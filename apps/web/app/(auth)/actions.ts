@@ -1,5 +1,6 @@
 "use server"
 
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import {
@@ -38,6 +39,7 @@ import {
   throttleReset,
   throttleStatus,
 } from "@/lib/throttle"
+import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie"
 
 /**
  * F-ID-01 §7 "Server contracts": "All in apps/web/app/(auth)/actions.ts unless
@@ -311,7 +313,20 @@ export async function signOut(): Promise<void> {
   if (user) {
     await logAuthEvent(supabase, { action: "account.logout", rowId: user.id })
   }
-  await supabase.auth.signOut()
+  // `scope: "local"` on purpose. supabase-js defaults to `"global"`, which
+  // revokes every refresh token the user holds — signing out on the school's
+  // shared phone would sign them out of their own, which is precisely the
+  // "forced re-authentication" D-35 makes an M0 exit criterion, and it would
+  // make Part 6's per-device revoke list meaningless. §4.10 describes a
+  // single-device sign-out.
+  await supabase.auth.signOut({ scope: "local" })
+
+  // §4.10: "deletes the workspace cookie" — the prototype's logout-never-clears
+  // -`activeWorkspaceId` finding (SECURITY.md §3 Finding 6). The docblock above
+  // claimed this happened here; it did not.
+  const cookieStore = await cookies()
+  cookieStore.delete(WORKSPACE_COOKIE)
+
   redirect("/login")
 }
 
