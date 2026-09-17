@@ -15,7 +15,7 @@
 -- `school_profiles` tenant-freeze gap this migration closes.
 -- =====================================================================
 begin;
-select plan(27);
+select plan(31);
 
 create schema if not exists tests;
 
@@ -248,6 +248,66 @@ select is(
   (select count(*)::int from public.list_my_workspaces()
     where workspace_id = '99991111-1111-1111-1111-111111111111'),
   1, 'list_my_workspaces: includes the caller''s own membership');
+
+select tests.logout();
+
+-- ---------------------------------------------------------------------
+-- switch_workspace's two gates, each proven on its own.
+-- ---------------------------------------------------------------------
+-- Gate 1 — membership status. A `pending` membership is not a membership
+-- (app.member_role() agrees; see 01_app_helpers.sql). Join-by-code lands a
+-- user exactly here, and the switcher does render them as "Pending approval"
+-- from list_my_workspaces — but the switch itself must be refused with the
+-- same error a total stranger gets.
+select tests.mkuser('99990001-0000-0000-0000-000000000004', 'pending.a@t09.local', 'Pending A');
+insert into public.workspace_members (workspace_id, user_id, role, status)
+values ('99991111-1111-1111-1111-111111111111', '99990001-0000-0000-0000-000000000004',
+        'teacher', 'pending');
+
+select tests.login('99990001-0000-0000-0000-000000000004');
+
+select throws_ok(
+  $$select * from public.switch_workspace('99991111-1111-1111-1111-111111111111')$$,
+  '42501', 'WORKSPACE_NOT_MEMBER',
+  'switch_workspace: a PENDING member cannot switch in (status = ''active'' only)');
+
+-- The point of the gate: a refused switch must not have moved the hint the
+-- resolution chain reads. (It is non-null — app.handle_new_user() points it at
+-- the personal workspace on signup — so assert what it is NOT.)
+select isnt(
+  (select last_active_workspace_id from public.profiles
+    where id = '99990001-0000-0000-0000-000000000004'),
+  '99991111-1111-1111-1111-111111111111'::uuid,
+  'switch_workspace: a refused switch never writes the target to last_active_workspace_id');
+
+select is(
+  (select count(*)::int from public.list_my_workspaces()
+    where workspace_id = '99991111-1111-1111-1111-111111111111'
+      and status = 'pending'),
+  1, 'list_my_workspaces: still shows the pending row, so the UI can say "Pending approval"');
+
+select tests.logout();
+
+-- Gate 2 — workspace status, as an ALLOWLIST. `archived` is already a
+-- workspace_status value and was switchable while this check denylisted only
+-- 'suspended'. Owner A is an active owner of School C, so membership passes
+-- and the workspace's status is the only thing left that can reject it.
+update public.workspaces set status = 'archived'
+ where id = '99993333-3333-3333-3333-333333333333';
+
+select tests.login('99990001-0000-0000-0000-000000000001');
+
+select throws_ok(
+  $$select * from public.switch_workspace('99993333-3333-3333-3333-333333333333')$$,
+  '42501', 'WORKSPACE_UNAVAILABLE',
+  'switch_workspace: an ARCHIVED workspace is refused even for its own owner (allowlist, not denylist)');
+
+select tests.logout();
+
+update public.workspaces set status = 'active'
+ where id = '99993333-3333-3333-3333-333333333333';
+
+select tests.login('99990001-0000-0000-0000-000000000003');
 
 select is(
   (select count(*)::int from public.list_my_workspaces()

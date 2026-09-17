@@ -59,7 +59,7 @@ export async function switchWorkspace(
   const log = await requestLogger({ route: "workspace.switch" })
 
   if (error) {
-    // public.switch_workspace raises these two messages by name (§7) so the
+    // public.switch_workspace raises these messages by name (§7) so the
     // client can branch without parsing SQLSTATE.
     if (error.message === "WORKSPACE_NOT_MEMBER") {
       return err(
@@ -72,6 +72,15 @@ export async function switchWorkspace(
           "forbidden",
           "This workspace is suspended. Contact your school for details."
         )
+      )
+    }
+    // Every other non-active status: today `archived`, tomorrow whatever the
+    // enum grows. The RPC allowlists `active` rather than denylisting the
+    // values it happens to know about, so this branch stays correct as the
+    // enum changes.
+    if (error.message === "WORKSPACE_UNAVAILABLE") {
+      return err(
+        apiError("forbidden", "This workspace is no longer available.")
       )
     }
     log.warn({ code: error.code }, "switch_workspace RPC failed")

@@ -261,6 +261,38 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
   })
 })
 
+describe("can: deny-by-default on inputs the type system says cannot happen", () => {
+  // Each of these is a string that could reach can() from a JWT claim, a
+  // database row or a JSON body without passing isRole() or an Action literal.
+  // The contract is that they are DENIED, not that they throw: assertCan is the
+  // guard at the top of every server action, so a throw here is a 500 instead
+  // of a 403, and an unhandled path is where bypasses live.
+  const unknownRoles = ["", "Owner", "superuser", "__proto__", "constructor"]
+
+  it.each(unknownRoles)(
+    "denies the unknown role %j without throwing",
+    (role) => {
+      expect(() => can(role as Role, "attendance.read")).not.toThrow()
+      expect(can(role as Role, "attendance.read")).toBe(false)
+    }
+  )
+
+  it("denies an unknown action for a real role", () => {
+    expect(can("owner", "attendance.destroy" as Action)).toBe(false)
+    expect(can("owner", "" as Action)).toBe(false)
+  })
+
+  it("denies when both the role and the action are unknown", () => {
+    expect(can("superuser" as Role, "everything.always" as Action)).toBe(false)
+  })
+
+  it("makes assertCan deny an unknown role rather than crash", () => {
+    expect(() => assertCan("superuser" as Role, "billing.manage")).toThrow(
+      PermissionDeniedError
+    )
+  })
+})
+
 describe("assertCan", () => {
   it("passes silently when allowed", () => {
     expect(() => assertCan("owner", "billing.manage")).not.toThrow()

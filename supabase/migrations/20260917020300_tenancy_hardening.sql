@@ -87,8 +87,17 @@ begin
     raise exception 'WORKSPACE_NOT_MEMBER' using errcode = '42501';
   end if;
 
-  if v_status = 'suspended' then
-    raise exception 'WORKSPACE_SUSPENDED' using errcode = '42501';
+  -- ALLOWLIST, not a denylist. `workspace_status` is already a three-value
+  -- enum ('active','suspended','archived') and the first draft only rejected
+  -- 'suspended', so an archived workspace was switchable — and any value the
+  -- enum grows later would default to allow, which is the wrong direction for
+  -- a tenancy gate. Suspended keeps its own §7 error name because apps/web
+  -- shows a distinct message for it.
+  if v_status <> 'active' then
+    if v_status = 'suspended' then
+      raise exception 'WORKSPACE_SUSPENDED' using errcode = '42501';
+    end if;
+    raise exception 'WORKSPACE_UNAVAILABLE' using errcode = '42501';
   end if;
 
   update public.profiles

@@ -233,9 +233,28 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
   ],
 }
 
-/** May this role attempt this action? The only question this module answers. */
+/**
+ * May this role attempt this action? The only question this module answers.
+ *
+ * Deny-by-default in both arguments — including arguments TypeScript says
+ * cannot happen. A role string that reaches here from a JWT claim, a database
+ * row or a JSON body without passing `isRole()` used to throw `TypeError` on
+ * `undefined.includes(...)`, and `assertCan` is the guard at the top of every
+ * server action, so that throw surfaced as a 500 rather than a denial. A 500 is
+ * a worse answer than "no": it is an unhandled path, and unhandled paths are
+ * where bypasses live. Unknown role, unknown action, or neither: `false`.
+ *
+ * `PERMISSIONS[role]?.includes(...)` is NOT enough, which the tests for this
+ * function prove: `PERMISSIONS` is an object literal, so a role of
+ * `"__proto__"` resolves to `Object.prototype` and `"constructor"` to `Object`
+ * — both truthy, so `?.` happily calls a `.includes` that does not exist and
+ * throws anyway. The grant list is therefore looked up as an OWN property and
+ * type-checked before it is used.
+ */
 export function can(role: Role, action: Action): boolean {
-  return PERMISSIONS[role].includes(action)
+  if (!Object.hasOwn(PERMISSIONS, role)) return false
+  const granted = PERMISSIONS[role]
+  return Array.isArray(granted) && granted.includes(action)
 }
 
 /** True when the role may attempt every one of the actions. */
