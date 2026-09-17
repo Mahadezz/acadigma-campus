@@ -1,14 +1,14 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest"
 
+import type { AcadigmaSupabaseClient } from "@acadigma/db"
+
 import {
   throttleRecordFailure,
   throttleReset,
   throttleStatus,
   type ThrottleBucket,
 } from "./throttle"
-
-import type { AcadigmaSupabaseClient } from "@acadigma/db"
 
 /**
  * `requestLogger` (security review N3's fail-closed logging) calls Next's

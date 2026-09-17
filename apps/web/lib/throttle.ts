@@ -2,9 +2,9 @@ import "server-only"
 
 import { z } from "zod"
 
-import { requestLogger } from "@/lib/logger"
-
 import type { AcadigmaSupabaseClient } from "@acadigma/db"
+
+import { requestLogger } from "@/lib/logger"
 
 /**
  * Named limits from F-ID-01 §5/§7 "Business rules" / "Server contracts". These are
