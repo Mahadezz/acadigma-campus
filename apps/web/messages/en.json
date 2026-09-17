@@ -156,7 +156,7 @@
       "2": "Fair",
       "3": "Good",
       "4": "Strong",
-      "too_short": "Must be at least 10 characters.",
+      "too_short": "Must be at least 12 characters.",
       "too_long": "That password is too long.",
       "too_common": "This password is too common.",
       "too_similar_to_identity": "Can't contain your name or email.",

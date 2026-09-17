@@ -48,6 +48,14 @@ describe("safeReturnTo — rejects an attempt to leave the origin", () => {
     { name: "no leading slash at all", value: "evil.example" },
     { name: "encoded backslash", value: "/%5C%5Cevil.example" },
     { name: "embedded control char (encoded newline)", value: "/app%0A/evil" },
+    { name: "javascript: scheme", value: "javascript:alert(document.cookie)" },
+    { name: "javascript: scheme, mixed case", value: "JaVaScRiPt:alert(1)" },
+    { name: "javascript: with a leading tab in the scheme", value: "java	script:alert(1)" },
+    { name: "data: URL", value: "data:text/html;base64,PHNjcmlwdD4=" },
+    { name: "encoded tab before a protocol-relative host", value: "/%09//evil.example" },
+    { name: "mixed slash + backslash", value: "/\/evil.example" },
+    { name: "userinfo trick after a protocol-relative host", value: "//evil.example\@acadigma.app" },
+    { name: "scheme with a backslash path", value: "http:/\evil.example" },
   ]
 
   it.each(attacks)(
@@ -57,6 +65,19 @@ describe("safeReturnTo — rejects an attempt to leave the origin", () => {
       expect(result).toEqual({ path: FALLBACK, rejected: true })
     }
   )
+})
+
+describe("safeReturnTo — unicode look-alikes stay same-origin", () => {
+  // U+FF0F FULLWIDTH SOLIDUS and U+2044 FRACTION SLASH are not path separators
+  // to any URL parser, so these are ordinary (odd-looking) same-origin paths --
+  // the assertion that matters is that they never become an off-origin host.
+  const lookalikes = ["/／／evil.example", "/⁄⁄evil.example"]
+
+  it.each(lookalikes)("%s resolves to a root-relative, non-// path", (value) => {
+    const result = safeReturnTo(value, FALLBACK)
+    expect(result.path.startsWith("/")).toBe(true)
+    expect(result.path.startsWith("//")).toBe(false)
+  })
 })
 
 describe("safeReturnTo — AC16", () => {

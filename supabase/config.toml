@@ -68,6 +68,13 @@ enable_signup = true
 # Anonymous sign-ins would carry the `authenticated` Postgres role and slip past any
 # policy that only checks the role rather than membership. Off.
 enable_anonymous_sign_ins = false
+# SECURITY.md §5.7.5 [MUST]: minimum 12. Mirrored by PASSWORD_MIN_LENGTH in
+# packages/domain/src/auth/passwordPolicy.ts -- GoTrue enforces it even for any
+# path that does not go through our own server action.
+password_min_length = 12
+# The other half of §5.7.5 -- HaveIBeenPwned leaked-password rejection -- has no
+# config.toml key; it is a dashboard/Management-API setting on the hosted project
+# and is NOT on yet. Tracked as OQ-19 in F-ID-01 §11.
 
 [auth.email]
 enable_signup = true

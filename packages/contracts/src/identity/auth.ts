@@ -17,12 +17,23 @@ import { emailSchema } from "../common"
 // Shared primitives
 // ---------------------------------------------------------------------------
 
-/** §5: password minimum length 10, maximum 72 bytes (bcrypt) — the byte cap is
- * enforced by `checkPassword` in `packages/domain`, which needs the raw string;
- * Zod only gates the character-count floor and a sane upper bound here. */
+/**
+ * Shape only — a non-empty string of sane size.
+ *
+ * `checkPassword` in `@acadigma/domain/auth` is the single source of the password
+ * policy (minimum 12 per SECURITY.md §5.7.5, the 72-byte bcrypt cap, the
+ * common-password list, identity similarity, the strength score), and every
+ * action that accepts this field runs it: `registerWithPassword`,
+ * `resetPassword` and `changePassword`.
+ *
+ * The floor is deliberately NOT duplicated here. When it was, Zod's generic
+ * "at least 12 characters" pre-empted the specific rule the user needs: AC3
+ * requires `password123` to be rejected as *too common*, and it is 11 characters
+ * long. Two copies of a policy number is also two things to forget to change.
+ */
 export const passwordSchema = z
   .string()
-  .min(10, "Password must be at least 10 characters.")
+  .min(1, "Enter a password.")
   .max(128, "Password is too long.")
 
 export const fullNameSchema = z

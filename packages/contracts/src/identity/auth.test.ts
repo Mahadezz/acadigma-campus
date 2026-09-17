@@ -47,12 +47,20 @@ describe("registerWithPasswordInputSchema", () => {
     expect(result.success).toBe(false)
   })
 
-  it("rejects a password under the 10-character floor", () => {
-    const result = registerWithPasswordInputSchema.safeParse({
-      ...valid,
-      password: "Short1!",
-    })
-    expect(result.success).toBe(false)
+  it("rejects an empty password but leaves the policy to checkPassword", () => {
+    // The 12-character floor lives in `@acadigma/domain/auth`'s `checkPassword`,
+    // not here, so that AC3's `password123` is reported as "too common" rather
+    // than pre-empted by a generic length message. See `passwordSchema`.
+    expect(
+      registerWithPasswordInputSchema.safeParse({ ...valid, password: "" })
+        .success
+    ).toBe(false)
+    expect(
+      registerWithPasswordInputSchema.safeParse({
+        ...valid,
+        password: "Short1!",
+      }).success
+    ).toBe(true)
   })
 })
 

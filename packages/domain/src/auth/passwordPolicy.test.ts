@@ -10,13 +10,13 @@ import {
 
 describe("checkPassword — length", () => {
   it("rejects a password shorter than the minimum", () => {
-    const result = checkPassword({ password: "Sh0rt!ab" }) // 8 chars
+    const result = checkPassword({ password: "Sh0rt!ab99" }) // 10 chars
     expect(result).toMatchObject({ ok: false, reason: "too_short" })
   })
 
   it(`accepts exactly the minimum length (${PASSWORD_MIN_LENGTH}) when otherwise strong`, () => {
-    // 10 chars, 4 character classes, no common-password match.
-    const result = checkPassword({ password: "Zq7!mK9#pL" })
+    // 12 chars, 4 character classes, no common-password match.
+    const result = checkPassword({ password: "Zq7!mK9#pLx2" })
     expect(result.ok).toBe(true)
   })
 
@@ -39,6 +39,24 @@ describe("checkPassword — the acceptance-criteria cases", () => {
   it('AC3: rejects "password123" as too common, with no other rule cited', () => {
     const result = checkPassword({ password: "password123" })
     expect(result).toMatchObject({ ok: false, reason: "too_common" })
+  })
+
+  it("AC3 ordering: a common password is 'too common' even when it is also too short", () => {
+    // "password123" is 11 characters, one under the 12-char floor. Reporting it
+    // as "too short" would invite the user to pad it and re-submit the same
+    // guessable string, and AC3 names the rule it must cite.
+    expect("password123".length).toBeLessThan(PASSWORD_MIN_LENGTH)
+    expect(checkPassword({ password: "password123" })).toMatchObject({
+      ok: false,
+      reason: "too_common",
+    })
+  })
+
+  it("SECURITY.md §5.7.5: an 11-character non-common password is still too short", () => {
+    expect(checkPassword({ password: "Zq7!mK9#pL1" })).toMatchObject({
+      ok: false,
+      reason: "too_short",
+    })
   })
 
   it("AC1: a password scoring >= 3 is accepted", () => {
