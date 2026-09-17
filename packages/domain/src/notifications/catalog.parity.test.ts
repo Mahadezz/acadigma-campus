@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest"
+
 import {
   notificationCategorySchema,
   notificationChannelSchema,
   notificationPrioritySchema,
 } from "@acadigma/contracts"
+
 import {
   NOTIFICATION_CATEGORIES,
   NOTIFICATION_CHANNELS,

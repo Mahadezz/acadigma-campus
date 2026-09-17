@@ -21,7 +21,6 @@ import {
   schoolSettingsPatchSchema,
   type ApiError,
   type Result,
-  type,
 } from "@acadigma/contracts"
 import {
   getSchoolSettings as getSchoolSettingsRepo,
