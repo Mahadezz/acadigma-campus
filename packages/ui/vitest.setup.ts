@@ -103,7 +103,12 @@ export function triggerIntersection(target?: Element) {
   for (const entry of [...observedTargets]) {
     if (target && entry.target !== target) continue
     entry.callback(
-      [{ isIntersecting: true, target: entry.target } as IntersectionObserverEntry],
+      [
+        {
+          isIntersecting: true,
+          target: entry.target,
+        } as IntersectionObserverEntry,
+      ],
       entry.observer
     )
   }

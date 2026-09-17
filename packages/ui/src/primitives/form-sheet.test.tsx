@@ -17,12 +17,7 @@ function renderFormSheet(
 ) {
   const onOpenChange = vi.fn()
   const utils = render(
-    <FormSheet
-      open
-      onOpenChange={onOpenChange}
-      title="Add student"
-      {...props}
-    >
+    <FormSheet open onOpenChange={onOpenChange} title="Add student" {...props}>
       <p>Form fields go here.</p>
     </FormSheet>
   )
@@ -123,12 +118,7 @@ describe("FormSheet — dirty-close guard", () => {
     // Opening never goes through the guard (guardedOnOpenChange only guards
     // `next === false`), so this should render without prompting anything.
     rerender(
-      <FormSheet
-        open
-        onOpenChange={onOpenChange}
-        title="Add student"
-        isDirty
-      >
+      <FormSheet open onOpenChange={onOpenChange} title="Add student" isDirty>
         <p>Form fields go here.</p>
       </FormSheet>
     )
