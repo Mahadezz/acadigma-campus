@@ -234,6 +234,15 @@ A snapshot of what the prototype was and what tooling we surveyed. These files a
 | `<feature>-part-<n>.md`                                                 | One per shipped part, committed in the PR that ships it, with numbers copied from real runs.                                                                           |
 | `security-<date>.md`                                                    | Record of an authorized dynamic security test against a preview deployment.                                                                                            |
 | `restore-drill-<date>.md`                                               | Record of a quarterly backup restore drill: time to restore, data loss window, what broke.                                                                             |
+| File                                                                | One line                                                                                                                                                               |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`_TEMPLATE.md`](test-reports/_TEMPLATE.md)                         | The report every feature part ships with: scope, environment, unit and database and e2e result tables, coverage, performance, security checks, known issues, sign-off. |
+| [`2026-09-17-foundation.md`](test-reports/2026-09-17-foundation.md) | Test report for `chore/foundation`: monorepo toolchain, foundation migrations 0001–0004, packages, app shell, CI workflows.                                            |
+| [`2026-09-17-M0-gates.md`](test-reports/2026-09-17-M0-gates.md)     | M0 gates: settings `resolve()` + notification catalogue (F-OP-07 P1, F-ID-07 P1).                                                                                      |
+| [`2026-09-17-M0-ui-otel-redaction.md`](test-reports/2026-09-17-M0-ui-otel-redaction.md) | Test report for `feat/m0-ui-otel-redaction`: `packages/ui` primitives conformance (DESIGN-SYSTEM §3–§7), OpenTelemetry wiring (D-30), `redactForAI()` + Semgrep rule (D-34). |
+| `<feature>-part-<n>.md`                                             | One per shipped part, committed in the PR that ships it, with numbers copied from real runs.                                                                           |
+| `security-<date>.md`                                                | Record of an authorized dynamic security test against a preview deployment.                                                                                            |
+| `restore-drill-<date>.md`                                           | Record of a quarterly backup restore drill: time to restore, data loss window, what broke.                                                                             |
 
 ## superpowers/ — historical planning artifacts
 
