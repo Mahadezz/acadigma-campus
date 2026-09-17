@@ -3,7 +3,22 @@
  * runs in jsdom because component tests need a DOM. Playwright owns the browser
  * end of the pyramid and is configured separately in apps/web/playwright.config.ts.
  */
+import { fileURLToPath } from "node:url"
+
 import { defineWorkspace } from "vitest/config"
+
+/**
+ * `server-only` is not an installed dependency anywhere in this repo — Next.js
+ * resolves the literal import via its own webpack/Turbopack alias at build time,
+ * which vitest never goes through. Every server module under `apps/web` starts
+ * with `import "server-only"`, so unit tests that import one need a stand-in; see
+ * `apps/web/test/server-only-stub.ts`. Test files that need `node` rather than
+ * `jsdom` semantics still override the environment per-file with
+ * `// @vitest-environment node` — that does not affect module resolution.
+ */
+const serverOnlyStub = fileURLToPath(
+  new URL("./apps/web/test/server-only-stub.ts", import.meta.url)
+)
 
 export default defineWorkspace([
   {
@@ -36,6 +51,11 @@ export default defineWorkspace([
       root: "./apps/web",
       environment: "jsdom",
       include: ["{app,lib,components}/**/*.test.{ts,tsx}"],
+    },
+    resolve: {
+      alias: {
+        "server-only": serverOnlyStub,
+      },
     },
   },
   {

@@ -7,7 +7,7 @@
 -- functions behave exactly as F-ID-01 §5 describes.
 -- =====================================================================
 begin;
-select plan(14);
+select plan(18);
 
 create schema if not exists tests;
 
@@ -81,22 +81,29 @@ select is(
 -- =====================================================================
 -- C. throttle_record_failure: 5 failures allowed, the 6th blocks
 --    (F-ID-01 §5 "Sign-in failures: 5 per (email, 15 min) -> 15 min block")
+--    bucket 'loginByEmail' carries that threshold server-side now (security
+--    review N2) -- the call takes only a bucket name and a key, no limits.
 -- =====================================================================
 select is(
-  (select blocked from public.throttle_record_failure('login:sha256(a@test.local)', 5, 900, 900)),
+  (select blocked from public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)')),
   false, 'failure 1 of 5 does not block');
 
-select public.throttle_record_failure('login:sha256(a@test.local)', 5, 900, 900); -- 2
-select public.throttle_record_failure('login:sha256(a@test.local)', 5, 900, 900); -- 3
-select public.throttle_record_failure('login:sha256(a@test.local)', 5, 900, 900); -- 4
+select public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)'); -- 2
+select public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)'); -- 3
+select public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)'); -- 4
 
 select is(
-  (select blocked from public.throttle_record_failure('login:sha256(a@test.local)', 5, 900, 900)),
+  (select blocked from public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)')),
   false, 'failure 5 of 5 does not block yet');
 
 select is(
-  (select blocked from public.throttle_record_failure('login:sha256(a@test.local)', 5, 900, 900)),
+  (select blocked from public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)')),
   true, 'failure 6 (past the limit of 5) blocks the key');
+
+select throws_ok(
+  $$select public.throttle_record_failure('not-a-real-bucket', 'login:sha256(nobody@test.local)')$$,
+  '22023', null,
+  'an unrecognised bucket name is rejected rather than silently unthrottled');
 
 select ok(
   (select retry_after_seconds from public.throttle_status('login:sha256(a@test.local)')) > 0,
@@ -128,7 +135,28 @@ select is(
 select ok(true, 'auth_throttle functions run to completion under service context');
 
 -- =====================================================================
--- F. log_auth_event — the allowlist is the whole security property
+-- F. exposed throttle RPCs carry no caller-supplied limit/window params
+--    (security review N2). The thresholds live server-side (migration
+--    20260917020000 §3); a client can name a key or a bucket, never a
+--    number.
+-- =====================================================================
+select is(
+  pg_get_function_identity_arguments('public.throttle_status(text)'::regprocedure),
+  'p_key text',
+  'throttle_status takes only a key -- no limit or window parameters');
+
+select is(
+  pg_get_function_identity_arguments('public.throttle_record_failure(text, text)'::regprocedure),
+  'p_bucket text, p_key text',
+  'throttle_record_failure takes only a bucket name and a key -- no caller-supplied limits');
+
+select is(
+  pg_get_function_identity_arguments('public.throttle_reset(text)'::regprocedure),
+  'p_key text',
+  'throttle_reset takes only a key -- no limit or window parameters');
+
+-- =====================================================================
+-- G. log_auth_event — the allowlist is the whole security property
 -- =====================================================================
 select throws_ok(
   $$select public.log_auth_event('drop.everything', 'bbbbbbbb-0000-0000-0000-000000000001'::uuid)$$,

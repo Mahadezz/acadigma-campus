@@ -5,10 +5,13 @@ import { z } from "zod"
 import type { AcadigmaSupabaseClient } from "@acadigma/db"
 
 /**
- * Named limits from F-ID-01 §5 "Business rules and calculations". Centralised here
- * so a limit is changed in one place, not wherever a call site happens to hardcode
- * it — the actual counting lives in Postgres (`app.throttle_*`, migration
- * 20260917020000), this module only carries the numbers and the RPC plumbing.
+ * Named limits from F-ID-01 §5/§7 "Business rules" / "Server contracts". These are
+ * documentation only, and MUST match the `values` table inside
+ * `public.throttle_record_failure` (migration 20260917020000 §3) by hand — the
+ * actual thresholds live in Postgres now, not here. Security review N2: a caller
+ * who can name a throttle key must not also be able to name the limit, so
+ * `throttleRecordFailure` below sends only a bucket name; the server resolves it
+ * to a threshold the client never sees or supplies.
  */
 export const THROTTLE_LIMITS = {
   /** "Registrations per IP: 5 / hour" */
@@ -76,18 +79,16 @@ export async function throttleStatus(
   return parseThrottleRow(data)
 }
 
-/** Call on a FAILED attempt only. */
+/** Call on a FAILED attempt only. `bucket` selects the server-side threshold
+ * (security review N2) — the client names a bucket, never a limit. */
 export async function throttleRecordFailure(
   supabase: AcadigmaSupabaseClient,
   bucket: ThrottleBucket,
   key: string
 ): Promise<ThrottleState> {
-  const limit = THROTTLE_LIMITS[bucket]
   const { data, error } = await supabase.rpc("throttle_record_failure", {
+    p_bucket: bucket,
     p_key: key,
-    p_max_attempts: limit.maxAttempts,
-    p_window_seconds: limit.windowSeconds,
-    p_block_seconds: limit.blockSeconds,
   })
   if (error) return { blocked: false, retryAfterSeconds: 0 }
   return parseThrottleRow(data)

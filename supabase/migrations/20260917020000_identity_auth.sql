@@ -83,15 +83,19 @@ comment on function public.throttle_status(text) is
 
 -- ---------------------------------------------------------------------
 -- 3. public.throttle_record_failure — bumps the window, blocks once the
---    caller-supplied threshold is exceeded. The thresholds live in
---    apps/web/lib/throttle.ts (F-ID-01 §5), not here, so one table serves
---    every throttle key with a different limit per action.
+--    bucket's threshold is exceeded. The thresholds are server-side
+--    constants keyed by `p_bucket` (F-ID-01 §7 "Rate limit" column) — NOT
+--    caller-supplied arguments. Security review N2: a caller who can name a
+--    throttle key must not also be able to name `p_max_attempts`, or the
+--    bucket becomes unblockable (`p_max_attempts = 2147483647`). The bucket
+--    names below match `apps/web/lib/throttle.ts`'s `THROTTLE_LIMITS` keys
+--    exactly — keep both in sync by hand until there is a shared source.
 -- ---------------------------------------------------------------------
+drop function if exists public.throttle_record_failure(text, integer, integer, integer);
+
 create or replace function public.throttle_record_failure(
-  p_key             text,
-  p_max_attempts    integer,
-  p_window_seconds  integer,
-  p_block_seconds   integer)
+  p_bucket text,
+  p_key    text)
 returns table (blocked boolean, retry_after_seconds integer)
 language plpgsql
 volatile
@@ -99,13 +103,31 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_row public.auth_throttle;
+  v_row            public.auth_throttle;
+  v_max_attempts   integer;
+  v_window_seconds integer;
+  v_block_seconds  integer;
 begin
   if coalesce(btrim(p_key), '') = '' then
     raise exception 'a throttle key is required' using errcode = '22023';
   end if;
-  if p_max_attempts < 1 or p_window_seconds < 1 or p_block_seconds < 1 then
-    raise exception 'throttle thresholds must be positive' using errcode = '22023';
+
+  select l.max_attempts, l.window_seconds, l.block_seconds
+    into v_max_attempts, v_window_seconds, v_block_seconds
+  from (values
+    -- bucket,                 max_attempts, window_seconds, block_seconds
+    ('register',                5,  3600,  3600), -- "Registrations per IP: 5/h"
+    ('loginByEmail',            5,   900,   900),  -- "5 per (email, 15 min) -> 15 min block"
+    ('loginByIp',               30,  900,  3600),  -- "30 per (IP, 15 min) -> 60 min block"
+    ('passwordResetRequest',    5,  3600,  3600),
+    ('passwordResetSubmit',     10, 3600,  3600),  -- "resetPassword ... 10/h per IP"
+    ('resendVerification',      5,  3600,  3600),
+    ('changePassword',          10, 3600,  3600)
+  ) as l(bucket, max_attempts, window_seconds, block_seconds)
+  where l.bucket = p_bucket;
+
+  if v_max_attempts is null then
+    raise exception 'unrecognised throttle bucket: %', p_bucket using errcode = '22023';
   end if;
 
   insert into public.auth_throttle (key, window_started_at, attempts)
@@ -114,21 +136,21 @@ begin
     set attempts = case
           -- window expired (and not currently blocked): start a fresh window
           when auth_throttle.blocked_until is null
-               and auth_throttle.window_started_at < now() - make_interval(secs => p_window_seconds)
+               and auth_throttle.window_started_at < now() - make_interval(secs => v_window_seconds)
             then 1
           else auth_throttle.attempts + 1
         end,
         window_started_at = case
           when auth_throttle.blocked_until is null
-               and auth_throttle.window_started_at < now() - make_interval(secs => p_window_seconds)
+               and auth_throttle.window_started_at < now() - make_interval(secs => v_window_seconds)
             then now()
           else auth_throttle.window_started_at
         end
   returning * into v_row;
 
-  if v_row.attempts > p_max_attempts then
+  if v_row.attempts > v_max_attempts then
     update public.auth_throttle
-       set blocked_until = now() + make_interval(secs => p_block_seconds)
+       set blocked_until = now() + make_interval(secs => v_block_seconds)
      where key = p_key
      returning * into v_row;
   end if;
@@ -139,9 +161,10 @@ begin
 end;
 $$;
 
-comment on function public.throttle_record_failure(text, integer, integer, integer) is
+comment on function public.throttle_record_failure(text, text) is
   'Call on every FAILED attempt only. A password match or a valid code must '
-  'never reach here — success calls throttle_reset instead, per F-ID-01 §4.2.';
+  'never reach here — success calls throttle_reset instead, per F-ID-01 §4.2. '
+  'p_bucket selects a server-side threshold (F-ID-01 §7); it is not a limit.';
 
 -- ---------------------------------------------------------------------
 -- 4. public.throttle_reset — called on a successful attempt.
@@ -214,11 +237,11 @@ comment on function public.log_auth_event(text, uuid, jsonb, inet, text) is
 --    allowlisted action and never return PII, which is what makes that safe.
 -- ---------------------------------------------------------------------
 revoke all on function public.throttle_status(text) from public;
-revoke all on function public.throttle_record_failure(text, integer, integer, integer) from public;
+revoke all on function public.throttle_record_failure(text, text) from public;
 revoke all on function public.throttle_reset(text) from public;
 revoke all on function public.log_auth_event(text, uuid, jsonb, inet, text) from public;
 
 grant execute on function public.throttle_status(text) to anon, authenticated, service_role;
-grant execute on function public.throttle_record_failure(text, integer, integer, integer) to anon, authenticated, service_role;
+grant execute on function public.throttle_record_failure(text, text) to anon, authenticated, service_role;
 grant execute on function public.throttle_reset(text) to anon, authenticated, service_role;
 grant execute on function public.log_auth_event(text, uuid, jsonb, inet, text) to anon, authenticated, service_role;
