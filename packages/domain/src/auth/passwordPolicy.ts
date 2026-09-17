@@ -26,9 +26,11 @@ import { COMMON_PASSWORDS } from "./commonPasswords"
  * The other half of that control — Supabase Auth's HaveIBeenPwned leaked-password
  * rejection, with the "this password has appeared in a known data breach" message
  * — is NOT implemented here and is not implementable here: it is a project-level
- * Auth setting, not application code. Deferred explicitly, tracked as OQ-19 in
- * F-ID-01 §11. Until it is on, the common-password list below is a ~300-entry
- * stand-in for a 900-million-entry corpus; do not mistake one for the other.
+ * Auth setting, not application code. Deferred explicitly, tracked as OQ-25 in
+ * F-ID-01 §11 (renumbered from OQ-19, which OWNER-QUESTIONS.md already used for
+ * an unrelated data-residency question). Until it is on, the common-password
+ * list below is a ~300-entry stand-in for a 900-million-entry corpus; do not
+ * mistake one for the other.
  */
 export const PASSWORD_MIN_LENGTH = 12
 export const PASSWORD_MAX_BYTES = 72
