@@ -41,7 +41,20 @@ export type LandingRoute = (typeof LANDING_ROUTES)[keyof typeof LANDING_ROUTES]
  * The `/platform` row is intentionally not modelled here: platform admin is
  * never a default landing (F-ID-03 §4.4 footnote) — it is only ever reached by
  * explicit navigation, which is a routing concern, not a resolution one.
+ *
+ * Fails CLOSED on a school workspace with no resolved role: `/app` is the
+ * staff shell, the widest data surface in the product, so it is reached by an
+ * explicit allowlist match and never as a fallthrough default. A missing role
+ * means resolution failed, and the answer to that is `/onboarding` — not the
+ * staff dashboard.
  */
+const SCHOOL_SHELL_ROLES: readonly WorkspaceRole[] = [
+  "owner",
+  "admin",
+  "teacher",
+  "staff",
+]
+
 export function resolveLandingRoute(
   input: LandingResolutionInput
 ): LandingRoute {
@@ -50,5 +63,8 @@ export function resolveLandingRoute(
 
   // workspaceType === "school"
   if (input.role === "parent") return LANDING_ROUTES.family
-  return LANDING_ROUTES.app
+  if (input.role && SCHOOL_SHELL_ROLES.includes(input.role)) {
+    return LANDING_ROUTES.app
+  }
+  return LANDING_ROUTES.onboarding
 }

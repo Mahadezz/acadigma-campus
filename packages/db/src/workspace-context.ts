@@ -46,14 +46,31 @@ export type WorkspaceContext = {
 /** Minimal header bag, so this works with `Headers`, middleware and plain objects. */
 export type HeaderSource = { get: (name: string) => string | null }
 
+/**
+ * The embedded shape every candidate query asks PostgREST for.
+ *
+ * `public.workspaces` has NO `plan` column — the plan is `workspaces.plan_id`,
+ * an FK to `public.plans`, and the human-readable slug this context carries is
+ * `plans.code`. Selecting `workspaces(plan, …)` (as this file did until the
+ * F-ID-03 review) makes PostgREST answer 400 `column workspaces.plan does not
+ * exist` for EVERY request, which `resolveWorkspaceContext` turns into
+ * `dependency_unavailable` and `requireWorkspace()` turns into a 403 — the
+ * whole app, locked shut, with the forged-header tripwire never reached. Kept
+ * as a single constant so the two call sites cannot drift apart again.
+ */
+const WORKSPACE_EMBED = "workspaces(type, plans(code))"
+
 /** The membership row we rely on, validated rather than assumed. */
 const membershipRowSchema = z.object({
   role: z.string(),
   status: z.string(),
   workspaces: z
     .object({
-      plan: z.string().nullable().optional(),
       type: z.string().optional(),
+      plans: z
+        .object({ code: z.string().nullable().optional() })
+        .nullable()
+        .optional(),
     })
     .nullable()
     .optional(),
@@ -100,7 +117,10 @@ type ActiveMembershipRow = {
   role: string
   status: string
   workspace_id: string
-  workspaces?: { plan: string | null; type?: string } | null
+  workspaces?: {
+    type?: string
+    plans?: { code: string | null } | null
+  } | null
 }
 
 async function loadActiveMembership(
@@ -110,7 +130,7 @@ async function loadActiveMembership(
 ): Promise<{ data: unknown; error: unknown }> {
   return supabase
     .from("workspace_members")
-    .select("role, status, workspaces(plan, type)")
+    .select(`role, status, ${WORKSPACE_EMBED}`)
     .eq("workspace_id", workspaceId)
     .eq("user_id", userId)
     .eq("status", "active")
@@ -138,7 +158,10 @@ function toContext(
     userId,
     role: membership.data.role,
     workspaceType,
-    plan: membership.data.workspaces?.plan ?? null,
+    // `plans` is itself RLS-guarded (`plans_select_public`: active ∧ is_public),
+    // so a private or contact-sales plan embeds as null here. Feature gating
+    // must therefore treat `plan === null` as "unknown", never as "free".
+    plan: membership.data.workspaces?.plans?.code ?? null,
   })
 }
 
@@ -291,7 +314,7 @@ export async function resolveWorkspaceContext(
   // ---- step 3: first active membership, personal first ------------------
   const { data: firstRows, error: firstError } = await supabase
     .from("workspace_members")
-    .select("workspace_id, role, status, joined_at, workspaces(plan, type)")
+    .select(`workspace_id, role, status, joined_at, ${WORKSPACE_EMBED}`)
     .eq("user_id", userId)
     .eq("status", "active")
     .order("joined_at", { ascending: true })

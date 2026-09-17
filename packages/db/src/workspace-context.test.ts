@@ -37,6 +37,8 @@ function fakeClient(options: {
   activeMembershipsError?: boolean
   profile?: Record<string, unknown> | null
   rpc?: ReturnType<typeof vi.fn>
+  /** Records every `.select(...)` string, so a test can assert the columns asked for. */
+  onSelect?: (table: string, columns: string) => void
 }): AcadigmaSupabaseClient {
   const {
     user = { id: USER_ID },
@@ -50,6 +52,7 @@ function fakeClient(options: {
     activeMemberships = [],
     activeMembershipsError = false,
     rpc = vi.fn(async () => ({ data: null, error: null })),
+    onSelect = () => {},
   } = options
 
   return {
@@ -63,20 +66,23 @@ function fakeClient(options: {
     from: (table: string) => {
       if (table === "profiles") {
         return {
-          select: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({
-                data: profileQueryError
-                  ? null
-                  : (options.profile ?? {
-                      last_active_workspace_id: lastActiveWorkspaceId,
-                    }),
-                error: profileQueryError
-                  ? { message: "connection reset" }
-                  : null,
+          select: (columns: string) => {
+            onSelect("profiles", columns)
+            return {
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: profileQueryError
+                    ? null
+                    : (options.profile ?? {
+                        last_active_workspace_id: lastActiveWorkspaceId,
+                      }),
+                  error: profileQueryError
+                    ? { message: "connection reset" }
+                    : null,
+                }),
               }),
-            }),
-          }),
+            }
+          },
         }
       }
 
@@ -91,7 +97,10 @@ function fakeClient(options: {
         const singleCandidateRow = headerRow ?? lastActiveRow
         const singleCandidateErrored = headerQueryError || lastActiveQueryError
         const builder = {
-          select: () => builder,
+          select: (columns: string) => {
+            onSelect("workspace_members", columns)
+            return builder
+          },
           eq: () => builder,
           maybeSingle: async () => ({
             data: singleCandidateErrored ? null : singleCandidateRow,
@@ -133,7 +142,7 @@ describe("resolveWorkspaceContext", () => {
     activeMembership = {
       role: "teacher",
       status: "active",
-      workspaces: { plan: "standard", type: "school" },
+      workspaces: { type: "school", plans: { code: "standard" } },
     }
   })
 
@@ -153,6 +162,29 @@ describe("resolveWorkspaceContext", () => {
         },
       })
     })
+  })
+
+  it("asks PostgREST only for columns that exist in the schema", async () => {
+    // Regression guard for the F-ID-03 review finding: this file selected
+    // `workspaces(plan, type)`, but `public.workspaces` has no `plan` column —
+    // it has `plan_id`, an FK to `public.plans`, whose slug is `plans.code`.
+    // PostgREST answers 400 for an unknown column, which resolveWorkspaceContext
+    // turns into `dependency_unavailable` and requireWorkspace() into a 403, so
+    // the typo locked every signed-in user out of every route while every mocked
+    // unit test stayed green. Mocks cannot see the real schema, so the *columns
+    // asked for* are pinned here instead, next to the migration that defines them.
+    const selects: string[] = []
+    await resolveWorkspaceContext(
+      fakeClient({
+        headerRow: activeMembership,
+        onSelect: (_table, columns) => selects.push(columns),
+      }),
+      headers(WORKSPACE_ID)
+    )
+
+    expect(selects).toEqual(["role, status, workspaces(type, plans(code))"])
+    // Named explicitly so a reviewer sees WHY, not just a changed string.
+    expect(selects.join(" ")).not.toMatch(/workspaces\([^)]*\bplan\b[^_]/)
   })
 
   it("reports no plan as null rather than undefined", async () => {
@@ -302,7 +334,7 @@ describe("resolveWorkspaceContext", () => {
               role: "owner",
               status: "active",
               joined_at: "2026-01-01T00:00:00Z",
-              workspaces: { plan: null, type: "school" },
+              workspaces: { type: "school", plans: null },
             },
           ],
         }),
@@ -322,14 +354,14 @@ describe("resolveWorkspaceContext", () => {
               role: "teacher",
               status: "active",
               joined_at: "2020-01-01T00:00:00Z", // joined first, but is a school
-              workspaces: { plan: "standard", type: "school" },
+              workspaces: { type: "school", plans: { code: "standard" } },
             },
             {
               workspace_id: WORKSPACE_ID,
               role: "owner",
               status: "active",
               joined_at: "2026-01-01T00:00:00Z", // joined later, but is personal
-              workspaces: { plan: null, type: "personal" },
+              workspaces: { type: "personal", plans: null },
             },
           ],
         }),

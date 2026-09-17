@@ -30,8 +30,15 @@ if (!actionsBlock?.[1]) {
   )
   process.exit(1)
 }
+// Action keys are dot-separated segments of [a-z_]. The pattern MUST allow more
+// than two segments and an underscore: F-ID-03 §2 introduced
+// `workspace.settings.write`, `members.staff_fields.write` and 14 more like
+// them, and a two-segment-only pattern silently dropped every one of them from
+// `declared` — turning this guard off for exactly the newest, most
+// security-relevant half of the matrix.
+const ACTION_KEY = /"([a-z]+(?:[a-z_]*[a-z])?(?:\.[a-z]+(?:[a-z_]*[a-z])?)+)"/g
 const declared = new Set(
-  [...actionsBlock[1].matchAll(/"([a-z]+\.[a-z]+)"/g)].map((m) => m[1])
+  [...actionsBlock[1].matchAll(ACTION_KEY)].map((m) => m[1])
 )
 
 async function* walk(dir) {
@@ -52,8 +59,10 @@ async function* walk(dir) {
 }
 
 // Matches can("teacher", "attendance.write"), assertCan(...), requires: "..." .
+// Same multi-segment key shape as ACTION_KEY above, inlined without the capture
+// group so the two alternatives keep their own groups.
 const USE_PATTERN =
-  /(?:can|canAll|canAny|assertCan|rolesWithAction)\([^)]*?"([a-z]+\.[a-z]+)"|requires:\s*"([a-z]+\.[a-z]+)"/g
+  /(?:can|canAll|canAny|assertCan|rolesWithAction)\([^)]*?"([a-z]+(?:[a-z_]*[a-z])?(?:\.[a-z]+(?:[a-z_]*[a-z])?)+)"|requires:\s*"([a-z]+(?:[a-z_]*[a-z])?(?:\.[a-z]+(?:[a-z_]*[a-z])?)+)"/g
 
 const used = new Map()
 for (const dir of SCAN_DIRS) {

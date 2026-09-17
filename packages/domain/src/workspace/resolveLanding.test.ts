@@ -43,12 +43,27 @@ describe("resolveLandingRoute", () => {
     }
   })
 
-  it("treats a missing role on a school workspace as staff-shell, not a crash", () => {
-    // Should never happen in practice (a resolved school membership always carries
-    // a role), but the function must fail toward the safer generic shell rather
-    // than throw.
+  it("fails closed when a school workspace resolves with no role", () => {
+    // Should never happen in practice (a resolved school membership always
+    // carries a role), but `/app` is the widest data surface in the product,
+    // so it must never be the fallthrough default. An unresolved role is a
+    // resolution failure, and the answer to that is onboarding.
     expect(resolveLandingRoute({ workspaceType: "school" })).toBe(
-      LANDING_ROUTES.app
+      LANDING_ROUTES.onboarding
     )
+    expect(resolveLandingRoute({ workspaceType: "school", role: null })).toBe(
+      LANDING_ROUTES.onboarding
+    )
+  })
+
+  it("only ever reaches /app through the four school-shell roles", () => {
+    // Guards the allowlist itself: if a new WorkspaceRole is added and nobody
+    // decides which shell it lands in, it must not silently inherit /app.
+    const appRoles = WORKSPACE_ROLES.filter(
+      (role) =>
+        resolveLandingRoute({ workspaceType: "school", role }) ===
+        LANDING_ROUTES.app
+    )
+    expect(appRoles).toEqual(["owner", "admin", "teacher", "staff"])
   })
 })

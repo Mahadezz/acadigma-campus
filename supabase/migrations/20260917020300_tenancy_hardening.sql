@@ -202,3 +202,34 @@ revoke all on function public.log_tenancy_context_rejected(uuid) from public;
 grant execute on function public.switch_workspace(uuid) to authenticated;
 grant execute on function public.list_my_workspaces() to authenticated;
 grant execute on function public.log_tenancy_context_rejected(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 6. The rest of the tenant-freeze audit.
+--    Section 1 above closed `school_profiles` and its comment claims the
+--    remaining `workspace_id` tables were "checked". That check was
+--    incomplete: it looked only at `usage_counters` / `subscription_events`
+--    and missed the two tables below, both of which grant UPDATE to
+--    `authenticated` and both of which carry the same degenerate
+--    UPDATE-policy shape D-36 warns about (a WITH CHECK that re-evaluates the
+--    role predicate against the *new* workspace_id and therefore approves a
+--    re-parent).
+--
+--    public.data_requests — `data_requests_update`'s USING and WITH CHECK are
+--      both `app.has_role(workspace_id, {owner,admin})`. An owner/admin of two
+--      workspaces could `UPDATE ... SET workspace_id = <the other one>` and
+--      move a DSAR/erasure record — subject PII included — into a tenant that
+--      was never entitled to read it (`data_requests_select` grants
+--      owner/admin of `workspace_id` full read). That is Base44 finding 1's
+--      class of bug, on the most privacy-sensitive table in the schema.
+--
+--    public.notifications — worse in reach, smaller in blast radius:
+--      `notifications_update` is scoped by `recipient_id = auth.uid()` ONLY
+--      and never mentions workspace_id, so ANY authenticated user can stamp
+--      their own notification with ANY workspace id, with no membership
+--      anywhere. Nothing reads that tag for authorisation today, which is the
+--      only reason this is not already an exposure; a freeze trigger costs
+--      nothing and stops the tag from being attacker-controlled before the
+--      first workspace-scoped notification list ships.
+-- ---------------------------------------------------------------------
+select app.attach_freeze_workspace('public.data_requests');
+select app.attach_freeze_workspace('public.notifications');

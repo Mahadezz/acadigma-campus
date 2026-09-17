@@ -15,7 +15,7 @@
 -- `school_profiles` tenant-freeze gap this migration closes.
 -- =====================================================================
 begin;
-select plan(26);
+select plan(27);
 
 create schema if not exists tests;
 
@@ -283,6 +283,42 @@ select ok(
 select ok(
   not has_function_privilege('anon', 'public.log_tenancy_context_rejected(uuid)', 'execute'),
   'anon cannot execute log_tenancy_context_rejected');
+
+-- =====================================================================
+-- the tenant-freeze template, checked mechanically rather than by eye
+-- ---------------------------------------------------------------------
+-- `school_profiles` was missed by 0002 because its `workspace_id` is also
+-- its primary key, and `data_requests`/`notifications` were missed by the
+-- first draft of 0006 because the audit was done by reading the migration
+-- files. Both are the same failure: a human enumerating tenant tables. This
+-- assertion enumerates them from the catalogue instead, so the NEXT table
+-- that grants UPDATE to `authenticated` and carries a `workspace_id` fails
+-- CI on the day it is added rather than in a security review.
+--
+-- `workspace_members` is the one legitimate exemption: it has no freeze
+-- trigger because app.tg_workspace_members_guard() already raises on any
+-- change to workspace_id or user_id (0002 §10.6), which is strictly
+-- stricter than the generic freeze.
+-- =====================================================================
+select is(
+  (select coalesce(string_agg(c.relname, ', ' order by c.relname), '')
+     from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+     join pg_attribute a
+       on a.attrelid = c.oid and a.attname = 'workspace_id'
+      and a.attnum > 0 and not a.attisdropped
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+      and has_table_privilege('authenticated', c.oid, 'UPDATE')
+      and c.relname <> 'workspace_members'
+      and not exists (
+            select 1
+              from pg_trigger t
+             where t.tgrelid = c.oid
+               and not t.tgisinternal
+               and t.tgfoid = 'app.tg_freeze_workspace'::regproc)),
+  '',
+  'every client-UPDATE-able table with a workspace_id carries app.tg_freeze_workspace (D-36)');
 
 select * from finish();
 rollback;
