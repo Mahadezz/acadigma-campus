@@ -1,5 +1,7 @@
 "use client"
 
+import * as React from "react"
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { useIsMobile } from "../hooks/use-mobile"
 import { cn } from "../lib/utils"
@@ -109,9 +111,29 @@ export function PeriodGrid({
   const periodLabel = (period: PeriodGridPeriod) =>
     (locale === "bn" ? period.labelBn : undefined) ?? period.labelEn
 
+  // The mobile Tabs is controlled so it follows a later `currentDayId`
+  // change (the date rolls over, a "current period" poll ticks while the
+  // app stays open) instead of only ever reading it once. `activeDayId`
+  // still lets the user tap a different day's tab without that selection
+  // being fought on every render — this mirrors MarkCell's render-time
+  // "adjust state when a prop changes" pattern, not an effect: an effect
+  // would set state a beat late and flash the previous day's tab first.
+  const [activeDayId, setActiveDayId] = React.useState(
+    currentDayId ?? days[0]?.id
+  )
+  const [lastSeenDayId, setLastSeenDayId] = React.useState(currentDayId)
+  if (currentDayId !== lastSeenDayId) {
+    setLastSeenDayId(currentDayId)
+    if (currentDayId !== undefined) setActiveDayId(currentDayId)
+  }
+
   if (isMobile) {
     return (
-      <Tabs defaultValue={currentDayId ?? days[0]?.id} className={className}>
+      <Tabs
+        value={activeDayId}
+        onValueChange={setActiveDayId}
+        className={className}
+      >
         <TabsList className="w-full">
           {days.map((day) => (
             <TabsTrigger key={day.id} value={day.id} className="flex-1">

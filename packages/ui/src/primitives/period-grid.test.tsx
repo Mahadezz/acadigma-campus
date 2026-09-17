@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { PeriodGrid, type PeriodGridCell } from "./period-grid"
@@ -63,5 +64,60 @@ describe("PeriodGrid — phone (<1024px)", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
     expect(screen.getByRole("tablist")).toBeInTheDocument()
     expect(screen.getByRole("tab", { name: "Sat" })).toBeInTheDocument()
+  })
+
+  it("follows a later currentDayId prop change (controlled, not defaultValue)", () => {
+    const { rerender } = render(
+      <PeriodGrid
+        days={days}
+        periods={periods}
+        getCell={getCell}
+        currentDayId="sat"
+      />
+    )
+    expect(screen.getByRole("tab", { name: "Sat" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    )
+    expect(screen.getByRole("tab", { name: "Sun" })).toHaveAttribute(
+      "aria-selected",
+      "false"
+    )
+
+    // The date rolls over while the app stays open — the parent re-renders
+    // with a new currentDayId, uncontrolled `defaultValue` would ignore this.
+    rerender(
+      <PeriodGrid
+        days={days}
+        periods={periods}
+        getCell={getCell}
+        currentDayId="sun"
+      />
+    )
+    expect(screen.getByRole("tab", { name: "Sun" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    )
+    expect(screen.getByRole("tab", { name: "Sat" })).toHaveAttribute(
+      "aria-selected",
+      "false"
+    )
+  })
+
+  it("still lets the user tap a different day's tab", async () => {
+    const user = userEvent.setup()
+    render(
+      <PeriodGrid
+        days={days}
+        periods={periods}
+        getCell={getCell}
+        currentDayId="sat"
+      />
+    )
+    await user.click(screen.getByRole("tab", { name: "Sun" }))
+    expect(screen.getByRole("tab", { name: "Sun" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    )
   })
 })
