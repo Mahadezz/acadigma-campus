@@ -15,6 +15,7 @@
  */
 @import "@acadigma/config/tailwind";
 @import "./tokens/tokens.css";
+@import "./src/motion/recipes.css";
 
 /* Tailwind must see the class names used in this package's own components. */
 @source "./src/**/*.{ts,tsx}";

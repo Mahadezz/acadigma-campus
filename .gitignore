@@ -37,3 +37,6 @@ pnpm-debug.log*
 
 # graphify knowledge-graph cache — regenerated on demand, never reviewed
 graphify-out/
+
+# Claude Code per-user overrides
+.claude/settings.local.json

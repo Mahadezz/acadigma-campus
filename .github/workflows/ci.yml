@@ -224,6 +224,9 @@ jobs:
     name: contracts
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # `secrets` cannot be referenced in `if:`; surface it as env and test that.
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
       - uses: ./.github/actions/setup
@@ -234,9 +237,8 @@ jobs:
       # Regenerating types needs a live project; without the token the check would
       # pass vacuously, so say so instead of pretending.
       - name: Generated types are fresh
-        if: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+        if: ${{ env.SUPABASE_ACCESS_TOKEN != '' }}
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
           set -euo pipefail
@@ -248,7 +250,7 @@ jobs:
           fi
 
       - name: Note when the type check was skipped
-        if: ${{ secrets.SUPABASE_ACCESS_TOKEN == '' }}
+        if: ${{ env.SUPABASE_ACCESS_TOKEN == '' }}
         run: |
           echo "::notice::skipped generated-type freshness: no SUPABASE_ACCESS_TOKEN (fork PR)"
           echo "### contracts — type freshness skipped (no secrets)" >> "$GITHUB_STEP_SUMMARY"
