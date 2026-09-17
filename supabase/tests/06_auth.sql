@@ -7,7 +7,7 @@
 -- functions behave exactly as F-ID-01 §5 describes.
 -- =====================================================================
 begin;
-select plan(13);
+select plan(14);
 
 create schema if not exists tests;
 
@@ -50,6 +50,14 @@ select tests.mkuser('bbbbbbbb-0000-0000-0000-000000000001', 'throttle-victim@tes
 -- A. the table itself is not reachable by anon or authenticated
 -- =====================================================================
 select tests.login('bbbbbbbb-0000-0000-0000-000000000001');
+
+-- Class S1 means RLS is ON with zero policies, not merely "no grants": a later
+-- blanket grant must still hit a closed door.
+select is(
+  (select c.relrowsecurity from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'auth_throttle'),
+  true, 'auth_throttle has row level security enabled (class S1)');
 
 select throws_ok(
   $$select 1 from public.auth_throttle limit 1$$,

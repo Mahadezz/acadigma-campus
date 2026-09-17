@@ -33,6 +33,15 @@ comment on table public.auth_throttle is
   'never a raw address. No RLS policy and no grants: only reachable through '
   'the SECURITY DEFINER functions below.';
 
+alter table public.auth_throttle enable row level security;
+-- Class S1 (SECURITY.md): RLS enabled, ZERO policies, ZERO grants. The PR body
+-- and the pgTAP header both claim "RLS-enabled"; without this line it was not,
+-- the Supabase linter reports `rls_disabled_in_public`, and any future grant
+-- (an `alter default privileges` change, a blanket `grant all on all tables in
+-- schema public`) would silently open the table to `anon`. NOT `force`: the
+-- SECURITY DEFINER functions below run as the table owner and must keep
+-- bypassing RLS -- they are the only intended door.
+
 create index if not exists auth_throttle_blocked_idx
   on public.auth_throttle (blocked_until) where blocked_until is not null;
 -- justification: the nightly pg_cron sweep (F-ID-01 §3) cleans expired
