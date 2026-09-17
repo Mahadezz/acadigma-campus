@@ -114,7 +114,7 @@ create index if not exists audit_events_created_brin_idx
 create or replace function app.hash_request_ip(p_ip inet)
 returns text
 language sql
-immutable
+stable                                  -- NOT immutable: the body reads now()
 set search_path = ''
 as $$
   select case when p_ip is null then null else
@@ -125,7 +125,76 @@ $$;
 comment on function app.hash_request_ip(inet) is
   'F-ID-09 §5.3: raw IPs are never stored. The daily salt lets same-day '
   'incident response correlate repeated hits from one address without '
-  'making the hash a permanent fingerprint of it.';
+  'making the hash a permanent fingerprint of it. STABLE, not IMMUTABLE — '
+  'the daily salt is now(), so labelling it immutable would let the planner '
+  'fold a value computed on the wrong day into a plan or an index.';
+
+-- =====================================================================
+-- 3.1 The three universal column classes (F-ID-09 §5.3), kept as functions
+--     so the trigger, the pgTAP tests and the TypeScript mirror
+--     (packages/domain/src/audit/redact.ts) all name one source of truth.
+--
+--     They are applied to the WHOLE before/after payload, never only to the
+--     columns that changed: an UPDATE that touches one ordinary column still
+--     carries every other column's value in `before`/`after`, so scanning
+--     `changed_fields` alone would write an untouched push token or NID
+--     straight into the trail.
+-- =====================================================================
+
+-- Dropped entirely — name and value (F-ID-09 §5.3 "Secrets", and the PDPA
+-- §4.1 rule that we never store a full NID / birth-certificate number).
+create or replace function app.audit_secret_pattern()
+returns text language sql immutable set search_path = '' as $$
+  select '(token|secret|password|passwd|api_key|private_key|account_number'
+      || '|(^|_)nid(_|$)|national_id|birth_certificate|passport_no|passport_number)'
+$$;
+
+-- Value nulled, NAME kept in changed_fields — the §5.3 "health and medical
+-- fields on student records" row, plus religion (COMPLIANCE-PDPA §4.1 marks
+-- both S = sensitive under the Act).
+create or replace function app.audit_sensitive_pattern()
+returns text language sql immutable set search_path = '' as $$
+  select '((^|_)(religion|blood_group|disability)(_|$)|allerg|medical|health|diagnos|medication)'
+$$;
+
+-- Masked, not dropped — §5.3 "Personal contact data (email, phone): masked at
+-- write time". Anchored to the END of the name so `email_digest` (a
+-- preference, not an address) is left alone while `contact_email` is masked.
+create or replace function app.audit_contact_pattern()
+returns text language sql immutable set search_path = '' as $$
+  select '(^|_)(email|phone|mobile|msisdn)$'
+$$;
+
+create or replace function app.mask_email(p_value text)
+returns text language sql immutable set search_path = '' as $$
+  select case
+    when p_value is null then null
+    when position('@' in p_value) = 0 then '***'
+    when position('@' in p_value) <= 2 then '***' || substr(p_value, position('@' in p_value))
+    else left(p_value, 1) || '***' || substr(p_value, position('@' in p_value))
+  end
+$$;
+
+create or replace function app.mask_phone(p_value text)
+returns text language sql immutable set search_path = '' as $$
+  select case
+    when p_value is null then null
+    when length(p_value) < 9 then repeat('*', length(p_value))
+    else left(p_value, 5) || '*****' || right(p_value, 3)
+  end
+$$;
+
+comment on function app.audit_secret_pattern() is
+  'Column-name regex whose matches are dropped from every audited payload '
+  '(name AND value), whatever a table passed as its explicit p_redact list. '
+  'Mirrored by SECRET_COLUMN_PATTERN in packages/domain/src/audit/redact.ts.';
+comment on function app.audit_sensitive_pattern() is
+  'Column-name regex whose matches are NULLED but whose names survive in '
+  'changed_fields (F-ID-09 §5.3 health/religion row).';
+comment on function app.audit_contact_pattern() is
+  'Column-name regex whose matches are masked at write time (§5.3 contact '
+  'row, acceptance criterion 10) rather than dropped: an owner still needs '
+  'to see WHICH address an invitation went to, not the address itself.';
 
 -- =====================================================================
 -- 4. app.audit_action_catalog — F-ID-09 §5.1
@@ -375,7 +444,11 @@ declare
   v_actor_kind     public.audit_actor_kind;
   v_severity       public.audit_severity;
   v_changed_fields text[];
+  v_all_keys       text[];
   v_secret_keys    text[];
+  v_sensitive_keys text[];
+  v_contact_keys   text[];
+  v_masked         text;
 begin
   if tg_op = 'DELETE' then
     v_before := to_jsonb(old);
@@ -395,29 +468,67 @@ begin
   -- so a nulled free-text field's NAME still survives even though its value
   -- does not. Secret-deny-listed columns are removed from this list below,
   -- alongside their values.
-  select array_agg(k) into v_changed_fields
+  select array_agg(k) into v_all_keys
   from (
     select jsonb_object_keys(coalesce(v_before, '{}'::jsonb)) as k
     union
     select jsonb_object_keys(coalesce(v_after, '{}'::jsonb))
-  ) all_keys
+  ) all_keys;
+
+  select array_agg(k) into v_changed_fields
+  from unnest(coalesce(v_all_keys, '{}'::text[])) as k
   where v_before -> k is distinct from v_after -> k;
 
-  -- Universal secret deny-list (F-ID-09 §5.3 / acceptance criterion 9):
-  -- independent of whatever a table remembers to pass as its explicit
-  -- redact list. Column NAME and value are both dropped everywhere.
+  -- Universal deny-list (F-ID-09 §5.3 / acceptance criterion 9): independent
+  -- of whatever a table remembers to pass as its explicit redact list.
+  -- Applied over v_all_keys, NOT v_changed_fields — on an UPDATE, before/after
+  -- still carry every UNCHANGED column, so a payload scanned by changed-key
+  -- only would write an untouched push_token or NID into the trail verbatim.
   select array_agg(k) into v_secret_keys
-  from unnest(coalesce(v_changed_fields, '{}'::text[])) as k
-  where k ~* '(token|secret|password|account_number)';
+  from unnest(coalesce(v_all_keys, '{}'::text[])) as k
+  where k ~* app.audit_secret_pattern();
 
   if v_secret_keys is not null then
     foreach v_col in array v_secret_keys loop
       v_before := v_before - v_col;
       v_after  := v_after  - v_col;
+      v_changed_fields := array_remove(v_changed_fields, v_col);
     end loop;
-    select array_agg(k) into v_changed_fields
-    from unnest(v_changed_fields) as k
-    where not (k = any (v_secret_keys));
+  end if;
+
+  -- Health / religion: value nulled, NAME kept (§5.3) — an owner may know
+  -- that a medical field changed and who changed it, never what it says.
+  select array_agg(k) into v_sensitive_keys
+  from unnest(coalesce(v_all_keys, '{}'::text[])) as k
+  where k ~* app.audit_sensitive_pattern();
+
+  if v_sensitive_keys is not null then
+    foreach v_col in array v_sensitive_keys loop
+      if v_before ? v_col then v_before := jsonb_set(v_before, array[v_col], 'null'::jsonb); end if;
+      if v_after  ? v_col then v_after  := jsonb_set(v_after,  array[v_col], 'null'::jsonb); end if;
+    end loop;
+  end if;
+
+  -- Contact data: masked at write time (§5.3, acceptance criterion 10) so an
+  -- invitation's recipient reads `r***@gmail.com` in the trail and nowhere
+  -- does a full address or mobile number survive a row change.
+  select array_agg(k) into v_contact_keys
+  from unnest(coalesce(v_all_keys, '{}'::text[])) as k
+  where k ~* app.audit_contact_pattern();
+
+  if v_contact_keys is not null then
+    foreach v_col in array v_contact_keys loop
+      if jsonb_typeof(v_before -> v_col) = 'string' then
+        v_masked := case when v_col ~* 'email$' then app.mask_email(v_before ->> v_col)
+                         else app.mask_phone(v_before ->> v_col) end;
+        v_before := jsonb_set(v_before, array[v_col], to_jsonb(v_masked));
+      end if;
+      if jsonb_typeof(v_after -> v_col) = 'string' then
+        v_masked := case when v_col ~* 'email$' then app.mask_email(v_after ->> v_col)
+                         else app.mask_phone(v_after ->> v_col) end;
+        v_after := jsonb_set(v_after, array[v_col], to_jsonb(v_masked));
+      end if;
+    end loop;
   end if;
 
   -- Per-table explicit drop list (TG_ARGV[0]): token hashes, checksums,
@@ -485,8 +596,12 @@ $$;
 comment on function app.tg_audit() is
   'F-ID-09 Part 1: the generic row-change writer, extended with severity '
   '(from app.audit_action_catalog), actor_kind, changed_fields (computed '
-  'pre-redaction) and a universal secret deny-list on top of the per-table '
-  'TG_ARGV[0] list. TG_ARGV[1] nulls free-text columns while keeping their '
+  'pre-redaction) and three universal column classes applied to the WHOLE '
+  'payload on top of the per-table TG_ARGV[0] list: '
+  'app.audit_secret_pattern() drops name and value, '
+  'app.audit_sensitive_pattern() (health, religion) nulls the value, and '
+  'app.audit_contact_pattern() masks it. TG_ARGV[1] nulls per-table '
+  'free-text columns while keeping their '
   'names in changed_fields. subject_user_id is intentionally left null here '
   '— which column means "the person this event is about" is table-specific '
   'and is set by explicit app.log_audit_event() calls instead.';
@@ -526,8 +641,11 @@ comment on function app.attach_audit(regclass, text[], text[]) is
   'everywhere. p_redact columns are dropped entirely; p_freetext columns '
   'are nulled but their names remain in changed_fields (F-ID-09 §5.3).';
 
-revoke all on function app.attach_audit(regclass, text[], text[]) from public;
-grant execute on function app.attach_audit(regclass, text[], text[]) to authenticated, service_role;
+-- Migration-time DDL tool, granted to nobody — see §13 for why handing this
+-- to `authenticated` would let any signed-in user re-attach (or effectively
+-- disable) the audit trigger on any table in the database.
+revoke all on function app.attach_audit(regclass, text[], text[])
+  from public, anon, authenticated, service_role;
 
 -- =====================================================================
 -- 7. Attach the trigger to every tenant table — idempotent re-assertion of
@@ -668,8 +786,17 @@ declare
   v_headers     jsonb;
   v_correlation text;
 begin
-  v_headers := nullif(current_setting('request.headers', true), '')::jsonb;
-  if v_headers is null then
+  -- The hook runs before EVERY statement of every request, so it must never
+  -- be the thing that fails one. A missing setting is normal (a direct `pg`
+  -- connection); a non-JSON value should not turn into a 500 either, so the
+  -- cast is caught rather than assumed safe.
+  begin
+    v_headers := nullif(current_setting('request.headers', true), '')::jsonb;
+  exception when others then
+    return;
+  end;
+
+  if v_headers is null or jsonb_typeof(v_headers) <> 'object' then
     return;
   end if;
 
@@ -750,6 +877,20 @@ comment on view public.audit_events_view is
 revoke all on public.audit_events_view from anon, authenticated;
 grant select on public.audit_events_view to authenticated;
 
+-- The view is the ONLY read surface for the deprecated columns (F-ID-09 §3).
+-- 0003 granted table-wide `select` on the base table, which left the raw
+-- `ip` / `user_agent` of every pre-0005 row reachable with a one-word change
+-- to a `.from()` call — the view's omission of them was a convention, not a
+-- boundary. A COLUMN-level grant makes it a boundary while keeping the
+-- `security_invoker` view working, which needs the INVOKER to hold select on
+-- the columns it reads (a blanket revoke would break the view itself).
+revoke select on public.audit_events from anon, authenticated;
+grant select (
+  id, workspace_id, actor_id, actor_kind, action, table_name, row_id,
+  subject_user_id, before, after, changed_fields, correlation_id,
+  request_ip_hash, user_agent_family, severity, created_at
+) on public.audit_events to authenticated;
+
 -- =====================================================================
 -- 11. RLS — widen audit_events_select to the subject-of-the-event branch
 --     (F-ID-09 §2/§3: "a teacher can always see that they were removed and
@@ -772,6 +913,62 @@ create policy audit_events_select on public.audit_events
 --     0001 pg_cron extension block so a Postgres without pg_cron (CI, any
 --     self-hosted target) never fails the migration.
 -- =====================================================================
+-- 0003 shipped the body with a floor of ONE year and 0003's own grants sweep
+-- handed `execute` to `authenticated`. Together those let any signed-in user
+-- run `select app.purge_expired_audit_events(1)` and, because the function is
+-- SECURITY DEFINER, satisfy BOTH halves of app.tg_append_only()'s exception —
+-- deleting six years of every tenant's trail. Replace the body with the
+-- 7-year floor F-ID-09 §5.2 and DATA-MODEL §7.1 actually specify; §13 below
+-- withdraws the grant.
+create or replace function app.purge_expired_audit_events(p_keep_years integer default 7)
+returns integer
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_deleted integer;
+begin
+  if p_keep_years < 7 then
+    raise exception 'the audit retention window is 7 years and may not be shortened at the call site'
+      using errcode = '22023';
+  end if;
+
+  -- app.is_privileged_context() reads `current_user`, which SECURITY DEFINER
+  -- has already rewritten to this function's owner by the time the body runs —
+  -- so it can never say "no" from in here. The `role` GUC is what PostgREST
+  -- actually sets per request (`set local role authenticated`) and a definer
+  -- context does NOT reset it, so it still names the caller.
+  if coalesce(current_setting('role', true), 'none') in ('authenticated', 'anon') then
+    raise exception 'the retention purge runs only in a privileged context'
+      using errcode = '42501';
+  end if;
+
+  perform set_config('app.retention_purge', 'on', true);
+
+  delete from public.audit_events
+   where created_at < now() - make_interval(years => p_keep_years);
+  get diagnostics v_deleted = row_count;
+
+  perform set_config('app.retention_purge', 'off', true);
+
+  perform app.log_audit_event(
+    'retention.audit_events_purged', null, 'public.audit_events', null, null,
+    jsonb_build_object('deleted', v_deleted, 'keep_years', p_keep_years));
+
+  return v_deleted;
+end;
+$$;
+
+comment on function app.purge_expired_audit_events(integer) is
+  'Rolling 7-year retention, the ONLY path that may DELETE from an '
+  'append-only table. Three independent conditions: a 7-year floor that the '
+  'caller cannot argue down, app.is_privileged_context() evaluated BEFORE '
+  'the definer context could mask it, and the app.retention_purge flag that '
+  'only this function sets. Scheduled monthly with pg_cron; not executable '
+  'by `authenticated` (§13).';
+
 do $$
 begin
   perform cron.schedule(
@@ -790,20 +987,52 @@ end
 $$;
 
 -- =====================================================================
--- 13. Function grants sweep (same pattern as 0001/0003/0004)
+-- 13. Function grants sweep — same pattern as 0001/0003/0004, with the
+--     exclusion list those sweeps were missing.
+--
+--     `authenticated` holds `usage` on schema `app` (0001 §5), so a blanket
+--     "grant execute on every app function to authenticated" hands a signed-in
+--     user every SECURITY DEFINER helper in the schema. Three of them are DDL
+--     or retention tools, and all three break this feature's own guarantees:
+--
+--       app.purge_expired_audit_events  — deletes from an append-only table
+--       app.attach_audit                — `drop trigger` then recreate, so a
+--                                         caller can re-attach the audit
+--                                         trigger to any table with a redact
+--                                         list that hides what they are about
+--                                         to do (or attach it to
+--                                         `audit_events` itself and recurse)
+--       app.attach_append_only /
+--       app.attach_updated_at /
+--       app.attach_freeze_workspace     — same shape, same reach
+--
+--     These are migration-time tools. Nothing in apps/ or packages/ calls
+--     them at runtime, so they are granted to nobody: a migration runs as the
+--     owner and pg_cron runs as the scheduling superuser.
 -- =====================================================================
 do $$
 declare
   f record;
+  v_privileged text[] := array[
+    'purge_expired_audit_events',
+    'attach_audit',
+    'attach_append_only',
+    'attach_updated_at',
+    'attach_freeze_workspace'
+  ];
 begin
   for f in
-    select p.oid::regprocedure as sig
+    select p.oid::regprocedure as sig, p.proname
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'app'
   loop
     execute format('revoke all on function %s from public', f.sig);
-    execute format('grant execute on function %s to authenticated, service_role', f.sig);
+    if f.proname = any (v_privileged) then
+      execute format('revoke all on function %s from anon, authenticated, service_role', f.sig);
+    else
+      execute format('grant execute on function %s to authenticated, service_role', f.sig);
+    end if;
   end loop;
 end
 $$;

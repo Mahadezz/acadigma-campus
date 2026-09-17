@@ -94,4 +94,45 @@ describe("buildDiffRows", () => {
       { field: "role", before: null, after: "teacher", isRedactedValue: false },
     ])
   })
+
+  // Rows written before the redaction migration hold raw contact and health
+  // values. The viewer is the last place that could disclose them, so it
+  // applies the same §5.3 matrix the trigger now applies at write time.
+  it("masks a contact column rather than rendering the address", () => {
+    const rows = buildDiffRows(
+      { email: "rahim@gmail.com" },
+      { email: "karim@yahoo.com" },
+      ["email"]
+    )
+    expect(rows).toEqual([
+      {
+        field: "email",
+        before: "r***@gmail.com",
+        after: "k***@yahoo.com",
+        isRedactedValue: false,
+      },
+    ])
+  })
+
+  it("nulls a health or religion column and labels it redacted", () => {
+    const rows = buildDiffRows(
+      { blood_group: "O+", allergies: "peanuts" },
+      { blood_group: "A+", allergies: "peanuts, dust" },
+      ["blood_group", "allergies"]
+    )
+    expect(rows.every((r) => r.isRedactedValue)).toBe(true)
+    expect(rows.every((r) => r.before === null && r.after === null)).toBe(true)
+    // The field NAMES still survive — that is the whole point of §5.3's
+    // "field names only" rule.
+    expect(rows.map((r) => r.field)).toEqual(["blood_group", "allergies"])
+  })
+
+  it("never renders an NID even though it is not literally named 'token'", () => {
+    const rows = buildDiffRows(
+      { nid_number: "1234567890" },
+      { nid_number: "0987654321" },
+      ["nid_number"]
+    )
+    expect(rows).toEqual([])
+  })
 })

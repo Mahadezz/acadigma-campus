@@ -9,7 +9,7 @@
 -- threading, and the read-time redaction view.
 -- =====================================================================
 begin;
-select plan(30);
+select plan(56);
 
 create schema if not exists tests;
 
@@ -108,12 +108,20 @@ create table tests.scratch (
   workspace_id uuid,
   title text,
   api_token text,
-  notes text
+  notes text,
+  nid_number text,
+  blood_group text,
+  contact_email text,
+  contact_phone text,
+  email_digest text
 );
 select app.attach_audit('tests.scratch', '{}', array['notes']);
 
-insert into tests.scratch (workspace_id, title, api_token, notes)
-values ('11111111-1111-1111-1111-111111111111', 'Row one', 'sk-super-secret', 'a private note');
+insert into tests.scratch (
+  workspace_id, title, api_token, notes,
+  nid_number, blood_group, contact_email, contact_phone, email_digest)
+values ('11111111-1111-1111-1111-111111111111', 'Row one', 'sk-super-secret', 'a private note',
+        '1990123456789', 'O+', 'rahim@gmail.com', '+8801712345678', 'daily');
 
 select ok(
   (select not (after ? 'api_token') from public.audit_events
@@ -135,6 +143,33 @@ select ok(
     where table_name = 'tests.scratch' and action = 'scratch.insert' order by id desc limit 1),
   'but its VALUE is nulled, never the actual text');
 
+-- The other two universal classes, on the same INSERT.
+select ok(
+  (select not (after ? 'nid_number') from public.audit_events
+    where table_name = 'tests.scratch' and action = 'scratch.insert' order by id desc limit 1),
+  'an NID column is dropped outright — COMPLIANCE-PDPA §4.1 forbids storing the number anywhere');
+
+select ok(
+  (select (after ->> 'blood_group') is null and 'blood_group' = any(changed_fields)
+     from public.audit_events
+    where table_name = 'tests.scratch' and action = 'scratch.insert' order by id desc limit 1),
+  'a health column is nulled but its NAME survives (F-ID-09 §5.3 "field names only")');
+
+select is(
+  (select after ->> 'contact_email' from public.audit_events
+    where table_name = 'tests.scratch' and action = 'scratch.insert' order by id desc limit 1),
+  'r***@gmail.com', 'a contact email is masked at write time, not dropped (acceptance criterion 10)');
+
+select is(
+  (select after ->> 'contact_phone' from public.audit_events
+    where table_name = 'tests.scratch' and action = 'scratch.insert' order by id desc limit 1),
+  '+8801*****678', 'a contact phone is masked at write time');
+
+select is(
+  (select after ->> 'email_digest' from public.audit_events
+    where table_name = 'tests.scratch' and action = 'scratch.insert' order by id desc limit 1),
+  'daily', 'the contact pattern is end-anchored, so email_digest is a setting, not an address');
+
 update tests.scratch set title = 'Row one (renamed)'
  where workspace_id = '11111111-1111-1111-1111-111111111111';
 
@@ -142,6 +177,27 @@ select ok(
   (select 'title' = any(changed_fields) from public.audit_events
     where table_name = 'tests.scratch' and action = 'scratch.update' order by id desc limit 1),
   'an ordinary column change is recorded in changed_fields');
+
+-- Regression (PR #6 review): the deny-list is applied to the WHOLE payload,
+-- not just the changed keys. An UPDATE that touches only `title` still carries
+-- every other column in before/after, so a changed-keys-only scan wrote the
+-- untouched secret straight through.
+select ok(
+  (select not (before ? 'api_token') and not (after ? 'api_token')
+     from public.audit_events
+    where table_name = 'tests.scratch' and action = 'scratch.update' order by id desc limit 1),
+  'an UNCHANGED secret column is stripped from an update payload too');
+
+select ok(
+  (select not (before ? 'nid_number') and not (after ? 'nid_number')
+     from public.audit_events
+    where table_name = 'tests.scratch' and action = 'scratch.update' order by id desc limit 1),
+  'and so is an unchanged NID column');
+
+select is(
+  (select after ->> 'contact_email' from public.audit_events
+    where table_name = 'tests.scratch' and action = 'scratch.update' order by id desc limit 1),
+  'r***@gmail.com', 'an unchanged contact column is masked on an update payload too');
 
 -- =====================================================================
 -- 4. actor_kind and severity on a trigger-written row
@@ -275,6 +331,94 @@ select ok(
 select lives_ok(
   $$select app.attach_audit('public.workspaces')$$,
   'attach_audit is idempotent — re-running it on an already-attached table does not error');
+
+-- =====================================================================
+-- 11. Append-only survives this migration (F-ID-09 §5.2, acceptance
+--     criteria 1-2). 04_audit_append_only.sql proved it for 0003's shape;
+--     0005 adds six columns, a view and a purge schedule, each of which is a
+--     way the guarantee could have been widened by accident.
+-- =====================================================================
+select ok(not has_table_privilege('authenticated', 'public.audit_events', 'update'),
+          'after 0005, authenticated still holds no UPDATE on audit_events');
+select ok(not has_table_privilege('authenticated', 'public.audit_events', 'delete'),
+          'after 0005, authenticated still holds no DELETE on audit_events');
+select ok(not has_table_privilege('service_role', 'public.audit_events', 'delete'),
+          'and neither does service_role');
+
+-- The view is SELECT-only: a writable view would be a way around the guard
+-- trigger, since `security_invoker` would push the write down to the table.
+select ok(not has_table_privilege('authenticated', 'public.audit_events_view', 'update'),
+          'audit_events_view is not a writable back door into audit_events');
+select ok(not has_table_privilege('authenticated', 'public.audit_events_view', 'delete'),
+          'audit_events_view grants no DELETE either');
+
+-- The raw ip / user_agent columns are unreachable even on the base table:
+-- the view omitting them is now a privilege boundary, not a convention.
+select ok(not has_column_privilege('authenticated', 'public.audit_events', 'ip', 'select'),
+          'authenticated cannot select the deprecated raw ip column');
+select ok(not has_column_privilege('authenticated', 'public.audit_events', 'user_agent', 'select'),
+          'authenticated cannot select the deprecated raw user_agent column');
+
+select throws_ok(
+  $$update public.audit_events set action = 'tampered' where id = (select min(id) from public.audit_events)$$,
+  '42501',
+  null,
+  'the guard trigger still refuses UPDATE after the new columns were added');
+
+select throws_ok(
+  $$delete from public.audit_events where id = (select min(id) from public.audit_events)$$,
+  '42501',
+  null,
+  'and still refuses DELETE outside the retention purge');
+
+-- DECISION-LOG D-36(9): prove the outcome, not just the exception.
+select ok(
+  not exists(select 1 from public.audit_events where action = 'tampered'),
+  'and neither attempt left a single modified row behind');
+
+-- =====================================================================
+-- 12. The retention purge is the ONLY delete path, and it is not reachable
+--     from an application role (§5.2 "no UPDATE or DELETE grant to any role
+--     in application context").
+-- =====================================================================
+select ok(
+  not has_function_privilege('authenticated', 'app.purge_expired_audit_events(integer)', 'execute'),
+  'authenticated cannot execute the retention purge');
+select ok(
+  not has_function_privilege('service_role', 'app.purge_expired_audit_events(integer)', 'execute'),
+  'neither can service_role — the purge is pg_cron''s, not the application''s');
+select ok(
+  not has_function_privilege('authenticated', 'app.attach_audit(regclass, text[], text[])', 'execute'),
+  'and authenticated cannot re-attach or re-configure the audit trigger on any table');
+
+select throws_ok(
+  $$select app.purge_expired_audit_events(1)$$,
+  '22023',
+  null,
+  'the 7-year retention window cannot be argued down at the call site');
+
+-- =====================================================================
+-- 13. app.pre_request is safe when the header is absent or malformed, and
+--     cannot be steered by anything other than a well-formed uuid.
+-- =====================================================================
+select set_config('app.correlation_id', '77777777-7777-4777-8777-777777777777', true);
+
+select set_config('request.headers', '', true);
+select lives_ok($$select app.pre_request()$$,
+  'app.pre_request is a no-op when request.headers is absent (a direct pg connection)');
+
+select set_config('request.headers', 'not json at all', true);
+select lives_ok($$select app.pre_request()$$,
+  'a malformed request.headers value is swallowed, never turned into a failed request');
+
+select set_config('request.headers', '{"x-correlation-id":"'' or 1=1 --"}', true);
+select lives_ok($$select app.pre_request()$$,
+  'a hostile x-correlation-id is rejected rather than parsed');
+
+select is(
+  current_setting('app.correlation_id', true),
+  '77777777-7777-4777-8777-777777777777',
+  'none of the three left app.correlation_id anything but what it already was');
 
 select * from finish();
 rollback;
