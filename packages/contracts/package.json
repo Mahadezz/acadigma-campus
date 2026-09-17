@@ -12,7 +12,8 @@
     "./settings": "./src/settings.ts",
     "./notifications": "./src/notifications.ts",
     "./plans": "./src/plans.ts",
-    "./identity/auth": "./src/identity/auth.ts"
+    "./identity/auth": "./src/identity/auth.ts",
+    "./identity/workspace": "./src/identity/workspace.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
