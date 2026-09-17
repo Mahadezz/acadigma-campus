@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Postinstall scripts are code execution at install time, so they are opt-in.
+# These three need theirs: esbuild and unrs-resolver fetch their native binary, and
+# @sentry/cli its uploader.
+onlyBuiltDependencies:
+  - "@sentry/cli"
+  - esbuild
+  - unrs-resolver

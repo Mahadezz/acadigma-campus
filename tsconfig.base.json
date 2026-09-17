@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Acadigma Campus — base",
+
+  /* The compiler options live in the shared preset so every package reaches them
+     by package name. A relative climb out of packages/config would resolve through
+     pnpm's symlink farm and break for any tool that does not call realpath. */
+  "extends": "@acadigma/config/tsconfig/base"
+}
