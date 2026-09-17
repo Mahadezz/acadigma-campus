@@ -56,6 +56,27 @@ const securityHeaders = [
   },
 ]
 
+/**
+ * Routes where the URL itself is a bearer credential.
+ *
+ * SECURITY.md §3 "Finding 6 — further hardening" requires `Referrer-Policy:
+ * no-referrer` on exactly this route class, stricter than the site-wide
+ * `strict-origin-when-cross-origin` above: `/reset?token_hash=…` and
+ * `/api/auth/callback?token_hash=…` carry a single-use recovery/confirmation
+ * token in the query string, and `strict-origin-when-cross-origin` still sends
+ * the **full URL** on same-origin navigations and subresource requests. One
+ * cross-origin asset or outbound link on those pages leaks the token.
+ *
+ * The header is the second line of defence, not the first — F-ID-01 §4.5 should
+ * still be revisited to move the token out of the query string entirely.
+ */
+const TOKEN_BEARING_ROUTES = ["/reset", "/api/auth/callback", "/verify"]
+
+const noReferrerHeaders = [
+  ...securityHeaders.filter((h) => h.key !== "Referrer-Policy"),
+  { key: "Referrer-Policy", value: "no-referrer" },
+]
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -89,7 +110,16 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }]
+    return [
+      // More specific first: Next applies every matching entry, and the later
+      // `Referrer-Policy` wins, so the token-bearing routes must come after the
+      // catch-all to actually override it.
+      { source: "/:path*", headers: securityHeaders },
+      ...TOKEN_BEARING_ROUTES.map((source) => ({
+        source,
+        headers: noReferrerHeaders,
+      })),
+    ]
   },
 }
 

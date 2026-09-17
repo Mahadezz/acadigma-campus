@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto"
+
 import { defineConfig, devices } from "@playwright/test"
 
 /**
@@ -66,5 +68,13 @@ export default defineConfig({
     stderr: "pipe",
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
+    env: {
+      ...process.env,
+      // Auth throttling refuses to run in production mode without an unguessable
+      // salt (F-ID-01 review). The e2e server is a throwaway process, so an
+      // ephemeral salt is correct here; a real deployment sets THROTTLE_KEY_SALT.
+      THROTTLE_KEY_SALT:
+        process.env.THROTTLE_KEY_SALT ?? randomBytes(32).toString("hex"),
+    },
   },
 })

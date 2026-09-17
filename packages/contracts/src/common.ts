@@ -108,7 +108,12 @@ export const timezoneSchema = z.string().min(1).default("Asia/Dhaka")
 // Order matters: Zod applies string transforms in chain order, so trimming and
 // lower-casing must come *before* the format check — otherwise a pasted address with
 // a trailing space is rejected as malformed.
-export const emailSchema = z.string().trim().toLowerCase().email().max(255)
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email("Enter a valid email address.")
+  .max(255)
 
 /** Bangladeshi mobile numbers in E.164: +8801XXXXXXXXX. */
 export const phoneSchema = z

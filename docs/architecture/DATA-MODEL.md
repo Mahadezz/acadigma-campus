@@ -305,6 +305,14 @@ Deliberately has **no** `workspace_id`: preferences follow the person across sch
 **Indexes** — `unique (user_id, device_id)`: a re-install upserts. `unique (platform, push_token) where push_token is not null and revoked_at is null`: an FCM token maps to one live registration, otherwise a handed-down phone receives someone else's notifications. `(user_id) where revoked_at is null`: the push fan-out.
 **RLS** — class **U1**. **Triggers** — `updated_at`. **Soft delete** — `revoked_at`.
 
+### 1.8a `auth_throttle` _(F-ID-01 Parts 1-4)_
+
+`key text` **PK**, `window_started_at`, `attempts`, `blocked_until`. Not `user_id`-scoped: the key is a salted hash of an email, phone or IP (`login-email:sha256(...)`, `register:sha256(...)`), computed in `apps/web/lib/request-context.ts`, so a rate-limit bucket exists for attempts against an address that has no account yet — the case a `user_id` foreign key cannot express.
+
+**Tenant key** — none (pre-membership; F-ID-01 §3). **Indexes** — `(blocked_until) where blocked_until is not null`: the pg_cron sweep. **RLS** — class **S1**: RLS enabled, zero policies, no grants to `anon`/`authenticated` at all — reachable only through `public.throttle_status`, `public.throttle_record_failure` and `public.throttle_reset` (SECURITY DEFINER, migration `20260917020000_identity_auth.sql`). **Soft delete** — no; `throttle_reset` deletes the row outright on a successful attempt.
+
+These three functions live in `public`, not `app`, unlike the rest of this feature's helpers: `supabase/config.toml` exposes only `public` (and `graphql_public`) through PostgREST, so an `app.*` function is unreachable from `supabase-js`. `public.log_auth_event` (same migration) is the same shape — a narrow, action-allowlisted wrapper around `app.log_audit_event` (§7.1) for the seven account-level events this feature writes (`account.registered`, `account.email_verified`, `account.login`, `account.logout`, `account.password_reset`, `account.password_changed`, `session.revoked_all`).
+
 ### 1.9 `seller_profiles` _(commerce migration)_
 
 1:1 with `profiles`. Selling is a per-user capability; there is no seller workspace (PRODUCT-DECISIONS 1.8), so this table and everything hanging off it are **user-scoped, not tenant-scoped** (§0.5).

@@ -1,14 +1,12 @@
 import { redirect } from "next/navigation"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@acadigma/ui/components/card"
+import { AuthCard } from "@acadigma/ui/primitives/auth-card"
+import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
+
+import { LanguageToggle } from "../language-toggle"
 
 import { LoginForm } from "./login-form"
 
@@ -21,9 +19,9 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>
+  searchParams: Promise<{ next?: string; error?: string }>
 }) {
-  const { next } = await searchParams
+  const { next, error } = await searchParams
 
   // Already signed in? Skip the form. getUser() re-validates with the auth server,
   // unlike getSession(), which only reads the cookie.
@@ -33,17 +31,29 @@ export default async function LoginPage({
   } = await supabase.auth.getUser()
   if (user) redirect("/app/dashboard")
 
+  const { locale, t } = await getMessages()
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl">Sign in</CardTitle>
-        <CardDescription>
-          Use the email your school invited you with.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <LoginForm next={next} />
-      </CardContent>
-    </Card>
+    <AuthCard
+      title={t.auth.login.title}
+      subtitle={t.auth.login.subtitle}
+      footer={
+        <>
+          <a href="/register" className="block text-center">
+            {t.auth.login.createAccountLink}
+          </a>
+          <LanguageToggle current={locale} />
+        </>
+      }
+    >
+      {error === "link_expired" ? (
+        <div className="mb-4">
+          <InlineAlert tone="error">
+            {t.auth.login.linkExpiredBanner}
+          </InlineAlert>
+        </div>
+      ) : null}
+      <LoginForm t={t.auth.login} network={t.auth.network} next={next} />
+    </AuthCard>
   )
 }

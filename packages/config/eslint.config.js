@@ -115,6 +115,9 @@ export const acadigmaEslintConfig = [
       // App Router only: there is no `pages/` directory for this rule to check,
       // and leaving it on makes the plugin warn about its absence on every run.
       "@next/next/no-html-link-for-pages": "off",
+      // React Compiler diagnostics: we do not run the compiler, and react-hook-form's
+      // `watch()` trips "incompatible library" on every form. Re-enable if the compiler is adopted.
+      "react-hooks/incompatible-library": "off",
     },
   },
 

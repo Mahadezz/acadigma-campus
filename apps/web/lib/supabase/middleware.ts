@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { WORKSPACE_HEADER, createServerClient } from "@acadigma/db"
 
+import { WORKSPACE_COOKIE } from "../workspace-cookie"
+
 /** Route prefixes that require a session. Everything else is public. */
 const PROTECTED_PREFIXES = [
   "/app",
@@ -9,10 +11,10 @@ const PROTECTED_PREFIXES = [
   "/family",
   "/sell",
   "/platform",
+  // ARCHITECTURE §2 (account) route group: user-level settings, added by
+  // F-ID-01 Part 4 (Security > Change password).
+  "/account",
 ]
-
-/** Cookie the workspace switcher writes. Mirrored into the request header below. */
-const WORKSPACE_COOKIE = "acadigma_workspace"
 
 /**
  * Refreshes the Supabase session on every request, mirrors the active-workspace

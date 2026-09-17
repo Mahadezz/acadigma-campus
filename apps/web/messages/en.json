@@ -64,32 +64,107 @@
     "itemsCount": "{count, plural, one {# item} other {# items}}"
   },
   "auth": {
+    "languageToggle": {
+      "bn": "বাংলা",
+      "en": "English"
+    },
+    "network": {
+      "offline": "You appear to be offline. Check your connection and try again.",
+      "unavailable": "We could not reach Acadigma Campus. Try again in a moment."
+    },
     "login": {
-      "title": "Log in",
-      "subtitle": "Access your account",
+      "title": "Sign in",
+      "subtitle": "Use the email your school invited you with.",
       "emailLabel": "Email",
       "phoneLabel": "Phone number",
       "passwordLabel": "Password",
-      "submitButton": "Log in",
-      "forgotPasswordLink": "Forgot password?",
+      "rememberLabel": "Remember this device",
+      "submitButton": "Sign in",
+      "submittingButton": "Signing in…",
+      "forgotPasswordLink": "Forgot?",
       "magicLinkButton": "Log in with a link",
-      "otpButton": "Log in with OTP"
+      "otpButton": "Sign in with a code",
+      "createAccountLink": "New here? Create an account",
+      "errorInvalidCredentials": "Email or password is incorrect.",
+      "errorSuspended": "This account is suspended. Contact support to continue.",
+      "errorUnverified": "Confirm your email to finish signing in.",
+      "linkExpiredBanner": "That link has expired or was already used. Sign in, or request a new one.",
+      "throttled": "Too many attempts. Try again in {seconds}s."
     },
     "register": {
       "title": "Create an account",
-      "subtitle": "Join Acadigma Campus",
+      "subtitle": "Set up your Acadigma Campus account.",
+      "fullNameLabel": "Full name",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
       "confirmPasswordLabel": "Confirm password",
-      "submitButton": "Register",
-      "termsNotice": "By registering you agree to the terms of service"
+      "confirmPasswordMismatch": "Passwords do not match.",
+      "termsLabel": "I agree to the Terms of Service and Privacy Policy",
+      "submitButton": "Create account",
+      "submittingButton": "Creating account…",
+      "alreadyHaveAccount": "Already have an account? Sign in",
+      "errorEmailTaken": "This email already has an account — sign in or reset your password.",
+      "errorEmailTakenLoginLink": "Sign in"
     },
     "verify": {
-      "title": "Verify",
+      "title": "Check your email",
       "checkYourEmail": "Check your email",
-      "otpSentMessage": "An OTP has been sent to your phone"
+      "maskedEmailMessage": "We sent a link to {email}",
+      "instructions": "Click the link to verify your address. It expires in 24 hours.",
+      "resendButton": "Resend email",
+      "resendCooldown": "Resend in {seconds}s",
+      "resentToast": "Verification email sent again.",
+      "changeEmailLink": "Change email",
+      "otpSentMessage": "An OTP has been sent to your phone",
+      "linkExpiredTitle": "This link has expired",
+      "linkExpiredMessage": "Verification links expire after 24 hours. Send yourself a new one.",
+      "requestNewLinkButton": "Send a new link",
+      "verifiedRedirecting": "Email verified. Taking you to onboarding…"
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "subtitle": "We'll email you a link to set a new one.",
+      "emailLabel": "Email",
+      "submitButton": "Send reset link",
+      "submittingButton": "Sending…",
+      "successMessage": "If that address has an account, we've sent a reset link.",
+      "backToLogin": "Back to sign in"
     },
     "reset": {
-      "title": "Reset password",
-      "submitButton": "Change password"
+      "title": "Set a new password",
+      "subtitle": "Choose a new password for your account.",
+      "newPasswordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "submitButton": "Change password",
+      "submittingButton": "Changing password…",
+      "successMessage": "Your password was changed. Other devices have been signed out.",
+      "invalidTokenTitle": "This link has expired",
+      "invalidTokenMessage": "Password reset links are single-use and expire after 60 minutes.",
+      "requestNewLinkButton": "Send a new link"
+    },
+    "changePassword": {
+      "title": "Change password",
+      "description": "Requires your current password.",
+      "currentPasswordLabel": "Current password",
+      "newPasswordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "signOutOthersLabel": "Sign out of other devices",
+      "submitButton": "Change password",
+      "submittingButton": "Changing password…",
+      "successMessage": "Your password was changed."
+    },
+    "passwordStrength": {
+      "label": "Password strength",
+      "0": "Too weak",
+      "1": "Weak",
+      "2": "Fair",
+      "3": "Good",
+      "4": "Strong",
+      "too_short": "Must be at least 12 characters.",
+      "too_long": "That password is too long.",
+      "too_common": "This password is too common.",
+      "too_similar_to_identity": "Can't contain your name or email.",
+      "too_weak": "Add more length or mix letters, numbers and symbols."
     },
     "logout": {
       "confirmMessage": "Are you sure you want to log out?",

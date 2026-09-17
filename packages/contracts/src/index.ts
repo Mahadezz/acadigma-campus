@@ -1,6 +1,6 @@
 export * from "./common"
 export * from "./errors"
-export * from "./notifications"
+export * from "./identity/auth"
 export * from "./plans"
 export * from "./result"
 export * from "./settings"

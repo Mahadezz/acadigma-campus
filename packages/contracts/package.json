@@ -11,7 +11,8 @@
     "./common": "./src/common.ts",
     "./settings": "./src/settings.ts",
     "./notifications": "./src/notifications.ts",
-    "./plans": "./src/plans.ts"
+    "./plans": "./src/plans.ts",
+    "./identity/auth": "./src/identity/auth.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
