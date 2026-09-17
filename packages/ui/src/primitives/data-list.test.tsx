@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
+import { triggerIntersection } from "../../vitest.setup"
+
 import { DataList, type DataListColumn } from "./data-list"
 
 type Row = { id: string; name: string; grade: string }
@@ -129,6 +131,52 @@ describe("DataList — cursor pagination", () => {
     expect(
       screen.queryByRole("button", { name: "Load more" })
     ).not.toBeInTheDocument()
+  })
+
+  it("calls onLoadMore when the phone sentinel intersects (auto-load, no click)", () => {
+    const onLoadMore = vi.fn()
+    const { container } = render(
+      <DataList
+        items={rows}
+        columns={columns}
+        getRowId={(row) => row.id}
+        renderCardTitle={(row) => row.name}
+        hasMore
+        onLoadMore={onLoadMore}
+      />
+    )
+    // The phone and desktop trees both mount (CSS, not JS, hides one in
+    // jsdom) — each has its own sentinel and its own IntersectionObserver
+    // now that they no longer share a single ref.
+    const phoneSentinel = container.querySelector(
+      '[data-load-more-scope="phone"]'
+    )
+    expect(phoneSentinel).not.toBeNull()
+    expect(onLoadMore).not.toHaveBeenCalled()
+    triggerIntersection(phoneSentinel!)
+    expect(onLoadMore).toHaveBeenCalledTimes(1)
+  })
+
+  it("gives the phone and desktop sentinels independent DOM nodes", () => {
+    const { container } = render(
+      <DataList
+        items={rows}
+        columns={columns}
+        getRowId={(row) => row.id}
+        renderCardTitle={(row) => row.name}
+        hasMore
+        onLoadMore={() => {}}
+      />
+    )
+    const phoneSentinel = container.querySelector(
+      '[data-load-more-scope="phone"]'
+    )
+    const desktopSentinel = container.querySelector(
+      '[data-load-more-scope="desktop"]'
+    )
+    expect(phoneSentinel).not.toBeNull()
+    expect(desktopSentinel).not.toBeNull()
+    expect(phoneSentinel).not.toBe(desktopSentinel)
   })
 })
 

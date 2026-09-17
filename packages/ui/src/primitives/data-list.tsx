@@ -108,7 +108,6 @@ export function DataList<T>({
   const shouldVirtualize = virtualize ?? items.length > VIRTUALIZE_THRESHOLD
   const cardScrollRef = React.useRef<HTMLDivElement>(null)
   const tableScrollRef = React.useRef<HTMLDivElement>(null)
-  const sentinelRef = React.useRef<HTMLDivElement>(null)
 
   const cardRange = useVirtualRange({
     containerRef: cardScrollRef,
@@ -125,24 +124,6 @@ export function DataList<T>({
     enabled: shouldVirtualize,
   })
 
-  // Infinite scroll: the phone's non-scroll equivalent is the always-visible
-  // "Load more" row rendered below (§5.6 — "a visible Load more as the
-  // non-scroll equivalent").
-  React.useEffect(() => {
-    if (!onLoadMore || !hasMore || isLoadingMore) return
-    const node = sentinelRef.current
-    if (!node || typeof IntersectionObserver === "undefined") return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) onLoadMore()
-      },
-      { rootMargin: "300px" }
-    )
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [onLoadMore, hasMore, isLoadingMore])
-
   if (isLoading) {
     return <DataListSkeleton rows={loadingRows} className={className} />
   }
@@ -158,24 +139,6 @@ export function DataList<T>({
   const tableItems = shouldVirtualize
     ? items.slice(tableRange.startIndex, tableRange.endIndex + 1)
     : items
-
-  const loadMore = onLoadMore ? (
-    <div className="flex flex-col items-center gap-2 py-3">
-      {isLoadingMore ? (
-        <span className="text-muted-foreground text-xs">Loading…</span>
-      ) : hasMore ? (
-        <button
-          type="button"
-          onClick={onLoadMore}
-          className="text-primary hover:underline focus-visible:ring-ring min-h-11 rounded-md px-3 text-sm font-medium outline-none focus-visible:ring-2"
-        >
-          Load more
-        </button>
-      ) : null}
-      {/* Auto-fires onLoadMore ~300px before it scrolls into view. */}
-      <div ref={sentinelRef} aria-hidden="true" className="h-px w-full" />
-    </div>
-  ) : null
 
   return (
     <div className={className}>
@@ -221,9 +184,25 @@ export function DataList<T>({
             />
           ) : null}
         </ul>
-        {!shouldVirtualize ? loadMore : null}
+        {!shouldVirtualize && onLoadMore ? (
+          <LoadMoreControl
+            scope="phone"
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={onLoadMore}
+          />
+        ) : null}
       </div>
-      {shouldVirtualize ? <div className="lg:hidden">{loadMore}</div> : null}
+      {shouldVirtualize && onLoadMore ? (
+        <div className="lg:hidden">
+          <LoadMoreControl
+            scope="phone"
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={onLoadMore}
+          />
+        </div>
+      ) : null}
 
       {/* Desktop: the same data as a table. */}
       <div
@@ -273,8 +252,80 @@ export function DataList<T>({
             ) : null}
           </TableBody>
         </Table>
-        {loadMore}
+        {onLoadMore ? (
+          <LoadMoreControl
+            scope="desktop"
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={onLoadMore}
+          />
+        ) : null}
       </div>
+    </div>
+  )
+}
+
+/**
+ * One "Load more" row + its own sentinel and `IntersectionObserver`.
+ * Instantiated once per breakpoint tree (phone, desktop) so each gets its own
+ * ref — the phone and desktop trees both mount simultaneously (CSS, not JS,
+ * decides which is visible via `lg:hidden`/`hidden lg:block`), so sharing one
+ * ref between two DOM nodes means the observer only ever watches whichever
+ * one React attached last, and the other breakpoint's auto-load-on-scroll
+ * silently never fires.
+ */
+function LoadMoreControl({
+  scope,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+}: {
+  /** Distinguishes the phone vs desktop instance; test-only hook. */
+  scope: "phone" | "desktop"
+  hasMore: boolean
+  isLoadingMore: boolean
+  onLoadMore: () => void
+}) {
+  const sentinelRef = React.useRef<HTMLDivElement>(null)
+
+  // Infinite scroll: the phone's non-scroll equivalent is the always-visible
+  // "Load more" row rendered below (§5.6 — "a visible Load more as the
+  // non-scroll equivalent").
+  React.useEffect(() => {
+    if (!hasMore || isLoadingMore) return
+    const node = sentinelRef.current
+    if (!node || typeof IntersectionObserver === "undefined") return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) onLoadMore()
+      },
+      { rootMargin: "300px" }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [onLoadMore, hasMore, isLoadingMore])
+
+  return (
+    <div className="flex flex-col items-center gap-2 py-3">
+      {isLoadingMore ? (
+        <span className="text-muted-foreground text-xs">Loading…</span>
+      ) : hasMore ? (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          className="text-primary hover:underline focus-visible:ring-ring min-h-11 rounded-md px-3 text-sm font-medium outline-none focus-visible:ring-2"
+        >
+          Load more
+        </button>
+      ) : null}
+      {/* Auto-fires onLoadMore ~300px before it scrolls into view. */}
+      <div
+        ref={sentinelRef}
+        aria-hidden="true"
+        data-load-more-scope={scope}
+        className="h-px w-full"
+      />
     </div>
   )
 }
