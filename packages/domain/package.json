@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Pure business rules: permissions, money, id formatting, workspace time. No I/O.",
+  "description": "Pure business rules: permissions, money, id formatting, workspace time, plans/limits. No I/O.",
   "exports": {
     ".": "./src/index.ts",
     "./permissions": "./src/permissions.ts",
@@ -11,7 +11,8 @@
     "./ids": "./src/ids.ts",
     "./time": "./src/time.ts",
     "./settings": "./src/settings/index.ts",
-    "./notifications": "./src/notifications/index.ts"
+    "./notifications": "./src/notifications/index.ts",
+    "./plans": "./src/plans/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
