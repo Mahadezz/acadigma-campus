@@ -54,7 +54,9 @@ async function fetchRow(
 
   if (error) return err(UNAVAILABLE)
   if (!data) return err(NOT_FOUND)
-  return ok(data as unknown as SchoolProfileRow)
+  return ok(
+    data as unknown as SchoolProfileRow /* TODO(types): replace with generated Database row type once `pnpm db:types` runs against the project (types.generated.ts is a placeholder) */
+  )
 }
 
 /** School-scoped settings, resolved against the shipped defaults (F-OP-07 §5.1). */

@@ -16,6 +16,17 @@ import { readFile, readdir } from "node:fs/promises"
 import { join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 
+function parseJsonOrFail(file, text) {
+  try {
+    return JSON.parse(text)
+  } catch (error) {
+    console.error(
+      `::error file=${file}::invalid JSON in locale file: ${error.message}`
+    )
+    process.exit(1)
+  }
+}
+
 const repoRoot = fileURLToPath(new URL("..", import.meta.url))
 const CATALOG_FILE = join(
   repoRoot,
@@ -135,7 +146,7 @@ function readAtPath(root, segments) {
 const messageTrees = await Promise.all(
   MESSAGE_FILES.map(async (file) => ({
     file,
-    tree: JSON.parse(await readFile(file, "utf8")),
+    tree: parseJsonOrFail(file, await readFile(file, "utf8")),
   }))
 )
 

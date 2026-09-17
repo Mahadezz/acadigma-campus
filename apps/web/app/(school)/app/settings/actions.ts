@@ -68,11 +68,7 @@ export async function updateSchoolSettings(
   }
 
   const supabase = await createClient()
-  const result = await updateSchoolSettingsRepo(
-    supabase,
-    ctx,
-    parsed.data as SchoolSettingsPatch
-  )
+  const result = await updateSchoolSettingsRepo(supabase, ctx, parsed.data)
   if (result.ok) revalidatePath(SETTINGS_PATH)
   return result
 }
