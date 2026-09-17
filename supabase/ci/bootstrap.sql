@@ -83,7 +83,11 @@ grant usage on schema extensions to anon, authenticated, service_role;
 -- calling more `tests.*` helpers (e.g. `tests.logout()`). Without USAGE on
 -- that not-yet-created schema, those later calls fail with "permission
 -- denied for schema tests". Postgres 15+ default privileges for schemas
--- cover it for every schema `postgres` creates from here on, the same way
--- the managed platform's role setup does.
+-- cover it for every schema `postgres` creates from here on.
+--
+-- `authenticated` only, not `anon`/`service_role`: migrations grant schema
+-- access deliberately (e.g. `app` is authenticated/service_role only, never
+-- anon — 02_tenant_isolation.sql asserts that), and a blanket default would
+-- silently override that for every schema created after this point.
 alter default privileges for role postgres grant usage on schemas
-  to anon, authenticated, service_role;
+  to authenticated;
