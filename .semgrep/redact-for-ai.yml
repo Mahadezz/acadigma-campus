@@ -9,10 +9,28 @@
 # Both rules here are heuristics over syntax, not a real taint analysis of
 # "personal data reached this call" — Semgrep cannot know that. What they
 # enforce is the *shape* every prompt builder must have: a `redactForAI(`
-# call textually before the AI call, in the same function body. A reviewer
+# call textually before the AI call, in the same function body. The
+# pattern-not-inside blocks below repeat the flagged call ($CLIENT/$ADAPTER
+# .$METHOD(...)) *after* `redactForAI(...)` inside the same statement-order
+# template — Semgrep's `...` ellipsis in a matched statement sequence only
+# matches code in that literal order, so a redactForAI(...) call that exists
+# in the function but *after* the AI call (or on an unrelated, discarded
+# value) does not satisfy the exclusion and the rule still fires. A reviewer
 # still checks that the redacted value (not the original object) is what
 # actually gets sent — see docs/engineering/SECURITY.md §8 and the PR
 # checklist.
+#
+# Verification: `semgrep` and `docker` are both unavailable in this sandbox
+# (no local install, no daemon), so the before/after-ordering behavior below
+# was not exercised against a live `semgrep scan` here. CI's `security` job
+# (`.github/workflows/ci.yml`) runs `semgrep scan --config .semgrep` on every
+# PR and is the source of truth that this rule actually fires on an
+# unredacted call and stays quiet on a correctly-ordered one — treat a green
+# `security` check on a PR touching this file as that verification, and if
+# in doubt, temporarily add a deliberately unredacted
+# `client.messages.create(...)` call with no preceding `redactForAI(` in the
+# same function to a scratch branch and confirm CI flags it before relying on
+# a change here.
 rules:
   - id: redact-before-anthropic-sdk-call
     languages: [typescript, javascript]
@@ -28,10 +46,16 @@ rules:
       - pattern-either:
           - pattern: $CLIENT.messages.create(...)
           - pattern: $CLIENT.messages.stream(...)
+      # Each block below re-states the matched call as `$CLIENT.messages.$METHOD(...)`
+      # *after* `redactForAI(...)` in the same ellipsis-separated statement
+      # sequence, so the exclusion only applies when redaction happens first —
+      # see the header note on ordering.
       - pattern-not-inside: |
           function $F(...) {
             ...
             redactForAI(...)
+            ...
+            $CLIENT.messages.$METHOD(...)
             ...
           }
       - pattern-not-inside: |
@@ -39,11 +63,15 @@ rules:
             ...
             redactForAI(...)
             ...
+            $CLIENT.messages.$METHOD(...)
+            ...
           }
       - pattern-not-inside: |
           const $F = (...) => {
             ...
             redactForAI(...)
+            ...
+            $CLIENT.messages.$METHOD(...)
             ...
           }
       - pattern-not-inside: |
@@ -51,11 +79,15 @@ rules:
             ...
             redactForAI(...)
             ...
+            $CLIENT.messages.$METHOD(...)
+            ...
           }
       - pattern-not-inside: |
           $F(...) {
             ...
             redactForAI(...)
+            ...
+            $CLIENT.messages.$METHOD(...)
             ...
           }
     paths:
@@ -76,10 +108,16 @@ rules:
           - pattern: $ADAPTER.generate(...)
           - pattern: $ADAPTER.complete(...)
           - pattern: $ADAPTER.run(...)
+      # As above: each exclusion re-states the call as `$ADAPTER.$METHOD(...)`
+      # *after* `redactForAI(...)` so a redactForAI(...) call that exists but
+      # comes later in the function (or is unrelated/discarded) does not
+      # satisfy it.
       - pattern-not-inside: |
           function $F(...) {
             ...
             redactForAI(...)
+            ...
+            $ADAPTER.$METHOD(...)
             ...
           }
       - pattern-not-inside: |
@@ -87,17 +125,23 @@ rules:
             ...
             redactForAI(...)
             ...
+            $ADAPTER.$METHOD(...)
+            ...
           }
       - pattern-not-inside: |
           const $F = (...) => {
             ...
             redactForAI(...)
             ...
+            $ADAPTER.$METHOD(...)
+            ...
           }
       - pattern-not-inside: |
           const $F = async (...) => {
             ...
             redactForAI(...)
+            ...
+            $ADAPTER.$METHOD(...)
             ...
           }
       - metavariable-regex:
