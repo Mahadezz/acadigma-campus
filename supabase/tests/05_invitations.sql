@@ -148,11 +148,18 @@ select throws_ok(
   format('select app.accept_invitation(%L)', current_setting('tests.token')),
   '22023', null,
   'an expired invitation is rejected');
-select tests.logout();
 
-select is(
-  (select status::text from public.workspace_invitations where email = 'invitee@test.local'),
-  'expired', 'and the row is flipped to expired on the way out');
+-- F-ID-04 §4.3: the redeem function enforces expiry on every attempt
+-- regardless of the stored status; persisting status='expired' is the
+-- nightly sweep's job, not a guarantee of the rejected redeem call (whose
+-- own UPDATE is rolled back along with the exception it raises). So redeem
+-- again and expect the same rejection, rather than asserting a column write
+-- this function never durably makes.
+select throws_ok(
+  format('select app.accept_invitation(%L)', current_setting('tests.token')),
+  '22023', null,
+  'and redeeming the same expired token again still raises the same rejection');
+select tests.logout();
 
 -- =====================================================================
 -- join by invite code — always PENDING, always `teacher`

@@ -143,15 +143,21 @@ select is(
   0, 'and cannot read another workspace''s audit log');
 select tests.logout();
 
+-- Scoped to the school workspace: handle_new_user() also bootstraps each
+-- caller's own personal workspace (+ membership + subscription), which they
+-- own and may legitimately read the audit trail of. That is not the leak
+-- under test here — school A's audit log is.
 select tests.login('aaaaaaaa-0000-0000-0000-000000000002');
 select is(
-  (select count(*)::int from public.audit_events),
+  (select count(*)::int from public.audit_events
+    where workspace_id = '11111111-1111-1111-1111-111111111111'),
   0, 'an admin cannot read the audit log — it has to be able to record what an admin did');
 select tests.logout();
 
 select tests.login('aaaaaaaa-0000-0000-0000-000000000003');
 select is(
-  (select count(*)::int from public.audit_events),
+  (select count(*)::int from public.audit_events
+    where workspace_id = '11111111-1111-1111-1111-111111111111'),
   0, 'a teacher cannot read the audit log');
 select tests.logout();
 
