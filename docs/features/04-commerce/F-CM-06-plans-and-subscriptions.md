@@ -255,7 +255,7 @@ active ──(cancel)──► active with cancel_at_period_end ──(period en
 
 ### 5.2 Prices
 
-- Yearly is seeded at `10 × monthly` (PRODUCT-DECISIONS 5.1) but **stored independently** in `price_yearly_paisa`, so the owner can break the ratio without a code change. A seed test asserts the 10× relationship at v1 and will fail loudly if the owner changes it — at which point the test is updated, deliberately.
+- Yearly is seeded at `11 × monthly` — annual prepay is **one month free (8.3 %)**, not two (D-41 / MARKET-STRATEGY §c; this supersedes PRODUCT-DECISIONS 5.1's 10×). It is **stored independently** in `price_yearly_paisa`, so the owner can break the ratio without a code change. `supabase/tests/07_plans_limits.sql` asserts the 11× relationship and the full ৳2,200 / ৳4,900 / ৳18,000 grid, and will fail loudly if the owner changes it — at which point the test is updated, deliberately.
 - All prices are whole taka (`price_paisa % 100 = 0`, check constraint).
 - Every priced plan must satisfy `price_paisa >= 1000` (the SSLCommerz ৳10.00 minimum, F-CM-01 §5.8) — trivially true, but constrained.
 - Yearly Enterprise would breach the ৳500,000 gateway ceiling only above ৳500k; `is_contact_only` keeps it off self-serve anyway.
@@ -443,7 +443,7 @@ Tests: every override requires a reason and writes an event + audit row; a compe
 
 ## 9. Acceptance criteria
 
-1. **Given** a new school workspace **when** it is created **then** a `subscriptions` row exists with plan Pro, `status='trialing'`, `trial_ends_at = created_at + 14 days`, and the school immediately has Pro limits and modules — with no card collected.
+1. **Given** a new school workspace **when** it is created **then** a `subscriptions` row exists with plan Pro, `status='trialing'`, `trial_ends_at = created_at + 30 days` (D-28 resolution — 14 days contains no exam, no fee cycle and no month-end), and the school immediately has Pro limits and modules — with no card collected.
 2. **Given** a trial with 3 days left **when** the daily tick runs **then** exactly one email and one in-app banner are produced, naming the limits the school would exceed on Free.
 3. **Given** a trial that expires **when** the tick runs **then** the plan becomes Free, `subscription_events` records `trial_expired`, and a row-count comparison before and after shows **zero** rows deleted in any table.
 4. **Given** a Free school with 340 students **when** an admin opens the student list **then** all 340 are visible and exportable; **when** they tap _Add student_ **then** it is blocked with _"You have 340 students; Free includes 150."_ and an Upgrade link.
