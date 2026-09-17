@@ -365,6 +365,14 @@ select throws_ok(
 
 select tests.logout();
 
+-- The deterministic max_teachers=75 boundary above (needed for the
+-- within_limit tests just run) was a fixture override, not seeded state —
+-- revert it now so the "no school plan caps teachers" assertion below sees
+-- the real seed rather than this test's own scaffolding.
+delete from public.plan_limits
+ where plan_id = (select id from public.plans where code = 'pro')
+   and key = 'max_teachers';
+
 -- =====================================================================
 -- The seeded price grid is D-41 / MARKET-STRATEGY section c, verbatim.
 --
