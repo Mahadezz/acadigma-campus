@@ -2,7 +2,7 @@
   "name": "acadigma-campus",
   "version": "0.0.0",
   "private": true,
-  "description": "Acadigma Campus \u2014 school operations platform (Next.js 15 + Supabase).",
+  "description": "Acadigma Campus — school operations platform (Next.js 15 + Supabase).",
   "license": "UNLICENSED",
   "packageManager": "pnpm@10.34.5",
   "engines": {
@@ -44,5 +44,11 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.70.0",
     "vitest": "3.2.7"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss@<8.5.18": ">=8.5.18",
+      "browserslist@<4.28.7": ">=4.28.7"
+    }
   }
 }

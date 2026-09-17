@@ -174,8 +174,8 @@ select is(
   (select monthly_paisa from public.plan_prices
     where plan_id = (select id from public.plans where code = 'pro')
       and student_min = 0),
-  799900::bigint,
-  '...and the Pro 0-300 band still costs Tk 7,999');
+  490000::bigint,
+  '...and the Pro 0-300 band still costs Tk 4,900 (D-39 seed)');
 
 select tests.logout();
 
