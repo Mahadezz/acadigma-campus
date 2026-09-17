@@ -284,9 +284,13 @@ jobs:
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: build
+          # Bare directory patterns paired with a `!` exclusion match zero files
+          # (a known actions/upload-artifact glob quirk), which uploaded no
+          # artifact at all and left lighthouse/e2e downloading a name that
+          # never existed. Explicit `/**` globs fix the match.
           path: |
-            apps/web/.next
-            !apps/web/.next/cache
+            apps/web/.next/**
+            !apps/web/.next/cache/**
           retention-days: 3
 
   # Runs on pull_request, never pull_request_target, so a fork PR cannot reach secrets.
