@@ -24,5 +24,6 @@ minimumReleaseAgeExclude:
 
 # Security overrides (advisories 2026-09-17): force patched versions across the tree.
 overrides:
+  jsdom: 30.0.1 # transitive ^30 resolved to a <2-day-old release (cooldown)
   postcss: 8.5.28
   browserslist: 4.29.0
