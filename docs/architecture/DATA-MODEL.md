@@ -200,7 +200,7 @@ Not tenant-scoped: a person exists independently of any workspace.
 
 ### 1.3 `school_profiles` — 1:1 with `workspaces` where `type='school'`
 
-PK **is** `workspace_id`, so there is no second index and the row cannot move tenants.
+PK **is** `workspace_id`, so there is no second index. A primary key is still UPDATE-able in Postgres, though — an earlier version of this line claimed the row therefore "cannot move tenants", which is wrong; `app.attach_freeze_workspace()` is what actually makes it immutable (added by F-ID-03 Part 1's `20260917020300_tenancy_hardening.sql`, closing a real gap: an owner/admin of two workspaces could otherwise `UPDATE` this row's `workspace_id` to merge one school's profile onto another they also control, since the `with check` role predicate alone is satisfied on both ends).
 
 Typed columns: **identity** (`legal_name`, `eiin`, `board`, `school_type`, `medium`, `motto`) · **address** (`address_line1/2`, `city` default `Dhaka`, `district`, `postal_code`, `country` default `BD`) · **contact** (`contact_email`, `contact_phone`, `website`) · **calendar** (`timezone` default `Asia/Dhaka`, `working_days smallint[]` default `{6,7,1,2,3,4}` = Sat–Thu in ISO day numbers, `date_format`) · **finance** (`currency` `BDT`, `bin_number`, `vat_number`) · **AI** (`ai_billing_model` — `shared_pool` or `individual_allocation`, owner-changeable per 5.3).
 
@@ -216,7 +216,7 @@ Check constraints keep `working_days` non-empty and inside `{1..7}`, and every p
 | `messaging_policy`  | `SchoolMessagingPolicy`  | `parents_can_reply` (true), `announcement_roles` (`["owner","admin"]`), `quiet_hours` (`{}`)                                                                                                |
 | `branding`          | `SchoolBranding`         | `logo_file_id`, `header_line_1`, `header_line_2`, `accent`, `report_footer` — drives every report header, so no report ever hardcodes a school name                                         |
 
-**RLS** — class **T2**, with SELECT widened to every active member (a teacher needs the timezone and the working week). **Triggers** — `updated_at`, audit. **Soft delete** — no (cascades from `workspaces`).
+**RLS** — class **T2**, with SELECT widened to every active member (a teacher needs the timezone and the working week). **Triggers** — `updated_at`, audit, `app.tg_freeze_workspace()` (F-ID-03 Part 1). **Soft delete** — no (cascades from `workspaces`).
 
 ### 1.4 `workspace_members` — the only source of membership
 
