@@ -124,7 +124,10 @@ select is((select count(*)::int from attempted), 0,
 -- reason. Borrow School B's owner, who the RLS select policy does admit,
 -- for the read-back only (mirrors 03_role_escalation.sql's admin-actor
 -- pattern for the same check); the write attempts stay attributed to the
--- teacher.
+-- teacher. tests.login() is invoker-rights (not security definer) so it
+-- can only read auth.users while running as postgres — logout() first,
+-- same as every other actor switch in this suite.
+select tests.logout();
 select tests.login('bbbbbbbb-0000-0000-0000-000000000001');
 
 select is(
@@ -133,6 +136,7 @@ select is(
   'trialing',
   '...and it is still on trial');
 
+select tests.logout();
 select tests.login('bbbbbbbb-0000-0000-0000-000000000002');
 
 -- The mirror of the UPDATE case: `authenticated` also holds DELETE on
@@ -145,6 +149,7 @@ with attempted as (
 select is((select count(*)::int from attempted), 0,
           'a teacher deleting their school''s subscription affects ZERO rows...');
 
+select tests.logout();
 select tests.login('bbbbbbbb-0000-0000-0000-000000000001');
 
 select is(
@@ -153,6 +158,7 @@ select is(
   1,
   '...and the subscription row survives');
 
+select tests.logout();
 select tests.login('bbbbbbbb-0000-0000-0000-000000000002');
 
 -- =====================================================================
