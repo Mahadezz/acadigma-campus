@@ -47,6 +47,10 @@ export const ACTIONS = [
   "billing.read",
   "billing.manage",
   "settings.manage",
+  // The F-OP-07 jsonb policy blobs (attendance/academic/cover/messaging/branding)
+  // are {owner,admin} per school_profiles RLS — narrower than "settings.manage",
+  // which is reserved for owner-only surfaces (modules, danger zone).
+  "policies.manage",
   // Everyday use
   "reports.read",
   "messages.send",
@@ -81,12 +85,14 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "billing.read",
     "billing.manage",
     "settings.manage",
+    "policies.manage",
     "reports.read",
     "messages.send",
     "ai.use",
     "listing.create",
   ],
-  // Runs the school day to day. Money and workspace settings stay with the owner.
+  // Runs the school day to day. Money and owner-only settings (modules, danger
+  // zone) stay with the owner; the F-OP-07 policy blobs do not (RLS §3.1).
   admin: [
     "attendance.read",
     "attendance.write",
@@ -99,6 +105,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.read",
     "members.manage",
     "billing.read",
+    "policies.manage",
     "reports.read",
     "messages.send",
     "ai.use",

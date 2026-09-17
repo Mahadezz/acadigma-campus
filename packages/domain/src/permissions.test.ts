@@ -90,12 +90,20 @@ describe("role shapes", () => {
     expect(can("teacher", "marks.write")).toBe(true)
   })
 
-  it("keeps money and workspace settings with the owner", () => {
+  it("keeps money and owner-only workspace settings with the owner", () => {
     expect(can("owner", "billing.manage")).toBe(true)
     expect(can("owner", "settings.manage")).toBe(true)
     expect(can("admin", "billing.manage")).toBe(false)
     expect(can("admin", "settings.manage")).toBe(false)
     expect(can("admin", "billing.read")).toBe(true)
+  })
+
+  it("lets owner and admin both manage the F-OP-07 policy blobs (school_profiles RLS §3.1)", () => {
+    expect(can("owner", "policies.manage")).toBe(true)
+    expect(can("admin", "policies.manage")).toBe(true)
+    expect(can("teacher", "policies.manage")).toBe(false)
+    expect(can("staff", "policies.manage")).toBe(false)
+    expect(can("parent", "policies.manage")).toBe(false)
   })
 
   it("gives office staff no write action at all", () => {

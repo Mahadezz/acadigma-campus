@@ -1,13 +1,13 @@
 # F-ID-07 — Notifications
 
-|                  |                                                                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Area             | auth                                                                                                                                             |
-| Status           | planned                                                                                                                                          |
-| Owner branch     | `feat/identity-notifications`                                                                                                                    |
-| Depends on       | F-ID-01, F-ID-02, F-ID-03                                                                                                                        |
-| Plan             | `docs/plan/ROADMAP.md` chunk 2                                                                                                                   |
-| Base44 reference | `docs/reference/base44-inventory/01-auth-tenancy-personal.md` §3 rows 19, 22, 29; §5.1 B3; §5.2 D7; §5.3 W3, W4, W5, W7; PRODUCT-DECISIONS §1.11 |
+|                  |                                                                                                                                                                                                                                                                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Area             | auth                                                                                                                                                                                                                                                                                                                   |
+| Status           | in-progress — v1 event catalogue (`packages/domain/src/notifications/catalog.ts`), contracts mirror and the CI parity test landed (`feat/m0-settings-notifications`); `notification_event_catalog` migration, catalogue-aware `app.notify`, RLS and pgTAP not started. See `docs/test-reports/2026-09-17-M0-gates.md`. |
+| Owner branch     | `feat/identity-notifications`                                                                                                                                                                                                                                                                                          |
+| Depends on       | F-ID-01, F-ID-02, F-ID-03                                                                                                                                                                                                                                                                                              |
+| Plan             | `docs/plan/ROADMAP.md` chunk 2                                                                                                                                                                                                                                                                                         |
+| Base44 reference | `docs/reference/base44-inventory/01-auth-tenancy-personal.md` §3 rows 19, 22, 29; §5.1 B3; §5.2 D7; §5.3 W3, W4, W5, W7; PRODUCT-DECISIONS §1.11                                                                                                                                                                       |
 
 ## 1. Purpose
 
