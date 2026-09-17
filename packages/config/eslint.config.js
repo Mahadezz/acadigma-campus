@@ -123,6 +123,34 @@ export const acadigmaEslintConfig = [
     files: ["**/*.config.{js,mjs,ts}", "scripts/**/*.mjs", "**/*.workspace.ts"],
     rules: { "no-console": "off" },
   },
+
+  // D-26(5): only the AI adapter may import the Anthropic SDK directly. Every
+  // other call site goes through `packages/adapters/ai`'s exported functions,
+  // which are the only place `redactForAI()` is guaranteed to sit in front of
+  // the call (enforced alongside `.semgrep/redact-for-ai.yml`).
+  {
+    files: ["**/*.{js,mjs,ts,tsx}"],
+    ignores: ["packages/adapters/ai/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["../../packages/*"],
+              message:
+                "Import workspace packages by name (@acadigma/…), not by relative path.",
+            },
+            {
+              group: ["@anthropic-ai/sdk", "@anthropic-ai/sdk/*"],
+              message:
+                "Only packages/adapters/ai may import @anthropic-ai/sdk (DECISION-LOG D-26(5)). Call the adapter's exported functions instead, which redact through redactForAI() first.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]
 
 export default acadigmaEslintConfig

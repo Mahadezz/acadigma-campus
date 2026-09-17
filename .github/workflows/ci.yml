@@ -333,7 +333,7 @@ jobs:
           docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:1.177.0 \
             semgrep scan --metrics=off --error --sarif --output semgrep.sarif \
             --config p/typescript --config p/react --config p/nextjs \
-            --config p/owasp-top-ten --config p/secrets
+            --config p/owasp-top-ten --config p/secrets --config .semgrep
 
       # Code scanning (and therefore SARIF upload) requires GitHub Advanced
       # Security, which is not enabled on this private repo. Upload the SARIF

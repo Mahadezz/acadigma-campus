@@ -4,10 +4,16 @@ import { cn } from "../lib/utils"
 
 /**
  * Sticky header: workspace switcher and back button on the left, the screen title in
- * the middle, notifications and overflow on the right (ARCHITECTURE §6).
+ * the middle, notifications and overflow on the right (DESIGN-SYSTEM §3.1).
  *
  * The title is an `<h1>`, so every screen has exactly one — the landmark structure
- * axe checks for in the e2e suite.
+ * axe checks for in the e2e suite. Padded for `env(safe-area-inset-top)` so the
+ * bar clears the notch/status bar in the installed PWA, and uses `--z-topbar`
+ * so it stacks correctly under sheets/dialogs/the offline banner (§2.8).
+ *
+ * Sticky, not fixed (§3.1): it scrolls away on long reading pages and is kept
+ * on screen only by pages that also pass a persistent `fixed` wrapper — that
+ * choice belongs to the page, not this component.
  */
 export type TopBarProps = {
   title: React.ReactNode
@@ -30,9 +36,10 @@ export function TopBar({
   return (
     <header
       className={cn(
-        "bg-background/95 border-border supports-[backdrop-filter]:bg-background/75 sticky top-0 z-30 border-b backdrop-blur",
+        "bg-background/95 border-border supports-[backdrop-filter]:bg-background/75 sticky top-0 z-[var(--z-topbar)] border-b backdrop-blur",
         className
       )}
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="flex h-14 items-center gap-2 px-4 sm:px-6 lg:px-8">
         {leading ? (

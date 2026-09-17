@@ -1,0 +1,113 @@
+# Custom Semgrep rules for the AI boundary (DECISION-LOG D-34, amended
+# "redactForAI() moves to M0/M1 and fails closed"; COMPLIANCE-PDPA §5.2;
+# docs/engineering/SECURITY.md §8).
+#
+# Wired into CI via `--config .semgrep` in the `security` job
+# (`.github/workflows/ci.yml`), alongside the registry rulesets and
+# `.semgrep/acadigma.yml`.
+#
+# Both rules here are heuristics over syntax, not a real taint analysis of
+# "personal data reached this call" — Semgrep cannot know that. What they
+# enforce is the *shape* every prompt builder must have: a `redactForAI(`
+# call textually before the AI call, in the same function body. A reviewer
+# still checks that the redacted value (not the original object) is what
+# actually gets sent — see docs/engineering/SECURITY.md §8 and the PR
+# checklist.
+rules:
+  - id: redact-before-anthropic-sdk-call
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      This calls the Anthropic SDK without a `redactForAI(` call earlier in the
+      same function. Every prompt sent to Anthropic must be built from the
+      allow-listed projection `redactForAI()` returns — never from the raw
+      student/guardian record (DECISION-LOG D-34; COMPLIANCE-PDPA §5.2).
+      Call `redactForAI(...)` on the input first, and build the prompt from its
+      result.
+    patterns:
+      - pattern-either:
+          - pattern: $CLIENT.messages.create(...)
+          - pattern: $CLIENT.messages.stream(...)
+      - pattern-not-inside: |
+          function $F(...) {
+            ...
+            redactForAI(...)
+            ...
+          }
+      - pattern-not-inside: |
+          async function $F(...) {
+            ...
+            redactForAI(...)
+            ...
+          }
+      - pattern-not-inside: |
+          const $F = (...) => {
+            ...
+            redactForAI(...)
+            ...
+          }
+      - pattern-not-inside: |
+          const $F = async (...) => {
+            ...
+            redactForAI(...)
+            ...
+          }
+      - pattern-not-inside: |
+          $F(...) {
+            ...
+            redactForAI(...)
+            ...
+          }
+    paths:
+      include:
+        - "packages/adapters/ai/**"
+        - "apps/web/**"
+
+  - id: redact-before-ai-adapter-call
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      This calls into the AI adapter (`packages/adapters/ai`) without a
+      `redactForAI(` call earlier in the same function. Build the payload from
+      `redactForAI()`'s result, not from the raw record (DECISION-LOG D-34;
+      COMPLIANCE-PDPA §5.2).
+    patterns:
+      - pattern-either:
+          - pattern: $ADAPTER.generate(...)
+          - pattern: $ADAPTER.complete(...)
+          - pattern: $ADAPTER.run(...)
+      - pattern-not-inside: |
+          function $F(...) {
+            ...
+            redactForAI(...)
+            ...
+          }
+      - pattern-not-inside: |
+          async function $F(...) {
+            ...
+            redactForAI(...)
+            ...
+          }
+      - pattern-not-inside: |
+          const $F = (...) => {
+            ...
+            redactForAI(...)
+            ...
+          }
+      - pattern-not-inside: |
+          const $F = async (...) => {
+            ...
+            redactForAI(...)
+            ...
+          }
+      - metavariable-regex:
+          metavariable: $ADAPTER
+          regex: (?i)(ai|anthropic|claude)
+    paths:
+      include:
+        - "apps/web/**"
+        - "packages/**"
+      exclude:
+        - "packages/adapters/ai/**"
+        - "**/*.test.ts"
+        - "**/*.test.tsx"

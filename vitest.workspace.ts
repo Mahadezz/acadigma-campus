@@ -38,4 +38,13 @@ export default defineWorkspace([
       include: ["{app,lib,components}/**/*.test.{ts,tsx}"],
     },
   },
+  {
+    test: {
+      name: "ui",
+      root: "./packages/ui",
+      environment: "jsdom",
+      include: ["src/**/*.test.{ts,tsx}"],
+      setupFiles: ["./vitest.setup.ts"],
+    },
+  },
 ])

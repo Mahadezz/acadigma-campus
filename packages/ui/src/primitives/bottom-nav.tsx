@@ -1,8 +1,61 @@
+"use client"
+
 import * as React from "react"
 
+import {
+  ArrowLeftRightIcon,
+  BanknoteIcon,
+  BarChart3Icon,
+  BookOpenIcon,
+  BriefcaseIcon,
+  Building2Icon,
+  CalendarDaysIcon,
+  CheckSquareIcon,
+  ClipboardCheckIcon,
+  ClipboardListIcon,
+  CreditCardIcon,
+  EllipsisIcon,
+  FileTextIcon,
+  FolderIcon,
+  GraduationCapIcon,
+  HandCoinsIcon,
+  HelpCircleIcon,
+  HomeIcon,
+  LayoutGridIcon,
+  MegaphoneIcon,
+  MessageSquareIcon,
+  PackageIcon,
+  PrinterIcon,
+  ReceiptIcon,
+  SettingsIcon,
+  ShieldCheckIcon,
+  ShieldIcon,
+  StoreIcon,
+  TrendingUpIcon,
+  UserCheckIcon,
+  UsersIcon,
+  WalletIcon,
+  type LucideIcon,
+} from "lucide-react"
 import { Slot } from "radix-ui"
 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "../components/ui/sheet"
 import { cn } from "../lib/utils"
+
+import {
+  aggregateMoreBadgeCount,
+  useFilteredNav,
+  type IconName,
+  type NavConfig,
+  type NavFilterContext,
+  type NavGroup,
+  type NavItem,
+} from "./nav-config"
 
 /**
  * Phone tab bar (ARCHITECTURE §6). Hidden from `lg` up, where the sidebar takes over.
@@ -38,12 +91,12 @@ export function BottomNav({
     <nav
       aria-label={label}
       className={cn(
-        "bg-background/95 border-border supports-[backdrop-filter]:bg-background/85 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur lg:hidden",
+        "bg-background/95 border-border supports-[backdrop-filter]:bg-background/85 fixed inset-x-0 bottom-0 z-[var(--z-bottomnav)] border-t backdrop-blur lg:hidden",
         className
       )}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="flex items-stretch justify-around">{children}</ul>
+      <ul className="flex h-14 items-stretch justify-around">{children}</ul>
     </nav>
   )
 }
@@ -69,20 +122,36 @@ export function BottomNavItem({
   className,
   ...props
 }: BottomNavItemProps) {
-  const Comp = asChild ? Slot.Root : "a"
+  // A trigger with no `href` (the "More" tab) is a real `<button>`, not a link
+  // with no destination — that is what makes it reachable by role="button"
+  // for assistive tech and keyboard users, not just visually button-shaped.
+  const Comp = (
+    asChild ? Slot.Root : props.href ? "a" : "button"
+  ) as React.ElementType
+  const extraProps = Comp === "button" ? { type: "button" as const } : {}
 
   return (
-    <li className="flex-1">
+    <li className="relative flex-1">
+      {/* §3.1: the active bar sits on the TOP edge of the slot — the bottom
+       * edge is under the thumb and often under the gesture bar. */}
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="bg-primary absolute inset-x-0 top-0 h-0.5"
+        />
+      ) : null}
       <Comp
         // `page` is the correct value for a nav item pointing at the current screen.
         aria-current={active ? "page" : undefined}
+        {...extraProps}
         className={cn(
-          // 44px minimum touch target, per ARCHITECTURE §6.
-          "flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 px-1 py-2 text-[0.6875rem] font-medium",
-          "focus-visible:ring-ring transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset",
+          // Full 56px column height is the target, not just the icon (§3.1).
+          "flex h-14 w-full flex-col items-center justify-center gap-0.5 px-1 py-2 text-[0.6875rem]",
+          "focus-visible:ring-ring outline-none focus-visible:ring-2 focus-visible:ring-inset",
+          "[transition-duration:var(--duration-fast)] [transition-property:color] [transition-timing-function:var(--ease-standard)]",
           active
-            ? "text-primary"
-            : "text-muted-foreground hover:text-foreground",
+            ? "text-primary font-semibold"
+            : "text-muted-foreground hover:text-foreground font-medium",
           className
         )}
         {...props}
@@ -101,5 +170,259 @@ export function BottomNavItem({
         <span className="max-w-full truncate">{label}</span>
       </Comp>
     </li>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Nav-config composition: renders a `NavConfig` (DESIGN-SYSTEM §3.2) as the
+// primary `BottomNav` slots plus a "More" slot opening a grouped `Sheet`.
+// ---------------------------------------------------------------------------
+
+const ICON_MAP: Record<IconName, LucideIcon> = {
+  home: HomeIcon,
+  "check-square": CheckSquareIcon,
+  calendar: CalendarDaysIcon,
+  "message-square": MessageSquareIcon,
+  "more-horizontal": EllipsisIcon,
+  users: UsersIcon,
+  "graduation-cap": GraduationCapIcon,
+  "book-open": BookOpenIcon,
+  "clipboard-list": ClipboardListIcon,
+  "clipboard-check": ClipboardCheckIcon,
+  printer: PrinterIcon,
+  "file-text": FileTextIcon,
+  "bar-chart": BarChart3Icon,
+  briefcase: BriefcaseIcon,
+  shield: ShieldIcon,
+  settings: SettingsIcon,
+  "help-circle": HelpCircleIcon,
+  wallet: WalletIcon,
+  store: StoreIcon,
+  package: PackageIcon,
+  receipt: ReceiptIcon,
+  banknote: BanknoteIcon,
+  "user-check": UserCheckIcon,
+  megaphone: MegaphoneIcon,
+  folder: FolderIcon,
+  "trending-up": TrendingUpIcon,
+  "shield-check": ShieldCheckIcon,
+  "layout-grid": LayoutGridIcon,
+  "credit-card": CreditCardIcon,
+  "arrow-left-right": ArrowLeftRightIcon,
+  "building-2": Building2Icon,
+  "hand-coins": HandCoinsIcon,
+}
+
+/**
+ * Renders one nav destination as the consumer's link component — this package
+ * never depends on `next`. The implementation is expected to render its link
+ * with `className` applied and `aria-current="page"` set when `active` is
+ * true, and to call `onNavigate` (if given) on click, e.g.:
+ *
+ * ```tsx
+ * renderLink={({ href, className, active, children, onNavigate }) => (
+ *   <Link href={href} className={className}
+ *     aria-current={active ? "page" : undefined} onClick={onNavigate}>
+ *     {children}
+ *   </Link>
+ * )}
+ * ```
+ */
+export type NavLinkRenderer = (item: {
+  href: string
+  label: string
+  active: boolean
+  className: string
+  children: React.ReactNode
+  /** Set on a `MoreSheet` item so tapping it also closes the sheet. */
+  onNavigate?: () => void
+}) => React.ReactNode
+
+/**
+ * The "More" sheet (§3.1 "Slot 5 is always More, opening a sheet"): every
+ * `NavGroup` the filtered config still has, each item a full 44px row.
+ */
+export function MoreSheet({
+  open,
+  onOpenChange,
+  groups,
+  locale = "en",
+  isActive,
+  renderLink,
+  title = "More",
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  groups: readonly NavGroup[]
+  locale?: "en" | "bn"
+  isActive: (href: string) => boolean
+  renderLink: NavLinkRenderer
+  title?: string
+}) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{title}</SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-col gap-4 px-4 pb-4">
+          {groups.map((group) => (
+            <div key={group.id}>
+              <h3 className="text-muted-foreground mb-1 px-1 text-xs font-semibold tracking-wide uppercase">
+                {locale === "bn" ? group.labelBn : group.labelEn}
+              </h3>
+              <ul className="divide-border divide-y">
+                {group.items.map((navItem) => {
+                  const Icon = ICON_MAP[navItem.icon]
+                  const active = isActive(navItem.href)
+                  const label =
+                    locale === "bn" ? navItem.labelBn : navItem.labelEn
+                  return (
+                    <li key={navItem.id}>
+                      {renderLink({
+                        href: navItem.href,
+                        label,
+                        active,
+                        className: cn(
+                          "focus-visible:ring-ring flex min-h-11 items-center gap-3 rounded-md px-2 py-2 text-sm outline-none focus-visible:ring-2",
+                          active
+                            ? "text-primary font-medium"
+                            : "text-foreground hover:bg-muted"
+                        ),
+                        onNavigate: () => onOpenChange(false),
+                        children: (
+                          <>
+                            <Icon
+                              className="size-4 shrink-0"
+                              aria-hidden="true"
+                            />
+                            <span className="truncate">{label}</span>
+                            {navItem.badge?.count ? (
+                              <span
+                                className="bg-destructive text-background ml-auto min-w-4 rounded-full px-1 text-center text-[0.625rem] leading-4 font-semibold"
+                                aria-label={`${navItem.badge.count} unread`}
+                              >
+                                {navItem.badge.count > 9
+                                  ? "9+"
+                                  : navItem.badge.count}
+                              </span>
+                            ) : null}
+                          </>
+                        ),
+                      })}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+/**
+ * The full `NavConfig` → phone shell composition: `BottomNav` for the primary
+ * items (filtered by role/plan/owner-visibility), always followed by a "More"
+ * slot when any group has visible items.
+ */
+export function BottomNavFromConfig({
+  config,
+  filter,
+  pathname,
+  renderLink,
+  locale = "en",
+  navLabel = "Main",
+  className,
+}: {
+  config: NavConfig
+  filter: NavFilterContext
+  pathname: string
+  renderLink: NavLinkRenderer
+  locale?: "en" | "bn"
+  navLabel?: string
+  className?: string
+}) {
+  const filtered = useFilteredNav(config, filter)
+  const [moreOpen, setMoreOpen] = React.useState(false)
+  const isActive = React.useCallback(
+    (href: string) => pathname === href || pathname.startsWith(`${href}/`),
+    [pathname]
+  )
+  const moreBadgeCount = aggregateMoreBadgeCount(filtered)
+  const hasMore = filtered.more.length > 0
+
+  return (
+    <>
+      <BottomNav label={navLabel} className={className}>
+        {filtered.bottom.map((navItem: NavItem) => {
+          const Icon = ICON_MAP[navItem.icon]
+          const label = locale === "bn" ? navItem.labelBn : navItem.labelEn
+          const active = isActive(navItem.href)
+          const badge = navItem.badge?.count
+          return (
+            <li key={navItem.id} className="relative flex-1">
+              {active ? (
+                <span
+                  aria-hidden="true"
+                  className="bg-primary absolute inset-x-0 top-0 h-0.5"
+                />
+              ) : null}
+              {renderLink({
+                href: navItem.href,
+                label,
+                active,
+                className: cn(
+                  "flex h-14 w-full flex-col items-center justify-center gap-0.5 px-1 py-2 text-[0.6875rem]",
+                  "focus-visible:ring-ring outline-none focus-visible:ring-2 focus-visible:ring-inset",
+                  "[transition-duration:var(--duration-fast)] [transition-property:color]",
+                  active
+                    ? "text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground font-medium"
+                ),
+                children: (
+                  <>
+                    <span className="relative flex size-6 items-center justify-center [&_svg]:size-5">
+                      <Icon aria-hidden="true" />
+                      {badge && badge > 0 ? (
+                        <span
+                          className="bg-destructive text-background absolute -top-1 -right-2 min-w-4 rounded-full px-1 text-[0.625rem] leading-4 font-semibold"
+                          aria-label={`${badge} unread`}
+                        >
+                          {badge > 9 ? "9+" : badge}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="max-w-full truncate">{label}</span>
+                  </>
+                ),
+              })}
+            </li>
+          )
+        })}
+        {hasMore ? (
+          <BottomNavItem
+            icon={<EllipsisIcon />}
+            label={locale === "bn" ? "আরও" : "More"}
+            badge={moreBadgeCount}
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen(true)}
+          />
+        ) : null}
+      </BottomNav>
+      {hasMore ? (
+        <MoreSheet
+          open={moreOpen}
+          onOpenChange={setMoreOpen}
+          groups={filtered.more}
+          locale={locale}
+          isActive={isActive}
+          renderLink={renderLink}
+          title={locale === "bn" ? "আরও" : "More"}
+        />
+      ) : null}
+    </>
   )
 }

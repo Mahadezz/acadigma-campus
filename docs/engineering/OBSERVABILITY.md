@@ -10,7 +10,7 @@ The constraint that shapes everything here: this system holds children's records
 
 ### 1.1 Shape
 
-Structured JSON via **pino**, one line per event, emitted from server code only. Vercel captures stdout; the browser does not log to a server sink (client errors go to Sentry, §2).
+Structured JSON via **pino**, one line per event, emitted from server code only. Vercel captures stdout; the browser does not log to a server sink (client errors go to error reporting, §3).
 
 ```json
 {
@@ -53,7 +53,7 @@ Enforcement is layered: a pino `redact` list strips known-sensitive keys and any
 | `info`  | Business events worth counting           | Action completed, job processed, payment settled, file signed, AI call settled                     |
 | `debug` | Local only                               | `LOG_LEVEL=debug` in `.env.local`; `info` in preview and production                                |
 
-**Authorisation denials are logged at `warn` with `status: "denied"`** and the permission key. A 403 is either a bug in our UI or someone probing; both are worth seeing, and the pattern is what §5 alerts on.
+**Authorisation denials are logged at `warn` with `status: "denied"`** and the permission key. A 403 is either a bug in our UI or someone probing; both are worth seeing, and the pattern is what §6 alerts on.
 
 ### 1.4 Correlation
 
@@ -69,9 +69,79 @@ Vercel log drain per plan (short). Audit events are retained **indefinitely**; `
 
 ---
 
-## 2. Sentry
+## 2. OpenTelemetry
+
+**DECISION-LOG D-30:** observability is OpenTelemetry-first. The app emits OTLP
+(traces, and eventually logs) regardless of which error-reporting backend is
+running — OTel is the vendor-neutral contract; §3 is the backend choice sitting
+on top of it.
 
 ### 2.1 Setup
+
+`@vercel/otel` registers in `apps/web/instrumentation.ts`, unconditionally, in
+both the `register()` Sentry also uses:
+
+```ts
+import { registerOTel } from "@vercel/otel"
+
+registerOTel({
+  serviceName: process.env.OTEL_SERVICE_NAME ?? "acadigma-campus",
+  attributes: {
+    "deployment.environment": process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+  },
+})
+```
+
+No further configuration is required to be "on": `@vercel/otel` auto-detects a
+Vercel tracing integration when deployed on Vercel, falls back to a standard OTLP
+exporter when `OTEL_EXPORTER_OTLP_ENDPOINT` (+ optional
+`OTEL_EXPORTER_OTLP_HEADERS`, comma-separated `key=value` pairs) is set in the
+environment, and is a **no-op** when neither is configured — local development
+and CI never try to reach a collector that does not exist.
+
+### 2.2 Span attributes
+
+`apps/web/lib/telemetry.ts` exports the tracer and two helpers so span
+attributes match what the logger already binds (§1.2), rather than drifting from
+it:
+
+- `setWorkspaceSpanAttributes(span, { workspaceId, correlationId, userId, role })`
+  — the identifiers every span in this product should carry, when known.
+- `withWorkspaceSpan(name, attrs, fn)` — wraps a server action or repository
+  call in an active span with those attributes set, and records the outcome
+  (`OK` / `ERROR` + the exception) automatically.
+- `setAiSpanAttributes(span, { model, operation, ... })` — AI-call spans, using
+  the OTel `gen_ai.*` semantic convention with `user.id` set to the **workspace**
+  id, not a person's (D-30: "AI spans with `gen_ai.*` + `user.id = workspace_id`"
+  — AI spend is billed and rate-limited per workspace).
+
+Same rule as the logger (§1.2): **identifiers only.** Never a name, email, phone
+number, health detail or anything else a parent would recognise as theirs on a
+span attribute.
+
+### 2.3 Environment variables
+
+Added to `.env.example`, all optional:
+
+| Variable                      | Purpose                                                          |
+| ----------------------------- | ---------------------------------------------------------------- |
+| `OTEL_SERVICE_NAME`           | Overrides the default service name (`acadigma-campus`).          |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP collector endpoint. Unset in local dev and CI.              |
+| `OTEL_EXPORTER_OTLP_HEADERS`  | Comma-separated `key=value` auth headers for the OTLP collector. |
+
+## 3. Error reporting — backend chosen at R1 launch: Sentry vs Traceway
+
+**DECISION-LOG D-30:** the owner pointed at `tracewayapp/traceway` (MIT,
+OTel-native, includes per-tenant AI-call tracing and on-call paging) as an
+alternative to Sentry. Because §2's OTel emission is vendor-neutral, the
+error-reporting **backend** is a deploy-time choice, not an architecture one:
+**Sentry** (managed, usable immediately, configured below) vs **Traceway Cloud**
+vs **self-hosted Traceway** on a small VPS once one exists. Decide at Release 1
+launch with real pricing; Traceway's per-tenant AI cost view would match the
+credit ledger exactly, but there is no host for it today. Until that decision,
+Sentry is what is wired up, entirely opt-in behind `SENTRY_DSN`.
+
+### 3.1 Setup
 
 `@sentry/nextjs` with the three config files (`sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`) and the build plugin for source maps.
 
@@ -107,11 +177,11 @@ Attached to every event: `correlation_id`, `workspace_id`, `role`, `route`, `act
 
 ### 2.3 Issue hygiene
 
-Each release creates a Sentry release with the commit range, so regressions attribute to a deploy. Issues are grouped by fingerprint on `error_code` where we control it. Alerts on **new** issue types and on regression of a resolved issue (§5). An issue with no owner and no action after 14 days is either fixed or explicitly ignored with a reason — an alert channel full of known noise trains people to ignore it.
+Each release creates a Sentry release with the commit range, so regressions attribute to a deploy. Issues are grouped by fingerprint on `error_code` where we control it. Alerts on **new** issue types and on regression of a resolved issue (§6). An issue with no owner and no action after 14 days is either fixed or explicitly ignored with a reason — an alert channel full of known noise trains people to ignore it.
 
 ---
 
-## 3. Health endpoint
+## 4. Health endpoint
 
 `GET /api/health` — unauthenticated, uncached (`Cache-Control: no-store`), aims for under 500 ms.
 
@@ -141,7 +211,7 @@ Status codes: `200` for `ok`, `200` with `"status": "degraded"` when a non-criti
 
 ---
 
-## 4. Uptime
+## 5. Uptime
 
 - External monitor (Better Stack / UptimeRobot, owner's choice) on `https://<production>/api/health/ready` every **60 s** from at least two regions, one of them close to Bangladesh. Two consecutive failures → alert. Timeout 10 s.
 - A second monitor on `/` every 5 minutes, asserting a 200 and an expected string, to catch "healthy backend, broken render".
@@ -152,7 +222,7 @@ Status codes: `200` for `ok`, `200` with `"status": "degraded"` when a non-criti
 
 ---
 
-## 5. Alert rules
+## 6. Alert rules
 
 Three tiers. **Page** means it wakes someone; everything else waits. Keep the page list short — an alert that fires weekly without action is training people to ignore the one that matters.
 
@@ -183,7 +253,7 @@ Page → phone (owner, `@Mahadezz`, single on-call for now). Notify → the proj
 
 ---
 
-## 6. What to do when paged
+## 7. What to do when paged
 
 **First two minutes — establish, do not fix.**
 
