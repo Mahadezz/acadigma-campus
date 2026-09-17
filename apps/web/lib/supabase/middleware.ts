@@ -9,6 +9,9 @@ const PROTECTED_PREFIXES = [
   "/family",
   "/sell",
   "/platform",
+  // ARCHITECTURE §2 (account) route group: user-level settings, added by
+  // F-ID-01 Part 4 (Security > Change password).
+  "/account",
 ]
 
 /** Cookie the workspace switcher writes. Mirrored into the request header below. */
