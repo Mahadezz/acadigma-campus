@@ -6,16 +6,54 @@
  */
 
 /**
- * Same pattern the SQL trigger tests column names against
- * (`k ~* '(token|secret|password|account_number)'`). Case-insensitive, matches
- * anywhere in the name — `provider_customer_ref` is NOT matched (correctly: it is
- * redacted per-table by name, not by this universal net); `payout_account_number`
- * IS matched.
+ * Mirrors `app.audit_secret_pattern()`. Case-insensitive, matches anywhere in the
+ * name — `provider_customer_ref` is NOT matched (correctly: it is redacted
+ * per-table by name, not by this universal net); `payout_account_number` IS.
+ *
+ * The ID-document terms are here because COMPLIANCE-PDPA §4.1 requires that a
+ * full NID or birth-certificate number is never stored as a value anywhere,
+ * which includes the audit trail.
  */
-export const SECRET_COLUMN_PATTERN = /(token|secret|password|account_number)/i
+export const SECRET_COLUMN_PATTERN =
+  /(token|secret|password|passwd|api_key|private_key|account_number|(^|_)nid(_|$)|national_id|birth_certificate|passport_no|passport_number)/i
 
 export function isSecretColumnName(columnName: string): boolean {
   return SECRET_COLUMN_PATTERN.test(columnName)
+}
+
+/**
+ * Mirrors `app.audit_sensitive_pattern()` — health, medical and religion columns.
+ * F-ID-09 §5.3 files these under "field names only": the trigger nulls the VALUE
+ * and the name survives in `changed_fields`, so an owner can see that a medical
+ * field changed and who changed it, never what it says.
+ */
+export const SENSITIVE_COLUMN_PATTERN =
+  /((^|_)(religion|blood_group|disability)(_|$)|allerg|medical|health|diagnos|medication)/i
+
+export function isSensitiveColumnName(columnName: string): boolean {
+  return SENSITIVE_COLUMN_PATTERN.test(columnName)
+}
+
+/**
+ * Mirrors `app.audit_contact_pattern()` — masked at write time, not dropped
+ * (§5.3 contact row, acceptance criterion 10): an owner still needs to see WHICH
+ * address an invitation went to. Anchored to the END of the name so
+ * `email_digest` (a notification preference) is left alone while `contact_email`
+ * is masked.
+ */
+export const CONTACT_COLUMN_PATTERN = /(^|_)(email|phone|mobile|msisdn)$/i
+
+export function isContactColumnName(columnName: string): boolean {
+  return CONTACT_COLUMN_PATTERN.test(columnName)
+}
+
+/**
+ * The same mask the trigger applies, re-applied at read time. Rows written
+ * before this migration hold raw addresses, and the viewer must not be the
+ * thing that surfaces them.
+ */
+export function maskContactValue(columnName: string, value: string): string {
+  return /email$/i.test(columnName) ? maskEmail(value) : maskPhone(value)
 }
 
 /**
@@ -74,6 +112,9 @@ export function redactionCopy(
 /** `r***@gmail.com` — F-ID-09 §5.3. */
 export function maskEmail(email: string): string {
   const at = email.indexOf("@")
+  // No `@` at all: `slice(-1)` would have leaked the last character of whatever
+  // this actually is. Give back nothing.
+  if (at < 0) return "***"
   if (at <= 1) return "***" + email.slice(at)
   return email.slice(0, 1) + "***" + email.slice(at)
 }
