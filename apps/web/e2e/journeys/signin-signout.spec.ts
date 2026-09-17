@@ -2,6 +2,14 @@ import { expect, test } from "@playwright/test"
 
 import { expectNoA11yViolations } from "../axe"
 
+// Needs the live Supabase project with migrations + seed applied (CI sets
+// E2E_LIVE_SUPABASE=1 once the Supabase secrets exist — OQ-26). Skipped, not
+// silently passing, elsewhere.
+test.skip(
+  !process.env.E2E_LIVE_SUPABASE,
+  "live Supabase journey: set E2E_LIVE_SUPABASE=1 with a migrated project"
+)
+
 /**
  * F-ID-01 §9 AC5/AC6, Part 3 demo: "sign in and out on a phone; after 5 bad
  * passwords the form shows a countdown." Uses the seeded `owner@acadigma.test`
