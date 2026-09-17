@@ -77,3 +77,13 @@ grant usage on schema public to anon, authenticated, service_role;
 -- `auth.uid()`/`auth.jwt()`/`auth.role()` are callable from RLS policies.
 grant usage on schema auth to anon, authenticated, service_role;
 grant usage on schema extensions to anon, authenticated, service_role;
+
+-- pg_prove connects as `postgres` and each spec creates its own `tests`
+-- schema, then uses `tests.login()` to `SET ROLE authenticated` before
+-- calling more `tests.*` helpers (e.g. `tests.logout()`). Without USAGE on
+-- that not-yet-created schema, those later calls fail with "permission
+-- denied for schema tests". Postgres 15+ default privileges for schemas
+-- cover it for every schema `postgres` creates from here on, the same way
+-- the managed platform's role setup does.
+alter default privileges for role postgres grant usage on schemas
+  to anon, authenticated, service_role;
