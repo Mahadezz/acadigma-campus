@@ -1,0 +1,17 @@
+/*
+ * Tailwind v4 preset shared by every surface that renders Acadigma UI.
+ * Tailwind v4 is configured in CSS, so the "preset" is a stylesheet: import it,
+ * and you get the plugin wiring plus the design tokens.
+ *
+ * Token file ownership: packages/ui/tokens/tokens.css belongs to the design system.
+ * scripts/ensure-tokens.mjs writes a placeholder on postinstall when it is absent,
+ * so this import always resolves.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Tailwind must scan the shared component source, not just the consuming app. */
+@source "../ui/src/**/*.{ts,tsx}";
+
+/* Opt every surface into class-based dark mode, matched by next-themes. */
+@custom-variant dark (&:is(.dark *));

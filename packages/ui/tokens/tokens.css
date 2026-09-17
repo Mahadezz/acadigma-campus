@@ -1,0 +1,766 @@
+/* ============================================================================
+   Acadigma Campus — design tokens
+   Owner: docs/architecture/DESIGN-SYSTEM.md (that doc is the spec; this is the
+   only implementation of it). Do not add colours, spacing or radii anywhere
+   else in the monorepo — add them here and document them there.
+
+   Format: shadcn/ui v4 (`new-york-v4`). Colours are OKLCH. The `@theme inline`
+   block maps every token onto a Tailwind v4 utility so feature code writes
+   `bg-card`, `text-att-present-ink`, `shadow-raised` and never a raw value.
+
+   Colour-blind and contrast figures quoted in comments were computed, not
+   estimated (Viénot LMS simulation + WCAG 2.1 relative luminance). Numbers are
+   reproducible from the table in DESIGN-SYSTEM.md §2.
+   ============================================================================ */
+
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   1. Tailwind theme mapping
+   --------------------------------------------------------------------------- */
+
+@theme inline {
+  /* breakpoints — 360 is the design baseline, not a breakpoint */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px; /* shell switches: bottom nav -> sidebar */
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  /* type */
+  --font-sans: var(--font-sans);
+  --font-bn: var(--font-bn);
+  --font-mono: var(--font-mono);
+
+  /* radius — shadcn v4 derives the rest from --radius */
+  --radius-sm: calc(
+    var(--radius) * 0.5
+  ); /* 6px  — chips, badges, inputs-in-grid */
+  --radius-md: calc(var(--radius) * 0.75); /* 9px  — inputs, buttons */
+  --radius-lg: var(--radius); /* 12px — cards, sheets, popovers */
+  --radius-xl: calc(var(--radius) * 1.33); /* 16px — sheet top corners */
+  --radius-2xl: calc(var(--radius) * 1.83); /* 22px — avatars on stat tiles */
+
+  /* surfaces + ink */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-rule: var(--rule);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* brand */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+
+  /* semantic */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-ink: var(--success-ink);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-ink: var(--warning-ink);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+  --color-destructive: var(--danger); /* shadcn alias */
+  --color-destructive-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+
+  /* attendance */
+  --color-att-present: var(--att-present);
+  --color-att-present-fg: var(--att-present-fg);
+  --color-att-present-soft: var(--att-present-soft);
+  --color-att-present-ink: var(--att-present-ink);
+  --color-att-absent: var(--att-absent);
+  --color-att-absent-fg: var(--att-absent-fg);
+  --color-att-absent-soft: var(--att-absent-soft);
+  --color-att-absent-ink: var(--att-absent-ink);
+  --color-att-late: var(--att-late);
+  --color-att-late-fg: var(--att-late-fg);
+  --color-att-late-soft: var(--att-late-soft);
+  --color-att-late-ink: var(--att-late-ink);
+  --color-att-excused: var(--att-excused);
+  --color-att-excused-fg: var(--att-excused-fg);
+  --color-att-excused-soft: var(--att-excused-soft);
+  --color-att-excused-ink: var(--att-excused-ink);
+  --color-att-halfday: var(--att-halfday);
+  --color-att-halfday-fg: var(--att-halfday-fg);
+  --color-att-halfday-soft: var(--att-halfday-soft);
+  --color-att-halfday-ink: var(--att-halfday-ink);
+
+  /* grade bands */
+  --color-grade-a-plus: var(--grade-a-plus);
+  --color-grade-a: var(--grade-a);
+  --color-grade-a-minus: var(--grade-a-minus);
+  --color-grade-b: var(--grade-b);
+  --color-grade-c: var(--grade-c);
+  --color-grade-d: var(--grade-d);
+  --color-grade-f: var(--grade-f);
+  --color-grade-ink: var(--grade-ink);
+
+  /* charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-surface: var(--chart-surface);
+
+  /* sidebar (desktop ≥1024 only) */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* shadows */
+  --shadow-flat: var(--shadow-flat);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-overlay: var(--shadow-overlay);
+  --shadow-sheet: var(--shadow-sheet);
+  --shadow-nav: var(--shadow-nav);
+}
+
+/* ---------------------------------------------------------------------------
+   2. Typography — Inter (Latin + all digits) + Hind Siliguri (Bengali)
+   Both served from Google Fonts. Google's stylesheet is split by
+   `unicode-range`, so the 69 KB Bengali subset downloads ONLY when a Bengali
+   codepoint is actually rendered. English-only sessions pay 48 KB total.
+   Self-host in production (next/font) — see tokens/README.md.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --font-sans:
+    "Inter", "Inter Fallback", Roboto, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  /* --font-bn is applied by <BnEnText> to Bengali runs only; Inter stays in the
+     stack after it so Latin words inside a Bengali sentence keep Inter's
+     figures and do not fall back to Hind Siliguri's weaker Latin. */
+  --font-bn:
+    "Hind Siliguri", "Hind Siliguri Fallback", "Noto Sans Bengali", "Inter",
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+
+  /* type scale — 1.125 minor third at phone, 1.200 from lg up (fluid, capped) */
+  --text-2xs: 0.6875rem; /* 11px — only for the attendance legend + table units */
+  --text-xs: 0.75rem; /* 12px — metadata, timestamps, helper text          */
+  --text-sm: 0.8125rem; /* 13px — dense table cells, chips                   */
+  --text-base: 0.9375rem; /* 15px — body, list rows, form values (phone)       */
+  --text-md: 1rem; /* 16px — form inputs (never smaller: iOS zoom)      */
+  --text-lg: 1.125rem; /* 18px — card titles, sheet titles                  */
+  --text-xl: 1.375rem; /* 22px — page titles on phone                       */
+  --text-2xl: 1.75rem; /* 28px — stat tile values, page titles ≥lg          */
+  --text-3xl: 2.25rem; /* 36px — the single hero number on a dashboard      */
+
+  --leading-tight: 1.2; /* Latin display only                                */
+  --leading-snug: 1.35; /* Latin UI                                          */
+  --leading-normal: 1.5; /* Latin body                                        */
+  --leading-bn: 1.75; /* Bengali needs room for reph/matra above + below   */
+
+  --tracking-tight: -0.02em; /* ≥22px Latin only. Never on Bengali.           */
+  --tracking-normal: 0em;
+  --tracking-wide: 0.01em; /* ≤12px Latin                                   */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* numeric behaviour — the whole product is numbers in columns */
+  --fs-tabular:
+    "tnum" 1, "cv05" 1, "ss03" 1; /* tabular figures + slashed zero */
+  --fs-prose: "tnum" 0, "kern" 1, "liga" 1;
+
+  /* -------------------------------------------------------------------------
+     3. Spacing — 4px base. The only spacing values allowed in feature code.
+     ------------------------------------------------------------------------- */
+  --space-0: 0px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px; /* page gutter at 360px                                   */
+  --space-5: 20px;
+  --space-6: 24px; /* page gutter ≥sm; gap between card groups               */
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* fixed layout metrics (see DESIGN-SYSTEM.md §3) */
+  --size-touch: 44px; /* WCAG 2.5.5 minimum, enforced by lint rule     */
+  --size-touch-lg: 56px; /* attendance segments, numeric pad keys         */
+  --size-topbar: 56px;
+  --size-bottomnav: 56px; /* + safe-area inset below                       */
+  --size-row: 60px; /* DataList row: 44px content + 8px × 2 padding  */
+  --size-row-dense: 48px; /* marks grid + timetable cells                  */
+  --size-sidebar: 264px;
+  --size-sidebar-collapsed: 68px;
+  --size-sheet-max: 92svh;
+  --width-content: 72ch; /* prose max; never used for tables              */
+
+  /* safe areas — Capacitor/Android gesture bar + iOS notch */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --inset-bottomnav: calc(var(--size-bottomnav) + var(--safe-bottom));
+
+  /* -------------------------------------------------------------------------
+     4. Radius
+     ------------------------------------------------------------------------- */
+  --radius: 0.75rem; /* 12px — carried over from the prototype, unchanged */
+
+  /* -------------------------------------------------------------------------
+     5. Motion — durations, easings, reduced-motion switch
+     Every transition uses a token. `--motion` is set to 0 by the
+     prefers-reduced-motion block at the bottom of this file, so multiplying any
+     duration by it disables motion without touching component code.
+     ------------------------------------------------------------------------- */
+  --motion: 1;
+  --duration-instant: calc(90ms * var(--motion)); /* tap feedback, checkbox  */
+  --duration-fast: calc(140ms * var(--motion)); /* hover, chip swap        */
+  --duration-base: calc(200ms * var(--motion)); /* popover, toast          */
+  --duration-slow: calc(280ms * var(--motion)); /* sheet / drawer slide    */
+  --duration-page: calc(360ms * var(--motion)); /* route transition        */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* default                 */
+  --ease-entrance: cubic-bezier(
+    0.05,
+    0.7,
+    0.1,
+    1
+  ); /* things arriving         */
+  --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15); /* things leaving (faster) */
+  --ease-spring: cubic-bezier(
+    0.34,
+    1.32,
+    0.64,
+    1
+  ); /* sheet snap only         */
+
+  /* -------------------------------------------------------------------------
+     6. Z-index — the complete list. No other z-index may be written.
+     ------------------------------------------------------------------------- */
+  --z-base: 0;
+  --z-raised: 1; /* frozen first column of a grid                        */
+  --z-sticky: 10; /* sticky table header, sticky date bar                 */
+  --z-topbar: 20;
+  --z-bottomnav: 30;
+  --z-scrim: 40; /* sheet/dialog overlay                                 */
+  --z-sheet: 50;
+  --z-dialog: 60;
+  --z-popover: 70; /* select, dropdown, command palette                    */
+  --z-toast: 80; /* must clear the bottom nav                            */
+  --z-tooltip: 90;
+  --z-banner: 100; /* offline banner — above everything, always visible    */
+}
+
+/* ---------------------------------------------------------------------------
+   7. LIGHT theme
+   Neutral ramp is hue 272 (cool ink-indigo grey) so greys sit in the same
+   family as the brand and never read as a different design system.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* neutral ramp (reference; components use the semantic names below) */
+  --neutral-0: oklch(1 0 272); /* #ffffff */
+  --neutral-25: oklch(0.985 0.003 272); /* #f9fafc */
+  --neutral-50: oklch(0.975 0.004 272); /* #f6f7f9 — page bg, = prototype   */
+  --neutral-100: oklch(0.95 0.006 272); /* #edeef3 */
+  --neutral-200: oklch(0.91 0.008 272); /* #dfe1e7 — border, = prototype    */
+  --neutral-300: oklch(0.855 0.01 272); /* #cdcfd6 */
+  --neutral-400: oklch(0.72 0.014 272); /* #a1a4ae */
+  --neutral-500: oklch(0.6 0.018 272); /* #7c808b */
+  --neutral-600: oklch(0.5 0.02 272); /* #5f636f — muted text 6.01:1      */
+  --neutral-700: oklch(0.405 0.022 272); /* #454955 */
+  --neutral-800: oklch(0.3 0.022 272); /* #2a2d39 */
+  --neutral-900: oklch(0.222 0.02 272); /* #181b25 — body ink 17.25:1       */
+  --neutral-950: oklch(0.181 0.018 272); /* #0f111a — dark page bg           */
+  --neutral-1000: oklch(0.145 0.016 272); /* #080a11 */
+
+  /* indigo ramp — the brand. 600 is `--primary`. */
+  --indigo-50: oklch(0.972 0.014 269);
+  --indigo-100: oklch(0.938 0.032 269);
+  --indigo-200: oklch(0.886 0.064 269);
+  --indigo-300: oklch(0.802 0.112 269);
+  --indigo-400: oklch(0.652 0.168 269);
+  --indigo-500: oklch(0.545 0.196 269); /* #4461e0 */
+  --indigo-600: oklch(0.472 0.19 269); /* #334bc4 — white on it: 7.15:1      */
+  --indigo-700: oklch(0.404 0.162 269); /* #273b9e — hover/pressed            */
+  --indigo-800: oklch(0.34 0.13 269);
+  --indigo-900: oklch(0.282 0.098 269);
+  --indigo-950: oklch(0.212 0.062 269);
+
+  /* amber ramp — the accent. Fill and ink are different steps on purpose. */
+  --amber-50: oklch(0.978 0.018 74);
+  --amber-100: oklch(0.95 0.045 74);
+  --amber-200: oklch(0.908 0.085 74);
+  --amber-300: oklch(0.86 0.125 74);
+  --amber-400: oklch(0.812 0.15 74);
+  --amber-500: oklch(0.762 0.16 74); /* #eda009 — the mark; ink on it 7.96:1 */
+  --amber-600: oklch(0.686 0.15 74);
+  --amber-700: oklch(0.578 0.128 74); /* #a66c00 — amber as TEXT, 4.42:1      */
+  --amber-800: oklch(0.47 0.102 74);
+  --amber-900: oklch(0.39 0.082 74);
+  --amber-950: oklch(0.262 0.055 74);
+
+  /* — surfaces and ink — */
+  --background: var(--neutral-50);
+  --foreground: var(--neutral-900);
+  --card: var(--neutral-0);
+  --card-foreground: var(--neutral-900);
+  --popover: var(--neutral-0);
+  --popover-foreground: var(--neutral-900);
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--neutral-600); /* 6.01:1 on white            */
+  --border: var(--neutral-200);
+  --border-strong: var(--neutral-300); /* grid lines that must read  */
+  --rule: var(--neutral-200); /* the hairline between rows  */
+  --input: var(--neutral-300); /* 3.0:1 — visible unfocused  */
+  --ring: var(--indigo-600);
+
+  /* — brand — */
+  --primary: var(--indigo-600);
+  --primary-hover: var(--indigo-700);
+  --primary-foreground: var(--neutral-0); /* 7.15:1                     */
+  --primary-soft: var(--indigo-50);
+  --primary-ink: var(--indigo-700); /* primary as text: 9.48:1    */
+  --secondary: var(--neutral-100);
+  --secondary-foreground: var(--neutral-800);
+  --accent: var(--amber-500); /* the highlighter. Ration it.*/
+  --accent-foreground: var(--neutral-900); /* 7.96:1                     */
+  --accent-soft: var(--amber-100);
+  --accent-ink: var(--amber-700); /* amber as text: 4.42:1      */
+
+  /* — semantic — */
+  --success: oklch(0.545 0.14 152); /* #0c8644 white on it 4.64:1 */
+  --success-foreground: var(--neutral-0);
+  --success-soft: oklch(0.955 0.035 152);
+  --success-ink: oklch(0.43 0.14 152); /* on -soft: 6.57:1           */
+  --warning: oklch(0.655 0.15 74); /* #c68000 white on it 3.25:1 */
+  --warning-foreground: var(--neutral-900); /* use ink, not white         */
+  --warning-soft: oklch(0.955 0.035 74);
+  --warning-ink: oklch(0.43 0.14 74); /* on -soft: 7.23:1           */
+  --danger: oklch(0.52 0.2 25); /* #c21725 white on it 6.12:1 */
+  --danger-foreground: var(--neutral-0);
+  --danger-soft: oklch(0.955 0.035 25);
+  --danger-ink: oklch(0.43 0.14 25); /* on -soft: 7.42:1           */
+  --info: oklch(0.54 0.15 250); /* #0871c1 white on it 5.07:1 */
+  --info-foreground: var(--neutral-0);
+  --info-soft: oklch(0.955 0.035 250);
+  --info-ink: oklch(0.43 0.14 250); /* on -soft: 7.02:1           */
+
+  /* — attendance —
+     Four chromatic statuses, verified colour-blind separable: worst adjacent
+     deuteran/protan ΔE = 13.9 (target ≥ 8, OKLab ×100). half_day is deliberately
+     NOT a fifth hue — it is a neutral with a 50% diagonal fill, so it separates
+     by chroma (ΔE 16.4 from the nearest chromatic) and by shape at any size.
+     Status is NEVER colour-only: every mark carries its letter (P/A/L/E/½ or
+     উ/অ/বি/ছু/অর্ধ) and an accessible name. `late` and `halfday` fills fall below
+     3:1 against a white card, so their chips ALWAYS carry a 1px `-ink` ring. */
+  --att-present: oklch(0.6 0.15 148); /* #2e9848 */
+  --att-present-fg: var(--neutral-900); /* 4.90:1  */
+  --att-present-soft: oklch(0.95 0.045 148);
+  --att-present-ink: oklch(0.4 0.11 148); /* on -soft: 7.70:1 */
+  --att-absent: oklch(0.44 0.195 25); /* #a3000b */
+  --att-absent-fg: var(--neutral-0); /* 8.16:1  */
+  --att-absent-soft: oklch(0.945 0.035 25);
+  --att-absent-ink: oklch(0.46 0.18 25); /* on -soft: 6.53:1 */
+  --att-late: oklch(0.845 0.155 80); /* #ffbf40 — needs ring */
+  --att-late-fg: var(--neutral-900); /* 11.06:1 */
+  --att-late-soft: oklch(0.955 0.055 80);
+  --att-late-ink: oklch(0.52 0.115 80); /* on -soft: 4.83:1 */
+  --att-excused: oklch(0.52 0.15 262); /* #3664be */
+  --att-excused-fg: var(--neutral-0); /* 5.63:1  */
+  --att-excused-soft: oklch(0.948 0.033 262);
+  --att-excused-ink: oklch(0.45 0.15 262); /* on -soft: 6.50:1 */
+  --att-halfday: oklch(0.755 0.018 268); /* #aaafbb — needs ring */
+  --att-halfday-fg: var(--neutral-900); /* 8.29:1  */
+  --att-halfday-soft: oklch(0.945 0.008 268);
+  --att-halfday-ink: oklch(0.42 0.022 268); /* on -soft: 7.21:1 */
+
+  /* — grade bands (BD scale: A+ A A− B C D F) —
+     An ORDERED ramp, not a categorical palette: adjacent steps are meant to be
+     similar. The letter is always printed; colour only reinforces it. Used as a
+     soft tint behind `--grade-ink`, never as a solid fill behind white text. */
+  --grade-a-plus: oklch(0.545 0.145 150);
+  --grade-a: oklch(0.6 0.14 140);
+  --grade-a-minus: oklch(0.66 0.13 118);
+  --grade-b: oklch(0.72 0.135 92);
+  --grade-c: oklch(0.79 0.15 72);
+  --grade-d: oklch(0.7 0.145 48);
+  --grade-f: oklch(0.52 0.19 25);
+  --grade-ink: var(--neutral-900);
+
+  /* — charts — fixed order, never cycled. Validated (dataviz six checks: all
+     PASS, worst adjacent protan ΔE 13.7, all ≥3:1 on surface). */
+  --chart-1: oklch(0.545 0.196 269); /* #4461e0 indigo — always series 1      */
+  --chart-2: oklch(0.52 0.185 355); /* #b3276e rose                          */
+  --chart-3: oklch(0.66 0.15 74); /* #c78100 amber                         */
+  --chart-4: oklch(0.6 0.105 192); /* #009490 teal                          */
+  --chart-5: oklch(0.48 0.15 305); /* #7241a0 violet                        */
+  --chart-6: oklch(0.64 0.14 145); /* #4ea253 green                         */
+  --chart-grid: var(--neutral-200);
+  --chart-surface: var(--card);
+
+  /* — sidebar (desktop ≥1024 only). Dark navy in light mode, on purpose: it is
+     the one inverted surface and it reads as the crest bar on a school gate. — */
+  --sidebar: oklch(0.255 0.062 275); /* #1b1f40 */
+  --sidebar-foreground: oklch(0.93 0.01 275); /* 12.95:1 on sidebar */
+  --sidebar-muted: oklch(0.74 0.02 275); /* 6.89:1  */
+  --sidebar-primary: var(
+    --amber-500
+  ); /* 7.29:1 — stays amber
+                                                        regardless of palette  */
+  --sidebar-primary-foreground: oklch(0.196 0.038 275);
+  --sidebar-accent: oklch(0.32 0.068 275); /* active row background  */
+  --sidebar-accent-foreground: oklch(0.985 0.003 275);
+  --sidebar-border: oklch(0.352 0.062 275);
+  --sidebar-ring: var(--amber-500);
+
+  /* — elevation. Tinted to the neutral hue; never pure black. Three levels only. — */
+  --shadow-flat: 0 0 0 1px oklch(0.3 0.022 272 / 0.06);
+  --shadow-raised:
+    0 1px 2px oklch(0.222 0.02 272 / 0.06),
+    0 2px 6px -2px oklch(0.222 0.02 272 / 0.08);
+  --shadow-overlay:
+    0 8px 24px -6px oklch(0.222 0.02 272 / 0.14),
+    0 2px 6px -2px oklch(0.222 0.02 272 / 0.08);
+  --shadow-sheet: 0 -8px 28px -8px oklch(0.181 0.018 272 / 0.18);
+  --shadow-nav: 0 -1px 0 0 var(--border); /* a rule, not a shadow */
+}
+
+/* ---------------------------------------------------------------------------
+   8. DARK theme — selected, not inverted. Every step was chosen and measured
+   against the dark surfaces, per dataviz check 6.
+   --------------------------------------------------------------------------- */
+
+.dark {
+  --background: var(--neutral-950); /* #0f111a */
+  --foreground: oklch(0.945 0.006 272);
+  --card: oklch(0.223 0.02 272); /* #181b25 */
+  --card-foreground: oklch(0.945 0.006 272);
+  --popover: oklch(0.25 0.02 272);
+  --popover-foreground: oklch(0.945 0.006 272);
+  --muted: oklch(0.27 0.02 272);
+  --muted-foreground: oklch(0.72 0.014 272); /* 7.57:1 on page bg          */
+  --border: oklch(0.32 0.02 272);
+  --border-strong: oklch(0.4 0.022 272);
+  --rule: oklch(0.3 0.02 272);
+  --input: oklch(0.4 0.022 272);
+  --ring: var(--indigo-400);
+
+  --primary: oklch(0.66 0.175 269); /* #6789fc — 5.86:1 on bg     */
+  --primary-hover: oklch(0.72 0.155 269);
+  --primary-foreground: oklch(0.181 0.018 272); /* ink on the fill, 5.86:1    */
+  --primary-soft: oklch(0.3 0.075 269);
+  --primary-ink: oklch(0.8 0.115 269); /* primary as text on bg      */
+  --secondary: oklch(0.28 0.02 272);
+  --secondary-foreground: oklch(0.91 0.008 272);
+  --accent: oklch(0.82 0.15 74); /* amber lifts in dark        */
+  --accent-foreground: oklch(0.181 0.018 272);
+  --accent-soft: oklch(0.32 0.065 74);
+  --accent-ink: oklch(0.86 0.11 74);
+
+  --success: oklch(0.72 0.13 152);
+  --success-foreground: oklch(0.181 0.018 272); /* 7.99:1 */
+  --success-soft: oklch(0.3 0.06 152);
+  --success-ink: oklch(0.86 0.09 152); /* on -soft: 8.99:1 */
+  --warning: oklch(0.82 0.15 74);
+  --warning-foreground: oklch(0.181 0.018 272); /* 10.54:1 */
+  --warning-soft: oklch(0.3 0.06 74);
+  --warning-ink: oklch(0.86 0.09 74); /* on -soft: 8.90:1 */
+  --danger: oklch(0.66 0.185 25);
+  --danger-foreground: oklch(0.181 0.018 272); /* 5.54:1 */
+  --danger-soft: oklch(0.3 0.06 25);
+  --danger-ink: oklch(0.86 0.09 25); /* on -soft: 8.62:1 */
+  --info: oklch(0.7 0.145 250);
+  --info-foreground: oklch(0.181 0.018 272); /* 7.06:1 */
+  --info-soft: oklch(0.3 0.06 250);
+  --info-ink: oklch(0.86 0.09 250); /* on -soft: 8.85:1 */
+
+  /* attendance, dark: worst adjacent deuteran/protan ΔE = 12.9 */
+  --att-present: oklch(0.7 0.15 148); /* #52b766, 6.84:1 on card */
+  --att-present-fg: oklch(0.181 0.018 272); /* 7.66:1 */
+  --att-present-soft: oklch(0.3 0.055 148);
+  --att-present-ink: oklch(0.86 0.11 148); /* on -soft: 9.07:1 */
+  --att-absent: oklch(0.545 0.205 25); /* #cd1f2a, 3.12:1 on card */
+  --att-absent-fg: oklch(0.985 0.003 272); /* 5.51:1 */
+  --att-absent-soft: oklch(0.31 0.075 25);
+  --att-absent-ink: oklch(0.85 0.11 25); /* on -soft: 7.68:1 */
+  --att-late: oklch(0.9 0.15 80); /* #ffd25c, 11.99:1 */
+  --att-late-fg: oklch(0.181 0.018 272); /* 13.44:1 */
+  --att-late-soft: oklch(0.33 0.055 80);
+  --att-late-ink: oklch(0.87 0.115 80); /* on -soft: 8.22:1 */
+  --att-excused: oklch(0.64 0.155 262); /* #5689e9, 5.04:1 */
+  --att-excused-fg: oklch(0.181 0.018 272); /* 5.64:1 */
+  --att-excused-soft: oklch(0.31 0.07 262);
+  --att-excused-ink: oklch(0.855 0.09 262); /* on -soft: 8.27:1 */
+  --att-halfday: oklch(0.46 0.016 268); /* #545861 — needs ring */
+  --att-halfday-fg: oklch(0.985 0.003 272); /* 7.13:1 */
+  --att-halfday-soft: oklch(0.31 0.014 268);
+  --att-halfday-ink: oklch(0.845 0.016 268); /* on -soft: 8.06:1 */
+
+  --grade-a-plus: oklch(0.7 0.14 150);
+  --grade-a: oklch(0.74 0.135 140);
+  --grade-a-minus: oklch(0.79 0.125 118);
+  --grade-b: oklch(0.84 0.13 92);
+  --grade-c: oklch(0.88 0.145 72);
+  --grade-d: oklch(0.79 0.14 48);
+  --grade-f: oklch(0.66 0.185 25);
+  --grade-ink: oklch(0.181 0.018 272);
+
+  /* charts, dark — same hue order (identity follows the entity, not the theme).
+     Validated: all six checks PASS, worst adjacent deuteran ΔE 14.6. */
+  --chart-1: oklch(0.64 0.17 269); /* #6383f2 */
+  --chart-2: oklch(0.62 0.18 355); /* #d44d8c */
+  --chart-3: oklch(0.66 0.15 74); /* #c78100 */
+  --chart-4: oklch(0.655 0.115 192); /* #25a4a1 */
+  --chart-5: oklch(0.56 0.165 305); /* #8b55c1 */
+  --chart-6: oklch(0.6 0.14 145); /* #419547 */
+  --chart-grid: oklch(0.32 0.02 272);
+  --chart-surface: var(--card);
+
+  --sidebar: oklch(0.196 0.038 275); /* deeper than the page       */
+  --sidebar-foreground: oklch(0.93 0.01 275);
+  --sidebar-muted: oklch(0.7 0.02 275);
+  --sidebar-primary: oklch(0.82 0.15 74);
+  --sidebar-primary-foreground: oklch(0.181 0.018 272);
+  --sidebar-accent: oklch(0.28 0.045 275);
+  --sidebar-accent-foreground: oklch(0.985 0.003 275);
+  --sidebar-border: oklch(0.32 0.04 275);
+  --sidebar-ring: oklch(0.82 0.15 74);
+
+  --shadow-flat: 0 0 0 1px oklch(0.985 0.003 272 / 0.06);
+  --shadow-raised:
+    0 1px 2px oklch(0 0 0 / 0.4), 0 2px 6px -2px oklch(0 0 0 / 0.36);
+  --shadow-overlay:
+    0 8px 24px -6px oklch(0 0 0 / 0.52), 0 2px 6px -2px oklch(0 0 0 / 0.4);
+  --shadow-sheet: 0 -8px 28px -8px oklch(0 0 0 / 0.55);
+  --shadow-nav: 0 -1px 0 0 var(--border);
+}
+
+/* ---------------------------------------------------------------------------
+   9. Palette overrides (user_preferences.palette)
+   Applied as a class on <html> alongside `.dark`. These override the BRAND ONLY
+   — `--primary`, `--primary-hover`, `--primary-ink`, `--ring`, `--chart-1`.
+   They deliberately do NOT touch `--accent` or `--sidebar-primary`: amber means
+   "act on this" everywhere, in every palette. (The prototype recoloured
+   --sidebar-primary per palette, which made the sidebar accent meaningless.)
+   Every 600 step below carries white text at ≥ 6:1.
+   --------------------------------------------------------------------------- */
+
+.palette-emerald {
+  --primary: oklch(0.472 0.13 162);
+  --primary-hover: oklch(0.41 0.115 162);
+  --primary-ink: oklch(0.41 0.115 162);
+  --ring: oklch(0.472 0.13 162);
+  --chart-1: oklch(0.545 0.128 162);
+}
+.palette-violet {
+  --primary: oklch(0.472 0.18 302);
+  --primary-hover: oklch(0.41 0.16 302);
+  --primary-ink: oklch(0.41 0.16 302);
+  --ring: oklch(0.472 0.18 302);
+  --chart-1: oklch(0.545 0.18 302);
+}
+.palette-rose {
+  --primary: oklch(0.472 0.17 14);
+  --primary-hover: oklch(0.41 0.152 14);
+  --primary-ink: oklch(0.41 0.152 14);
+  --ring: oklch(0.472 0.17 14);
+  --chart-1: oklch(0.545 0.172 14);
+}
+.palette-bronze {
+  --primary: oklch(0.472 0.115 62);
+  --primary-hover: oklch(0.41 0.102 62);
+  --primary-ink: oklch(0.41 0.102 62);
+  --ring: oklch(0.472 0.115 62);
+  --chart-1: oklch(0.545 0.12 62);
+}
+.palette-cyan {
+  --primary: oklch(0.472 0.13 215);
+  --primary-hover: oklch(0.41 0.115 215);
+  --primary-ink: oklch(0.41 0.115 215);
+  --ring: oklch(0.472 0.13 215);
+  --chart-1: oklch(0.545 0.13 215);
+}
+
+.dark.palette-emerald,
+.dark .palette-emerald {
+  --primary: oklch(0.66 0.12 162);
+  --primary-hover: oklch(0.72 0.11 162);
+  --primary-ink: oklch(0.8 0.1 162);
+  --ring: oklch(0.66 0.12 162);
+  --chart-1: oklch(0.68 0.12 162);
+}
+.dark.palette-violet,
+.dark .palette-violet {
+  --primary: oklch(0.66 0.166 302);
+  --primary-hover: oklch(0.72 0.15 302);
+  --primary-ink: oklch(0.8 0.13 302);
+  --ring: oklch(0.66 0.166 302);
+  --chart-1: oklch(0.64 0.17 302);
+}
+.dark.palette-rose,
+.dark .palette-rose {
+  --primary: oklch(0.66 0.156 14);
+  --primary-hover: oklch(0.72 0.14 14);
+  --primary-ink: oklch(0.81 0.115 14);
+  --ring: oklch(0.66 0.156 14);
+  --chart-1: oklch(0.64 0.17 14);
+}
+.dark.palette-bronze,
+.dark .palette-bronze {
+  --primary: oklch(0.66 0.106 62);
+  --primary-hover: oklch(0.72 0.1 62);
+  --primary-ink: oklch(0.82 0.095 62);
+  --ring: oklch(0.66 0.106 62);
+  --chart-1: oklch(0.68 0.115 62);
+}
+.dark.palette-cyan,
+.dark .palette-cyan {
+  --primary: oklch(0.66 0.12 215);
+  --primary-hover: oklch(0.72 0.11 215);
+  --primary-ink: oklch(0.81 0.095 215);
+  --ring: oklch(0.66 0.12 215);
+  --chart-1: oklch(0.68 0.12 215);
+}
+
+/* ---------------------------------------------------------------------------
+   10. Density (user_preferences.density)
+   Only touches row heights and the page gutter. Never font size — text stays
+   readable at every density.
+   --------------------------------------------------------------------------- */
+
+.density-compact {
+  --size-row: 52px;
+  --size-row-dense: 44px;
+  --space-4: 12px;
+}
+.density-comfortable {
+  --size-row: 68px;
+  --size-row-dense: 52px;
+}
+
+/* ---------------------------------------------------------------------------
+   11. Base layer
+   --------------------------------------------------------------------------- */
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    /* the address bar must never reveal a different colour behind the app */
+    background-color: var(--background);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    font-feature-settings: var(--fs-prose);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none; /* we own pull-to-refresh */
+  }
+
+  /* Bengali runs. <BnEnText lang="bn"> and any [lang="bn"] subtree. */
+  :lang(bn) {
+    font-family: var(--font-bn);
+    line-height: var(--leading-bn);
+    letter-spacing: 0; /* never track Bengali */
+  }
+
+  /* Everything numeric: marks, money, attendance %, IDs, dates, phone numbers. */
+  .tabular,
+  table,
+  [data-numeric],
+  input[inputmode="numeric"],
+  input[inputmode="decimal"] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: var(--fs-tabular);
+  }
+
+  /* Inputs at 16px on phone: anything smaller makes iOS Safari zoom the page. */
+  input,
+  select,
+  textarea {
+    font-size: var(--text-md);
+  }
+
+  /* Focus: one ring, everywhere, never removed. 3:1 against both surfaces. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Windows High Contrast / forced-colors: keep structure, drop our colours. */
+  @media (forced-colors: active) {
+    * {
+      forced-color-adjust: auto;
+    }
+    [data-status] {
+      border: 1px solid CanvasText;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   12. Reduced motion — flips the global multiplier, so every tokenised
+   transition collapses to 0 with no component changes. Opacity cross-fades are
+   kept at 1 frame so state changes are still perceivable.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion: 0.01;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

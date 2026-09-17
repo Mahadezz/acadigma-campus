@@ -1,0 +1,29 @@
+{
+  "name": "@acadigma/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Supabase clients, generated types and workspace context resolution.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./workspace-context": "./src/workspace-context.ts",
+    "./types": "./src/types.generated.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@acadigma/contracts": "workspace:*",
+    "@acadigma/domain": "workspace:*",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.116.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@acadigma/config": "workspace:*",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "extends": "@acadigma/config/tsconfig/library",
+  "include": ["src/**/*.ts"]
+}
