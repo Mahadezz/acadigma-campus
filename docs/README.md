@@ -189,6 +189,7 @@ End-to-end journeys crossing several features. Read the workflow before building
 | File                            | One line                                                                                                                                       |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`ROADMAP.md`](plan/ROADMAP.md) | The build order: milestones merged from the five feature-area READMEs, what must be true before each counts as done, and what Release 1 means. |
+| [`HANDOFF-2026-09-18.md`](plan/HANDOFF-2026-09-18.md) | State at the 2026-09-18 pause: what is merged, what is open, owner actions, next steps. |
 
 ## reference/ — inherited and external material, read-only
 
