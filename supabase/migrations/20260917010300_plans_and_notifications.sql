@@ -99,9 +99,9 @@ create table if not exists public.plan_limits (
 
 comment on table public.plan_limits is
   'Quotas as key/value: max_teachers, max_students, storage_gb, '
-  'ai_credits_per_day, max_sections. A NULL value_int means UNLIMITED — '
-  'which is why the column is nullable instead of defaulted. Adding a new '
-  'quota is a row, not a migration.';
+  'ai_actions_per_month (D-39, was ai_credits_per_day), max_sections. A NULL '
+  'value_int means UNLIMITED — which is why the column is nullable instead '
+  'of defaulted. Adding a new quota is a row, not a migration.';
 -- PK only: a plan's limits are always read as a whole set.
 
 -- ---------------------------------------------------------------------
@@ -160,48 +160,59 @@ create index if not exists plan_prices_lookup_idx
 --     `do nothing` on conflict: a re-run must never overwrite what the
 --     owner has since edited from /platform.
 -- ---------------------------------------------------------------------
+-- 'free' school plan row removed: abolished per SYNTHESIS P-07 / D-42 /
+-- MARKET-STRATEGY §c, pending final owner sign-off (OQ-22). `personal_free`
+-- (the zero-AI free teacher workspace) is kept — it is not the abolished
+-- school plan. Numbers below are placeholders, owner-editable in /platform.
 insert into public.plans
   (code, name, tagline, sort_order, is_public, is_contact_sales, currency,
    trial_days, included_sms_per_month)
 values
   ('personal_free', 'Personal',   'Your own teaching workspace', 5,  false, false, 'BDT',  0,    0),
-  ('free',          'Free',       'Get a school online',         10, true,  false, 'BDT',  0,    0),
-  ('starter',       'Starter',    'For a growing school',        20, true,  false, 'BDT',  0,  200),
-  ('pro',           'Pro',        'The full operations suite',   30, true,  false, 'BDT', 14, 1000),
+  ('starter',       'Starter',    'For a growing school',        20, true,  false, 'BDT',  0,    0),
+  ('pro',           'Pro',        'The full operations suite',   30, true,  false, 'BDT', 30,  300),
   ('enterprise',    'Enterprise', 'Contact us',                  40, true,  true,  'BDT',  0, 5000)
 on conflict (code) do nothing;
+-- pro.trial_days = 30 (was 14): self-serve trial is 30 days of Pro, no card,
+-- capped at trial_ai_actions_lifetime=100 total (MARKET-STRATEGY §c).
+-- included_sms_per_month: starter 0, pro 300 (S-01–S-04, never "unlimited").
 
--- limits ---------------------------------------------------------------
+-- limits ------------------------------------------------------------
+-- Placeholders, owner-editable in /platform. Teacher/parent seats are
+-- unlimited on every school plan (P-05, D-39) — pricing is on students
+-- only. Student "limits" are band boundaries, not hard caps: overage
+-- bills instead of blocking (see plan_prices). AI allowances are per
+-- MONTH, pooled (D-39, was ai_credits_per_day/day).
 insert into public.plan_limits (plan_id, key, value_int)
 select p.id, l.key, l.value_int
 from public.plans p
 join (values
   -- a personal workspace is entitled, but not to a school's shape
-  ('personal_free', 'max_teachers',         1),
-  ('personal_free', 'max_students',        60),
-  ('personal_free', 'storage_gb',           1),
-  ('personal_free', 'ai_credits_per_day',  10),
+  ('personal_free', 'max_teachers',                 1),
+  ('personal_free', 'max_students',                60),
+  ('personal_free', 'storage_gb',                   1),
+  ('personal_free', 'ai_actions_per_month',          0),
 
-  ('free',          'max_teachers',         5),
-  ('free',          'max_students',       150),
-  ('free',          'storage_gb',           1),
-  ('free',          'ai_credits_per_day',  20),
+  ('starter',       'max_teachers',               null),
+  ('starter',       'max_students',               null),
+  ('starter',       'storage_gb',                   10),
+  ('starter',       'ai_actions_per_month',        200),
+  ('starter',       'ai_topup_price_paisa',     120000),
+  ('starter',       'ai_monthly_ceiling_multiple',   3),
 
-  ('starter',       'max_teachers',        20),
-  ('starter',       'max_students',       600),
-  ('starter',       'storage_gb',          10),
-  ('starter',       'ai_credits_per_day', 100),
+  ('pro',           'max_teachers',               null),
+  ('pro',           'max_students',               null),
+  ('pro',           'storage_gb',                   50),
+  ('pro',           'ai_actions_per_month',        600),
+  ('pro',           'trial_ai_actions_lifetime',   100),
+  ('pro',           'ai_topup_price_paisa',     120000),
+  ('pro',           'ai_monthly_ceiling_multiple',   3),
 
-  ('pro',           'max_teachers',        75),
-  ('pro',           'max_students',      2500),
-  ('pro',           'storage_gb',          50),
-  ('pro',           'ai_credits_per_day', 400),
-
-  -- NULL = unlimited
-  ('enterprise',    'max_teachers',      null),
-  ('enterprise',    'max_students',      null),
-  ('enterprise',    'storage_gb',         250),
-  ('enterprise',    'ai_credits_per_day',1500)
+  -- NULL = unlimited / contractual
+  ('enterprise',    'max_teachers',               null),
+  ('enterprise',    'max_students',               null),
+  ('enterprise',    'storage_gb',                  250),
+  ('enterprise',    'ai_actions_per_month',        null)
 ) as l(code, key, value_int) on l.code = p.code
 on conflict (plan_id, key) do nothing;
 
@@ -212,7 +223,7 @@ from public.plans p
 join (values
   ('personal_free', 'lessons'), ('personal_free', 'resources'), ('personal_free', 'attendance'),
 
-  ('free', 'academics'), ('free', 'attendance'), ('free', 'lessons'), ('free', 'messaging'),
+  -- 'free' school plan modules removed with the plan row (D-42, OQ-22).
 
   ('starter', 'academics'), ('starter', 'attendance'), ('starter', 'lessons'),
   ('starter', 'messaging'), ('starter', 'resources'), ('starter', 'reports'), ('starter', 'print'),
@@ -231,27 +242,26 @@ join (values
 on conflict (plan_id, module) do nothing;
 
 -- prices ---------------------------------------------------------------
--- The owner-approved anchors — Starter Tk 2,999 and Pro Tk 7,999 — are the
--- 0-300 student band. Bands step up from there. Yearly = 10x monthly.
--- Overage is seeded at 0 (pure ladder) pending the pricing debate round.
--- Every number here is a PLACEHOLDER; /platform is the editor.
+-- Post-debate anchors (SYNTHESIS / MARKET-STRATEGY §c, D-39, D-41): Starter
+-- Tk 2,200 base / 150 included students / +Tk 9 overage per student above.
+-- Pro Tk 4,900 base / 300 included / +Tk 11 overage per student above.
+-- Enterprise from Tk 18,000, custom band, contractual AI cap. Bands +
+-- overage are live (no longer a pure ladder); teacher caps are removed on
+-- every plan (P-05); AI allowances are per MONTH, pooled. Yearly = 11x
+-- monthly (one month free, not two — was 10x). Every number here is a
+-- PLACEHOLDER, owner-editable in /platform.
 insert into public.plan_prices
   (plan_id, student_min, student_max, monthly_paisa, yearly_paisa, overage_per_student_paisa)
 select p.id, b.student_min, b.student_max, b.monthly_paisa, b.yearly_paisa, b.overage
 from public.plans p
 join (values
-  ('personal_free', 0,    null,       0::bigint,        0::bigint, 0::bigint),
-  ('free',          0,    150,        0::bigint,        0::bigint, 0::bigint),
+  ('personal_free', 0,    null,        0::bigint,        0::bigint,    0::bigint),
 
-  ('starter',       0,    300,   299900::bigint,  2999000::bigint, 0::bigint),
-  ('starter',       301,  600,   449900::bigint,  4499000::bigint, 0::bigint),
+  ('starter',       0,    150,   220000::bigint,  2420000::bigint,   900::bigint),
 
-  ('pro',           0,    300,   799900::bigint,  7999000::bigint, 0::bigint),
-  ('pro',           301,  800,  1199900::bigint, 11999000::bigint, 0::bigint),
-  ('pro',           801, 1500,  1699900::bigint, 16999000::bigint, 0::bigint),
-  ('pro',          1501, 2500,  2299900::bigint, 22999000::bigint, 0::bigint),
+  ('pro',           0,    300,   490000::bigint,  5390000::bigint,  1100::bigint),
 
-  ('enterprise',    0,   null,        0::bigint,        0::bigint, 0::bigint)
+  ('enterprise',    0,   null,  1800000::bigint, 19800000::bigint,    0::bigint)
 ) as b(code, student_min, student_max, monthly_paisa, yearly_paisa, overage) on b.code = p.code
 where not exists (select 1 from public.plan_prices pp where pp.plan_id = p.id);
 
