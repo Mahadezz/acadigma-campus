@@ -38,6 +38,7 @@
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "16.5.0",
+    "jsdom": "30.0.1",
     "prettier": "3.9.7",
     "supabase": "2.117.0",
     "turbo": "2.10.13",

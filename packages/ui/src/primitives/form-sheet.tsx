@@ -51,6 +51,19 @@ export type FormSheetProps = {
   /** Submit and cancel. Stacked on a phone, right-aligned on desktop. */
   footer?: React.ReactNode
   className?: string
+  /**
+   * True while the form has unsaved changes. Guards every close path — Escape,
+   * an overlay click, the drag-to-dismiss handle — against a silent data loss
+   * (§3.3: "a sheet's primary action ... never scrolled off"; the corollary is
+   * that closing it any other way must not be free).
+   */
+  isDirty?: boolean
+  /**
+   * Called instead of closing when `isDirty` and the user attempts to close.
+   * Show your own confirmation (an `AlertDialog`) and call `onOpenChange(false)`
+   * once the user confirms discarding. Omit to fall back to a native `confirm()`.
+   */
+  onAttemptClose?: () => void
 }
 
 export function FormSheet({
@@ -61,12 +74,32 @@ export function FormSheet({
   children,
   footer,
   className,
+  isDirty = false,
+  onAttemptClose,
 }: FormSheetProps) {
   const isMobile = useIsMobile()
 
+  const guardedOnOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (next || !isDirty) {
+        onOpenChange(next)
+        return
+      }
+      if (onAttemptClose) {
+        onAttemptClose()
+        return
+      }
+      const confirmed =
+        typeof window === "undefined" ||
+        window.confirm("Discard unsaved changes?")
+      if (confirmed) onOpenChange(false)
+    },
+    [isDirty, onAttemptClose, onOpenChange]
+  )
+
   if (isMobile) {
     return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet open={open} onOpenChange={guardedOnOpenChange}>
         <SheetContent
           side="bottom"
           // Never taller than the visual viewport, so the submit button stays
@@ -87,7 +120,7 @@ export function FormSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={guardedOnOpenChange}>
       <DialogContent
         className={className ?? "max-h-[85dvh] overflow-y-auto sm:max-w-lg"}
       >

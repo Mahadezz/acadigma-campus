@@ -6,6 +6,7 @@
   "description": "Pure business rules: permissions, money, id formatting, workspace time, plans/limits. No I/O.",
   "exports": {
     ".": "./src/index.ts",
+    "./ai/redact": "./src/ai/redact.ts",
     "./permissions": "./src/permissions.ts",
     "./money": "./src/money.ts",
     "./ids": "./src/ids.ts",
