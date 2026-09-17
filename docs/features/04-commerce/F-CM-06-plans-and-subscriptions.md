@@ -3,7 +3,7 @@
 |                  |                                                                                                                                               |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Area             | billing                                                                                                                                       |
-| Status           | planned                                                                                                                                       |
+| Status           | in-progress (Parts 1-3)                                                                                                                       |
 | Owner branch     | `feat/commerce-plans-subscriptions`                                                                                                           |
 | Depends on       | F-CM-01 (orders/payments/receipts), F-AU-02 (workspaces, members), F-TE-0x (AI credits ledger), F-OP-0x (files, PDF)                          |
 | Plan             | `docs/plan/ROADMAP.md` chunk — commerce, sixth (but **plans + limits land early**, see §8 note)                                               |
