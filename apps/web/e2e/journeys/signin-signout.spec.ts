@@ -8,7 +8,9 @@ import { expectNoA11yViolations } from "../axe"
  * / `password123` account from `supabase/seed/seed.sql`.
  */
 test.describe("sign in and sign out", () => {
-  test("wrong credentials show one generic message", async ({ page }, testInfo) => {
+  test("wrong credentials show one generic message", async ({
+    page,
+  }, testInfo) => {
     await page.goto("/login")
 
     await page.getByLabel("Email").fill("owner@acadigma.test")
@@ -23,7 +25,9 @@ test.describe("sign in and sign out", () => {
     await expectNoA11yViolations(page, testInfo)
   })
 
-  test("a valid sign-in reaches the post-login landing route", async ({ page }) => {
+  test("a valid sign-in reaches the post-login landing route", async ({
+    page,
+  }) => {
     await page.goto("/login")
 
     await page.getByLabel("Email").fill("owner@acadigma.test")

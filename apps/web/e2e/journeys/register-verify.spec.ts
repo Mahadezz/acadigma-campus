@@ -18,7 +18,9 @@ test.describe("register then reach the verify screen", () => {
     const email = `e2e-${Date.now()}-${testInfo.workerIndex}@acadigma.test`
     await page.getByLabel("Full name").fill("Test Teacher")
     await page.getByLabel("Email").fill(email)
-    await page.getByLabel("Password", { exact: true }).fill("Correct-Horse-Battery-99!")
+    await page
+      .getByLabel("Password", { exact: true })
+      .fill("Correct-Horse-Battery-99!")
     await page.getByLabel("Confirm password").fill("Correct-Horse-Battery-99!")
     await page.getByRole("checkbox").check()
 
@@ -38,14 +40,14 @@ test.describe("register then reach the verify screen", () => {
 
     await page.getByLabel("Full name").fill("Duplicate Owner")
     await page.getByLabel("Email").fill("owner@acadigma.test")
-    await page.getByLabel("Password", { exact: true }).fill("Correct-Horse-Battery-99!")
+    await page
+      .getByLabel("Password", { exact: true })
+      .fill("Correct-Horse-Battery-99!")
     await page.getByLabel("Confirm password").fill("Correct-Horse-Battery-99!")
     await page.getByRole("checkbox").check()
     await page.getByRole("button", { name: "Create account" }).click()
 
-    await expect(
-      page.getByText(/already has an account/i)
-    ).toBeVisible()
+    await expect(page.getByText(/already has an account/i)).toBeVisible()
     await expect(page).toHaveURL(/\/register$/)
 
     await expectNoA11yViolations(page, testInfo)

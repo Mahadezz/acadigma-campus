@@ -105,12 +105,10 @@ beforeEach(() => {
     mockCallOrder.push("updateUser")
     return { error: null }
   })
-  mockSignOut.mockImplementation(
-    async (opts?: { scope?: string }) => {
-      mockCallOrder.push(`signOut:${opts?.scope ?? "global"}`)
-      return { error: null }
-    }
-  )
+  mockSignOut.mockImplementation(async (opts?: { scope?: string }) => {
+    mockCallOrder.push(`signOut:${opts?.scope ?? "global"}`)
+    return { error: null }
+  })
   mockRpc.mockImplementation(async () => ({ data: null, error: null }))
 })
 

@@ -70,11 +70,9 @@ export default async function VerifyPage({
           {t.auth.verify.instructions}
         </p>
       </div>
-      {email ? <ResendForm
-            email={email}
-            t={t.auth.verify}
-            network={t.auth.network}
-          /> : null}
+      {email ? (
+        <ResendForm email={email} t={t.auth.verify} network={t.auth.network} />
+      ) : null}
     </AuthCard>
   )
 }

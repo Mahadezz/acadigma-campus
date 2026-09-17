@@ -27,7 +27,9 @@ test.describe("forgot password request is enumeration-safe", () => {
     page,
   }) => {
     await page.goto("/forgot")
-    await page.getByLabel("Email").fill(`no-such-user-${Date.now()}@acadigma.test`)
+    await page
+      .getByLabel("Email")
+      .fill(`no-such-user-${Date.now()}@acadigma.test`)
     await page.getByRole("button", { name: "Send reset link" }).click()
 
     await expect(
@@ -45,7 +47,9 @@ test.describe("reset with an invalid token", () => {
     await expect(
       page.getByRole("heading", { name: /link has expired/i })
     ).toBeVisible()
-    await expect(page.getByRole("link", { name: /send a new link/i })).toBeVisible()
+    await expect(
+      page.getByRole("link", { name: /send a new link/i })
+    ).toBeVisible()
 
     await expectNoA11yViolations(page, testInfo)
   })
