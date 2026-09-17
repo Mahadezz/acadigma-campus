@@ -1,0 +1,953 @@
+# Acadigma Campus — Data-Protection Compliance Plan (Bangladesh PDPA 2026)
+
+Version 0.1 (draft) · 2026-09-17 · Owner: Mahadi (Acadigma) · Engineering lead: Claude
+Status: **internal working document · for lawyer review · not legal advice**
+
+Companion documents: `PRD.md` §6 (non-functional: security, privacy) · `PRODUCT-DECISIONS.md` §1.13, §1.15, §6.5 · `../architecture/ARCHITECTURE.md` §3–4, §10, §11 · `../engineering/SECURITY.md` · `../features/01-identity/F-ID-01-authentication.md` §4.9 · `../features/01-identity/F-ID-04-invitations-and-join-codes.md` §4.5 · drafts in `legal/PRIVACY-POLICY-DRAFT.md` and `legal/DPA-DRAFT.md`.
+
+**Why this document exists.** Acadigma Campus holds children's dates of birth, religion, health conditions, allergies, medications and prescription files; national ID scans for children and parents; teacher CVs and certificates; government ID scans and selfies for seller KYC; and payment records. `SECURITY.md` states that plainly and builds the controls. This document is the _legal_ counterpart: which law applies, what it demands, what we must build, and what we may and may not say in marketing.
+
+---
+
+## 0. How to read the confidence markers
+
+Every factual claim about the law carries one of:
+
+| Marker              | Meaning                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[VERIFIED]**      | Corroborated by two or more independent sources, at least one of them a law firm, a specialist privacy publisher, or reputable Bangladeshi press. |
+| **[SINGLE-SOURCE]** | Found in exactly one credible source and not contradicted. Treat as probable; confirm with counsel.                                               |
+| **[CONFLICTING]**   | Credible sources disagree. The disagreement is recorded; do not build irreversible product decisions on it.                                       |
+| **[UNVERIFIED]**    | Reported to us (market-research brief) but not found in any source we could reach. Do not rely on it.                                             |
+
+**We did not obtain the statutory text itself.** The Bangladesh Laws portal (`bdlaws.minlaw.gov.bd`) carries the Bengali text of the **Ordinance** (ব্যক্তিগত উপাত্ত সুরক্ষা অধ্যাদেশ, ২০২৫, entry `act-1574`); we could not retrieve a machine-readable gazette copy of the **Act 2026** itself. Every section number below is therefore _reported by a secondary source_, never read by us. **Before any public claim or contract signature, counsel must read the gazette.**
+
+---
+
+## 1. What the Act requires
+
+### 1.0 Which instrument is current law — reconciling two internal briefs
+
+Two of our own research agents cited different instruments, so this is settled here before anything else in this document is read:
+
+- The **go-to-market brief** cited the _Personal Data Protection **Ordinance** 2025_, gazetted **6 November 2025**.
+- The **competitor / market brief** cited the _Personal Data Protection **Act** 2026_, passed **April 2026**, repealing that ordinance.
+
+**Both describe the same law at two points in its life, and the second one is current.** The sequence, corroborated across Securiti, The Daily Star, Asia News Network, SCL Insights (a Bangladeshi firm), security.land and Digital Policy Alert:
+
+| Date         | Instrument                                                                                                                                 | Status now                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| 6 Nov 2025   | Personal Data Protection **Ordinance**, 2025 — gazetted, in force                                                                          | **Repealed**                                            |
+| 5 Feb 2026   | Personal Data Protection (**Amendment**) **Ordinance**, 2026 (Ordinance No. 23 of 2026)                                                    | Spent — it amended the ordinance that was then repealed |
+| ~15 Apr 2026 | Personal Data Protection **Act, 2026** (reported as Act / Law **63 of 2026**), passed by Parliament, repealing and replacing the Ordinance | **Current law**                                         |
+
+**How we verified it.** Securiti's overview and bdlawdigest both state the April 2026 enactment and the repeal; The Daily Star and Asia News Network cover the November 2025 ordinance and its 18-month commencement structure; Digital Policy Alert records the February 2026 amendment ordinance with its number and presidential assent; SCL Insights and security.land both date the 18-month commencement clock from 6 November 2025. We did **not** read the gazette text of the Act itself (see the note in §0), so the _substance_ set out below is drawn largely from commentary on the Ordinance, which the Act carried forward.
+
+**Practical consequence:** cite "**the Personal Data Protection Act, 2026**" in every external document. Where a source describes "the Ordinance", its substance remains the best available evidence of what the Act says — but it must be flagged as such, which the confidence markers do. **Anything written against the 2025 Ordinance as if it were current law is out of date and must be corrected**, including `docs/product/research/GO-TO-MARKET.md` if it says so. One further trap: the 18-month commencement clock runs from the **Ordinance's** gazette date (6 Nov 2025), not from the Act's passage, so the enforcement date is ~May 2027 and not ~Oct 2027.
+
+### 1.1 Existence, name and date
+
+| Fact                                                                                                                           | Confidence          | Source                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Bangladesh's first comprehensive data-protection statute exists and is in force                                                | **[VERIFIED]**      | Securiti overview; The Daily Star; Asia News Network                                                        |
+| It began as the **Personal Data Protection Ordinance, 2025**, gazetted **6 November 2025**                                     | **[VERIFIED]**      | SCL Insights (Bangladeshi firm); security.land; Daily Star                                                  |
+| Amended by the **Personal Data Protection (Amendment) Ordinance, 2026 (Ordinance No. 23 of 2026)**, signed **5 February 2026** | **[VERIFIED]**      | Digital Policy Alert (two entries); Securiti                                                                |
+| Became the **Personal Data Protection Act, 2026** on **~15 April 2026**, repealing the Ordinance                               | **[VERIFIED]**      | Securiti; bdlawdigest; multiple                                                                             |
+| Numbered **Act / Law 63 of 2026**                                                                                              | **[SINGLE-SOURCE]** | Securiti ("Law 63 of 2026"). The brief's "Act 63 of 2026" matches. Confirm the gazette number with counsel. |
+
+**Verdict on the brief:** the Act is real; the April 2026 passage and the repeal of the November 2025 ordinance are confirmed. The act number is probable but single-sourced.
+
+### 1.2 The single most important thing the brief did not tell us
+
+> **[VERIFIED] Most of the enforcement machinery is delayed by 18 months from 6 November 2025 — i.e. to approximately 13 May 2027.** The delayed items reported are: appointment of a Chief Data Officer by significant data fiduciaries, and the complaint / investigation / penalty procedures.
+> Sources: SCL Insights ("18 months from 6 November 2025 — approximately May 2027"); security.land ("Delayed 18 months (until May 2027): Chief Data Officer appointment and complaint/investigation/penalty procedures"); Daily Star ("Most provisions take effect 18 months after gazette notification").
+
+This does **not** mean we can wait. It means:
+
+1. Substantive obligations (lawful basis, notice, rights, security, children's consent) are already on the books and already shape what a school's lawyer asks us in a procurement review.
+2. We have a **fixed, dated runway** — roughly 20 months from today — to be compliant _before_ fines and complaints switch on.
+3. Anything we build now is far cheaper than retrofitting consent records onto a live database of children.
+
+### 1.3 Scope and who is caught
+
+- **[VERIFIED]** Applies to any entity processing personal data **in** Bangladesh, and to foreign organisations processing the personal data of people in Bangladesh (Daily Star; Securiti). Acadigma is a Bangladeshi operation serving Bangladeshi schools; there is no argument that we are out of scope.
+- **[VERIFIED]** The Act distinguishes a **data fiduciary / controller** (decides purpose and means) from a **data processor** (processes on the fiduciary's behalf) (Securiti; DataGuidance; Daily Star). See §2.
+- **[SINGLE-SOURCE]** The fiduciary is **directly liable for the acts of any processor it engages** and must ensure "contractual compliance cascades through its vendor chain" (SCL Insights). This is the commercial reason schools will demand a DPA from us.
+
+### 1.4 Lawful basis and consent
+
+- **[VERIFIED]** Consent must be **informed and explicit**; the data subject must be told why data is collected, how it is used, who accesses it and for how long it is stored; consent is **withdrawable at any time** (Daily Star; Securiti).
+- **[VERIFIED]** There are non-consent routes, including a broad **§24 exemption** for national security, defence, public order and an undefined "public interest" — criticised by the Daily Star, Asia News Network and CCIA as lacking foreseeability. That exemption runs in the **state's** favour, not ours; it gives Acadigma nothing.
+- **[UNVERIFIED]** Whether "performance of a contract" or "legitimate interests" exist as standalone bases in the same shape as GDPR Art. 6. Our design therefore does not depend on them: we build **consent plus school-directed processing**, and let counsel tell us we over-built.
+
+### 1.5 Children
+
+| Fact                                                                                                                                                       | Confidence                        | Source                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A **child is anyone under 18**                                                                                                                             | **[VERIFIED]**                    | Securiti ("any person below the age of 18 years"); a secondary source attributes the age to **§12(3)(a)**                                                                     |
+| Processing a child's data requires consent of a **parent, legal guardian, or a person legally empowered to decide**                                        | **[VERIFIED]**                    | Securiti; Daily Star                                                                                                                                                          |
+| **Profiling, behavioural tracking and targeted advertising directed at minors are prohibited**; automated decision-making affecting children is restricted | **[SINGLE-SOURCE, high quality]** | The Daily Star key-takeaways piece                                                                                                                                            |
+| The word "**verifiable**" parental consent (the GDPR/COPPA term of art) appears in the statute                                                             | **[UNVERIFIED]**                  | The brief asserts it. No source we reached uses that exact word for Bangladesh. We design to a verifiable standard anyway: it is the defensible position and costs us little. |
+
+**Product consequence — the sharpest one in this document.** Our student **risk score** (PRODUCT-DECISIONS §2.10) is an automated assessment of a child. It is already a _deterministic, explainable formula with a human override and a human-set flag that is never auto-cleared_, which is close to the right answer for a restricted-automated-decision regime. It must now be documented as such, disclosed in the privacy notice, and never described as "AI risk prediction" in marketing. See §9 and §10.
+
+### 1.6 Sensitive personal data
+
+**[VERIFIED]** across Securiti and the Daily Star, the sensitive categories include:
+
+biometric identifiers (fingerprints, iris) · genetic / DNA data · **health records** · **religion** · caste · political affiliation · trade-union membership · sexual orientation · **government unique identifiers (NID, passport, TIN)** · criminal records and allegations · **real-time geolocation** · legal affairs.
+
+Sensitive data requires explicit consent and heightened security, and attracts **stricter oversight on cross-border transfer** (Securiti).
+
+**Product consequence.** Acadigma Campus holds three of these about children (health, religion, NID scans), one about staff and sellers (NID / government ID scans and selfies), and one about candidates (certificates plus NID). It holds **no biometrics** — our QR ID cards carry a _signed token_, not a fingerprint or face template (PRODUCT-DECISIONS §3.10). That is a genuine, defensible marketing claim (§10) and a design constraint we must not quietly break when the Android wrapper adds a camera, or when "geofenced staff check-in" (PRODUCT-DECISIONS §2.9, deferred) is picked up — geolocation is a sensitive category.
+
+### 1.7 Cross-border transfer and localisation
+
+This is where the brief was least complete and the risk to our architecture is highest.
+
+| Fact                                                                                                                                                                        | Confidence                               | Source                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data classified **"confidential"** or **"restricted"** under the Ordinance **must be stored within Bangladesh**                                                             | **[VERIFIED]** (two independent sources) | SCL Insights: "data classified as 'confidential' or 'restricted' … required to be stored within Bangladesh"; a second commentary describes the same tiering |
+| Organisations using foreign cloud infrastructure must keep **at least one synchronised real-time copy inside Bangladesh**                                                   | **[SINGLE-SOURCE]**                      | security.land                                                                                                                                               |
+| Government may order cessation of a foreign cloud service within **60 days** on national-interest grounds                                                                   | **[SINGLE-SOURCE]**                      | security.land                                                                                                                                               |
+| Other personal data may be transferred only to jurisdictions with an **"adequate level of protection"**, a list the government **has not yet published**                    | **[VERIFIED]**                           | SCL Insights; Daily Star ("equivalent protection standards")                                                                                                |
+| Transfers are otherwise permitted on **consent**, **contractual necessity**, or where the transfer serves the subject's interests in **education**, commerce or immigration | **[SINGLE-SOURCE]**                      | security.land                                                                                                                                               |
+| **Bulk transfers of sensitive identifiers** (fingerprints, DNA, NID numbers, passports) attract **heightened scrutiny / advance regulatory approval**                       | **[VERIFIED]**                           | security.land ("advance regulatory approval"); Securiti ("Controllers must notify authorities for large-scale transfers of sensitive data")                 |
+
+**Verdict on the brief:** "biometrics as sensitive data with cross-border transfer oversight" is correct but understates the problem. The brief did not mention **localisation**, the one fact that could force an architecture change. See §5.
+
+### 1.8 Data-subject rights
+
+**[VERIFIED]** (Securiti, bdlawdigest, Daily Star): **access**, **correction / rectification** (Securiti: within **30 days** — **[SINGLE-SOURCE]**), **erasure** when data is no longer necessary, **portability** ("receive data in a prescribed format" — the format is to be prescribed and **has not been published** — **[SINGLE-SOURCE]**), **withdrawal of consent** at any time, and **complaint to the Authority**.
+
+The brief's "statutory portability and erasure" is **[VERIFIED]**. The _prescribed format_ is not yet knowable, so we must not claim to produce a "statutory portability file".
+
+### 1.9 The regulator — a name conflict worth flagging
+
+| Claim                                                                                                                                                                                                                                                                                                                                                               | Confidence          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| The brief says **"National Data Management Authority"**                                                                                                                                                                                                                                                                                                             | **[CONFLICTING]**   |
+| The Daily Star (twice), Asia News Network and local commentary say **National Data Governance Authority (NDGA)**, created under a companion **National Data Governance Ordinance 2025**, which registers and classifies data fiduciaries, audits, issues guidelines, investigates complaints and imposes penalties; appeals go to a tribunal under the ICT Act 2006 | **[VERIFIED]**      |
+| Securiti calls it the **"National Data Management Authority"**, with the same functions (binding instructions, inspections, SOPs)                                                                                                                                                                                                                                   | **[SINGLE-SOURCE]** |
+
+**Working position:** use **"the Authority"** in all our documents and contracts, with a footnote that it is _reported_ as the National Data Governance Authority (NDGA). Never print a regulator's name on a marketing page until counsel confirms it from the gazette. Our DPA draft uses "the Authority" for exactly this reason.
+
+### 1.10 Chief Data Officer
+
+| Claim                                                                                                                                                                                               | Confidence                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| The brief says a CDO is **mandatory** for everyone                                                                                                                                                  | **[CONFLICTING]** — no source we reached says _every_ fiduciary must appoint one    |
+| **Significant** data fiduciaries must appoint a qualified CDO, responsible for regulatory liaison, reporting and handling data-subject complaints, and serving as contact point for rights requests | **[VERIFIED]** (Securiti; law-firm synthesis)                                       |
+| That obligation is among the provisions **delayed 18 months**, to ~May 2027                                                                                                                         | **[VERIFIED]** (security.land; SCL Insights)                                        |
+| "Significant data fiduciary" is a **designation the Authority makes**; the criteria are **pending**                                                                                                 | **[VERIFIED]** (SCL Insights: "significant data fiduciaries (designation pending)") |
+
+**Working position:** designate a CDO now, voluntarily (§8). It costs one paragraph and one email alias, it is the cheapest item on this list, and a school's lawyer will ask for a named contact whether or not the statute compels one. A platform holding records for dozens of schools' children is a plausible future "significant" designation.
+
+### 1.11 Records and retention
+
+- **[SINGLE-SOURCE]** Controllers must "maintain a register and properly preserve all records" for **at least 5 years** (Securiti). The brief's "5-year record retention" matches. Not corroborated elsewhere; treat as probable.
+- The distinction that matters in practice: this is a **minimum retention of compliance records**, not a _maximum_ retention of personal data, and it is certainly not a licence to keep a child's medical file for five years after they leave. Our own schedule (§4) is shorter for most personal data and at least five years for consent, audit and breach records.
+
+### 1.12 Breach notification
+
+| Claim                                      | Confidence                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Breaches must be reported to the Authority | **[VERIFIED]** (Daily Star: "promptly report … detailing incident specifics, risks to individuals, and remedial actions"; Securiti: notify where a breach causes "significant damage")                                                                                                                                                                             |
+| Within **72 hours**                        | **[CONFLICTING / likely contaminated]** — every 72-hour result we found traces to **India's DPDP Act**, not Bangladesh. One synthesis asserted 72 hours for Bangladesh and in the same breath said the law "contains no mandatory breach notification requirement in its strictest interpretation". **Do not put 72 hours in a contract as a statutory citation.** |
+
+**Working position:** commit contractually to **notifying the school within 72 hours**, with an initial heads-up "without undue delay and in any event within 24 hours of confirming a breach". That is stricter than anything the Act is reported to require, is easy to honour given our trigger-written audit trail, and takes the issue off the procurement table.
+
+### 1.13 Penalties
+
+| Figure                                                                                                                                                                            | Confidence                     | Source                                                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Up to **৳25 lakh** administrative fine for failing to honour a data subject's rights                                                                                              | **[VERIFIED]**                 | Securiti; law-firm synthesis                                                                                                                                                         |
+| Up to **৳50 lakh** for a designated **significant** data fiduciary                                                                                                                | **[VERIFIED]**                 | Securiti; law-firm synthesis                                                                                                                                                         |
+| Criminal exposure: imprisonment up to **5–7 years** and fines up to **৳20 lakh** for serious violations; **corporate officers personally liable** unless they prove due diligence | **[SINGLE-SOURCE / probable]** | Daily Star                                                                                                                                                                           |
+| Turnover-based fines: **1–2 % of annual turnover** generally, **2–5 %** for significant fiduciaries                                                                               | **[CONFLICTING]**              | SCL Insights. Cannot be reconciled with the lakh figures from the same period — possibly ordinance-vs-act drift, possibly a cap-plus-percentage structure. **Counsel must resolve.** |
+
+**Verdict on the brief:** the ৳25 lakh / ৳50 lakh figures are **[VERIFIED]**. The brief omitted the criminal and personal-officer liability, which is the part the owner should care about most.
+
+### 1.14 Summary verdict on the research brief
+
+| Brief's claim                                                                           | Verdict                                                                                          |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| PDPA 2026 (Act 63 of 2026), passed April 2026, repeals the Nov 2025 ordinance           | **[VERIFIED]**; act number **[SINGLE-SOURCE]**                                                   |
+| Children under 18, verifiable parental consent                                          | Under-18 **[VERIFIED]**; parental consent **[VERIFIED]**; the word "verifiable" **[UNVERIFIED]** |
+| Biometrics sensitive, cross-border oversight                                            | **[VERIFIED]**, and understated — see localisation                                               |
+| ৳25 lakh / ৳50 lakh fines                                                               | **[VERIFIED]**; turnover-percentage alternative **[CONFLICTING]**                                |
+| Mandatory Chief Data Officer                                                            | **[CONFLICTING]** — verified only for **significant** fiduciaries, and **delayed to ~May 2027**  |
+| 5-year record retention                                                                 | **[SINGLE-SOURCE]**                                                                              |
+| Statutory portability and erasure                                                       | **[VERIFIED]**; portability _format_ not yet prescribed                                          |
+| National Data Management Authority                                                      | **[CONFLICTING]** — reputable BD press says **National Data Governance Authority (NDGA)**        |
+| _(not in the brief)_ 18-month delayed enforcement to ~May 2027                          | **[VERIFIED]** — materially changes our timeline                                                 |
+| _(not in the brief)_ Localisation of "confidential"/"restricted" data inside Bangladesh | **[VERIFIED]** — materially threatens our architecture                                           |
+| _(not in the brief)_ Criminal and personal officer liability                            | **[SINGLE-SOURCE]** — materially changes the owner's risk                                        |
+
+### 1.15 Sources
+
+1. Securiti — _An Overview of Bangladesh's Personal Data Protection Act, 2026_ — https://securiti.ai/bangladesh-personal-data-protection-act-overview/
+2. The Daily Star — _Bangladesh's Personal Data Protection Ordinance 2025: key takeaways_ — https://www.thedailystar.net/tech-startup/news/bangladeshs-personal-data-protection-ordinance-2025-key-takeaways-4015401
+3. The Daily Star — _Why Bangladesh's new data protection law may fail to protect your data_ — https://www.thedailystar.net/slow-reads/big-picture/news/why-bangladeshs-new-data-protection-law-may-fail-protect-your-data-4217396
+4. SCL Insights (Bangladesh) — _The Personal Data Protection Ordinance 2025: What Every Bangladeshi Business Must Do Before the Clock Runs Out_ — https://bd-scl.com/insights/personal-data-protection-ordinance-2025-compliance.html
+5. security.land — _Bangladesh Enacts Data Protection Law with Localization Rules_ — https://www.security.land/bangladesh-data-protection-law-localization/
+6. Digital Policy Alert — _Personal Data Protection (Amendment) Ordinance, 2026 (Ordinance No. 23 of 2026)_ — https://digitalpolicyalert.org/change/18757-personal-data-protection-amendment-ordinance-2026-ordinance-no-23-of-2026
+7. bdlawdigest — _Personal Data Protection Act 2026 Bangladesh: Privacy Gap_ — https://bdlawdigest.org/personal-data-protection-act-2026-bangladesh.html
+8. Mahbub & Company — _Key Highlights of the Personal Data Protection Ordinance, 2025 for Businesses_ — https://mahbub-law.com/key-highlights-of-the-personal-data-protection-ordinance-2025-for-businesses/
+9. DataGuidance — _Bangladesh: Data Protection Ordinance 2025 — key compliance obligations, rights, and implementation priorities (part two)_ — https://www.dataguidance.com/opinion/bangladesh-data-protection-ordinance-2025-key-part-two
+10. CCIA — _Views on Bangladesh's Personal Data Protection Ordinance_ (April 2026) — https://ccianet.org/wp-content/uploads/2026/04/CCIA-Views-on-Bangladeshs-Personal-Data-Protection-Ordinance.pdf
+11. Laws of Bangladesh — ব্যক্তিগত উপাত্ত সুরক্ষা অধ্যাদেশ, ২০২৫ — http://bdlaws.minlaw.gov.bd/act-1574.html _(Ordinance text, Bengali; Act 2026 text not retrieved)_
+
+**Stale source warning.** DLA Piper's _Data Protection Laws of the World_ Bangladesh page (https://www.dlapiperdataprotection.com/?t=law&c=BD) still describes the Cyber Security Act 2023 as the framework and states there is no breach-notification duty and no DPO requirement. It has not been updated for the PDPO/PDPA. Do not cite it.
+
+---
+
+## 2. Roles: who is the controller, who is the processor
+
+### 2.1 The allocation
+
+| Data set                                                                                                                      | Controller / data fiduciary                                              | Processor    | Why                                                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Students, guardians, enrolments, attendance, marks, behaviour, report cards, school files, messages inside a school workspace | **The school** (the workspace of `type='school'`)                        | **Acadigma** | The school decides which children to enrol, which fields to collect, who may see them, and how long to keep them. We execute its instructions.                                                                                         |
+| Staff records, pay rates, staff attendance, leave, cover assignments                                                          | **The school**                                                           | **Acadigma** | Employment data is the employer's.                                                                                                                                                                                                     |
+| Hiring: job postings, applications, interview scorecards, candidate documents shared with a school                            | **The school** for the pipeline it runs                                  | **Acadigma** | The school decides whom to interview and what to record.                                                                                                                                                                               |
+| A candidate's own `teacher_profiles`, CV, certificates and `open_to_work` flag in their **personal workspace**                | **Acadigma**                                                             | —            | The user created this for themselves on our platform; nobody instructs us. We are the controller.                                                                                                                                      |
+| Personal-workspace data of an independent tutor (their students, files, diary)                                                | **Acadigma**                                                             | —            | Same reasoning. Note this includes children — see §2.3.                                                                                                                                                                                |
+| Account identity: `profiles`, `auth.users`, sessions, `device_registrations`, throttles                                       | **Acadigma**                                                             | —            | We decide what an account is and how it is secured.                                                                                                                                                                                    |
+| Seller profiles, KYC documents, payout methods, earnings, payouts                                                             | **Acadigma**                                                             | —            | We run the marketplace, we set the KYC standard, we pay out.                                                                                                                                                                           |
+| Orders, payments, refunds, invoices                                                                                           | **Acadigma** (as merchant of record and for our own tax/accounting duty) | —            | SSLCommerz is our processor/sub-processor for the payment leg.                                                                                                                                                                         |
+| Platform telemetry: `audit_events`, `email_log`, `file_access_log`, logs, Sentry                                              | **Joint in practice, Acadigma-led**                                      | —            | We keep them for security and to answer the school's own accountability questions. The DPA states that we retain audit records in our own right for security and legal-defence purposes and that the school cannot order them deleted. |
+
+**Acadigma is therefore both**: a processor for everything a school puts into its workspace, and a controller for accounts, the marketplace and personal workspaces. The privacy policy and the DPA must be two documents because they speak in those two different voices.
+
+### 2.2 What this means day to day
+
+- **We do not decide what happens to a child's record.** A school asks us to export, correct or delete; we do it. If a _parent_ asks us directly, we route them to the school and tell the school within 3 business days (§6.6).
+- **We do not use school data for our own purposes.** Not for analytics sold to anyone, not for training models, not for marketing to parents. The DPA says so and `SECURITY.md` §5.5 already forbids PII in logs.
+- **Aggregated, de-identified benchmarks** ("the average attendance across schools on Acadigma is 87 %") are the only school-derived product we may build, and only with a written instruction in the DPA plus a k-anonymity floor (no cell below 5 schools / 50 students). Until that is built, do not claim it.
+- **Sub-processors are ours to control and disclose.** See §5.
+
+### 2.3 The uncomfortable case: independent tutors
+
+An independent tutor's personal workspace holds _children's_ records (their tutoring students) and Acadigma is the **controller** there, not a processor. That means the full weight of the children's provisions falls directly on us for that data. Consequences:
+
+1. The tutor must warrant, at the point of adding a student under 18, that they hold the parent's consent, and must record who gave it (§3.4).
+2. The personal-workspace student record must be **field-limited** compared with the school one: name, contact of guardian, subject, attendance, notes. **No health fields, no religion, no ID scans** in personal workspaces. This is a new product constraint (§9, item P6) — today `PRODUCT-DECISIONS` §2.11 makes no such distinction.
+
+### 2.4 What a Data Processing Agreement must contain
+
+The DPA is at `legal/DPA-DRAFT.md`. Required contents, each mapped to what we already have:
+
+| #   | Clause                                                                                                                  | Our position                                                                                                                                                                                                                                                                                                                                                                            |
+| --- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Subject matter, duration, nature and purpose** of processing; **types of data** and **categories of data subject**    | The data inventory in §4 is incorporated into the DPA as Annex A.                                                                                                                                                                                                                                                                                                                       |
+| 2   | **Processing only on documented instructions** of the school, including for transfers                                   | ARCHITECTURE §3: tenant context derives from `workspace_members`, never from the client. Platform-staff access is "narrow and enumerated", never impersonation.                                                                                                                                                                                                                         |
+| 3   | **Confidentiality** of personnel with access                                                                            | Named platform staff only; `is_platform_admin`; support access is a time-boxed, owner-granted `support_access_grants` row.                                                                                                                                                                                                                                                              |
+| 4   | **Security measures** (technical and organisational), specified not hand-waved                                          | Annex B of the DPA = a summary of `SECURITY.md`: RLS on every table plus a server policy check, both tested (pgTAP); private bucket with 5-minute signed URLs and `file_access_log`; encryption in transit and at rest; pgsodium for payout details; append-only trigger-written `audit_events`; CSP, Zod on every input, Semgrep and gitleaks in CI; authorized pentest before launch. |
+| 5   | **Sub-processor terms**: named list, flow-down obligations, 30 days' notice of change, right to object                  | §5.4.                                                                                                                                                                                                                                                                                                                                                                                   |
+| 6   | **Assistance with data-subject rights**                                                                                 | The `data_requests` table and export/erasure tooling in §6. SLA: acknowledge in 3 business days, complete in 20.                                                                                                                                                                                                                                                                        |
+| 7   | **Assistance with security, breach notification and DPIAs**                                                             | §7 and §8.4.                                                                                                                                                                                                                                                                                                                                                                            |
+| 8   | **Breach notification to the school**: timeline, content, single channel                                                | 24 h initial / 72 h full (§7).                                                                                                                                                                                                                                                                                                                                                          |
+| 9   | **Deletion or return at the end of the contract**, and proof of it                                                      | 30-day export window, then deletion within 90 days; a signed deletion certificate on request. Audit records are carved out.                                                                                                                                                                                                                                                             |
+| 10  | **Audit and information rights**                                                                                        | Annual written security summary plus the pentest attestation; on-site audit at the school's cost with 30 days' notice, no more than once a year.                                                                                                                                                                                                                                        |
+| 11  | **Cross-border transfer terms** — the transfers listed in §5, the safeguards, and the school's instruction to make them | Explicit. This is the clause counsel must look at hardest (§5.5).                                                                                                                                                                                                                                                                                                                       |
+| 12  | **Children's data**: the school warrants it holds parental consent; Acadigma will provide the capture mechanism         | §3.                                                                                                                                                                                                                                                                                                                                                                                     |
+| 13  | **Liability, indemnity, and the interaction with the main subscription terms**                                          | For counsel. Our draft is deliberately silent on caps.                                                                                                                                                                                                                                                                                                                                  |
+| 14  | **Governing law**: Bangladesh; courts of Dhaka                                                                          | For counsel.                                                                                                                                                                                                                                                                                                                                                                            |
+
+### 2.5 Where the DPA is accepted
+
+**In the school creation wizard (F-ID-05 onboarding), as a blocking step before the workspace becomes usable.**
+
+Design:
+
+- Step order becomes: school details → **Terms, Privacy Policy and Data Processing Agreement** → academic setup.
+- The screen shows: who is signing (the person creating the school, who becomes `owner`), on behalf of which school, the three document titles with version numbers, an expandable full text (not a link-only pattern — schools print these), and a single checkbox: _"I confirm I am authorised to bind {school} and I accept the Terms of Service (v{n}), Privacy Policy (v{n}) and Data Processing Agreement (v{n})."_
+- The primary button is **disabled** until the checkbox is ticked. There is no "skip".
+- On submit we write a row to a new table **`legal_acceptances`**: `id`, `workspace_id`, `user_id`, `document ∈ {terms, privacy, dpa}`, `version`, `document_hash` (sha256 of the exact rendered text), `accepted_at`, `ip_hash`, `user_agent`, `locale`. Never the raw IP — `SECURITY.md` and `device_registrations` already establish `ip_hash` as our pattern.
+- A PDF counterpart of the accepted DPA is generated (we already render PDFs server-side) and stored to `files` with `visibility='private'`, so a school can hand it to its auditor. Downloadable any time from Settings → Legal.
+- **Re-acceptance on a new version:** when `dpa.version` increases, every school owner sees a blocking interstitial on next sign-in with a diff summary ("what changed") and must accept. Admins see a banner. 30 days' notice by email first (the DPA promises this).
+- The whole flow emits audit events: `legal.dpa_accepted`, `legal.privacy_accepted`, `legal.terms_accepted`, `legal.reaccepted`.
+
+**Also accepted elsewhere, with the same table:**
+
+- **Registration** (F-ID-01 §4.1): Terms + Privacy only, at sign-up. Not the DPA — an individual is not a school.
+- **Seller onboarding** (F-CM-02): a Seller Agreement + KYC consent.
+- **Public job application** (`/jobs/:slug/apply`): candidate privacy notice + document-sharing consent (§3.5).
+
+---
+
+## 3. Lawful basis and consent capture design
+
+### 3.1 The lawful-basis map
+
+Because the statute's non-consent bases are not clearly verified (§1.4), we rely on a **two-layer** story: the school's own lawful basis for running a school, plus explicit consent wherever the data is sensitive, wherever a child is involved, and wherever data leaves the school's own operational need.
+
+| Processing                                                           | Controller                                       | Basis we rely on                                                                     | Consent artefact                                                                             |
+| -------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Enrolling a student; attendance; marks; report cards                 | School                                           | School's contract with the family + statutory/regulatory duty to keep school records | Admission form + our recorded guardian consent (§3.2)                                        |
+| Student **health** fields, allergies, medication, prescription files | School                                           | **Explicit consent** of the parent (sensitive category)                              | Per-category consent toggle at admission, re-confirmable                                     |
+| Student **religion**                                                 | School                                           | **Explicit consent**; and the field is **optional** and off by default               | Same                                                                                         |
+| Student / guardian **NID scans**                                     | School                                           | **Explicit consent** (sensitive: government identifier)                              | Same, with a stated purpose ("verifying identity at admission") and a short retention (§4)   |
+| Giving a parent a portal account and linking them to children        | School                                           | **Consent of that guardian**, captured by the invitation flow                        | §3.2 — the central mechanism                                                                 |
+| Messaging parents; announcements                                     | School                                           | Contract + legitimate school communication; **no marketing**                         | Notice, with opt-out for non-essential                                                       |
+| Staff records, pay, attendance                                       | School                                           | Employment contract + statutory duty                                                 | Staff privacy notice at invitation                                                           |
+| Candidate applications and documents                                 | School (pipeline) / Acadigma (profile)           | **Consent**, time-limited and revocable                                              | §3.5 — `DocumentRequest` at `/personal/requests`, 30-day approvals (PRODUCT-DECISIONS §1.15) |
+| Seller KYC (NID, selfie, payout details)                             | Acadigma                                         | **Consent** + our own legal/AML-style duty as a payer                                | §3.6                                                                                         |
+| Sending prompt content to Anthropic                                  | School (instructing) / Acadigma (deciding means) | School instruction in the DPA + minimisation rules                                   | §5.2                                                                                         |
+| Security logging, audit, fraud prevention                            | Acadigma                                         | Our own legitimate/legal interest; carved out of erasure                             | Stated in the privacy policy                                                                 |
+| Product analytics on our own marketing site                          | Acadigma                                         | **Consent** (cookie banner)                                                          | §9 item P9                                                                                   |
+
+### 3.2 Guardian invitation as parental consent — the core design
+
+The guardian invitation already exists (PRODUCT-DECISIONS §1.13; F-ID-04 §4.5). It is the right hook because it is the one moment when a named adult, reached at a channel the school already holds, actively proves control of that channel and clicks a button about a specific child. We upgrade it from "account linking" to "**consent of record**".
+
+**What the flow must record.** A new table **`consent_records`** (append-only, never updated in place; a change is a new row):
+
+| column                                       | meaning                                                                                                                                                                                                                         |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                                         | uuid                                                                                                                                                                                                                            |
+| `workspace_id`                               | tenant key (the school)                                                                                                                                                                                                         |
+| `subject_type`                               | `student \| staff \| candidate \| seller \| user`                                                                                                                                                                               |
+| `subject_id`                                 | the student / user the consent is _about_                                                                                                                                                                                       |
+| `consent_type`                               | `guardian_portal_access`, `student_health_data`, `student_religion`, `student_id_documents`, `student_photo_use`, `candidate_documents`, `seller_kyc`, `marketing_email`, … (a Postgres enum, mirrored in `packages/contracts`) |
+| `granted_by_user_id`                         | the account that clicked — null for an offline paper consent                                                                                                                                                                    |
+| `granted_by_guardian_id`                     | which `guardians` row this adult is                                                                                                                                                                                             |
+| `relationship`                               | `father \| mother \| legal_guardian \| other`, copied from `guardians.relation` at the time                                                                                                                                     |
+| `status`                                     | `granted \| withdrawn \| superseded \| expired`                                                                                                                                                                                 |
+| `granted_at` / `withdrawn_at` / `expires_at` | timestamps                                                                                                                                                                                                                      |
+| `channel`                                    | `email \| sms \| in_app \| paper` — **how the invitation reached them**, copied from `workspace_invitations.channel`                                                                                                            |
+| `channel_identifier_masked`                  | `r***@gmail.com` or `+8801*****89` — the masked address the link was sent to, matching the masking convention already used in audit rows (F-ID-04 §4.1)                                                                         |
+| `invitation_id`                              | FK to `workspace_invitations` — the proof chain                                                                                                                                                                                 |
+| `document_version`                           | the version string of the consent text shown                                                                                                                                                                                    |
+| `document_hash`                              | sha256 of the exact rendered text, so we can prove _what_ they agreed to even after the text changes                                                                                                                            |
+| `locale`                                     | `bn` or `en` — which language they actually read                                                                                                                                                                                |
+| `ip_hash`                                    | sha256(IP + salt); **never the raw IP**                                                                                                                                                                                         |
+| `user_agent`                                 | as stored for devices                                                                                                                                                                                                           |
+| `evidence`                                   | jsonb: `{ token_last4, children: [student_ids], screen: 'guardian_invite_accept' }`                                                                                                                                             |
+| `created_at`                                 |                                                                                                                                                                                                                                 |
+
+RLS: select by `{owner, admin}` of the workspace, by the granting user for their own rows, and by platform staff; **insert only** through a `SECURITY DEFINER` function called from `app.redeem_invitation`; **no update, no delete grant** — it is evidence, like `audit_events`.
+
+**What the guardian actually sees.** F-ID-04 §4.5 already shows "exactly which children will become visible". We add, on the accept screen, above the Accept button:
+
+> **You are agreeing on behalf of your child.**
+> Ideal School & College uses Acadigma Campus to keep school records. By accepting, you confirm that:
+> • you are the parent or legal guardian of **Ayaan Rahman (Class 6 – A)**;
+> • you agree that the school may keep and use their school records in Acadigma Campus, as described in the school's privacy notice;
+> • you agree that you will be able to see their attendance, results, timetable, homework, behaviour notes and school announcements.
+> You can withdraw this at any time by asking the school. Withdrawing does not delete records the school must keep by law.
+> _Consent text v1.0 · shown in বাংলা / English_
+
+Both languages must be first-class: the screen renders in the locale of the link, and the _other_ language is one tap away. `document_hash` covers the language actually displayed, and `locale` records it. A consent text a parent could not read is not consent.
+
+**Proof of channel control.** The link is a 32-byte CSPRNG token, stored only as sha256 (F-ID-04 §3), delivered to a channel the school already recorded for that guardian. Redeeming it proves control of that mailbox or phone. Combined with the school's independent knowledge of who the guardian is, this is the strongest verification available to us without demanding an NID scan from every parent — which would be worse, not better, because it would collect more sensitive data to prove consent to collect sensitive data.
+
+**Guardrails already in the spec that we must keep.** F-ID-04 §4.2 step 4: accepting a `kind='guardian'` invitation with a _different_ signed-in account is **refused**. That rule is now a compliance control, not a nicety — it is what stops a consent record naming the wrong adult. Add a test id for it.
+
+**The offline path.** Many Bangladeshi parents will not click a link. The school must be able to record a **paper** consent: an admin opens the student → Guardians → "Record consent received on paper", uploads a scan of the signed form (private file), and we write `consent_records` with `channel='paper'`, `granted_by_user_id = null`, `evidence.recorded_by = <admin user id>`, `evidence.file_id = <files.id>`. The UI must make clear that the school, not Acadigma, is asserting this.
+
+### 3.3 Re-consent on a policy change
+
+- Every consent text is versioned (`consent_texts` table or a constant module with a version + hash; either is acceptable, the hash is the point).
+- A **material** change to a consent text bumps the major version and sets `requires_reconsent = true`. A typo fix bumps the minor version and does not.
+- On a major bump: existing `consent_records` for that `consent_type` move to `status='superseded'`; the parent portal shows a **blocking interstitial** on next sign-in with a plain-language "what changed" summary and the new text; the school's admins get a dashboard card listing guardians who have not yet re-consented.
+- Access is **not** cut off while re-consent is pending — a parent locked out of their child's attendance because a lawyer changed a sentence is a worse outcome than a delayed consent record. Instead: 30-day nag, then the school is told.
+- `legal_acceptances` (schools) follows the same pattern, but there the interstitial **is** blocking for owners, because the school is the counterparty to the contract.
+
+### 3.4 Consent for students in a personal workspace (independent tutors)
+
+At "add student" in `/personal/students`, when the DOB implies under 18:
+
+- a required checkbox: _"I confirm I have the parent's or guardian's permission to keep this student's records here."_
+- required guardian name + one contact, so the record is traceable to a real adult;
+- a `consent_records` row with `subject_type='student'`, `consent_type='guardian_portal_access'`, `channel='paper'` (i.e. asserted offline by the tutor), `evidence.asserted_by = <tutor user id>`;
+- the restricted field set from §2.3.
+
+### 3.5 Consent for candidate documents
+
+PRODUCT-DECISIONS §1.15 already has the right shape: a `DocumentRequest` at `/personal/requests`, approved per request, **time-limited to 30 days**, revocable. Compliance additions:
+
+1. Every approval writes a `consent_records` row (`consent_type='candidate_documents'`, `expires_at = now() + 30 days`, `evidence.request_id`, `evidence.document_ids`, `evidence.requesting_workspace_id`).
+2. The approval screen must name **which school**, **which documents**, **for what purpose** and **for how long** — not a generic "share my documents".
+3. Revocation is one tap and takes effect immediately: the school's signed-URL issuance for those files starts failing, and `file_access_log` shows the cut-off. A pg_cron job expires approvals at 30 days.
+4. On the **public apply page** (`/jobs/:slug/apply`), where the applicant may not yet have an account, the candidate privacy notice is shown inline and acceptance is recorded in `consent_records` against the lightweight account created at that moment.
+5. **Age gate:** an applicant under 18 cannot complete a public application without a guardian step. See §9 item P7.
+6. Interview **scorecards** are opinions about an identifiable person and are within the candidate's access right. Write them accordingly; the UI should say so.
+
+### 3.6 Consent for seller KYC
+
+1. Before upload, an explicit consent screen: what we collect (NID or passport, a selfie, payout account details), **why** (to verify you are who you say you are before we send you money), **who sees it** (named platform staff only — never schools, never buyers, which `SECURITY.md` already enforces and tests), **how long** (see §4), and that verification can be withdrawn by closing the seller account.
+2. `consent_records` with `consent_type='seller_kyc'`, `subject_type='seller'`.
+3. **Under-18 sellers are not permitted.** A DOB gate at seller onboarding; a teacher under 18 can still hold a `teacher_profile`, but cannot sell or be paid. This is both a data-protection and a contract-capacity point. See §9 item P7.
+4. The KYC consent must state the **retention** explicitly, because holding an NID scan indefinitely is the least defensible thing in our inventory.
+
+---
+
+## 4. Data inventory
+
+**Sensitivity key.** **S** = sensitive under the Act (§1.6) · **C** = a child's data (under 18) · **F** = financial · **N** = ordinary personal data.
+Table names are **proposed**; `DATA-MODEL.md` wins, and this table must be regenerated from it before the DPA is signed.
+"Erasure method" distinguishes **hard delete** (row gone), **anonymise** (row kept, identifiers nulled — the pattern F-ID-01 §4.9 already uses for `profiles`), **storage purge** (object removed from the bucket) and **retain (legal hold)**.
+
+### 4.1 Students and their families
+
+| Category                                                                       | Sens.   | Where it lives                                                                  | Retention                                                                                                       | Erasure method                                                                                                 | Who can access                                                                                             |
+| ------------------------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Student core: name, DOB, gender, photo, student ID, section, enrolment history | **C/N** | `students`, `enrollments`                                                       | Active + **7 years** after leaving (school-configurable, floor 5) — schools are routinely asked for old records | Anonymise on request after the hold ends; `deleted_at` soft delete for undo (PRODUCT-DECISIONS §4 conventions) | School owner/admin/teachers of the section; linked guardians (portal); platform staff **never** by default |
+| Student **religion**                                                           | **S/C** | `students.religion` (optional, default null)                                    | Same as core; **deletable on request at any time** — it is never needed for a legal record                      | Hard null                                                                                                      | Owner/admin only; hidden from the teacher list view                                                        |
+| Student **health**: conditions, allergies, medications, blood group            | **S/C** | `students` health columns                                                       | Active enrolment + **1 year**, then purge                                                                       | Hard null + storage purge                                                                                      | Owner/admin, class teacher, designated first-aid staff; linked guardians                                   |
+| Student **medical files**: prescriptions, immunisation cards                   | **S/C** | `files` (`visibility='private'`) + Supabase Storage `private` bucket            | Active enrolment + **1 year**                                                                                   | Storage purge + row delete; `file_access_log` retained                                                         | As above, via `/api/files/[id]` only, 5-min signed URL, every issue logged                                 |
+| Student / guardian **NID and birth-certificate scans**                         | **S/C** | `files` (`private`)                                                             | **90 days after admission is confirmed**, then purge — we verify, we do not archive                             | Storage purge; a `verified_at` boolean survives                                                                | Owner/admin only                                                                                           |
+| Guardian contact: name, relation, phone, email, occupation, address            | **N**   | `guardians`                                                                     | With the student record                                                                                         | Anonymise                                                                                                      | Owner/admin, class teacher; the guardian themselves                                                        |
+| Guardian↔account link                                                          | **N**   | `guardian_users`                                                                | While the portal link exists                                                                                    | Hard delete on unlink                                                                                          | Owner/admin; the parent                                                                                    |
+| Attendance                                                                     | **C/N** | `attendance_sessions`, `attendance_records`                                     | **Legal hold: keep for the school's statutory period** — floor **7 years**, school-configurable                 | **Retain (legal hold)**; anonymise only after the hold                                                         | School staff; linked guardians                                                                             |
+| Marks, exam results, GPA, rank, report cards                                   | **C/N** | `exams`, `exam_subjects`, `marks`, `report_comments`, generated PDFs in `files` | **Legal hold: 7 years minimum**                                                                                 | **Retain (legal hold)**                                                                                        | School staff; linked guardians                                                                             |
+| Behaviour logs and points                                                      | **C/N** | `behaviour_logs`                                                                | Academic year + **3 years**                                                                                     | Hard delete after the hold; individual entries correctable                                                     | School staff; guardians only where `parent_visible`                                                        |
+| Assignments and submissions                                                    | **C/N** | `assignments`, `assignment_submissions`                                         | 3 years                                                                                                         | Hard delete                                                                                                    | Subject teacher, admin; guardians                                                                          |
+| Risk score and its inputs                                                      | **C/N** | `student_risk_scores` (nightly)                                                 | Rolling 24 months                                                                                               | Hard delete                                                                                                    | Owner/admin, class teacher. **Never shown to parents as a "risk" label**; never exported to third parties  |
+| Student QR token on ID cards                                                   | **N**   | signed token, no PII in the payload                                             | Reissued per academic year                                                                                      | Rotate                                                                                                         | Anyone holding the card — hence no PII in it                                                               |
+
+### 4.2 Staff and school operations
+
+| Category                                                               | Sens.                                    | Where it lives                                    | Retention                                    | Erasure method                               | Who can access                                                               |
+| ---------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------- | -------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------- |
+| Staff record: name, contact, designation, joining date, qualifications | **N**                                    | `staff_records`, `profiles`                       | Employment + **6 years**                     | Anonymise after hold                         | Owner/admin; the staff member                                                |
+| **Hourly rate, salary, payroll impact**                                | **F**                                    | `staff_records.hourly_rate`, cover/payroll tables | Employment + 6 years (tax)                   | Retain then hard delete                      | **Owner/admin only** (PRODUCT-DECISIONS §6.3 already restricts visibility)   |
+| Staff attendance, leave, missed punches                                | **N**                                    | staff attendance tables                           | Employment + 3 years                         | Hard delete                                  | Owner/admin; the staff member                                                |
+| Offboarding checklist and notes                                        | **N**                                    | staff tables                                      | Employment + 3 years                         | Hard delete                                  | Owner/admin                                                                  |
+| Messages, channels, DMs, announcements                                 | **N** (can contain **S/C** in free text) | `messages`, channels                              | **2 years** default, school-configurable 1–5 | Hard delete of body, keep envelope for audit | Participants; **no admin read-all of DMs** — say so explicitly in the policy |
+| Contact log (WhatsApp/phone hand-offs)                                 | **N**                                    | `contact_log`                                     | 3 years — it exists for safeguarding         | Hard delete                                  | Owner/admin, the logging staff member                                        |
+| School expenses and receipts                                           | **F**                                    | expense ledger + `files`                          | 6 years (tax)                                | Retain then purge                            | Owner/admin                                                                  |
+
+### 4.3 Candidates and hiring
+
+| Category                                            | Sens.                     | Where it lives                                    | Retention                                                                                                       | Erasure method                                              | Who can access                                                                                |
+| --------------------------------------------------- | ------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Application, stage history                          | **N**                     | `applications`                                    | **1 year** after the pipeline closes, then anonymise; unsuccessful candidate may request erasure at any time    | Anonymise                                                   | The hiring school's owner/admin + assigned interviewers; the candidate                        |
+| CV, certificates, degree scans                      | **N/S** (may contain NID) | `files` (`private`), shared via `DocumentRequest` | Owned by the **candidate** indefinitely in their personal workspace; the **school's access expires at 30 days** | Revoke access immediately; candidate deletes their own file | Candidate; a school only while an approval is live                                            |
+| Interview scorecards, ratings, comments             | **N**                     | `scorecards`                                      | 1 year after close                                                                                              | Anonymise the candidate, keep the aggregate                 | Interviewer who wrote it + owner/admin; **disclosable to the candidate on an access request** |
+| `teacher_profiles`, `open_to_work`, `profile_score` | **N**                     | `teacher_profiles`                                | While the account lives                                                                                         | Hard delete on account deletion                             | The user; schools only if `open_to_work`                                                      |
+
+### 4.4 Marketplace, sellers and money
+
+| Category                                         | Sens.   | Where it lives                                                 | Retention                                                                                                                              | Erasure method                                         | Who can access                                                                                                                           |
+| ------------------------------------------------ | ------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Seller profile, storefront                       | **N**   | `seller_profiles`                                              | While the account lives                                                                                                                | Hard delete                                            | The seller; platform staff; buyers see the public part                                                                                   |
+| **KYC: NID / passport scan, selfie**             | **S**   | `identity_verifications` + `files` (`private`)                 | **Approved: 2 years after the last payout, then purge. Rejected: 90 days.** The `verified` flag and the decision survive the documents | Storage purge + column null; decision row retained     | **The subject and `is_platform_admin` only** — never schools, never buyers (already enforced and tested: `T-RLS-identity_verifications`) |
+| **Payout methods** (bank / bKash / Nagad)        | **S/F** | `seller_payout_methods`, encrypted with pgsodium, masked in UI | While active + 6 years (financial record)                                                                                              | Retain masked, purge the encrypted blob after the hold | The seller (masked); platform staff (full)                                                                                               |
+| Orders, order lines, payments, refunds, invoices | **F**   | `orders`, `order_lines`, `payments`                            | **6 years** (tax/VAT)                                                                                                                  | **Retain (legal hold)**, then anonymise the buyer      | Buyer; the paying school for school-funded purchases; platform staff                                                                     |
+| Earnings, payouts, statements                    | **F**   | earnings/payout tables                                         | 6 years                                                                                                                                | Retain                                                 | Seller; platform staff                                                                                                                   |
+| Download log and watermark records               | **N**   | `file_access_log`, download log                                | 1 year (ARCHITECTURE §10)                                                                                                              | Hard delete                                            | Platform staff; the seller sees counts only                                                                                              |
+| Reviews                                          | **N**   | reviews                                                        | While the listing lives                                                                                                                | Anonymise on request                                   | Public                                                                                                                                   |
+
+### 4.5 Accounts, platform and telemetry
+
+| Category                                                  | Sens.            | Where it lives                              | Retention                                                                                 | Erasure method                                                  | Who can access                                                       |
+| --------------------------------------------------------- | ---------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Account identity: email, phone, name, avatar              | **N**            | `profiles`, `auth.users`                    | While the account lives; **30-day deletion grace** then purge (F-ID-01 §4.9)              | Anonymise `profiles` + delete `auth.users`                      | The user; peers only via the `member_directory` view; platform staff |
+| Passwords                                                 | —                | Supabase Auth (hashed)                      | —                                                                                         | Deleted with the account                                        | Nobody                                                               |
+| Sessions and devices: `user_agent`, `ip_hash`, push token | **N**            | `device_registrations`                      | 12 months after `last_seen_at`                                                            | Hard delete                                                     | The user; platform staff (no tokens)                                 |
+| Auth throttle keys                                        | **N** (hashed)   | `auth_throttle`                             | Cleaned nightly                                                                           | Hard delete                                                     | Nobody (server only)                                                 |
+| **`consent_records`** (new)                               | **N**            | `consent_records`                           | **5 years after withdrawal or account closure** (§1.11)                                   | **Retain (legal hold)** — it is the proof we processed lawfully | Owner/admin, the granting user, platform staff                       |
+| **`legal_acceptances`** (new)                             | **N**            | `legal_acceptances`                         | Contract + 6 years                                                                        | Retain                                                          | Owner/admin, platform staff                                          |
+| **`data_requests`** (new)                                 | **N**            | `data_requests`                             | 5 years                                                                                   | Retain                                                          | Owner/admin, the requester, platform staff                           |
+| `audit_events`                                            | **N** (ids only) | `audit_events`                              | **Indefinite** today (ARCHITECTURE §4, §10) → change to **7 years** rolling (§9 item P12) | Not erasable by a subject; carved out in the policy and the DPA | Owners (own workspace), platform staff                               |
+| `email_log`, `sms_log`, `file_access_log`                 | **N**            | as named                                    | 1 year                                                                                    | Hard delete                                                     | Platform staff                                                       |
+| Application logs, Sentry                                  | **ids only**     | Vercel / Sentry                             | Vercel default; Sentry 90 days                                                            | Provider deletion                                               | Engineers                                                            |
+| AI usage log and stored AI outputs                        | **N**            | `ai_usage_log`, `resources`, `lesson_plans` | With the artefact                                                                         | Hard delete with the artefact                                   | Workspace members per role                                           |
+| Marketing-site analytics                                  | **N**            | TBD (see §9 item P9)                        | 14 months                                                                                 | Provider deletion                                               | Acadigma                                                             |
+
+### 4.6 What we deliberately do **not** hold
+
+Stating the negatives is as important as the inventory, because it is what makes §10's claims true.
+
+- **No biometric templates.** No fingerprints, no face recognition, no iris. QR tokens are signed random strings.
+- **No student accounts** in Campus v1 (PRODUCT-DECISIONS §1.22) — so no child logins, no child device data, no child behavioural telemetry.
+- **No targeted advertising**, no ad SDKs, no third-party trackers inside the app shell.
+- **No card numbers.** SSLCommerz hosted checkout means card data never touches our servers.
+- **No raw IP addresses** stored against users — `ip_hash` only.
+- **No caste, political affiliation, trade-union membership or sexual-orientation fields**, and none may be added without a DPIA.
+- **No real-time geolocation.** Geofenced staff check-in stays deferred; if it is ever built it is a sensitive-category feature needing its own DPIA and consent.
+
+---
+
+## 5. Cross-border transfers
+
+### 5.1 Where data actually goes today
+
+| Destination                                                            | What goes there                                                                                                                                    | Region                                                                          | Class                                     |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Supabase Postgres + Storage + Auth** — project `acadigma-suite`      | **Everything**: all tables, all private files (medical, NID, KYC), auth identities                                                                 | **`ap-south-1`, Mumbai, India**                                                 | Primary store — **outside Bangladesh**    |
+| **Vercel** — Next.js on the Edge Network and serverless/edge functions | Requests and responses in transit; server-rendered HTML containing student data; PDF rendering in a Node runtime; cron routes                      | Edge PoPs worldwide; functions in the configured region(s) — today **unpinned** | Processing in transit + ephemeral compute |
+| **Anthropic API (Claude)**                                             | Prompt text and completions for lesson plans, worksheets, quizzes, parent messages, notices, rubrics, differentiation, images, syllabus extraction | **United States**                                                               | Transient processing of content           |
+| **Resend** (transactional email)                                       | Recipient email, name, school name, invitation links, notification bodies                                                                          | US/EU                                                                           | Transient                                 |
+| **Sentry**                                                             | Error events with ids, no PII (`sendDefaultPii: false`, `beforeSend` scrubber, replay disabled on student routes)                                  | US/EU depending on org region                                                   | Telemetry                                 |
+| **SSLCommerz**                                                         | Buyer name, email, phone, amount                                                                                                                   | **Bangladesh**                                                                  | Domestic — good                           |
+| **GitHub Actions / Vercel build**                                      | Source and migrations, **never production personal data**                                                                                          | US                                                                              | Not a transfer of personal data           |
+
+### 5.2 What we send to Anthropic, precisely, and the redaction rules
+
+This is the transfer most likely to be asked about, because it is the one where a human's words leave the country.
+
+**Standing rule, already in the PRD (§5.3) and ARCHITECTURE (§5):** _no student PII beyond first name + grade in prompts._ That rule is now a compliance control and needs tests, not just a sentence.
+
+**The redaction contract** — to be implemented in `adapters/ai` as a single `redactForAI()` function that every prompt builder must pass through (Semgrep rule: an Anthropic SDK call not preceded by `redactForAI` fails CI):
+
+| Never sent                                                  | Sent, allowed                                                             | Notes                                                                                                                                                                                                                                                                           |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full names of students                                      | **First name only**, and only where the output needs to address the child | A parent message needs "Ayaan"; a worksheet does not                                                                                                                                                                                                                            |
+| Surnames, family names                                      | —                                                                         | Stripped                                                                                                                                                                                                                                                                        |
+| DOB, age in years                                           | **Grade / class level**                                                   | "Class 6" is what changes the pedagogy, not the birthday                                                                                                                                                                                                                        |
+| NID, birth-certificate number, student ID, admission number | —                                                                         | Regex-blocked (BD NID 10/13/17 digits)                                                                                                                                                                                                                                          |
+| Phone numbers, email addresses, postal addresses            | —                                                                         | Regex-blocked                                                                                                                                                                                                                                                                   |
+| **Health conditions, allergies, medications**               | —                                                                         | **Hard block.** A "differentiation" prompt may say "this student needs extra reading time"; it may not say "epilepsy"                                                                                                                                                           |
+| **Religion, caste**                                         | —                                                                         | Hard block                                                                                                                                                                                                                                                                      |
+| Marks tied to a named child                                 | Aggregate or anonymised ranges                                            | "3 students below 40 %" not "Ayaan got 31"                                                                                                                                                                                                                                      |
+| Guardian names and contacts                                 | —                                                                         | Blocked                                                                                                                                                                                                                                                                         |
+| Uploaded files                                              | **Syllabus PDFs only**                                                    | The syllabus-extraction feature sends a curriculum document, which contains no personal data. **No student document, medical file, CV, NID or KYC scan is ever sent to Anthropic.** Enforced by allowing only the syllabus upload path to reach the file-bearing prompt builder |
+| Teacher free text                                           | Passed through the same redactor, plus a client-side warning              | A teacher can type anything into a prompt box. The redactor runs server-side on the final prompt, and the UI carries a one-line notice: _"Don't include students' full names, health details or ID numbers."_                                                                   |
+
+**Contractual and technical posture with Anthropic:**
+
+- Commercial API terms: inputs and outputs are **not used to train models**, and data is retained only briefly for abuse monitoring. **Confirm the current terms and retention window in writing before the DPA is signed** — do not state a specific number of days in the privacy policy until we have it.
+- Zero-data-retention or an enterprise agreement should be requested. **[Action: owner]**
+- If a zero-retention arrangement is unavailable, the residual risk is: _pseudonymised educational content, briefly retained in the US_. That is a defensible position given the redaction rules, and it is exactly what the privacy policy must say.
+
+### 5.3 Vercel: what we can pin and what we cannot
+
+- **Serverless / Node function region:** pin to `bom1` (Mumbai) in `vercel.json` so server-rendered pages, server actions, PDF rendering and cron routes run in the same region as the database. This also fixes a latency problem, so it is easy to justify internally. **[Action: engineering, one-line config]**
+- **Edge middleware and the Edge Network** run at the PoP nearest the user. For Bangladeshi users that is typically Singapore, Mumbai or Dhaka-adjacent PoPs, but it is **not contractually pinnable**. Therefore: **middleware must never touch personal data** beyond the session cookie and the workspace id — no student rows, no profile reads, no logging of request bodies. Add this as a review rule and a Semgrep check.
+- Static assets and the marketing site are not a personal-data transfer.
+- **Do not claim "all processing happens in Mumbai."** Claim "our database and our application servers are in Mumbai; requests are routed through a global edge network that does not store your data."
+
+### 5.4 Sub-processor list (goes into the DPA, and onto a public page)
+
+| Sub-processor                      | Purpose                                          | Location                                     |
+| ---------------------------------- | ------------------------------------------------ | -------------------------------------------- |
+| Supabase (AWS `ap-south-1`)        | Database, authentication, file storage, realtime | India                                        |
+| Vercel Inc.                        | Application hosting and delivery                 | USA / global edge; functions pinned to India |
+| Anthropic PBC                      | AI features (Claude)                             | USA                                          |
+| Resend                             | Transactional email                              | USA / EU                                     |
+| Functional Software, Inc. (Sentry) | Error monitoring (no PII)                        | USA / EU                                     |
+| SSLCommerz                         | Payment processing                               | **Bangladesh**                               |
+| _(future)_ SMS gateway             | OTP and SMS invitations                          | Bangladesh — **prefer a domestic provider**  |
+
+We commit to **30 days' written notice** before adding or replacing a sub-processor, with a right for the school to object and, failing resolution, to terminate.
+
+### 5.5 The localisation problem, stated honestly
+
+**The risk.** §1.7 reports **[VERIFIED]** that data classified "confidential" or "restricted" must be stored **within Bangladesh**, and **[SINGLE-SOURCE]** that foreign cloud use requires a real-time synchronised copy inside Bangladesh. Acadigma Campus stores **100 % of its data in Mumbai**. If children's health records, NID scans or KYC documents fall into those classes — which is the natural reading — **our current architecture does not comply**, and no contract clause fixes it.
+
+**What is genuinely unknown:** the classification scheme is defined by the Authority, the classes have not been mapped to real data types by published guidance, and the "adequate jurisdiction" list does not exist yet. India is not on a list because there is no list.
+
+**Mitigations, in order of cost:**
+
+1. **Minimise what could be classified.** The single most effective move: **stop storing NID and birth-certificate scans at all** after verification (§4.1 sets 90 days; consider going to zero — verify at admission, record a boolean, keep nothing). Same logic for KYC: the shortest defensible retention. This shrinks the localisation exposure to health records.
+2. **Pin what we can.** Vercel functions to `bom1`; keep everything else in `ap-south-1`. Never let a preview environment hold production personal data (already true — previews use the Supabase dev branch).
+3. **Contract and notice.** Disclose the Mumbai location in the privacy policy and DPA; rely on the school's instruction, the data subject's consent, and the **education** purpose that security.land reports as a permitted transfer ground. Record the school's transfer instruction in the DPA (Annex C) so the school's own basis is documented.
+4. **Avoid bulk sensitive transfers entirely.** No bulk export of NID numbers or KYC documents out of the platform, ever. Our exports are per-school and per-subject, which keeps us away from the "bulk transfer needs advance approval" trigger. Make this a written rule (§9 item P14).
+5. **Prepare a Bangladesh-resident option.** Before ~May 2027, have a costed plan for one of: (a) Supabase self-hosted or a managed Postgres in a Bangladeshi data centre / a domestic cloud, (b) a Bangladesh-resident encrypted replica or nightly synchronised copy of the sensitive subset, or (c) splitting the sensitive columns and the `private` bucket into a domestic store while the operational database stays in Mumbai. **(c) is the cheapest to reason about and the most invasive to build.** This is a roadmap item, not a launch blocker, but it must be on the roadmap with a name against it. **[Action: owner + engineering, decide by Q2 2027]**
+
+**Do we need NDMA/NDGA approval or notification today?**
+
+| Question                                                  | Position                                                                                                                             | Confidence                                                                                 |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Registration of data fiduciaries with the Authority       | The Authority "registers and classifies data fiduciaries" — a registration duty probably exists, and the machinery is not live yet   | **[VERIFIED]** that the function exists; **[UNVERIFIED]** whether we must register and how |
+| Notification for our routine transfers to Mumbai / the US | Probably **not** required as a per-transfer approval; the reported duty attaches to **large-scale/bulk transfers of sensitive data** | **[SINGLE-SOURCE]**                                                                        |
+| Advance approval for bulk sensitive-identifier transfers  | Required — which is why §5.5 mitigation 4 exists                                                                                     | **[VERIFIED]**                                                                             |
+| Net                                                       | **No filing appears due today.** Counsel must confirm, and we must watch for the Authority standing up its registration process      | —                                                                                          |
+
+---
+
+## 6. Data-subject rights: how each one is implemented
+
+### 6.0 The routing rule
+
+Acadigma is a **processor** for school data (§2). So:
+
+- A request about **school data** (a student, a guardian link, a staff record) → **the school decides**; we provide the tooling and, if asked, execute.
+- A request about **account, marketplace or personal-workspace data** → **Acadigma decides and acts**.
+- A request that arrives at the wrong door is forwarded, and the requester is told where it went, within **3 business days**.
+
+### 6.1 The `data_requests` table (new)
+
+| column                                                     | meaning                                                                                               |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `id`                                                       | uuid                                                                                                  |
+| `workspace_id`                                             | nullable — null for account-level requests to Acadigma                                                |
+| `request_type`                                             | `access \| export \| correction \| erasure \| portability \| consent_withdrawal \| objection`         |
+| `subject_type` / `subject_id`                              | who the request is about (`student`, `guardian`, `staff`, `user`, `candidate`, `seller`)              |
+| `requested_by_user_id`                                     | the account that raised it (null for a paper/phone request recorded by an admin)                      |
+| `requested_via`                                            | `portal \| email \| phone \| paper`                                                                   |
+| `identity_verified_by`                                     | how we/the school satisfied ourselves who this is                                                     |
+| `status`                                                   | `received \| verifying \| in_progress \| completed \| partially_refused \| refused \| withdrawn`      |
+| `received_at`, `acknowledged_at`, `due_at`, `completed_at` | `due_at = received_at + 20 business days`, acknowledgement within **3 business days**                 |
+| `refusal_reason`                                           | free text plus a code (`legal_hold`, `third_party_rights`, `not_the_subject`, `manifestly_unfounded`) |
+| `result_file_id`                                           | FK `files` — the export bundle, private, signed-URL only                                              |
+| `handled_by`                                               | user id                                                                                               |
+| `notes`                                                    | internal                                                                                              |
+
+RLS: owner/admin of the workspace, the requester, platform staff. **No delete grant.** Every transition writes an `audit_events` row (`data_request.received`, `.completed`, `.refused`). Retention 5 years (§4.5).
+
+**SLAs we adopt:** acknowledge in 3 business days; complete in **20 business days**; corrections in **30 calendar days** (Securiti reports 30 days for rectification — **[SINGLE-SOURCE]**, so we simply meet the tighter of the two). One extension of 20 business days, with reasons, for genuinely complex requests.
+
+### 6.2 Access and export
+
+Three export shapes, all generated server-side, all delivered as a **private file with a 5-minute signed URL** (never email attachments), all logged to `file_access_log`:
+
+**Per student** — requested by a linked guardian through the parent portal (`/family/{child}/data`) or by the school:
+
+- `student.json` — core record, guardians, enrolment history, all consent records about them;
+- `attendance.csv` — every session and status, with the session date and section;
+- `marks.csv` — every exam subject, mark, letter, grade point;
+- `behaviour.csv`, `assignments.csv`;
+- `report-cards/` — the generated PDFs already stored in `files`;
+- `documents/` — the student's own uploaded documents **that still exist** (NID scans will usually be gone by design, §4.1);
+- `messages.csv` — announcements and messages sent to that guardian;
+- `README.txt` in Bengali and English explaining each file, who produced it, and the date.
+
+**Per guardian / per user** (`/personal/settings/data` or `/family/settings/data`) — profile, preferences, devices (labels and last-seen, no tokens), consent records, legal acceptances, notifications, messages authored, marketplace orders and entitlements, seller profile and earnings (not the KYC document images themselves — those are shown as "held / verified on {date}" with the option to view in-app), personal-workspace content, teacher profile, applications and their outcomes.
+
+**Per staff member** — the above plus their staff record, attendance, leave, cover assignments, and their own scorecards written about candidates (disclosed to _them_, not to the candidate, except as §4.3 requires).
+
+Implementation notes: build these as one `exportBundle(subjectType, subjectId, ctx)` in `packages/domain` with a repository per section, run as a `jobs` row (`data.export`), not inline — a full student export touches a dozen tables and must not block a request. Idempotency key on `data_requests.id`.
+
+### 6.3 Correction
+
+- Most corrections are just **editing the record** — a school admin fixes a misspelled name in the student profile. That is the normal path and needs no ceremony; the `audit_events` trigger already records before/after.
+- A correction the school **disputes** (a parent says the attendance for 3 March is wrong; the teacher says it is right) is recorded as a `data_requests` row with `status='partially_refused'` and a **note attached to the record** — the parent's position is visible next to the data. Do not silently overwrite a register.
+- **Marks and attendance have an edit window** already in the product (attendance edit window, PRODUCT-DECISIONS §2.1 area). Corrections after the window require an admin and always leave an audit trail. This is a feature, not an obstacle: it is what makes the register trustworthy.
+- Corrections to data we control (name, email, phone on `profiles`) are self-service already (F-ID-01).
+
+### 6.4 Erasure, and the legal-hold exceptions
+
+**The honest position, which must appear in the privacy policy in plain words:** a school cannot delete a child's attendance register or exam results on request, because it is required to keep them. Pretending otherwise would be a worse failure than refusing.
+
+| Category                                               | Erasable on request?                                                                                                          | Why                                                                                                                                                                                            |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Religion, optional profile fields, photo               | **Yes, immediately**                                                                                                          | Never needed for a statutory record                                                                                                                                                            |
+| Health data, medical files                             | **Yes** once the child leaves, or immediately if the guardian withdraws consent and accepts the safety consequence (recorded) | Consent-based                                                                                                                                                                                  |
+| NID / birth-certificate scans                          | **Yes, immediately** — and they are auto-purged at 90 days anyway                                                             | Verification is a moment, not an archive                                                                                                                                                       |
+| Behaviour notes                                        | **Yes** after the academic year, on review                                                                                    | Not a statutory record                                                                                                                                                                         |
+| Messages and announcements                             | **Yes** for the body, envelope retained                                                                                       |                                                                                                                                                                                                |
+| **Attendance records**                                 | **No — legal hold** until the school's statutory period expires (floor 7 years)                                               | Schools are inspected and asked for registers                                                                                                                                                  |
+| **Marks, exam results, report cards**                  | **No — legal hold** (floor 7 years)                                                                                           | Certificates and transfers depend on them                                                                                                                                                      |
+| **Enrolment history, student ID**                      | **No — legal hold**                                                                                                           | It is the school's record that this child attended                                                                                                                                             |
+| Orders, payments, invoices                             | **No — 6 years**                                                                                                              | Tax and VAT                                                                                                                                                                                    |
+| `audit_events`, `consent_records`, `legal_acceptances` | **No**                                                                                                                        | They are the evidence that we behaved lawfully; erasing them defeats the Act's own accountability requirement. Already stated in F-ID-01 §4.9's fine print for audit — extend the same wording |
+| Account identity                                       | **Yes** — 30-day grace then anonymise (F-ID-01 §4.9)                                                                          | Already built                                                                                                                                                                                  |
+
+**Mechanism.** Add `app.erase_subject(subject_type, subject_id, scope)` — a `SECURITY DEFINER` function that walks a **declared** map of tables and columns (one entry per table, enumerated like `coverage.sql`), applies hard-delete / null / anonymise per the map, purges the matching storage objects, and writes one audit row per table touched. A CI test asserts **every** table containing personal data appears in the map — the same "no table escapes" discipline `SECURITY.md` applies to RLS coverage. Without that test, erasure silently rots as the schema grows.
+
+**Withdrawal of consent** is distinct from erasure: it stops future processing for that purpose (`consent_records.status='withdrawn'`) and triggers deletion of the data that only that consent supported. Withdrawing portal consent removes the parent's access; it does **not** remove the child from the school.
+
+### 6.5 Portability
+
+- Format: **JSON plus CSV in a ZIP**, UTF-8, with a documented schema (`schema.json`) and a human-readable `README`. Dates ISO-8601, money in paisa with an explicit currency field, Bengali text as UTF-8 (not transliterated).
+- **We must not call this "the statutory portability format".** The Act's prescribed format has not been published (§1.8). The policy wording is: _"we provide your data in a common, machine-readable format (JSON and CSV). If the Authority prescribes a format, we will provide that instead."_
+- **School-level portability** matters commercially as much as legally: a school leaving Acadigma gets the whole workspace in the same shape, within 30 days of termination, once, free. Say so in the DPA — a school that knows it can leave is a school that will sign.
+
+### 6.6 Requests that arrive by the wrong door
+
+A parent emails `privacy@acadigma.com` asking us to delete their child. We: (1) acknowledge in 3 business days; (2) tell them we are the school's processor and the school decides; (3) notify the school's owner/admin through a `notifications` event (`data_request.forwarded`) **and** email, with a `data_requests` row created in that school's workspace; (4) track it to completion and follow up at day 15 if the school has not acted; (5) if the school does nothing, escalate to the owner of Acadigma, because processor liability is real (§1.3).
+
+---
+
+## 7. Breach response
+
+`SECURITY.md` §7 already has a severity ladder (S1 = confirmed or suspected exposure of personal data, cross-tenant access, or money moved wrongly) and an assess-contain-eradicate-notify sequence built on the trigger-written audit trail. This section adds only the **legal clock and the who-tells-whom**.
+
+### 7.1 Timeline
+
+| When             | What                                                                                                                                                                                                                                                                                                      | Who                                      |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **T0**           | Detection: alert, report, or a support ticket that smells wrong. Open an incident, assign a lead.                                                                                                                                                                                                         | Whoever notices                          |
+| **T0 + 1 h**     | Triage to a severity. S1 → everything else stops (already `SECURITY.md` §7).                                                                                                                                                                                                                              | Incident lead                            |
+| **T0 + 24 h**    | **Initial notification to every affected school**, even if the picture is incomplete: what we know, what we do not, what we are doing, a named contact. Do not wait for certainty.                                                                                                                        | CDO (§8), drafted by the incident lead   |
+| **T0 + 72 h**    | **Full notification to affected schools**: categories and approximate number of data subjects and records, likely consequences, measures taken and proposed, contact point. This is the contractual commitment in the DPA.                                                                                | CDO                                      |
+| **T0 + 72 h**    | **Notification to the Authority** where the breach is likely to cause significant harm — _and the school, as fiduciary, is the notifying party._ We provide the full technical account so the school can file; we file our own notification for breaches of data we control (accounts, KYC, marketplace). | School (fiduciary) / Acadigma (own data) |
+| **As directed**  | **Notification to affected individuals** — guardians, staff, sellers. For school data the **school decides and communicates**, because it holds the relationship; we supply the text and the affected list. For our own data we notify directly.                                                          | School / Acadigma                        |
+| **T0 + 30 days** | Written post-incident review: root cause, the control that should have caught it, the test that now exists, and the change shipped. Filed in the compliance register (§8.3).                                                                                                                              | Incident lead + CDO                      |
+
+**Note the asymmetry deliberately:** we commit to _our schools_ on a 24/72 clock regardless of what the statute turns out to require, because that is a competitive advantage and costs nothing we do not already have.
+
+### 7.2 Who notifies whom
+
+```
+detection ──▶ incident lead ──▶ CDO (owner)
+                                  │
+                ┌─────────────────┼──────────────────────┐
+                ▼                 ▼                      ▼
+    affected school owners   the Authority          affected individuals
+    (24h initial, 72h full)  (school files for      (school communicates for
+     via email + in-app       school data;           school data; we communicate
+     + phone for S1)          we file for ours)      for accounts/KYC/marketplace)
+```
+
+Single channel: `security@acadigma.com` inbound, CDO outbound. One person speaks. No engineer emails a school directly during an incident.
+
+### 7.3 Notification template (school-facing, 72-hour)
+
+> **Subject: Security incident affecting {school name} — Acadigma Campus**
+>
+> Dear {owner name},
+>
+> We are writing to tell you about a security incident affecting personal data that Acadigma processes on your behalf. We are your data processor; you are the data fiduciary, so this notice is for you to act on, and we will help with every step.
+>
+> **What happened.** On {date, time Asia/Dhaka} we {detected / were told about} {plain description — e.g. "a fault in a file-access check that could have allowed a signed-in staff member of another school to open documents belonging to your students"}.
+>
+> **When it happened and how long it lasted.** From {start} to {end}, a period of {duration}. We confirmed the end of exposure at {time} by {action}.
+>
+> **What data was involved.** {categories — e.g. "student medical documents"}. Approximately **{n} individuals** and **{m} records**. From our access logs we can confirm that **{k} records were actually accessed** / that **no records were actually accessed**.
+>
+> **Whose data.** {students of classes … / guardians / staff}. A list of the affected individuals is attached as a secure download (link expires in 24 hours).
+>
+> **Likely consequences.** {honest assessment — e.g. "these documents contain health information, which could cause distress or embarrassment if misused. We have no evidence of misuse."}
+>
+> **What we have done.** {containment}. {fix shipped, time}. {credentials rotated / sessions revoked}. {evidence preserved}.
+>
+> **What we are doing next.** {permanent fix, test added, review date}.
+>
+> **What you may need to do.** As the data fiduciary you may need to notify the Authority and the affected individuals. We recommend you take your own legal advice. We can provide: a technical report for your filing, a draft notice to guardians in Bengali and English, and the affected-individual list. Tell us what you need.
+>
+> **Your contact.** {CDO name}, Chief Data Officer, Acadigma — {email} — {phone}. I will send an update by {date} even if there is nothing new.
+>
+> {name}, on behalf of Acadigma
+
+A guardian-facing variant (shorter, no technical detail, one clear "what this means for you" paragraph, Bengali first) lives alongside it in `legal/` when drafted.
+
+### 7.4 What must exist before an incident, not during
+
+- The incident lead and the CDO know they hold those roles **in writing**.
+- `security@acadigma.com` exists, is monitored, and is published in the privacy policy and on a `/security` page with a responsible-disclosure statement.
+- A school contact list with a phone number per school, exportable in 60 seconds.
+- The queries in `SECURITY.md` §7 step 3 are saved and tested on demo data — the first time you write a `file_access_log` query should not be during an S1.
+- One rehearsal per year (§8.5).
+
+---
+
+## 8. Governance
+
+### 8.1 Chief Data Officer
+
+- **Designation:** **Mahadi (the owner)** is designated Chief Data Officer for Acadigma, effective on adoption of this document. Recorded in the compliance register with a date, and named in the privacy policy and the DPA.
+- **Why the owner:** the role needs authority, not seniority-theatre. At our size the owner is the only person who can stop a release, sign a notification and answer a regulator. A dedicated CDO is a hiring trigger, not a launch blocker.
+- **Contact:** `privacy@acadigma.com` (rights requests, school queries) and `security@acadigma.com` (incidents). Both published. Both monitored with a 3-business-day acknowledgement.
+- **Duties:** own this document; approve DPIAs (§8.4); approve any new sub-processor; approve any new data field in a sensitive category; sign breach notifications; keep the register (§8.3); brief the team annually.
+- **Conflict of interest:** the owner is also the commercial decision-maker. Mitigation: every CDO decision that _overrides_ a privacy objection is written down with reasons in the register. If the company grows past ~15 staff or is designated a significant fiduciary, split the role.
+- **Statutory framing:** we designate **voluntarily** — the verified obligation attaches to _significant_ fiduciaries and is delayed to ~May 2027 (§1.10). Say "we have designated a Chief Data Officer", never "as required by law we have appointed".
+
+### 8.2 The compliance calendar
+
+| Cadence       | Task                                                                                                                                                      | Owner             |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| Per feature   | DPIA screening (§8.4)                                                                                                                                     | Engineering lead  |
+| Monthly       | Review open `data_requests` past 10 business days                                                                                                         | CDO               |
+| Quarterly     | Sub-processor list review; Supabase advisors; access review of `is_platform_admin` and `support_access_grants`                                            | CDO + engineering |
+| Quarterly     | Re-check the legal position: has the Authority published classification rules, an adequacy list, a portability format, or significant-fiduciary criteria? | CDO               |
+| Annually      | Breach rehearsal (§8.5); privacy-policy and DPA review with counsel; retention sweep (are we deleting what §4 says?); team training                       | CDO               |
+| Before launch | Authorized penetration test (already a PRD §3 goal and `SECURITY.md` commitment)                                                                          | Engineering       |
+| By Q2 2027    | Localisation decision (§5.5 mitigation 5)                                                                                                                 | Owner             |
+
+### 8.3 Records kept for five years (§1.11)
+
+A single **compliance register** — a private repository folder plus the database tables — containing:
+
+| Record                                                                        | Where                                      | Retention                        |
+| ----------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------- |
+| Consent records                                                               | `consent_records`                          | 5 years after withdrawal/closure |
+| Legal acceptances (Terms, Privacy, DPA) with version and hash                 | `legal_acceptances`                        | Contract + 6 years               |
+| Signed DPAs per school (PDF)                                                  | `files` (private) + register               | Contract + 6 years               |
+| Data-subject requests and their outcomes                                      | `data_requests`                            | 5 years                          |
+| Breach records, even those not notified, with the reasoning for not notifying | Register (Markdown, one file per incident) | 5 years                          |
+| DPIAs                                                                         | `docs/product/dpia/`                       | Life of the feature + 5 years    |
+| Sub-processor list, versioned                                                 | This document §5.4 + register              | 5 years                          |
+| Training records (who, when, what)                                            | Register                                   | 5 years                          |
+| Audit events                                                                  | `audit_events`                             | 7 years (§9 item P12)            |
+| Records of processing (this document's §4)                                    | This file, version-controlled              | Current + history in git         |
+
+Git history gives us dated, tamper-evident versions of everything in `docs/` for free. Use it: no compliance record lives in a Google Doc.
+
+### 8.4 DPIA
+
+**Screening — a DPIA is required when a change involves any of:** a new sensitive category (§1.6) · children's data in a new way · a new automated decision or score about a person · biometrics or geolocation of any kind · a new sub-processor or a new destination country · large-scale new collection · a new sharing of data between workspaces or with a third party · public-facing exposure of data previously private.
+
+Screen every feature spec at the "planned → in progress" transition. Most take 30 seconds and the answer is no. Record the no.
+
+**Template** (`docs/product/dpia/DPIA-TEMPLATE.md`, to be created):
+
+1. **Feature and spec reference** — name, `F-XX-NN`, owner, date.
+2. **What personal data** — categories, subjects, volume, sensitivity, whether children are involved.
+3. **Why** — the purpose, in a sentence a parent would understand.
+4. **Lawful basis** — and for sensitive data, the consent artefact (§3).
+5. **Necessity and proportionality** — could we achieve this with less data? What did we drop? (_Answer this honestly or the whole exercise is theatre._)
+6. **Flows** — where it is stored, who can read it, which sub-processors and countries it reaches.
+7. **Retention and erasure** — the row for §4; the entry in the `erase_subject` map.
+8. **Risks to individuals** — likelihood × severity, from the person's point of view, not ours.
+9. **Mitigations** — controls, RLS policies, tests by id (`SECURITY.md` style).
+10. **Residual risk and decision** — accepted / rejected / accepted with conditions; CDO signature and date.
+11. **Review date.**
+
+**Features that need a DPIA before they ship, from today's roadmap:** student risk scoring (automated decision about a child) · parent portal (children's data to a new audience) · seller KYC (sensitive identifiers) · the Anthropic AI integration (transfer to the US) · gate-scan attendance and the Android camera (adjacency to biometrics) · geofenced staff check-in if ever built (sensitive geolocation) · any cross-school analytics or benchmarking · hiring document sharing.
+
+### 8.5 Training and culture
+
+- **Onboarding, day one:** every person with production access reads `SECURITY.md` and this document, and signs a confidentiality undertaking. Recorded.
+- **Annual refresher:** 60 minutes — what changed in the law, what we got wrong last year, and the three rules that matter most (never copy production data locally; never paste student data into an AI prompt or a support ticket; escalate anything that smells like exposure immediately, with no blame for a false alarm).
+- **Annual breach rehearsal:** a tabletop against a realistic scenario (a misconfigured RLS policy discovered by a school), timed against §7.1, with the notification actually drafted.
+- **For school staff:** a one-page "your responsibilities as the data fiduciary" PDF, in Bengali and English, handed over at onboarding. Schools that understand their role stop asking us to do illegal things.
+
+---
+
+## 9. Product changes required — the checklist
+
+Priority: **P0** = before the first real school holds real children's data · **P1** = before R1 launch · **P2** = before R3 (commerce) · **P3** = before ~May 2027 enforcement.
+
+### 9.1 Identity and consent
+
+| #      | Change                                                                                                                                                                                                                                                        | Priority | Spec to amend                                       |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| **P1** | New table **`consent_records`** (§3.2) with enum `consent_type`, append-only RLS, insert only via `SECURITY DEFINER`, pgTAP coverage                                                                                                                          | **P0**   | `DATA-MODEL.md`; new `F-ID-10-consent-and-legal.md` |
+| **P2** | New table **`legal_acceptances`** (§2.5) with `document_hash`, `ip_hash`, `locale`                                                                                                                                                                            | **P0**   | `DATA-MODEL.md`; `F-ID-05-onboarding.md`            |
+| **P3** | **F-ID-04 §4.5 guardian invitation**: add the consent panel to the accept screen (children named, plain-language statement, version + hash, bn/en toggle); `app.redeem_invitation` writes a `consent_records` row in the same transaction as `guardian_users` | **P0**   | `F-ID-04` §3 (data), §4.5                           |
+| **P4** | **F-ID-04**: add `consent_text_version` and `consent_text_hash` columns to `workspace_invitations` for `kind='guardian'`, so the invitation itself carries what was shown                                                                                     | **P0**   | `F-ID-04` §3                                        |
+| **P5** | **F-ID-04 §4.2 step 4** (guardian invitation refused for a mismatched account) gets a named test id and is listed in `SECURITY.md` as a compliance control, not just UX                                                                                       | **P0**   | `F-ID-04`, `SECURITY.md`                            |
+| **P6** | **Paper-consent path**: admin records an offline consent with an uploaded scan; `channel='paper'`                                                                                                                                                             | **P1**   | `F-ID-04` §4.5                                      |
+| **P7** | **Re-consent on version bump** (§3.3): supersede, interstitial for parents, blocking interstitial for school owners, 30-day email notice, admin dashboard card                                                                                                | **P1**   | new `F-ID-10`                                       |
+| **P8** | **DPA/Terms/Privacy acceptance step** in the school creation wizard, blocking, with a stored PDF (§2.5)                                                                                                                                                       | **P0**   | `F-ID-05-onboarding.md`                             |
+| **P9** | **Sign-up** records Terms + Privacy acceptance to `legal_acceptances`                                                                                                                                                                                         | **P0**   | `F-ID-01` §4.1                                      |
+
+### 9.2 Rights and erasure
+
+| #       | Change                                                                                                                                                                      | Priority | Spec to amend                                   |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------- |
+| **P10** | New table **`data_requests`** (§6.1) + `/app/settings/data-requests` (school), `/family/settings/data`, `/personal/settings/data`                                           | **P1**   | `DATA-MODEL.md`; new `F-ID-11-data-requests.md` |
+| **P11** | **`exportBundle()`** for student / guardian / staff / user, run as a `jobs` row, delivered as a private file with a 5-minute signed URL, ZIP of JSON + CSV + README (bn/en) | **P1**   | `F-ID-11`                                       |
+| **P12** | **`app.erase_subject()`** with a declared table/column map **and a CI test asserting every personal-data table is in the map**                                              | **P1**   | `F-ID-11`, `SECURITY.md`                        |
+| **P13** | **Legal-hold flags** on attendance, marks, enrolment, orders: erasure refuses with a code and an explanation, never a silent no-op                                          | **P1**   | `F-ID-11`                                       |
+| **P14** | Parent-portal **"Your data"** screen: what the school holds about my child, download, ask for a correction, ask for deletion, withdraw consent — one screen, phone-first    | **P1**   | parent portal spec                              |
+
+### 9.3 Audit and records
+
+| #       | Change                                                                                                                                                                                                                                                                                                                | Priority | Spec to amend                                   |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------- |
+| **P15** | New audit event types: `legal.dpa_accepted`, `legal.privacy_accepted`, `legal.terms_accepted`, `legal.reaccepted`, `consent.granted`, `consent.withdrawn`, `consent.superseded`, `data_request.received/completed/refused/forwarded`, `export.generated`, `erasure.executed`, `ai.prompt_redacted`, `breach.declared` | **P0**   | `F-ID-09-audit-viewer.md`, `ARCHITECTURE.md` §4 |
+| **P16** | Change `audit_events` retention from **indefinite** to **7 years rolling** with a documented purge job. "Indefinite" is not a retention policy and conflicts with data minimisation                                                                                                                                   | **P1**   | `ARCHITECTURE.md` §4, §10; `SECURITY.md`        |
+| **P17** | Owner-visible **consent and request dashboard**: guardians consented / pending, open data requests, overdue ones                                                                                                                                                                                                      | **P2**   | `F-ID-09` or the school settings spec           |
+
+### 9.4 AI and transfers
+
+| #       | Change                                                                                                                                                                                                                   | Priority | Spec to amend                                              |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ---------------------------------------------------------- |
+| **P18** | **`redactForAI()`** in `adapters/ai` implementing §5.2, with unit tests per rule (BD NID patterns, phone, email, health keyword list in bn + en) and a **Semgrep rule** failing any Anthropic call not routed through it | **P0**   | `ARCHITECTURE.md` §5, `SECURITY.md` §5.5, AI feature specs |
+| **P19** | Pin Vercel functions to **`bom1`** in `vercel.json`; add a review rule that **edge middleware never touches personal data**                                                                                              | **P0**   | `ARCHITECTURE.md` §8                                       |
+| **P20** | In-app **notice next to every AI input**: "Don't include students' full names, health details or ID numbers"                                                                                                             | **P1**   | AI tool specs                                              |
+| **P21** | Public **sub-processor page** (`/legal/subprocessors`) + 30-day change notice mechanism                                                                                                                                  | **P2**   | marketing routes                                           |
+| **P22** | Written **rule against bulk export of sensitive identifiers** off-platform, enforced by not building such an export (§5.5)                                                                                               | **P1**   | `SECURITY.md`                                              |
+
+### 9.5 Age handling
+
+| #       | Change                                                                                                                                                                                      | Priority | Spec to amend                                           |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| **P23** | **Sellers must be 18+**: DOB gate at seller onboarding, blocking; a `teacher_profile` and job applications remain available under 18                                                        | **P2**   | `F-CM-02-seller-onboarding-and-kyc.md`                  |
+| **P24** | **Candidates under 18**: the public apply page asks for DOB; under 18 requires a guardian's name, contact and consent before the application can be submitted, with a `consent_records` row | **P2**   | `F-OP-01` hiring spec                                   |
+| **P25** | **Personal-workspace students under 18**: the tutor's consent assertion and the **restricted field set** — no health, no religion, no ID scans (§2.3)                                       | **P1**   | `F-ID-06-personal-workspace.md`, personal students spec |
+| **P26** | **No student accounts** stays a written constraint, not an accident, until the Students app has its own children's-consent design                                                           | **P1**   | `PRODUCT-DECISIONS.md` §1.22 (add the reason)           |
+
+### 9.6 Data minimisation changes to existing specs
+
+| #       | Change                                                                                                                                                            | Priority | Spec to amend                                       |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| **P27** | **NID / birth-certificate scans auto-purge 90 days after admission confirmation**; keep a `verified_at` boolean. A pg_cron job plus a visible countdown in the UI | **P0**   | `PRODUCT-DECISIONS.md` §6.5, student documents spec |
+| **P28** | **Religion field optional, off by default, admin-only**, with a tooltip explaining why it is sensitive                                                            | **P1**   | student record spec                                 |
+| **P29** | **Health data** restricted to owner/admin, class teacher and designated first-aid staff — not every teacher                                                       | **P1**   | student record spec, permissions matrix             |
+| **P30** | **KYC document retention**: purge 2 years after last payout (approved) / 90 days (rejected); keep the decision                                                    | **P2**   | `F-CM-02`                                           |
+| **P31** | **Message retention** setting per school (default 2 years) with a purge job                                                                                       | **P2**   | messaging spec                                      |
+| **P32** | **Risk score**: document it as a restricted automated decision — explanation always shown, human override, never parent-facing as a "risk" label, never exported  | **P1**   | student analytics / risk spec, DPIA                 |
+
+### 9.7 Public-facing pages and notices
+
+| #       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Priority | Spec to amend               |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------- |
+| **P33** | **`/legal/privacy`** (bn + en), versioned, with a change history — from `legal/PRIVACY-POLICY-DRAFT.md` after counsel review                                                                                                                                                                                                                                                                                                                                                                                                                                              | **P0**   | marketing routes            |
+| **P34** | **`/legal/terms`**, **`/legal/dpa`**, **`/legal/subprocessors`**, **`/security`** (responsible disclosure)                                                                                                                                                                                                                                                                                                                                                                                                                                                                | **P1**   | marketing routes            |
+| **P35** | **Children's privacy notice** — a one-page, plain-Bengali explanation for parents, linked from the portal and printable for the school to hand out at admission                                                                                                                                                                                                                                                                                                                                                                                                           | **P1**   | marketing + parent portal   |
+| **P36** | **Cookie / storage notice.** The app uses only strictly necessary storage (session cookie, `acx_ws` workspace cookie, `localStorage` preference cache, the IndexedDB offline queue, the service worker). **No consent banner is needed inside the app** — say so in a short "cookies and local storage" section of the policy, listing each item and its purpose. A **consent banner is required on the marketing site** only if analytics are added; if we choose a cookieless, IP-truncating analytics tool, we avoid the banner entirely. **Recommendation: do that.** | **P1**   | marketing routes, `F-ID-02` |
+| **P37** | **`privacy@` and `security@`** mailboxes created, monitored, and published                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | **P0**   | ops                         |
+| **P38** | **Per-school privacy notice hook**: a school can paste its own notice text, shown to its guardians alongside ours. Schools are the fiduciary; they need somewhere to be one                                                                                                                                                                                                                                                                                                                                                                                               | **P2**   | school settings spec        |
+
+### 9.8 New feature specs to write
+
+- `docs/features/01-identity/F-ID-10-consent-and-legal.md` — consent records, legal acceptances, versioning, re-consent.
+- `docs/features/01-identity/F-ID-11-data-requests.md` — the request lifecycle, export bundles, erasure, legal holds.
+- `docs/product/dpia/DPIA-TEMPLATE.md` — §8.4.
+
+---
+
+## 10. Marketing claims: what we may say, and what we must not
+
+The rule: **every claim must be traceable to a control in `SECURITY.md`, a row in §4 of this document, or a verified fact in §1.** If it is not, it does not go on a slide.
+
+### 10.1 Claims we can make and defend
+
+| Claim                                                                                                                                                 | Why it holds                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **"We hold no biometric data of children."**                                                                                                          | No fingerprint, face or iris data anywhere in the product. ID cards use a signed random QR token (§4.6, PRODUCT-DECISIONS §3.10). |
+| **"Children don't have accounts, and we don't track them."**                                                                                          | No student logins in Campus v1 (PRODUCT-DECISIONS §1.22); no ad SDKs, no third-party trackers, no behavioural profiling.          |
+| **"Your school's data is stored in Mumbai (AWS ap-south-1) and our application servers run there too."**                                              | True once P19 pins functions to `bom1`. Do not say it before then.                                                                |
+| **"No advertising. We never sell your data, and we never use your students' data to train AI models."**                                               | A commitment we make in the DPA; supported by Anthropic's commercial terms (confirm in writing, §5.2).                            |
+| **"Every record is protected by database-level access rules, tested on every code change."**                                                          | RLS + server policy check, pgTAP isolation and escalation tests per table, `coverage.sql` failing the build (`SECURITY.md`).      |
+| **"Every change to a child's record is logged, permanently, and your school's owner can see it."**                                                    | Trigger-written append-only `audit_events` with no UPDATE/DELETE grant; audit viewer for owners (F-ID-09).                        |
+| **"Medical documents and ID scans are never public links — every download is signed, time-limited and logged."**                                      | Private bucket, 5-minute signed URLs via `/api/files/[id]`, `file_access_log` (PRODUCT-DECISIONS §6.5).                           |
+| **"We delete national ID scans 90 days after admission — we verify, we don't archive."**                                                              | True once P27 ships. A strong, concrete claim; do not make it before then.                                                        |
+| **"Parents can download everything the school holds about their child."**                                                                             | True once P11/P14 ship.                                                                                                           |
+| **"We have designated a Chief Data Officer and published how to reach them."**                                                                        | §8.1 — note the wording: _designated_, not _as required by law_.                                                                  |
+| **"We will tell your school within 72 hours of confirming a breach — in writing, with the numbers."**                                                 | §7.1, and it is in the DPA.                                                                                                       |
+| **"Card details never touch our servers."**                                                                                                           | SSLCommerz hosted checkout.                                                                                                       |
+| **"Built for the Bangladesh Personal Data Protection Act, 2026 — with a Data Processing Agreement, consent records and data-export tools included."** | Factual and specific. Note **"built for"**, not "compliant with".                                                                 |
+
+### 10.2 Claims we must NOT make
+
+| Forbidden claim                                                                        | Why                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ❌ **"PDPA compliant"** / "fully compliant with the Personal Data Protection Act 2026" | Compliance is a state a regulator assesses, the enforcement machinery is not live until ~May 2027, key rules (classification, adequacy, portability format) are unpublished, and we have not read the gazette. Say **"built for"** or **"designed to meet"**.                                                                          |
+| ❌ **"Certified"**, "approved by the Authority", "government-approved"                 | No such certification exists. Any use of this is a misrepresentation.                                                                                                                                                                                                                                                                  |
+| ❌ **"All your data stays in Bangladesh"** / "data is stored locally"                  | **False.** Everything is in Mumbai. This is the single most dangerous claim on the list because it is exactly what a school wants to hear.                                                                                                                                                                                             |
+| ❌ **"All processing happens in Mumbai"**                                              | Vercel's edge network is global and Anthropic is in the US. Use the §10.1 wording instead.                                                                                                                                                                                                                                             |
+| ❌ **"We never send your data outside the country"**                                   | False — Mumbai and the US (§5).                                                                                                                                                                                                                                                                                                        |
+| ❌ **"AI-powered risk prediction spots at-risk students"**                             | Two problems: the score is a deterministic formula, not a prediction, and marketing an automated assessment of children cuts against the reported restriction on automated decision-making affecting minors. Say: _"a transparent attendance-and-marks indicator that flags students who may need attention, with the reasons shown."_ |
+| ❌ **"Bank-grade / military-grade security"**, "unhackable", "100 % secure"            | Meaningless, and in a product holding children's medical records it reads as arrogance. Describe the actual controls.                                                                                                                                                                                                                  |
+| ❌ **"GDPR compliant"**                                                                | We have not done the work, we have no EU establishment, and it invites a question we cannot answer.                                                                                                                                                                                                                                    |
+| ❌ **"ISO 27001 / SOC 2 certified"**                                                   | We are not. Not even "SOC 2 ready" — that phrase means nothing and auditors notice.                                                                                                                                                                                                                                                    |
+| ❌ **"Encrypted end-to-end"**                                                          | Not true of messaging or files. We have TLS in transit and encryption at rest, plus pgsodium for payout details. Say that.                                                                                                                                                                                                             |
+| ❌ **"Your data is never seen by anyone at Acadigma"**                                 | False: named platform staff review KYC, and time-boxed owner-granted support access exists. Say _"access is limited to named staff, only with your permission, and every access is logged."_                                                                                                                                           |
+| ❌ **"Delete anything, any time"**                                                     | False and harmful — attendance and marks are under legal hold (§6.4). Explain the hold instead; schools respect the honesty.                                                                                                                                                                                                           |
+| ❌ Naming the regulator on a public page                                               | The name is **[CONFLICTING]** (§1.9) until counsel confirms it.                                                                                                                                                                                                                                                                        |
+| ❌ Quoting fine amounts to scare schools ("৳50 lakh fines — are you ready?")           | The figures are unsettled (§1.13), turnover-based alternatives exist, and fear-selling a law we have not read will be the first thing a school's lawyer checks.                                                                                                                                                                        |
+| ❌ **"We'll make your school compliant"**                                              | We can make the _software_ part easier. We cannot make a school compliant, and offering to is unlicensed legal advice. Say _"tools that help your school meet its obligations."_                                                                                                                                                       |
+
+### 10.3 The standard disclaimer for sales material
+
+> Acadigma Campus is built to help schools meet their obligations under Bangladesh's Personal Data Protection Act, 2026. Acadigma acts as your data processor; your school remains the data fiduciary. Nothing here is legal advice — please take your own.
+
+---
+
+## 11. Open questions for counsel
+
+1. Confirm the gazette citation and number of the Act (Act 63 of 2026?) and provide the authoritative text.
+2. **Localisation:** do children's health records, NID scans and KYC documents fall within "confidential" or "restricted"? Is a Bangladesh-resident copy legally required for our data set, and by when? _(This is the question that could change our architecture — ask it first.)_
+3. Is a per-transfer notification or approval required for our routine transfers to Mumbai and to the US, or only for bulk sensitive-identifier transfers?
+4. Must Acadigma register with the Authority, and is there a live process today?
+5. Are we at risk of being designated a **significant data fiduciary**, and on what criteria?
+6. Reconcile the penalty regimes: ৳25/৳50 lakh versus 1–5 % of turnover. What is the criminal exposure, and what does "due diligence" require of the owner personally?
+7. Confirm the breach-notification trigger, timeline and recipients, and who files when a processor's failure affects a fiduciary's data.
+8. Confirm the statutory retention floors that Bangladeshi schools are subject to for attendance registers and examination records (the basis for our legal holds in §6.4) — this may sit in education regulation rather than the PDPA.
+9. Does the Act recognise "performance of a contract" or "legitimate interests" as lawful bases, or is consent effectively mandatory for everything we do?
+10. Is our guardian-invitation design sufficient as parental consent, and does the paper path need a specific form of words or signature?
+11. Review the DPA draft, especially the audit-record carve-out, the liability position, the transfer instruction, and the deletion-on-termination clause.
+12. Is an under-18 seller prohibition legally necessary, or is it just prudent?
+
+---
+
+_End of document. Version 0.1 — drafted 2026-09-17 by the engineering lead from public sources, not from the statutory text. **For lawyer review. Not legal advice.**_
