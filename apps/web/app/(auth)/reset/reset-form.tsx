@@ -24,6 +24,10 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { PasswordField } from "@acadigma/ui/primitives/password-field"
 
 import type { Messages } from "@/lib/i18n"
+import {
+  describeSubmitFailure,
+  type SubmitFailureTone,
+} from "@/lib/submit-failure"
 
 import { resetPassword } from "../actions"
 
@@ -31,12 +35,15 @@ export function ResetForm({
   tokenHash,
   t,
   strengthLabels,
+  network,
 }: {
   tokenHash: string
   t: Messages["auth"]["reset"]
   strengthLabels: Messages["auth"]["passwordStrength"]
+  network: Messages["auth"]["network"]
 }) {
   const [formError, setFormError] = useState<string | null>(null)
+  const [errorTone, setErrorTone] = useState<SubmitFailureTone>("error")
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [confirmPassword, setConfirmPassword] = useState("")
   const [done, setDone] = useState(false)
@@ -64,13 +71,23 @@ export function ResetForm({
       setConfirmError("Passwords do not match.")
       return
     }
+    setErrorTone("error")
     startTransition(async () => {
-      const result = await resetPassword(values)
-      if (!result.ok) {
-        setFormError(result.error.message)
-        return
+      try {
+        const result = await resetPassword(values)
+        if (!result.ok) {
+          setFormError(result.error.message)
+          return
+        }
+        setDone(true)
+      } catch {
+        // D-35, and it matters most here: the reset token is single-use, so a
+        // user told "something went wrong" when they were merely offline will
+        // request a second link and burn the first one.
+        const failure = describeSubmitFailure(network)
+        setErrorTone(failure.tone)
+        setFormError(failure.message)
       }
-      setDone(true)
     })
   }
 
@@ -92,7 +109,9 @@ export function ResetForm({
         className="space-y-4"
         noValidate
       >
-        {formError ? <InlineAlert tone="error">{formError}</InlineAlert> : null}
+        {formError ? (
+          <InlineAlert tone={errorTone}>{formError}</InlineAlert>
+        ) : null}
 
         <FormField
           control={form.control}

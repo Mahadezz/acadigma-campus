@@ -39,6 +39,7 @@ export default async function RegisterPage() {
     >
       <RegisterForm
         t={{ ...t.auth.register, strength: t.auth.passwordStrength }}
+        network={t.auth.network}
       />
     </AuthCard>
   )

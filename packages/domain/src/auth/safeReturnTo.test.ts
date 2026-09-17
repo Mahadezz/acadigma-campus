@@ -50,12 +50,12 @@ describe("safeReturnTo — rejects an attempt to leave the origin", () => {
     { name: "embedded control char (encoded newline)", value: "/app%0A/evil" },
     { name: "javascript: scheme", value: "javascript:alert(document.cookie)" },
     { name: "javascript: scheme, mixed case", value: "JaVaScRiPt:alert(1)" },
-    { name: "javascript: with a leading tab in the scheme", value: "java	script:alert(1)" },
+    { name: "javascript: with a tab in the scheme", value: "java\tscript:alert(1)" },
     { name: "data: URL", value: "data:text/html;base64,PHNjcmlwdD4=" },
     { name: "encoded tab before a protocol-relative host", value: "/%09//evil.example" },
-    { name: "mixed slash + backslash", value: "/\/evil.example" },
-    { name: "userinfo trick after a protocol-relative host", value: "//evil.example\@acadigma.app" },
-    { name: "scheme with a backslash path", value: "http:/\evil.example" },
+    { name: "mixed slash + backslash", value: "/\\/evil.example" },
+    { name: "userinfo trick after //", value: "//evil.example\\@acadigma.app" },
+    { name: "scheme with a backslash path", value: "http:/\\evil.example" },
   ]
 
   it.each(attacks)(

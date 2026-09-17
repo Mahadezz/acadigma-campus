@@ -26,6 +26,10 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { PasswordField } from "@acadigma/ui/primitives/password-field"
 
 import type { Messages } from "@/lib/i18n"
+import {
+  describeSubmitFailure,
+  type SubmitFailureTone,
+} from "@/lib/submit-failure"
 
 import { registerWithPassword } from "../actions"
 
@@ -35,12 +39,15 @@ import { registerWithPassword } from "../actions"
  */
 export function RegisterForm({
   t,
+  network,
 }: {
   t: Messages["auth"]["register"] & {
     strength: Messages["auth"]["passwordStrength"]
   }
+  network: Messages["auth"]["network"]
 }) {
   const [formError, setFormError] = useState<string | null>(null)
+  const [errorTone, setErrorTone] = useState<SubmitFailureTone>("error")
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -78,15 +85,23 @@ export function RegisterForm({
       setConfirmError(t.confirmPasswordMismatch)
       return
     }
+    setErrorTone("error")
     startTransition(async () => {
-      const result = await registerWithPassword(values)
-      if (!result.ok) {
-        setFormError(result.error.message)
-        return
+      try {
+        const result = await registerWithPassword(values)
+        if (!result.ok) {
+          setFormError(result.error.message)
+          return
+        }
+        window.location.assign(
+          `/verify?email=${encodeURIComponent(values.email)}`
+        )
+      } catch {
+        // D-35: offline is not "the server is down".
+        const failure = describeSubmitFailure(network)
+        setErrorTone(failure.tone)
+        setFormError(failure.message)
       }
-      window.location.assign(
-        `/verify?email=${encodeURIComponent(values.email)}`
-      )
     })
   }
 
@@ -98,7 +113,7 @@ export function RegisterForm({
         noValidate
       >
         {formError ? (
-          <InlineAlert tone="error">
+          <InlineAlert tone={errorTone}>
             {formError}{" "}
             {formError === t.errorEmailTaken ? (
               <a href="/login" className="underline underline-offset-4">

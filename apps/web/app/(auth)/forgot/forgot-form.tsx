@@ -23,13 +23,27 @@ import { Input } from "@acadigma/ui/components/input"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
+import {
+  describeSubmitFailure,
+  type SubmitFailureTone,
+} from "@/lib/submit-failure"
 
 import { requestPasswordReset } from "../actions"
 
 /** §4.5 / AC8: always the same success message, whether the address exists or
  * not — the request never distinguishes the two cases, in response or timing. */
-export function ForgotForm({ t }: { t: Messages["auth"]["forgot"] }) {
+export function ForgotForm({
+  t,
+  network,
+}: {
+  t: Messages["auth"]["forgot"]
+  network: Messages["auth"]["network"]
+}) {
   const [sent, setSent] = useState(false)
+  const [failure, setFailure] = useState<{
+    tone: SubmitFailureTone
+    message: string
+  } | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const form = useForm<PasswordResetRequestInput>({
@@ -38,9 +52,17 @@ export function ForgotForm({ t }: { t: Messages["auth"]["forgot"] }) {
   })
 
   function onSubmit(values: PasswordResetRequestInput) {
+    setFailure(null)
     startTransition(async () => {
-      await requestPasswordReset(values)
-      setSent(true)
+      try {
+        await requestPasswordReset(values)
+        setSent(true)
+      } catch {
+        // AC8's "always the same message" governs the *server's* answer. A
+        // request that never reached the server is a different fact and leaks
+        // nothing, so say so (D-35) rather than claiming the email was sent.
+        setFailure(describeSubmitFailure(network))
+      }
     })
   }
 
@@ -55,6 +77,10 @@ export function ForgotForm({ t }: { t: Messages["auth"]["forgot"] }) {
         className="space-y-4"
         noValidate
       >
+        {failure ? (
+          <InlineAlert tone={failure.tone}>{failure.message}</InlineAlert>
+        ) : null}
+
         <FormField
           control={form.control}
           name="email"

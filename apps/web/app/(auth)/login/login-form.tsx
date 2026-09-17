@@ -24,6 +24,10 @@ import { Input } from "@acadigma/ui/components/input"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
+import {
+  describeSubmitFailure,
+  type SubmitFailureTone,
+} from "@/lib/submit-failure"
 
 import { signInWithPassword } from "../actions"
 
@@ -45,12 +49,15 @@ function extractSeconds(message: string): number | null {
  */
 export function LoginForm({
   t,
+  network,
   next,
 }: {
   t: Messages["auth"]["login"]
+  network: Messages["auth"]["network"]
   next?: string
 }) {
   const [formError, setFormError] = useState<string | null>(null)
+  const [errorTone, setErrorTone] = useState<SubmitFailureTone>("error")
   const [retrySeconds, setRetrySeconds] = useState<number | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -70,14 +77,24 @@ export function LoginForm({
 
   function onSubmit(values: SignInWithPasswordInput) {
     setFormError(null)
+    setErrorTone("error")
     startTransition(async () => {
-      const result = await signInWithPassword(values)
-      // Only a failure ever returns; success throws Next's redirect signal.
-      if (!result.ok) {
-        setFormError(result.error.message)
-        if (result.error.code === "rate_limited") {
-          setRetrySeconds(extractSeconds(result.error.message))
+      try {
+        const result = await signInWithPassword(values)
+        // Only a failure ever returns; success throws Next's redirect signal.
+        if (!result.ok) {
+          setFormError(result.error.message)
+          if (result.error.code === "rate_limited") {
+            setRetrySeconds(extractSeconds(result.error.message))
+          }
         }
+      } catch {
+        // The action never reached the server (or the reply never came back).
+        // D-35: say which, rather than blaming the server for a dead 2G link --
+        // and never leave the form spinning with no message at all.
+        const failure = describeSubmitFailure(network)
+        setErrorTone(failure.tone)
+        setFormError(failure.message)
       }
     })
   }
@@ -92,7 +109,7 @@ export function LoginForm({
         noValidate
       >
         {formError ? (
-          <InlineAlert tone="error">
+          <InlineAlert tone={errorTone}>
             {throttled
               ? t.throttled.replace("{seconds}", String(retrySeconds))
               : formError}

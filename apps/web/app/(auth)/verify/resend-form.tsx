@@ -6,6 +6,10 @@ import { CountdownButton } from "@acadigma/ui/primitives/countdown-button"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
+import {
+  describeSubmitFailure,
+  type SubmitFailureTone,
+} from "@/lib/submit-failure"
 
 import { requestEmailVerification } from "../actions"
 
@@ -14,32 +18,43 @@ const RESEND_COOLDOWN_SECONDS = 60
 export function ResendForm({
   email,
   t,
+  network,
 }: {
   email: string
   t: Messages["auth"]["verify"]
+  network: Messages["auth"]["network"]
 }) {
   const [seconds, setSeconds] = useState(0)
   const [toast, setToast] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errorTone, setErrorTone] = useState<SubmitFailureTone>("error")
   const [isPending, startTransition] = useTransition()
 
   function handleResend() {
     setToast(null)
     setError(null)
+    setErrorTone("error")
     startTransition(async () => {
-      const result = await requestEmailVerification({ email })
-      if (!result.ok) {
-        setError(result.error.message)
-        return
+      try {
+        const result = await requestEmailVerification({ email })
+        if (!result.ok) {
+          setError(result.error.message)
+          return
+        }
+        setToast(t.resentToast)
+        setSeconds(RESEND_COOLDOWN_SECONDS)
+      } catch {
+        // D-35: never start a 60s cooldown for a send that never happened.
+        const failure = describeSubmitFailure(network)
+        setErrorTone(failure.tone)
+        setError(failure.message)
       }
-      setToast(t.resentToast)
-      setSeconds(RESEND_COOLDOWN_SECONDS)
     })
   }
 
   return (
     <div className="space-y-3">
-      {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+      {error ? <InlineAlert tone={errorTone}>{error}</InlineAlert> : null}
       {toast ? <InlineAlert tone="success">{toast}</InlineAlert> : null}
       <CountdownButton
         type="button"

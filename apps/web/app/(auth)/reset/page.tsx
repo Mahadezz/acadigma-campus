@@ -45,6 +45,7 @@ export default async function ResetPage({
         tokenHash={tokenHash}
         t={t.auth.reset}
         strengthLabels={t.auth.passwordStrength}
+        network={t.auth.network}
       />
     </AuthCard>
   )

@@ -45,6 +45,7 @@ export default async function SecurityPage() {
           <ChangePasswordForm
             t={t.auth.changePassword}
             strengthLabels={t.auth.passwordStrength}
+            network={t.auth.network}
           />
         </CardContent>
       </Card>

@@ -21,7 +21,7 @@ export default async function ForgotPage() {
       subtitle={t.auth.forgot.subtitle}
       footer={<LanguageToggle current={locale} />}
     >
-      <ForgotForm t={t.auth.forgot} />
+      <ForgotForm t={t.auth.forgot} network={t.auth.network} />
     </AuthCard>
   )
 }

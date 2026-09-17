@@ -26,6 +26,10 @@ import { PasswordField } from "@acadigma/ui/primitives/password-field"
 
 import { changePassword } from "@/app/(auth)/actions"
 import type { Messages } from "@/lib/i18n"
+import {
+  describeSubmitFailure,
+  type SubmitFailureTone,
+} from "@/lib/submit-failure"
 
 /** F-ID-01 §4.6 "Change password while signed in": re-authentication with the
  * current password, then the new one twice; "Sign out of other devices"
@@ -33,11 +37,14 @@ import type { Messages } from "@/lib/i18n"
 export function ChangePasswordForm({
   t,
   strengthLabels,
+  network,
 }: {
   t: Messages["auth"]["changePassword"]
   strengthLabels: Messages["auth"]["passwordStrength"]
+  network: Messages["auth"]["network"]
 }) {
   const [formError, setFormError] = useState<string | null>(null)
+  const [errorTone, setErrorTone] = useState<SubmitFailureTone>("error")
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [confirmPassword, setConfirmPassword] = useState("")
   const [success, setSuccess] = useState(false)
@@ -66,15 +73,23 @@ export function ChangePasswordForm({
       setConfirmError("Passwords do not match.")
       return
     }
+    setErrorTone("error")
     startTransition(async () => {
-      const result = await changePassword(values)
-      if (!result.ok) {
-        setFormError(result.error.message)
-        return
+      try {
+        const result = await changePassword(values)
+        if (!result.ok) {
+          setFormError(result.error.message)
+          return
+        }
+        setSuccess(true)
+        form.reset({ currentPassword: "", password: "", signOutOthers: true })
+        setConfirmPassword("")
+      } catch {
+        // D-35.
+        const failure = describeSubmitFailure(network)
+        setErrorTone(failure.tone)
+        setFormError(failure.message)
       }
-      setSuccess(true)
-      form.reset({ currentPassword: "", password: "", signOutOthers: true })
-      setConfirmPassword("")
     })
   }
 
@@ -85,7 +100,9 @@ export function ChangePasswordForm({
         className="space-y-4"
         noValidate
       >
-        {formError ? <InlineAlert tone="error">{formError}</InlineAlert> : null}
+        {formError ? (
+          <InlineAlert tone={errorTone}>{formError}</InlineAlert>
+        ) : null}
         {success ? (
           <InlineAlert tone="success">{t.successMessage}</InlineAlert>
         ) : null}

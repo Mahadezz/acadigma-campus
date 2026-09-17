@@ -32,7 +32,11 @@ export default async function VerifyPage({
         footer={<LanguageToggle current={locale} />}
       >
         {email ? (
-          <ResendForm email={email} t={t.auth.verify} />
+          <ResendForm
+            email={email}
+            t={t.auth.verify}
+            network={t.auth.network}
+          />
         ) : (
           <Button asChild className="h-12 w-full">
             <a href="/register">{t.auth.verify.requestNewLinkButton}</a>
@@ -66,7 +70,11 @@ export default async function VerifyPage({
           {t.auth.verify.instructions}
         </p>
       </div>
-      {email ? <ResendForm email={email} t={t.auth.verify} /> : null}
+      {email ? <ResendForm
+            email={email}
+            t={t.auth.verify}
+            network={t.auth.network}
+          /> : null}
     </AuthCard>
   )
 }
