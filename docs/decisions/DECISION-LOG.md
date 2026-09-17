@@ -315,3 +315,9 @@ Pilot-ready **1 Sep 2027**; base closes **January 2028**; proof on the **April�
 
 Admins see **scheduled periods only**; workload variance is teacher-private by default (per-teacher opt-in to share); thresholds are BD-calibrated (26/30/32 periods/week, not 20/24/25); a first-run disclosure page states plainly what the school can and cannot see.
 **Why:** BD private-school teachers routinely teach 28–32 periods/week, so the old thresholds flagged normal load as burnout on day one; and a workload dashboard that reads as surveillance is how `lesson_logs` fills with fiction (SYNTHESIS T-01, T-02). Priority: R1.
+
+## D-49 — Dependency release-age cooldown is 2 days, security patches exempt · ACCEPTED · 2026-09-17
+
+**Context:** Semgrep's supply-chain rules led to `minimumReleaseAge: 7 days` in `pnpm-workspace.yaml`. With every dependency pinned exactly, that rejected `@turbo/linux-64@2.10.13` (published 3 days earlier) and aborted every install — which silently prevented the postcss/browserslist security overrides from applying.
+**Decision:** `minimumReleaseAge: 2880` (2 days) — still blocks same-day malicious publishes, which is the threat the rule targets — plus `minimumReleaseAgeExclude` for packages being patched for a published advisory, and `overrides` in `pnpm-workspace.yaml` (not `package.json`) with exact versions. Rule for the future: when pinning a dependency released < 2 days ago, add it to the exclude list in the same commit, and remove it in the next.
+**Why:** a supply-chain control that breaks installs gets disabled; one that costs nothing stays on.
