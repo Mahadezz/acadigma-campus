@@ -1,4 +1,5 @@
 export * from "./client"
+export * from "./repositories"
 export * from "./workspace-context"
 export type {
   Database,
