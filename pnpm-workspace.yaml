@@ -14,7 +14,7 @@ onlyBuiltDependencies:
 # sources, wait 2 days before installing newly published versions (7 broke exact pins of fresh releases — D-49), and never
 # let a package update silently downgrade these settings.
 blockExoticSubdeps: true
-minimumReleaseAge: 2880
+minimumReleaseAge: 2880 # nosemgrep: package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age -- 2 days by decision D-49; 7 days aborts installs of exactly-pinned fresh releases
 trustPolicy: no-downgrade
 
 # Security patches bypass the release-age cooldown (advisories on these two, 2026-09-17).
