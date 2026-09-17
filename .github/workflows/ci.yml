@@ -352,7 +352,9 @@ jobs:
         run: node scripts/audit-with-exceptions.mjs
 
       - name: Dependency review
-        if: github.event_name == 'pull_request'
+        # Needs Dependency graph + Advanced Security, unavailable on private repos without GHAS.
+        # `pnpm audit` above is the advisory gate meanwhile; this re-enables itself if the repo goes public.
+        if: github.event_name == 'pull_request' && github.event.repository.private == false
         uses: actions/dependency-review-action@3b139cfc5fae8b618d3eae3675e383bb1769c019 # v4.5.0
         with:
           fail-on-severity: high
