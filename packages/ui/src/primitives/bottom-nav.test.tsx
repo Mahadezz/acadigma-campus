@@ -147,6 +147,20 @@ describe("BottomNavFromConfig — the More sheet", () => {
     expect(screen.getByText("Audit log")).toBeInTheDocument()
   })
 
+  it("points the More trigger's aria-controls at the sheet content's id", async () => {
+    const user = userEvent.setup()
+    renderNav({ role: "teacher", isOwner: false, hasModule: () => true })
+
+    const trigger = screen.getByRole("button", { name: /more/i })
+    const controlsId = trigger.getAttribute("aria-controls")
+    expect(controlsId).toBeTruthy()
+
+    await user.click(trigger)
+    // The sheet content Radix renders (role="dialog") carries that same id.
+    const sheet = screen.getByRole("dialog")
+    expect(sheet).toHaveAttribute("id", controlsId)
+  })
+
   it("does not render a More tab when every group is filtered to empty", () => {
     const emptyMoreConfig: NavConfig = {
       bottom: testConfig.bottom,

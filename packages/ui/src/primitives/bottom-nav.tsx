@@ -250,6 +250,7 @@ export function MoreSheet({
   isActive,
   renderLink,
   title = "More",
+  contentId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -258,10 +259,17 @@ export function MoreSheet({
   isActive: (href: string) => boolean
   renderLink: NavLinkRenderer
   title?: string
+  /** Wired to the "More" trigger's `aria-controls` (§7.1: disclosure widgets
+   * need both `aria-expanded` and `aria-controls`). */
+  contentId?: string
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
+      <SheetContent
+        id={contentId}
+        side="bottom"
+        className="max-h-[85dvh] overflow-y-auto"
+      >
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
@@ -346,6 +354,11 @@ export function BottomNavFromConfig({
 }) {
   const filtered = useFilteredNav(config, filter)
   const [moreOpen, setMoreOpen] = React.useState(false)
+  // Stable across renders (and unique even if this component renders more
+  // than once on a page), so the More trigger's aria-controls always points
+  // at a real id rather than one derived from label text that could repeat
+  // or contain characters unsafe in an id.
+  const moreSheetId = React.useId()
   const isActive = React.useCallback(
     (href: string) => pathname === href || pathname.startsWith(`${href}/`),
     [pathname]
@@ -408,6 +421,7 @@ export function BottomNavFromConfig({
             badge={moreBadgeCount}
             aria-haspopup="dialog"
             aria-expanded={moreOpen}
+            aria-controls={moreSheetId}
             onClick={() => setMoreOpen(true)}
           />
         ) : null}
@@ -421,6 +435,7 @@ export function BottomNavFromConfig({
           isActive={isActive}
           renderLink={renderLink}
           title={locale === "bn" ? "আরও" : "More"}
+          contentId={moreSheetId}
         />
       ) : null}
     </>
