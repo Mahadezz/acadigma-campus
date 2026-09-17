@@ -190,13 +190,21 @@ comment on function public.throttle_reset(text) is
 --    "write anything to audit_events" RPC for anon/authenticated —
 --    audit_events keeps its "exactly two writers" property (0003 §7.1);
 --    this is a narrow, allowlisted extension of writer #2, not a third one.
+--
+--    Security review N1: `p_row_id`, `p_ip` and `p_user_agent` used to be
+--    caller-supplied arguments granted to `anon` — anyone holding the
+--    publishable key could spray audit_events with rows naming an arbitrary
+--    user id, IP or user-agent. They are not parameters here any more;
+--    `row_id` is always `auth.uid()`, which `app.log_audit_event` also uses
+--    for `actor_id`, so a caller can only ever audit-log against themselves.
+--    `ip`/`user_agent` are dropped for this wrapper rather than trusted from
+--    the caller.
 -- ---------------------------------------------------------------------
+drop function if exists public.log_auth_event(text, uuid, jsonb, inet, text);
+
 create or replace function public.log_auth_event(
   p_action     text,
-  p_row_id     uuid    default null,
-  p_after      jsonb   default null,
-  p_ip         inet    default null,
-  p_user_agent text    default null)
+  p_after      jsonb   default null)
 returns bigint
 language plpgsql
 volatile
@@ -219,29 +227,75 @@ begin
   end if;
 
   v_id := app.log_audit_event(
+    p_action, null, 'auth.users', auth.uid(), null, p_after, null, null, null);
+  return v_id;
+end;
+$$;
+
+comment on function public.log_auth_event(text, jsonb) is
+  'F-ID-01 §4 audit events, reachable from apps/web (app.log_audit_event is '
+  'not — see the schema-placement note at the top of this file). The action '
+  'allowlist is the whole security property: anon/authenticated get exactly '
+  'these seven actions, always attributed to auth.uid(), and nothing else '
+  'written to audit_events through it. See log_auth_event_service for the '
+  'one case (pre-session registration) that needs a different row_id.';
+
+-- ---------------------------------------------------------------------
+-- 5a. public.log_auth_event_service — the single case log_auth_event cannot
+--    cover: `account.registered` is logged the instant `signUp` returns,
+--    before a session exists, so `auth.uid()` is null and the new user's id
+--    has to come from the caller. Granted to service_role ONLY — never
+--    anon/authenticated — because a caller-supplied row_id/ip/user_agent is
+--    only safe from a credential that never reaches a browser
+--    (apps/web/lib/audit.ts calls this via withServiceRole for exactly this
+--    one action, and rejects every other action).
+-- ---------------------------------------------------------------------
+create or replace function public.log_auth_event_service(
+  p_action     text,
+  p_row_id     uuid,
+  p_after      jsonb   default null,
+  p_ip         inet    default null,
+  p_user_agent text    default null)
+returns bigint
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_id bigint;
+begin
+  if p_action <> 'account.registered' then
+    raise exception
+      'log_auth_event_service is for account.registered only (got %); use log_auth_event for every other action',
+      p_action using errcode = '22023';
+  end if;
+
+  v_id := app.log_audit_event(
     p_action, null, 'auth.users', p_row_id, null, p_after, p_ip, p_user_agent, null);
   return v_id;
 end;
 $$;
 
-comment on function public.log_auth_event(text, uuid, jsonb, inet, text) is
-  'F-ID-01 §4 audit events, reachable from apps/web (app.log_audit_event is '
-  'not — see the schema-placement note at the top of this file). The action '
-  'allowlist is the whole security property: anon/authenticated get exactly '
-  'these seven actions and nothing else written to audit_events through it.';
+comment on function public.log_auth_event_service(text, uuid, jsonb, inet, text) is
+  'service_role-only counterpart to log_auth_event, for the pre-session '
+  'account.registered write alone. Never grant this to anon or authenticated.';
 
 -- ---------------------------------------------------------------------
 -- 6. Grants — anon needs the throttle + registration/login events too:
 --    registration, sign-in and password reset all run before a session
 --    exists. The functions themselves accept only an opaque key or an
 --    allowlisted action and never return PII, which is what makes that safe.
+--    log_auth_event_service is the one exception: service_role only.
 -- ---------------------------------------------------------------------
 revoke all on function public.throttle_status(text) from public;
 revoke all on function public.throttle_record_failure(text, text) from public;
 revoke all on function public.throttle_reset(text) from public;
-revoke all on function public.log_auth_event(text, uuid, jsonb, inet, text) from public;
+revoke all on function public.log_auth_event(text, jsonb) from public;
+revoke all on function public.log_auth_event_service(text, uuid, jsonb, inet, text) from public;
 
 grant execute on function public.throttle_status(text) to anon, authenticated, service_role;
 grant execute on function public.throttle_record_failure(text, text) to anon, authenticated, service_role;
 grant execute on function public.throttle_reset(text) to anon, authenticated, service_role;
-grant execute on function public.log_auth_event(text, uuid, jsonb, inet, text) to anon, authenticated, service_role;
+grant execute on function public.log_auth_event(text, jsonb) to anon, authenticated, service_role;
+grant execute on function public.log_auth_event_service(text, uuid, jsonb, inet, text) to service_role;

@@ -7,7 +7,7 @@
 -- functions behave exactly as F-ID-01 §5 describes.
 -- =====================================================================
 begin;
-select plan(18);
+select plan(23);
 
 create schema if not exists tests;
 
@@ -156,16 +156,48 @@ select is(
   'throttle_reset takes only a key -- no limit or window parameters');
 
 -- =====================================================================
--- G. log_auth_event — the allowlist is the whole security property
+-- G. log_auth_event — the allowlist is the whole security property, and
+--    (security review N1) ip/user_agent/row_id are no longer accepted from
+--    anon/authenticated: row_id always follows auth.uid().
 -- =====================================================================
+select is(
+  pg_get_function_identity_arguments('public.log_auth_event(text, jsonb)'::regprocedure),
+  'p_action text, p_after jsonb',
+  'log_auth_event accepts no ip, user_agent or row_id from anon/authenticated callers');
+
 select throws_ok(
-  $$select public.log_auth_event('drop.everything', 'bbbbbbbb-0000-0000-0000-000000000001'::uuid)$$,
+  $$select public.log_auth_event('drop.everything')$$,
   '22023', null,
   'an action outside the seven-item allowlist is rejected');
 
 select ok(
-  (select public.log_auth_event('account.login', 'bbbbbbbb-0000-0000-0000-000000000001'::uuid)) is not null,
+  (select public.log_auth_event('account.login')) is not null,
   'an allowlisted action writes a row and returns its id');
+
+-- =====================================================================
+-- H. log_auth_event_service is reachable only by service_role -- the
+--    row_id/ip/user_agent it still accepts must never be anon/authenticated
+--    input (security review N1).
+-- =====================================================================
+select ok(
+  has_function_privilege('service_role',
+    'public.log_auth_event_service(text, uuid, jsonb, inet, text)', 'execute'),
+  'service_role may call log_auth_event_service');
+
+select ok(
+  not has_function_privilege('anon',
+    'public.log_auth_event_service(text, uuid, jsonb, inet, text)', 'execute'),
+  'anon may not call log_auth_event_service');
+
+select ok(
+  not has_function_privilege('authenticated',
+    'public.log_auth_event_service(text, uuid, jsonb, inet, text)', 'execute'),
+  'authenticated may not call log_auth_event_service');
+
+select throws_ok(
+  $$select public.log_auth_event_service('account.login', 'bbbbbbbb-0000-0000-0000-000000000001'::uuid)$$,
+  '22023', null,
+  'log_auth_event_service refuses every action except account.registered');
 
 select finish();
 rollback;

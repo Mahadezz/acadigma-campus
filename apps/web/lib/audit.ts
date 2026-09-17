@@ -1,6 +1,6 @@
 import "server-only"
 
-import type { AcadigmaSupabaseClient } from "@acadigma/db"
+import { withServiceRole, type AcadigmaSupabaseClient } from "@acadigma/db"
 
 import { getRequestContext } from "./request-context"
 
@@ -14,12 +14,17 @@ import type { RequestContext } from "./request-context"
  * `account.password_changed`, `session.revoked_all`. `workspace_id` is always
  * null — this feature's rows are user-scoped, not tenant-scoped (F-ID-01 §3).
  *
- * One function serves both the pre-session case (registration, the instant
- * `signUp` returns — `actor_id` ends up null, `rowId` carries the new user's id
- * instead) and the authenticated case (`auth.uid()` attributes `actor_id`
- * correctly): `log_auth_event` is granted to `anon` as well as `authenticated`
- * precisely so a plain request-scoped client is enough for both, and no
- * `withServiceRole` bypass is needed just to write an audit line.
+ * Security review N1: `log_auth_event` no longer accepts `row_id`/`ip`/
+ * `user_agent` as arguments — a caller holding only the publishable key must
+ * not be able to write an audit row naming an arbitrary user, IP or
+ * user-agent. `row_id` is always `auth.uid()` on the Postgres side, which is
+ * correct for every action here except one: `account.registered` is logged
+ * the instant `signUp` returns, before a session exists, so `auth.uid()` is
+ * null and the new user's id has to come from the caller. That one case goes
+ * through `withServiceRole` to the service_role-only
+ * `public.log_auth_event_service`, which still takes `row_id`/`ip`/
+ * `user_agent` — safe there only because `SUPABASE_SERVICE_ROLE_KEY` never
+ * reaches a browser (ARCHITECTURE §3).
  */
 type LogAuthEventInput = {
   action:
@@ -35,29 +40,46 @@ type LogAuthEventInput = {
   context?: RequestContext
 }
 
+function warnAuditLogFailed(action: string, message: string): void {
+  // Never let an audit-logging failure take down the auth flow it is
+  // describing — surface it to the structured logs instead. Matches the
+  // console.warn(JSON) pattern packages/db/src/client.ts already uses for
+  // this same "before pino is wired up everywhere" situation.
+  console.warn(
+    JSON.stringify({ event: "audit_log_failed", action, error: message })
+  )
+}
+
 export async function logAuthEvent(
   supabase: AcadigmaSupabaseClient,
   input: LogAuthEventInput
 ): Promise<void> {
-  const ctx = input.context ?? (await getRequestContext())
+  if (input.action === "account.registered") {
+    if (!input.rowId) {
+      warnAuditLogFailed(input.action, "missing rowId for account.registered")
+      return
+    }
+    const ctx = input.context ?? (await getRequestContext())
+    await withServiceRole(
+      "auth.log_auth_event: account.registered runs pre-session, so row_id " +
+        "cannot come from auth.uid() -- see log_auth_event_service",
+      async (db) => {
+        const { error } = await db.rpc("log_auth_event_service", {
+          p_action: input.action,
+          p_row_id: input.rowId,
+          p_after: input.after ?? null,
+          p_ip: ctx.ip,
+          p_user_agent: ctx.userAgent,
+        })
+        if (error) warnAuditLogFailed(input.action, error.message)
+      }
+    )
+    return
+  }
+
   const { error } = await supabase.rpc("log_auth_event", {
     p_action: input.action,
-    p_row_id: input.rowId ?? null,
     p_after: input.after ?? null,
-    p_ip: ctx.ip,
-    p_user_agent: ctx.userAgent,
   })
-  if (error) {
-    // Never let an audit-logging failure take down the auth flow it is
-    // describing — surface it to the structured logs instead. Matches the
-    // console.warn(JSON) pattern packages/db/src/client.ts already uses for
-    // this same "before pino is wired up everywhere" situation.
-    console.warn(
-      JSON.stringify({
-        event: "audit_log_failed",
-        action: input.action,
-        error: error.message,
-      })
-    )
-  }
+  if (error) warnAuditLogFailed(input.action, error.message)
 }
