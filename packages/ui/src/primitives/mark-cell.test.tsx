@@ -5,6 +5,24 @@ import { describe, expect, it, vi } from "vitest"
 import { MarkCell } from "./mark-cell"
 
 describe("MarkCell", () => {
+  it("exposes the required aria-label as the input's accessible name", () => {
+    render(
+      <MarkCell
+        value={78}
+        onCommit={() => {}}
+        maxMarks={100}
+        aria-label="Mathematics mark for Ayaan Rahman"
+      />
+    )
+    // A bare numeric input has no visible <label>; getByRole with `name`
+    // only finds it because aria-label is required, not optional.
+    expect(
+      screen.getByRole("textbox", {
+        name: "Mathematics mark for Ayaan Rahman",
+      })
+    ).toBeInTheDocument()
+  })
+
   it("selects the current value on focus", async () => {
     const user = userEvent.setup()
     render(

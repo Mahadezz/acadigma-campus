@@ -45,7 +45,14 @@ export type MarkCellProps = {
   getGrade?: (value: number, maxMarks: number) => MarkCellGrade | undefined
   /** `Enter` commits and asks the grid to advance — the grid owns focus movement. */
   onNext?: () => void
-  "aria-label"?: string
+  /**
+   * Required — this is a bare numeric `<input>` with no visible `<label>`
+   * (the "/100" and grade chip beside it are not one). Without it the grid
+   * ships an unlabeled form control (a11y checklist HIGH: "Form input
+   * without label"). Name the student and subject, e.g.
+   * `"Mathematics mark for Ayaan Rahman"`.
+   */
+  "aria-label": string
   disabled?: boolean
   className?: string
 }
