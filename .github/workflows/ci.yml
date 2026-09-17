@@ -131,9 +131,13 @@ jobs:
           fetch-depth: 0
 
       # Forward-only is checked mechanically, not trusted (CI.md §2.3 step 2).
+      # base_ref goes through env, not string interpolation, so it can't be
+      # used to inject shell code into this step.
       - name: Migrations are append-only
         if: github.event_name == 'pull_request'
-        run: node scripts/check-migrations-append-only.mjs "origin/${{ github.base_ref }}"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/check-migrations-append-only.mjs "origin/$BASE_REF"
 
       # pgTAP is a server-side extension, so it is installed inside the service
       # container. The official postgres image already has the PGDG apt repository.
@@ -326,11 +330,23 @@ jobs:
             --config p/typescript --config p/react --config p/nextjs \
             --config p/owasp-top-ten --config p/secrets
 
-      - name: Upload Semgrep findings
-        if: always() && hashFiles('semgrep.sarif') != ''
+      # Code scanning (and therefore SARIF upload) requires GitHub Advanced
+      # Security, which is not enabled on this private repo. Upload the SARIF
+      # as a plain artifact instead so findings stay reviewable; the Semgrep
+      # step above still fails the job on blocking findings either way.
+      - name: Upload Semgrep findings (code scanning)
+        if: always() && hashFiles('semgrep.sarif') != '' && github.event.repository.private == false
         uses: github/codeql-action/upload-sarif@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
         with:
           sarif_file: semgrep.sarif
+
+      - name: Upload Semgrep findings (artifact)
+        if: always() && hashFiles('semgrep.sarif') != '' && github.event.repository.private == true
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: semgrep-sarif
+          path: semgrep.sarif
+          retention-days: 14
 
       - name: Dependency audit
         run: node scripts/audit-with-exceptions.mjs

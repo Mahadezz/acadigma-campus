@@ -9,3 +9,10 @@ onlyBuiltDependencies:
   - "@sentry/cli"
   - esbuild
   - unrs-resolver
+
+# Supply-chain hardening: refuse transitive deps pulled from untrusted
+# sources, wait 7 days before installing newly published versions, and never
+# let a package update silently downgrade these settings.
+blockExoticSubdeps: true
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade

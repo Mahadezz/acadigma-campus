@@ -42,6 +42,7 @@ values
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000001',
    'authenticated', 'authenticated', 'owner@acadigma.test',
+   -- nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash -- dev-only fixture hash of the literal string `password123`, never used outside `supabase db reset`; not a leaked real credential.
    '$2a$10$PZTfVVhZa5rgDwgoJrTVOOuhJ6Dq5Xm0OeHAzAGjCPZocfdMa6wfy',
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Rezaul Karim"}'::jsonb, now(), now()),
@@ -49,6 +50,7 @@ values
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000002',
    'authenticated', 'authenticated', 'teacher@acadigma.test',
+   -- nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash -- dev-only fixture hash of the literal string `password123`, never used outside `supabase db reset`; not a leaked real credential.
    '$2a$10$PZTfVVhZa5rgDwgoJrTVOOuhJ6Dq5Xm0OeHAzAGjCPZocfdMa6wfy',
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Farhana Akter"}'::jsonb, now(), now()),
@@ -56,6 +58,7 @@ values
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000003',
    'authenticated', 'authenticated', 'parent@acadigma.test',
+   -- nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash -- dev-only fixture hash of the literal string `password123`, never used outside `supabase db reset`; not a leaked real credential.
    '$2a$10$PZTfVVhZa5rgDwgoJrTVOOuhJ6Dq5Xm0OeHAzAGjCPZocfdMa6wfy',
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Shahidul Islam"}'::jsonb, now(), now())
