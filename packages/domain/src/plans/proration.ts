@@ -85,6 +85,12 @@ export type MonthlyToYearlyUpgradeInput = {
 export function computeMonthlyToYearlyUpgrade(
   input: MonthlyToYearlyUpgradeInput
 ): { remainingDays: number; unusedCreditPaisa: Paisa; amountDuePaisa: Paisa } {
+  // The delegated call below passes `newPricePaisa: 0`, so it validates the OLD
+  // price and never sees this one — the only money argument in this file that
+  // would otherwise reach an arithmetic result unchecked. `plan_prices.yearly_paisa`
+  // is platform-staff editable, so a bad value here is an input, not a theory.
+  assertNonNegativeInteger(input.newYearlyPricePaisa, "newYearlyPricePaisa")
+
   const { remainingDays, unusedCreditPaisa } = computeUpgradeWithinPeriod({
     oldPricePaisa: input.oldMonthlyPricePaisa,
     // newPricePaisa/newChargePaisa are unused for this shape — only the credit
