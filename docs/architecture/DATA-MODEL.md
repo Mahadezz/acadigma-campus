@@ -583,6 +583,17 @@ Prices are per student band. The owner-approved anchors — Starter ৳2,999 and
 
 A new school starts on the Pro trial with no card. At expiry it falls back to Free, `access_mode` becomes `read_only`, and data over the Free limits is **read-only, never deleted** (PRODUCT-DECISIONS 5.2).
 
+### 5.3 F-CM-06 Parts 1-3 additions (`20260917020100_plans_limits_engine.sql`)
+
+Builds on `0004` without editing it (forward-only). Additive only — it does not rename or reseed `plan_limits`, which a parallel `chore/foundation` rewrite owns.
+
+- **`platform_settings.ai_topup_price_paisa` / `ai_topup_actions` / `ai_topup_monthly_ceiling_multiplier`** (D-39) — placeholder Tk 1,200 for 500 AI actions, capped per workspace per month at `ai_topup_monthly_ceiling_multiplier × plan_limits.ai_actions_per_month`, so a stolen card cannot buy an unbounded top-up loop. Added with `add column if not exists`, per this table's "columns are added by whichever feature needs them first" convention (§7).
+- **`plan_modules` gains a `fees` row for `starter`, `pro`, `enterprise`** (D-31, F-CM-08). `personal_free` deliberately gets none — the nav item still renders locked with an upgrade prompt, a UI concern, not an entitlement one.
+- **`app.workspace_plan(p_workspace_id)`** — returns the `plans` row a workspace is entitled to via the denormalised `workspaces.plan_id` (PRODUCT-DECISIONS 1.20), not a join through `subscriptions`. `stable security definer`; refuses (`42501`) a caller who is not an active member, platform staff, or a privileged context — the same re-imposed tenancy check every RLS-bypassing definer needs (§9 "security definer is a decision, not a fix").
+- **`app.within_limit(p_workspace_id, p_key, p_delta default 1, p_period default 'all')`** — the server-side mirror of `packages/domain`'s `assertWithinLimit`. No `plan_limits` row (or an explicit `NULL`) for the key means unlimited, matching `plan_limits`' own convention. Same caller check as `app.workspace_plan`: without it, a non-member could binary-search `p_delta` against the boolean return to recover another school's usage count.
+- **`app.set_access_mode` gains the permission check `0004` never had** — `create or replace` on the same signature (forward-only fix for a function, HANDBOOK §1 rule 5). `0004`'s version was reachable by any `authenticated` caller; now only `app.is_privileged_context()` (service role / trusted backend) or `app.is_platform_admin()` may flip it.
+- **`app.is_privileged_context()` corrected** — see §9 for the bug (`current_user` reads as the function owner inside a nested `SECURITY DEFINER` call, not the real caller) and the fix (`current_setting('role', true)`, which nesting does not disturb).
+
 ---
 
 ## 5A. Fee collection (R1.5)
@@ -698,19 +709,19 @@ The cover-teacher payroll calculation needs the rate but must not be able to _se
 
 11 tables. Nine ship in the foundation.
 
-| Table                   | Purpose                                                                                                     | Tenant                             | Policy                                 | Soft delete |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------- | ----------- |
-| `platform_settings`     | Single-row config: `commission_bp` (3000), payout minimum (`100000` paisa), hold days (7), KYC SLA days (2) | —                                  | P1                                     | no          |
-| `audit_events`          | Append-only change log                                                                                      | `workspace_id` (nullable, FK-free) | A1                                     | no          |
-| `files`                 | Every stored object                                                                                         | ✔                                  | see below                              | **yes**     |
-| `file_access_log`       | Signed-URL and download trail                                                                               | ✔ (FK-free)                        | A1                                     | no          |
-| `notifications`         | Event-typed user notifications                                                                              | ✔ (nullable)                       | U1 by `recipient_id`                   | no          |
-| `email_log`             | Every transactional send                                                                                    | ✔ (nullable, FK-free)              | `{owner,admin}` + platform read        | no          |
-| `verification_requests` | Unified platform review queue (seller KYC, teacher degree/identity)                                         | —                                  | own + platform                         | no          |
-| `consent_records`       | Proof that a person agreed, and to which text                                                               | ✔ (nullable, FK-free)              | A1                                     | no          |
-| `legal_acceptances`     | DPA / terms / privacy acceptance                                                                            | ✔ (nullable, FK-free)              | A1                                     | no          |
-| `data_requests`         | Export, erasure, correction — and their clock                                                               | ✔ (nullable)                       | requester + `{owner,admin}` + platform | no          |
-| `personal_data_map`     | The declared erasure map, asserted by CI                                                                    | — (global)                         | read: all; write: platform             | no          |
+| Table                   | Purpose                                                                                                                                                                                                                      | Tenant                             | Policy                                 | Soft delete |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------- | ----------- |
+| `platform_settings`     | Single-row config: `commission_bp` (3000), payout minimum (`100000` paisa), hold days (7), KYC SLA days (2), plus billing's `ai_topup_price_paisa` / `ai_topup_actions` / `ai_topup_monthly_ceiling_multiplier` (§5.3, D-39) | —                                  | P1                                     | no          |
+| `audit_events`          | Append-only change log                                                                                                                                                                                                       | `workspace_id` (nullable, FK-free) | A1                                     | no          |
+| `files`                 | Every stored object                                                                                                                                                                                                          | ✔                                  | see below                              | **yes**     |
+| `file_access_log`       | Signed-URL and download trail                                                                                                                                                                                                | ✔ (FK-free)                        | A1                                     | no          |
+| `notifications`         | Event-typed user notifications                                                                                                                                                                                               | ✔ (nullable)                       | U1 by `recipient_id`                   | no          |
+| `email_log`             | Every transactional send                                                                                                                                                                                                     | ✔ (nullable, FK-free)              | `{owner,admin}` + platform read        | no          |
+| `verification_requests` | Unified platform review queue (seller KYC, teacher degree/identity)                                                                                                                                                          | —                                  | own + platform                         | no          |
+| `consent_records`       | Proof that a person agreed, and to which text                                                                                                                                                                                | ✔ (nullable, FK-free)              | A1                                     | no          |
+| `legal_acceptances`     | DPA / terms / privacy acceptance                                                                                                                                                                                             | ✔ (nullable, FK-free)              | A1                                     | no          |
+| `data_requests`         | Export, erasure, correction — and their clock                                                                                                                                                                                | ✔ (nullable)                       | requester + `{owner,admin}` + platform | no          |
+| `personal_data_map`     | The declared erasure map, asserted by CI                                                                                                                                                                                     | — (global)                         | read: all; write: platform             | no          |
 
 ### 7.1 `audit_events`
 
@@ -800,7 +811,7 @@ It is a **table rather than a document** so CI can assert coverage: a test walks
 
 `files.purge_after` is set on upload, not discovered later by a classifier. Deleting a scan we no longer need is not housekeeping: an ID scan we still hold is a breach we have not had yet.
 
-**The audit purge is the one path that can delete from an append-only table**, and it needs two independent things to be true at once. `app.tg_append_only()` permits a DELETE only when `app.is_privileged_context()` is true **and** the transaction-local flag `app.retention_purge` is `on`. A client statement can never satisfy the first — `current_user` is `authenticated` — so setting the flag buys an attacker nothing. `UPDATE` remains refused unconditionally, for every caller, forever: there is no legitimate reason to alter a record of what happened, and the moment one exists the table stops being evidence.
+**The audit purge is the one path that can delete from an append-only table**, and it needs two independent things to be true at once. `app.tg_append_only()` permits a DELETE only when `app.is_privileged_context()` is true **and** the transaction-local flag `app.retention_purge` is `on`. A client statement can never satisfy the first — its `role` is `authenticated` — so setting the flag buys an attacker nothing. `UPDATE` remains refused unconditionally, for every caller, forever: there is no legitimate reason to alter a record of what happened, and the moment one exists the table stops being evidence.
 
 ---
 
@@ -981,14 +992,26 @@ $$;
 
 ```sql
 -- TRUE when the statement is running inside a server-owned path rather than
--- as a direct client statement. SECURITY INVOKER on purpose: current_user is
--- the *effective* role, so it reads `authenticated` for a PostgREST
--- statement and `postgres` inside a SECURITY DEFINER function we own.
--- Guard triggers use this instead of a set_config flag, which a client could
--- in principle set for itself.
+-- as a direct client statement. SECURITY INVOKER on purpose. Guard triggers
+-- use this instead of a set_config flag, which a client could in principle
+-- set for itself.
+--
+-- Corrected by 20260917020100 (F-CM-06 Parts 1-3): the `0001` body read
+-- `current_user`, which is the *effective* role for the current call —
+-- inside a SECURITY DEFINER function Postgres substitutes that function's
+-- OWNER for `current_user`, regardless of who actually invoked it. Any
+-- caller check built on `is_privileged_context()` that itself runs inside a
+-- SECURITY DEFINER function (`app.workspace_plan`, `app.within_limit`,
+-- `app.set_access_mode`) therefore always saw a privileged context and let
+-- every caller through. `current_setting('role', true)` is the `role` GUC
+-- PostgREST sets once per request (`SET ROLE <role>`, same as this repo's
+-- pgTAP `tests.login()`); entering a SECURITY DEFINER function does not
+-- re-issue that SET, so it reports the real caller at any nesting depth. A
+-- bare connection with no SET ROLE ever issued reads the literal `'none'`,
+-- correctly treated as privileged.
 create or replace function app.is_privileged_context()
 returns boolean language sql stable set search_path = ''
-as $$ select current_user not in ('authenticated', 'anon') $$;
+as $$ select coalesce(current_setting('role', true), 'none') not in ('authenticated', 'anon') $$;
 ```
 
 ```sql
