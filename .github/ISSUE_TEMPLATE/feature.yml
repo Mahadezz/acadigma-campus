@@ -1,0 +1,132 @@
+name: Feature request
+description: Propose something Acadigma Campus should do
+title: "feat: "
+labels: ["feature", "triage"]
+assignees: ["Mahadezz"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before writing: the product scope is already settled in
+        [`docs/product/PRODUCT-DECISIONS.md`](../blob/main/docs/product/PRODUCT-DECISIONS.md),
+        which resolves ~95 ambiguities from the prototype, and the order of work is in
+        `docs/plan/ROADMAP.md`.
+
+        Check whether your idea is already decided there — it may be **planned**, or it may be
+        **deliberately out of scope**, in which case this issue needs to argue with that decision
+        rather than restate the idea. Both are useful; knowing which one you are doing saves time.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >
+        Who has this problem, and what does it cost them today? Describe the situation,
+        not the solution. The best feature requests here have come from "a teacher spends
+        20 minutes every morning doing X".
+      placeholder: |
+        A teacher covering an absent colleague has no way to see which class they are covering
+        without asking the office. They arrive at the wrong room roughly once a week.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who needs this
+      multiple: true
+      options:
+        - School owner
+        - School admin
+        - Teacher
+        - Office staff
+        - Parent
+        - Seller (marketplace)
+        - Job applicant
+        - Platform staff
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Identity, roles, tenancy
+        - Academic core — attendance, timetable, classes, students, exams, marks
+        - Teaching intelligence — lessons, curriculum, resources, AI
+        - Marketplace and selling
+        - Billing and plans
+        - Operations — messaging, hiring, cover, print, reports
+        - Personal workspace
+        - Parent portal
+        - Platform console
+        - Cross-cutting (design system, performance, accessibility, offline)
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+      description: >
+        The behaviour, from the user's chair. What do they see, what do they tap,
+        what happens. Describe the phone experience specifically — this app is phone-first
+        and a design that only works on a desktop is not a design we can ship.
+    validations:
+      required: true
+
+  - type: textarea
+    id: today
+    attributes:
+      label: How it is handled today
+      description: >
+        The current workaround — inside the app, in the prototype, on paper, in WhatsApp.
+        "Nothing, it just doesn't happen" is a valid and informative answer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: rules
+    attributes:
+      label: Rules, edge cases and permissions
+      description: >
+        Who should be allowed to do this and who should not? What happens at the boundaries —
+        no data yet, a very large class, a removed member, a parent looking at it?
+        This is the section that determines whether the feature can actually be built.
+      placeholder: |
+        - Only the admin assigns a cover; the covering teacher can see it but not change it
+        - A teacher who has left the school must not see past cover assignments
+        - If the covering teacher is also teaching that period, the assignment must be refused
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: How urgent
+      options:
+        - Blocking a school from using the product
+        - Painful — a daily workaround
+        - Valuable — would clearly improve the day
+        - Nice to have
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope-check
+    attributes:
+      label: Existing decisions this relates to
+      description: >
+        If `PRODUCT-DECISIONS.md` or `DECISION-LOG.md` already covers this, reference it
+        (section or D-nn) and say whether you are asking us to implement a planned thing
+        or to revisit a decision. If revisiting: what is new since it was made?
+      placeholder: "PRODUCT-DECISIONS §6.4 says cover is manual. This asks to revisit that, because…"
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked `docs/product/PRODUCT-DECISIONS.md` and this is not already decided (or I explained why it should be revisited)
+          required: true
+        - label: I searched existing issues
+          required: true

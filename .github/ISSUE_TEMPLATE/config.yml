@@ -1,0 +1,30 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/Mahadezz/acadigma-campus/security/advisories/new
+    about: >
+      Never open a public issue for a security problem. Report it privately here, or email
+      security@acadigma.app. We acknowledge within 3 working days. See SECURITY.md for scope
+      and safe harbour.
+
+  - name: 📖 How we work — the engineering handbook
+    url: https://github.com/Mahadezz/acadigma-campus/blob/main/docs/engineering/HANDBOOK.md
+    about: >
+      Branches, commits, PRs, the Definition of Done, local setup on Windows, code conventions.
+      Read this before your first contribution.
+
+  - name: 🧭 What we are building and why
+    url: https://github.com/Mahadezz/acadigma-campus/blob/main/docs/product/PRODUCT-DECISIONS.md
+    about: >
+      Product scope, resolved ambiguities, and what is explicitly out of scope for v1.
+      Check here before filing a feature request.
+
+  - name: 🗂️ Documentation index
+    url: https://github.com/Mahadezz/acadigma-campus/blob/main/docs/README.md
+    about: Every document in the repository, with one line on what it is for.
+
+  - name: 💬 Questions and ideas
+    url: https://github.com/Mahadezz/acadigma-campus/discussions
+    about: >
+      For anything that is not a specific bug or a concrete feature proposal — questions about
+      how something works, half-formed ideas, or "is this intended?".

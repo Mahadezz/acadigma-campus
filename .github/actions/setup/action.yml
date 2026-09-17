@@ -1,0 +1,20 @@
+name: Setup toolchain
+description: Installs pnpm and Node, restores the store cache and installs the workspace.
+
+runs:
+  using: composite
+  steps:
+    # pnpm's version comes from `packageManager` in the root package.json, so CI and
+    # the development machine cannot drift (DECISION-LOG D-12).
+    - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+    - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    # --frozen-lockfile is the supply-chain gate (SECURITY §6): a lockfile that does
+    # not match package.json fails here rather than quietly resolving to something new.
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

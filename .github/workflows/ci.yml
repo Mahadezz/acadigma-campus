@@ -1,0 +1,510 @@
+name: CI
+
+# Implements docs/engineering/CI.md. Job ids are contract: branch protection matches
+# on "CI / <job id>", so renaming one silently disables its gate (CI.md §3).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A superseded PR run is wasted money; a cancelled main run is a half-applied release.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Public by design (D-19). Present so `next build` needs no repository secret.
+  NEXT_PUBLIC_SUPABASE_URL: https://bvqzhrvcrxebawjusrxk.supabase.co
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_6POCbYjBAcrSiT1AlCPSVQ_SG3ohfsL
+  APP_URL: http://127.0.0.1:3000
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  # D-21. Branch protection is the first line; this leaves a red mark if it is ever
+  # loosened. Squash-merges are ordinary commits, so ask GitHub which PR produced
+  # this one rather than looking for a merge commit.
+  guard:
+    name: guard
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Require the commit to come from a merged pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          merged=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            --jq '[.[] | select(.merged_at != null)] | length')
+          if [ "$merged" -eq 0 ]; then
+            echo "::error::${{ github.sha }} reached main without a merged pull request (D-21)."
+            echo "### guard — FAILED" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "### guard — commit arrived via a merged pull request" >> "$GITHUB_STEP_SUMMARY"
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+
+      # Warnings are errors: a warning nobody fixes hides the next real one.
+      - name: ESLint
+        run: pnpm lint --max-warnings=0
+
+      - name: Prettier
+        run: pnpm format:check
+
+      # A new variable that only exists in someone's .env.local breaks every other
+      # checkout silently. This is the check that stops it.
+      - name: .env.example parity
+        run: node scripts/check-env-parity.mjs
+
+      - name: Summary
+        if: always()
+        run: echo "### lint" >> "$GITHUB_STEP_SUMMARY"
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: ./.github/actions/setup
+
+      # Runs against the committed types.generated.ts; freshness is `contracts`' job,
+      # so a stale-types failure reports as the right thing.
+      - name: tsc --noEmit
+        run: pnpm typecheck
+
+      - name: Summary
+        if: always()
+        run: echo "### typecheck" >> "$GITHUB_STEP_SUMMARY"
+
+  # The authorization gate. D-20: pgTAP runs against a Postgres 17 service container
+  # rather than the shared Supabase dev branch, so a PR's RLS tests never depend on
+  # whichever branch pushed last.
+  db:
+    name: db
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: acadigma_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: acadigma_test
+
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+
+      # Forward-only is checked mechanically, not trusted (CI.md §2.3 step 2).
+      - name: Migrations are append-only
+        if: github.event_name == 'pull_request'
+        run: node scripts/check-migrations-append-only.mjs "origin/${{ github.base_ref }}"
+
+      # pgTAP is a server-side extension, so it is installed inside the service
+      # container. The official postgres image already has the PGDG apt repository.
+      - name: Install pgTAP into the Postgres container
+        run: |
+          set -euo pipefail
+          docker exec ${{ job.services.postgres.id }} bash -c \
+            "apt-get update -qq && apt-get install -y --no-install-recommends postgresql-17-pgtap"
+
+      - name: Install psql and pg_prove
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            postgresql-client libtap-parser-sourcehandler-pgtap-perl
+
+      - name: Create the Supabase-shaped roles and schemas
+        run: psql -v ON_ERROR_STOP=1 --quiet --file supabase/ci/bootstrap.sql
+
+      - name: Apply migrations in order
+        run: |
+          set -euo pipefail
+          for file in $(find supabase/migrations -name '*.sql' | sort); do
+            echo "--- $file"
+            psql -v ON_ERROR_STOP=1 --quiet --file "$file"
+          done
+
+      # Fails when a workspace_id table has RLS off, has no test file, or has no
+      # audit trigger. Owned by the database agent; absent until it lands.
+      - name: RLS coverage
+        run: |
+          set -euo pipefail
+          if [ -f supabase/tests/coverage.sql ]; then
+            psql -v ON_ERROR_STOP=1 --file supabase/tests/coverage.sql
+          else
+            echo "::warning::supabase/tests/coverage.sql is missing — RLS coverage was not verified."
+          fi
+
+      - name: pgTAP
+        run: |
+          set -euo pipefail
+          pg_prove --verbose --ext .sql supabase/tests/*.sql | tee pgtap.tap
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### db — pgTAP"
+            echo
+            echo '```'
+            tail -30 pgtap.tap 2>/dev/null || echo "no TAP output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: pgtap
+          path: pgtap.tap
+          retention-days: 14
+
+  unit:
+    name: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: ./.github/actions/setup
+
+      # Zero retries: a unit test that needs one is a bug report (CI.md §2.4).
+      - name: Vitest with coverage
+        run: pnpm test:cov
+
+      - name: Coverage summary
+        if: always()
+        run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: unit-results
+          path: |
+            coverage/
+            test-results/
+          retention-days: 14
+
+  # Cheap drift detection, separated so the failure message is unambiguous.
+  contracts:
+    name: contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Permission keys used in code exist in the domain matrix
+        run: node scripts/check-permission-parity.mjs
+
+      # Regenerating types needs a live project; without the token the check would
+      # pass vacuously, so say so instead of pretending.
+      - name: Generated types are fresh
+        if: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          cp packages/db/src/types.generated.ts /tmp/committed.ts
+          pnpm db:types
+          if ! diff -u /tmp/committed.ts packages/db/src/types.generated.ts; then
+            echo "::error::packages/db/src/types.generated.ts is stale — run pnpm db:types and commit."
+            exit 1
+          fi
+
+      - name: Note when the type check was skipped
+        if: ${{ secrets.SUPABASE_ACCESS_TOKEN == '' }}
+        run: |
+          echo "::notice::skipped generated-type freshness: no SUPABASE_ACCESS_TOKEN (fork PR)"
+          echo "### contracts — type freshness skipped (no secrets)" >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Restore the Next.js build cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/**/*.[jt]s?(x)') }}
+          restore-keys: |
+            next-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Build
+        run: pnpm build
+
+      # TESTING §6: a school route over 250 kB first-load JS is a phone that stalls
+      # on a 3G handset. The budget is checked, not hoped for.
+      - name: Bundle budget
+        run: node scripts/check-bundle-budget.mjs
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: build
+          path: |
+            apps/web/.next
+            !apps/web/.next/cache
+          retention-days: 3
+
+  # Runs on pull_request, never pull_request_target, so a fork PR cannot reach secrets.
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pinned image rather than the marketplace action, whose only published tag is
+      # a moving `v1`. ERROR severity fails; the SARIF carries the rest.
+      - name: Semgrep
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:1.177.0 \
+            semgrep scan --metrics=off --error --sarif --output semgrep.sarif \
+            --config p/typescript --config p/react --config p/nextjs \
+            --config p/owasp-top-ten --config p/secrets
+
+      - name: Upload Semgrep findings
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
+        with:
+          sarif_file: semgrep.sarif
+
+      - name: Dependency audit
+        run: node scripts/audit-with-exceptions.mjs
+
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@3b139cfc5fae8b618d3eae3675e383bb1769c019 # v4.5.0
+        with:
+          fail-on-severity: high
+
+  e2e:
+    name: e2e
+    needs: [build, db]
+    # Skipped on drafts: the expensive jobs start when the PR is marked ready.
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: ./.github/actions/setup
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: build
+          path: apps/web/.next
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Chromium
+        run: pnpm --filter @acadigma/web exec playwright install --with-deps chromium
+
+      # playwright.config.ts starts `next start` and waits for the port; both the
+      # mobile-360 and desktop-1280 projects run.
+      - name: Playwright
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: node scripts/e2e-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+  lighthouse:
+    name: lighthouse
+    needs: [build]
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: ./.github/actions/setup
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: build
+          path: apps/web/.next
+
+      - name: Start the built app
+        run: |
+          pnpm --filter @acadigma/web exec next start --port 3000 &
+          npx --yes wait-on@8 http://127.0.0.1:3000 --timeout 120000
+
+      - name: Lighthouse
+        uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
+        with:
+          urls: |
+            http://127.0.0.1:3000/
+            http://127.0.0.1:3000/login
+          configPath: ./.lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: false
+
+  changeset:
+    name: changeset
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+      - name: Require a changeset for code changes
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: node scripts/check-changeset.mjs
+
+  docs-sync:
+    name: docs-sync
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+      # Verifies docs were not forgotten, not that they are good. Reviewers do the rest.
+      - name: Docs accompany the change
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/check-docs-sync.mjs
+
+  # Deliberately not a required check: it runs on always() and would block on an
+  # unrelated failure (CI.md §3).
+  report:
+    name: report
+    needs:
+      [
+        lint,
+        typecheck,
+        db,
+        unit,
+        contracts,
+        build,
+        security,
+        e2e,
+        lighthouse,
+        changeset,
+        docs-sync,
+      ]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Skip on fork PRs
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "::notice::skipped - no secrets on fork PRs. Job summaries are still on the run page."
+
+      - name: Comment the run summary, updating in place
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const marker = "<!-- acadigma-ci-report -->"
+            const results = ${{ toJSON(needs) }}
+            const icon = (r) =>
+              r === "success" ? "✅" : r === "skipped" ? "⏭️" : "❌"
+            const rows = Object.entries(results)
+              .map(([job, r]) => `| ${job} | ${icon(r.result)} ${r.result} |`)
+              .join("\n")
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const body = [
+              marker,
+              "### CI",
+              "",
+              "| Job | Result |",
+              "| --- | --- |",
+              rows,
+              "",
+              `[Full run, job summaries and artifacts](${run})`,
+            ].join("\n")
+
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            })
+            const existing = comments.find((c) => c.body?.startsWith(marker))
+            if (existing) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: existing.id,
+                body,
+              })
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body,
+              })
+            }
