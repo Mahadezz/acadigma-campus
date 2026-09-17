@@ -20,6 +20,14 @@ const serverOnlyStub = fileURLToPath(
   new URL("./apps/web/test/server-only-stub.ts", import.meta.url)
 )
 
+/**
+ * apps/web/tsconfig.json maps `"@/*": ["./*"]` (relative to apps/web); Vite/
+ * vitest does not read tsconfig paths on its own, so any apps/web test that
+ * imports a sibling module by its `@/...` alias (rather than mocking it
+ * outright) needs the same mapping here.
+ */
+const webRoot = fileURLToPath(new URL("./apps/web/", import.meta.url))
+
 export default defineWorkspace([
   {
     test: {
@@ -53,9 +61,10 @@ export default defineWorkspace([
       include: ["{app,lib,components}/**/*.test.{ts,tsx}"],
     },
     resolve: {
-      alias: {
-        "server-only": serverOnlyStub,
-      },
+      alias: [
+        { find: "server-only", replacement: serverOnlyStub },
+        { find: /^@\//, replacement: webRoot },
+      ],
     },
   },
   {

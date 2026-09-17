@@ -394,6 +394,20 @@ export async function resetPassword(
     )
   }
 
+  // Security review N9: `verifyOtp` below both consumes the single-use
+  // recovery token AND mints a live session. The throttle check above already
+  // ran first; this generic policy check (length, common-password list,
+  // strength) now runs before the exchange too, so a trivially-bad password
+  // never spends the token or starts a session. Identity (email/full name)
+  // isn't known yet at this point -- `checkPassword` without it just skips
+  // that one rule -- so it is re-checked below once `verifyOtp` returns the
+  // user, and a failure there signs the freshly-minted session back out
+  // rather than leaving it live.
+  const genericPasswordCheck = checkPassword({ password })
+  if (!genericPasswordCheck.ok) {
+    return err(apiError("validation_failed", genericPasswordCheck.message))
+  }
+
   const { data: verifyData, error: verifyError } =
     await supabase.auth.verifyOtp({
       type: "recovery",
@@ -412,6 +426,10 @@ export async function resetPassword(
       ?.full_name,
   })
   if (!passwordCheck.ok) {
+    // The token is already spent and verifyOtp already minted a session --
+    // it was only ever meant to authorise one password change, so a failure
+    // here (the identity-similarity rule) must not leave that session live.
+    await supabase.auth.signOut({ scope: "local" })
     return err(apiError("validation_failed", passwordCheck.message))
   }
 
