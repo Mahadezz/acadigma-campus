@@ -128,7 +128,7 @@ Private files: the school logo is public; nothing else here is a file.
 
 ### 4.1 Create a school workspace
 
-Owned end-to-end by F-ID-05 §4.3 (the wizard). This feature provides the transaction: `workspaces` row + `school_profiles` row + `workspace_members{role:'owner', status:'active', joined_at}` + `workspace_join_codes` row + default `plan_id` (Pro trial, PRODUCT-DECISIONS §5.2) + `app.next_id` short code — **all in one database transaction**, so the prototype's swallowed-catch orphan account is structurally impossible.
+Owned end-to-end by F-ID-05 §4.3 (the wizard). This feature provides the transaction: `workspaces` row + `school_profiles` row + `workspace_members{role:'owner', status:'active', joined_at}` + `workspace_join_codes` row (its `code` **prefixed with this workspace's own `app.next_id` short code**, so a guess only ever tests this one school — schema and the global hourly failure-budget alert owned by F-ID-04 §3) + default `plan_id` (Pro trial, PRODUCT-DECISIONS §5.2) + `app.next_id` short code — **all in one database transaction**, so the prototype's swallowed-catch orphan account is structurally impossible.
 **Audit:** `workspace.created`. **Notifications:** none (the creator is present).
 
 ### 4.2 Switch the active workspace

@@ -19,7 +19,7 @@ The buyer half of the marketplace: find a resource, look at it, buy it (personal
 
 **What Base44 had:** browse that called an unbounded `.list()` and filtered **the entire table in the browser** with no pagination. _Buy Now_ wrote a `completed` transaction with `create` RLS of `{}` and no payment at all, then handed over `listing.main_file_url` — a raw, unsigned, permanent URL that was already readable by anyone who could see the listing, so **paid files were free to everybody whether they clicked Buy or not**. The purchased resource was "delivered" by copying the seller's URL into the buyer's library row, so if the seller replaced the file every buyer's copy changed. School-funded purchase wrote a `pending` transaction that the approvals screen could never see, because the approvals screen queried a different entity that nothing ever wrote — a documented dead end. Sales counters could not increment because RLS required the updater to be the seller. Reviews were written but `rating_average` was never recomputed, so no rating ever surfaced. Related-listing cards called `window.location.reload()`.
 
-**Done looks like:** a teacher searches _"class 8 algebra worksheet"_ on a phone, filters to free + NCTB, opens a listing, sees three watermarked preview pages, taps _Request school purchase_, her admin approves and the school pays, and she downloads a PDF whose footer reads _"Licensed to Rahima Khatun · Shaheen Model School · ORD-2026-000147"_. Every download is logged. The source file has no public URL at any point.
+**Done looks like:** a teacher searches _"class 8 algebra worksheet"_ on a phone, filters to free + NCTB, opens a listing, sees three watermarked preview pages, taps _Request school purchase_, her admin approves and the school pays, and she downloads a PDF that carries an **invisible** per-download watermark token (metadata + a hidden text run) traceable back to her and the order in `download_log` — no visible name or email printed on the page. Every download is logged. The source file has no public URL at any point.
 
 ---
 
@@ -206,7 +206,7 @@ Related listings are real `<Link>`s to real routes. (The prototype reloaded the 
 6. Insert `download_log` with the `watermark_token`; trigger bumps `entitlements.download_count`.
 7. The response is `{url, expiresAt, filename}`; the browser navigates to it. On a phone this hands off to the OS downloader, which is why the URL must be a direct object URL and not a streaming response from our server.
 
-**Failure cases:** file missing from storage (500 + platform alert + the buyer sees _"We're fixing this — your purchase is safe"_); watermarking fails (fall back to the unwatermarked original, log a warning, still record the download — never deny a paying buyer their file because of a rendering bug); expired URL (the button simply re-requests).
+**Failure cases:** file missing from storage (500 + platform alert + the buyer sees _"We're fixing this — your purchase is safe"_); **watermarking fails → retry with backoff, then queue for a background retry job; the unwatermarked original is NEVER served under any circumstance** — the buyer sees _"Preparing your file…"_ and is notified in-app + email the moment the retried/queued watermark succeeds, still recording the download once it does (later M6); expired URL (the button simply re-requests).
 
 ### 4.5 School-funded purchase (request → approve → school pays)
 
@@ -293,12 +293,12 @@ Already-downloaded files cannot be recalled — the `download_log` and watermark
 
 ### 5.6 PDF watermarking (server-side, per download)
 
-Applied with `pdf-lib` in the download route:
+Applied with `pdf-lib` in the download route.
 
-- **Footer band** on every page, 8 pt, 60 % grey: `Licensed to {buyer_display_name} · {buyer_email_masked} · {workspace_name or "Personal"} · {order_no} · {yyyy-mm-dd}`.
-- **Diagonal tile** across each page at 6 % opacity: `{order_no}` repeated — low enough to read through, high enough to survive a phone photo.
+**(Later M6 — commerce-wide decision.) No visible buyer name or email is ever printed on the file.** The prior design's visible **footer band** (`Licensed to {buyer_display_name} · {buyer_email_masked} · …`) is removed entirely: a printed name/email on a leaked page is itself a privacy exposure of the buyer, and it does not deter leaking any better than a marker only a forensic check can find. The watermark is **invisible-only**:
+
 - **Invisible marker:** `watermark_token` (a uuid) written into the PDF's `Keywords` metadata **and** as a 1×1 white-on-white text run at a page-specific offset. `download_log.watermark_token` maps it back to a person. Two markers because metadata is trivially stripped and a stripped copy is itself a signal.
-- `buyer_email_masked` = `rah****@gmail.com` — enough to identify with the log, not enough to harvest.
+- **Never serve untraced.** If watermarking fails, the download route retries with backoff and then queues the job; the **unwatermarked original is never returned to the buyer under any circumstance** — an untraceable copy defeats the entire point of the mechanism. This replaces the earlier "falls back to the unwatermarked original" behaviour.
 - Encrypted or password-protected source PDFs are rejected at listing submission (F-CM-03), so watermarking never has to handle them.
 - Budget: p95 < 3 s for a 30-page PDF. Beyond 200 pages, watermark only the first 5 and the last page (a full-document pass on a 500-page book is not worth the latency) — the token still goes in the metadata.
 
@@ -399,9 +399,9 @@ Tests: non-entitled user 403; revoked entitlement 403; removed workspace member 
 **Demo:** attempt every unauthorised download path and get 403 with nothing leaked.
 
 **Part 5 — PDF watermarking** _(1.5 days)_
-Scope: `pdf-lib` pipeline, footer band, diagonal tile, dual marker tokens, large-document strategy, non-PDF honest fallback, temp object cleanup job.
-Tests: extracted text contains the buyer identity; `watermark_token` round-trips from the PDF metadata to `download_log`; p95 latency budget; failure falls back rather than denying.
-**Demo:** two buyers download the same listing and the PDFs differ identifiably.
+Scope: `pdf-lib` pipeline, **invisible-only** dual marker tokens (metadata + hidden text run — no visible footer or tile), large-document strategy, non-PDF honest fallback, retry-then-queue on failure, temp object cleanup job.
+Tests: no buyer-identifying text is rendered visibly anywhere on the page (a visible-text extraction assertion that the page fails if it contains the buyer's name or email); `watermark_token` round-trips from the PDF metadata **and** the hidden text run to `download_log`; p95 latency budget; a forced watermarking failure retries, then queues, and never returns the unwatermarked original.
+**Demo:** two buyers download the same listing and the invisible tokens differ, traceable via `download_log`, with nothing visibly different on the page.
 
 **Part 6 — School-funded purchase: request → approve & pay** _(2 days)_
 Scope: `purchase_approvals` + RLS + price trigger, request sheet, `/app/billing/marketplace` queue, approve-and-pay handing off to `createOrder(funding:'workspace')`, decline, cancel, 14-day expiry job, price-change confirm, notifications.
@@ -426,7 +426,7 @@ Tests: a non-buyer's direct PostgREST insert is denied by policy; one review per
 2. **Given** an anonymous visitor **when** they open a listing page **then** it renders fully with previews, rating and seller, and the buy bar says _Sign in to buy_.
 3. **Given** any user, entitled or not **when** they query `listing_files` or inspect the listing page's network traffic **then** no URL to the private bucket is present.
 4. **Given** a buyer with no entitlement **when** they call `/api/market/download` directly **then** they get `403 NOT_ENTITLED` and no signed URL is generated.
-5. **Given** a completed personal purchase **when** the buyer downloads **then** exactly one `download_log` row is written with a `watermark_token`, and the PDF's footer names the buyer and the order number.
+5. **Given** a completed personal purchase **when** the buyer downloads **then** exactly one `download_log` row is written with a `watermark_token`, and the PDF carries that token **only invisibly** (metadata + hidden text run) — nothing on the visible page names the buyer or their email.
 6. **Given** two different buyers of the same listing **when** each downloads **then** the two PDFs carry different tokens, and each token resolves to the right person in `download_log`.
 7. **Given** a buyer who already owns a listing **when** they tap Buy again **then** `createOrder` returns `ALREADY_ENTITLED` and the UI shows Download.
 8. **Given** a teacher in a school workspace **when** they tap _Ask school to buy_ **then** a `pending` approval exists, the price snapshot was written by the trigger and not by the client, and the school admins are notified.
@@ -445,7 +445,7 @@ Tests: a non-buyer's direct PostgREST insert is denied by policy; one review per
 
 ## 10. Tests
 
-- **Unit (domain):** ranking function; price-band predicates; rating scale (the 1000× constant) and the `>=3` display rule; entitlement resolution truth table (8 combinations of scope × membership × revoked); watermark text composition and email masking.
+- **Unit (domain):** ranking function; price-band predicates; rating scale (the 1000× constant) and the `>=3` display rule; entitlement resolution truth table (8 combinations of scope × membership × revoked); invisible watermark-token embedding and extraction (metadata + hidden text run).
 - **DB (pgTAP):** `entitlements` insert/update denied for every role; scope visibility matrix; the two unique partial indexes under concurrency; `listing_reviews` insert policy with a forged order line; `purchase_approvals` price trigger overwrites a client value; `download_log` immutability; `seller_download_stats_v` column set frozen.
 - **Integration:** fulfilment handler idempotency under a double capture; refund cascade (revoke → withdraw review → decrement counters); school-funded end-to-end with three roles; download rate limiting.
 - **e2e (360×800 and 1280×800):** search → filter → detail → buy (sandbox) → download → review; school-funded request/approve/download across three logged-in contexts; anonymous browse; axe everywhere.

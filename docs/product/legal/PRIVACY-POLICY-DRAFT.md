@@ -39,7 +39,7 @@ If you only read one section, read §8 (your rights) and §7 (where your data is
 
 Acadigma is {{legal entity name and registration number}}, {{registered address, Bangladesh}}.
 
-Our **Chief Data Officer** is {{name}}. You can reach them at **privacy@acadigma.com**. If you think information has been exposed or is at risk, write to **security@acadigma.com**.
+Our **Chief Data Officer** is {{name}}, **the founder of Acadigma**. We say this plainly rather than let it look like an independent role: today the same person holds this responsibility and makes the company's commercial decisions, and no external reviewer yet has a standing right to check that register. We would rather you know that than assume otherwise. You can reach the CDO at **privacy@acadigma.com**. If you think information has been exposed or is at risk, write to **security@acadigma.com**.
 
 Acadigma Campus is part of the Acadigma suite. This policy covers Acadigma Campus, our website, and the Android and Windows versions of the app.
 
@@ -96,6 +96,8 @@ Your application, the stage it has reached, interview notes and scorecards, and 
 Your seller profile, the identity documents and photograph you provide so we can confirm who you are before we send you money, your payout account details (stored encrypted and shown only in masked form), and your sales, earnings and payouts.
 
 Only named Acadigma staff can see identity documents. **Schools cannot see them. Buyers cannot see them. Other sellers cannot see them.** Sellers must be 18 or over.
+
+**Downloaded files carry an invisible watermark token.** When a buyer downloads a file purchased on the marketplace, we embed a small, invisible token inside it. The token exists to trace a leaked copy back to the download it came from, so a seller's work is not copied and resold without them knowing. **It is invisible only** — it does not contain the buyer's name, email or any other personal detail, only an identifier we can look up ourselves if a leak needs investigating.
 
 ### 4.6 About everyone who uses the app
 
@@ -194,6 +196,8 @@ We would rather tell you this plainly than promise something we cannot do.
 | Your account — with a 30-day period in which you can change your mind                                |                                                                                                                                                                                                       |
 
 Your school's records are kept for {{7}} years after a student leaves, unless the school sets a different period or the law requires longer. When the period ends, the records are permanently deleted or stripped of anything that identifies the child.
+
+**A qualification on "we can delete it."** When we correct or erase a sensitive field (health information, religion, an identity document), the security and activity log entry for that change is one of the things we cannot delete (see the table above) — it is how we prove the change was made properly. To make that consistent with actually erasing the field, the log entry for a sensitive column either stores a **change-marker or hash** of the old value rather than the raw value itself, or the payload is **redacted on erasure while the audit envelope stays intact** (event type, timestamp, who did it) — the "that this happened" survives even though "what the value was" does not. **This must be decided before any 7-year retention policy is finalised for audit-log payloads** (tracked as item P16 in `COMPLIANCE-PDPA.md` §9.3, which currently proposes moving audit-event retention from indefinite to 7 years rolling) — a 7-year retention promise on payloads that still hold raw erased values would quietly undo the erasure this table promises.
 
 ## 9. Who can see what
 

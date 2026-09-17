@@ -27,6 +27,8 @@ A school's year is measured in paper: report cards for parents, an attendance re
 | Render report card (single)                      | `report.render.report_card`         |  ✅   |  ✅   |         own sections¹         |   —   |      —       |    —     |
 | Render report cards (bulk, per section per exam) | `report.render.report_card_bulk`    |  ✅   |  ✅   | class teacher of that section |   —   |      —       |    —     |
 | Render attendance register                       | `report.render.attendance_register` |  ✅   |  ✅   |         own sections¹         |   —   |      —       |    —     |
+| Sign attendance register (class teacher)         | `report.register.sign`              |  ✅   |  ✅   |         own sections¹         |   —   |      —       |    —     |
+| Countersign / lock / reopen attendance register  | `report.register.countersign`       |  ✅   |  ✅   |               —               |   —   |      —       |    —     |
 | Render exam mark sheet                           | `report.render.mark_sheet`          |  ✅   |  ✅   |     own section-subjects      |   —   |      —       |    —     |
 | Render staff attendance summary                  | `report.render.staff_attendance`    |  ✅   |  ✅   |               —               |   —   |      —       |    —     |
 | Render student profile sheet                     | `report.render.student_profile`     |  ✅   |  ✅   |         own sections¹         |   —   |      —       |    —     |
@@ -69,6 +71,27 @@ A school's year is measured in paper: report cards for parents, an attendance re
 
 Index `(workspace_id, kind, requested_at desc)`, `(status)` for the drainer.
 RLS: select for `has_role(workspace_id,'{owner,admin,teacher}')` **and** `requested_by = current_user or has_role(…,'{owner,admin}')`; insert via server action only; parents read published report cards through `report_publications`, not this table.
+
+### 3.1a `attendance_register_signoffs` (new; proposed — R1)
+
+The attendance register is a legal/inspection document (§1) and a plain re-render is not a record of who attested it. One row per section per month.
+
+| Column                                        | Type                           | Notes                                                                                     |
+| --------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
+| `workspace_id`                                | uuid                           | tenant key                                                                                |
+| `section_id`                                  | uuid                           |                                                                                           |
+| `period_label`                                | text                           | `YYYY-MM`, the month the register covers                                                  |
+| `report_run_id`                               | uuid → `report_runs`           | the specific rendered register PDF this sign-off attests to                               |
+| `status`                                      | enum `register_signoff_status` | `open \| class_teacher_signed \| countersigned` — `countersigned` **is** the locked state |
+| `class_teacher_id`, `class_teacher_signed_at` |                                | set by the sign action; must be the section's class teacher or an admin/owner             |
+| `head_id`, `head_countersigned_at`            |                                | set by the countersign action; must be owner/admin (the "head" role for this purpose)     |
+| `reopened_by`, `reopened_at`, `reopen_reason` |                                | set only when an owner/admin force-reopens a `countersigned` month (§4, §9)               |
+| `created_at`, `updated_at`                    |                                |                                                                                           |
+
+Unique `(workspace_id, section_id, period_label)` — one sign-off record per section per month, superseded in place on reopen rather than duplicated.
+RLS: select `has_role(workspace_id,'{owner,admin,teacher}')` scoped to sections the teacher teaches, as elsewhere in this feature; insert/update only through the sign/countersign/reopen server actions (never a direct client write, so the state machine in §5.2a cannot be skipped).
+
+**Month-close lock.** While a section's row is `countersigned` for a given `period_label`, that month's underlying `attendance_records` for that section are **not editable** — F-AC's attendance-write path checks this table and refuses with `PERIOD_LOCKED` (cross-feature dependency, tracked here because the lock is owned by the register's sign-off state, not by the attendance feature itself). Only an owner/admin **reopen** (§4, audited, reason required) clears the lock, reverting to `open` and requiring both signatures again before the month can close.
 
 ### 3.2 `report_comments`
 
@@ -154,7 +177,21 @@ Confirm sheet naming the section, exam, student count and how many comments are 
 
 `/app/reports` at 360×800 is a **single column of report-type cards** (icon, name, one-line description). Tapping one opens a **bottom sheet** of parameters with selects that open as full-screen pickers (section and student lists are long). The primary Generate button is a full-width 44 px button pinned to the bottom of the sheet. Runs in progress appear as a **collapsed strip above the bottom nav** ("Rendering 3 of 34 — tap to view") so the user can leave the screen. Finished runs live at `/app/reports/runs` as a list; the row's primary action is Download, with Print / Send to queue in an overflow. Nothing important requires a two-hand gesture, and there is no horizontal scrolling anywhere.
 
+### W7 — Sign and lock the attendance register (R1)
+
+Trigger: class teacher (or admin) opens a rendered `attendance_register` run for a section and month.
+
+1. **Sign** (class teacher, or owner/admin standing in): available once the register for that `period_label` has rendered `ready`. Writes `attendance_register_signoffs{status:'class_teacher_signed', class_teacher_id, class_teacher_signed_at}` (creating the row if this is the first sign for that section/month). Only the section's own class teacher, or an owner/admin, may sign — a teacher cannot sign another class's register.
+2. **Countersign** (owner/admin only, the "head" role for this purpose): available only after `class_teacher_signed`. Writes `head_id`, `head_countersigned_at`, `status='countersigned'`. **Countersigning is the lock event** — from this moment the month's `attendance_records` for that section are refused for edit (`PERIOD_LOCKED`, enforced in F-AC's write path per §3.1a) until an explicit reopen.
+3. The register PDF re-renders once countersigned, printing both names, roles and dates on the signature line using `school_profiles.signature_labels` — a signed register is a different artefact from a draft one, not the same PDF with a stamp implied.
+4. **Reopen** (owner/admin only, reason required, audited `attendance_register.reopened`): reverts a `countersigned` month to `open`, clearing both signatures — the month must be signed and countersigned again from scratch, so a reopened month is never silently treated as still-attested.
+   Failures: signing a month whose register has not rendered yet is refused with "Generate the register first"; countersigning before the class-teacher signature is refused with `NOT_YET_SIGNED`; any edit attempt against a locked month's attendance is refused with `PERIOD_LOCKED` naming who signed and when.
+
 ## 5. Business rules and calculations
+
+### 5.2a Register signature and month-close lock (R1)
+
+State machine: `open → class_teacher_signed → countersigned` (= locked) `→ (reopen, audited) → open`. There is no path from `open` directly to `countersigned` — the class teacher's attestation is a prerequisite to the head's, not a formality either role can skip. `countersigned` is the **only** status that locks `attendance_records`; `class_teacher_signed` alone does not lock anything, so a class teacher's own sign-off cannot itself block an admin correcting a data-entry error before the head reviews it. Locking is scoped to **`(section_id, period_label)`** — signing off October for Class 6-A never touches November, another section, or the staff attendance summary (§5.4, which has no sign-off concept in this spec).
 
 ### 5.1 One grading truth
 
@@ -266,8 +303,8 @@ _Demo:_ generate a comment with AI (credits visibly debited), edit it, approve i
 **Part 5 — Bulk report cards + publish** · chunked rendering with per-student items, merged + split output, ordering options, duplex padding, the publish/unpublish flow and the parent-side list.
 _Demo:_ 34 report cards for a section render in one run under the budget; a parent account sees exactly their own child's card and cannot fetch another child's file id.
 
-**Part 6 — Attendance register + exam mark sheet** · both templates with landscape switching, legends that print the school's own policy, column statistics, incomplete-data banners.
-_Demo:_ the register for a month with 26 sessions prints on one landscape page with per-day and per-student totals that match a SQL cross-check.
+**Part 6 — Attendance register + exam mark sheet** · both templates with landscape switching, legends that print the school's own policy, column statistics, incomplete-data banners; **`attendance_register_signoffs` schema + RLS, the sign/countersign/reopen actions, the `PERIOD_LOCKED` guard on `attendance_records` writes for a countersigned month, and the re-render with both signature lines** (§3.1a, §4 W7, §5.2a).
+_Demo:_ the register for a month with 26 sessions prints on one landscape page with per-day and per-student totals that match a SQL cross-check; sign as class teacher, countersign as admin, then attempt to edit an attendance record in that month and see `PERIOD_LOCKED`.
 
 **Part 7 — Staff attendance summary + student profile sheet** · both templates, the cover-hours join, private-file listing rules.
 _Demo:_ a monthly staff summary whose totals reconcile against `staff_attendance`, and a profile sheet for a transferring student that lists document names without embedding them.
@@ -293,6 +330,8 @@ _Demo:_ print a sheet, scan a card with a phone camera, and land on a verificati
 **Pipeline** 19. _Given_ an identical request within 10 minutes and unchanged data, _then_ the same `report_runs` row is returned and no second render occurs. 20. _Given_ a mark is edited after a render, _when_ the same report is requested, _then_ a new render occurs (the `data_version` changed). 21. _Given_ a render that throws, _then_ `status='failed'` with a non-empty `error_code`, the UI offers Retry, and nothing is silently swallowed. 22. _Given_ a `ready` run older than 30 days, _when_ the expiry cron runs, _then_ the file is deleted and `status='expired'`, and Download shows "This file expired — regenerate".
 
 **Registers, mark sheets, ID cards** 23. _Given_ a month with 26 attendance sessions, _then_ the register's per-student totals equal a direct SQL count and the legend states the school's late-counts-as-present policy. 24. _Given_ a mark sheet with 14 subjects, _then_ the page is landscape and no column is clipped. 25. _Given_ an ID card, _when_ the QR is scanned, _then_ `/id/{token}` shows the right student's name, photo and class; _when_ one character of the token is altered, _then_ it returns `invalid_token`. 26. _Given_ a student with no photo, _then_ the card renders a placeholder and the student is named in the run summary.
+
+**Register sign-off and lock (R1)** 26a. _Given_ a rendered October register for Class 6-A, _when_ the class teacher signs and then an admin countersigns, _then_ `attendance_register_signoffs.status='countersigned'`, both actor ids and timestamps are recorded, and the re-rendered PDF prints both names on the signature line. 26b. _Given_ a countersigned month, _when_ any role attempts to edit or insert an `attendance_records` row for that section and month, _then_ it is refused with `PERIOD_LOCKED` naming the class teacher, the head and the sign-off date. 26c. _Given_ an admin attempts to countersign before the class teacher has signed, _then_ it is refused with `NOT_YET_SIGNED`. 26d. _Given_ a countersigned month, _when_ an owner reopens it with a reason, _then_ `status` reverts to `open`, both signature fields clear, an audit event `attendance_register.reopened` is written with the reason, and `attendance_records` for that month are editable again until it is signed and countersigned afresh. 26e. _Given_ a teacher who is not the class teacher of Class 6-A, _when_ they attempt to sign that section's register, _then_ they get `FORBIDDEN`.
 
 **Access and tenancy** 27. _Given_ a teacher who does not teach Class 6 – A, _when_ they request that section's register, _then_ the action returns `forbidden`. 28. _Given_ an admin of School A, _when_ they query `report_runs` with their JWT, _then_ zero School B rows are returned (pgTAP). 29. _Given_ a Free-plan workspace, _when_ any report run is requested, _then_ the server returns `plan_required`.
 

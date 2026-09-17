@@ -9,7 +9,7 @@ Version 1.0 · 2026-09-17 · Companion to `GO-TO-MARKET.md` · Terminology per `
 1. **Bengali first**, unless the school's own page posts in English. আপনি form, always. Never তুমি.
 2. **One question per message.** Two questions gets zero answers.
 3. **No price in a first message.** No feature list in a first message.
-4. **Never paste a student's name, marks or photo** into any chat — link to the portal instead (PDPO 2025 + safeguarding).
+4. **Never paste a student's name, marks or photo** into any chat — link to the portal instead (Personal Data Protection Act 2026 [Act 63 of 2026] + safeguarding). _(amended per SYNTHESIS — the Personal Data Protection Ordinance 2025 was repealed and replaced)_
 5. **Identify yourself as Acadigma in the first sentence.** No fake "I'm a parent researching" openers.
 6. **Stop on "no."** Mark `lost`, note the reason, never message that school again unless they come back.
 
@@ -214,15 +214,15 @@ _Get the WhatsApp confirmation. That's the real win from a "call me later."_
 
 ### 4b. The 15-minute running order (your own card — do not send this)
 
-| Time  | Beat             | Do                                                                                                                 |
-| ----- | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
-| 0:00  | Diagnose         | "হাজিরা এখন কীভাবে?" · "নম্বর কে তোলেন?" · "গত প্রগতিপত্রে কতদিন লেগেছিল?" Write the three numbers down.           |
-| 2:00  | **The moment**   | "একটা জিনিস দেখাই — ঘড়ির দিকে তাকান।" 40-student section, one thumb, save. Announce the elapsed seconds out loud. |
-| 3:00  | Their logo       | Marks grid → generate section → open the PDF **with their school name and logo already on it**                     |
-| 6:00  | Parent side      | One student's parent view; send a notice; show the WhatsApp share carrying the school's name                       |
-| 9:00  | Control          | Owner dashboard: attendance completeness per teacher. Audit log: who changed what.                                 |
-| 11:00 | Price, once      | "ফ্রি ০ টাকা, Starter ২,৯৯৯, Pro ৭,৯৯৯ — মাসে। ১৪ দিন Pro ফ্রি, কার্ড লাগবে না।" **Then stop talking.**            |
-| 13:00 | Micro-commitment | "এক শাখা, দুই সপ্তাহ। সেটআপ আমি নিজেই করে দেব। বৃহস্পতিবার সন্ধ্যা ৬টা?" Book the date on the call.                |
+| Time  | Beat             | Do                                                                                                                                                                                                                                                    |
+| ----- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0:00  | Diagnose         | "হাজিরা এখন কীভাবে?" · "নম্বর কে তোলেন?" · "গত প্রগতিপত্রে কতদিন লেগেছিল?" Write the three numbers down.                                                                                                                                              |
+| 2:00  | **The moment**   | "একটা জিনিস দেখাই — ঘড়ির দিকে তাকান।" 40-student section, one thumb, save. Announce the elapsed seconds out loud.                                                                                                                                    |
+| 3:00  | Their logo       | Marks grid → generate section → open the PDF **with their school name and logo already on it**                                                                                                                                                        |
+| 6:00  | Parent side      | One student's parent view; send a notice; show the WhatsApp share carrying the school's name                                                                                                                                                          |
+| 9:00  | Control          | Owner dashboard: attendance completeness per teacher. Audit log: who changed what.                                                                                                                                                                    |
+| 11:00 | Price, once      | "Starter ২,২০০ টাকা (১৫০ ছাত্র পর্যন্ত, শিক্ষক সংখ্যার সীমা নেই), Pro ৪,৯০০ টাকা (৩০০ ছাত্র পর্যন্ত) — মাসে। অনবোর্ডিং ফি ১০,০০০ টাকা, শুরুতেই বলা হয়।" **Then stop talking.** _(amended per SYNTHESIS — canonical price list, no free-trial claim)_ |
+| 13:00 | Micro-commitment | "এক শাখা, দুই সপ্তাহ। সেটআপ আমি নিজেই করে দেব। বৃহস্পতিবার সন্ধ্যা ৬টা?" Book the date on the call.                                                                                                                                                   |
 
 ### 4c. Post-demo message (send within 2 hours, every time)
 
@@ -232,7 +232,7 @@ _Get the WhatsApp confirmation. That's the real win from a "call me later."_
 >
 > • আপনাদের এখন [১২]টি শাখা, হাজিরা খাতায়, প্রগতিপত্রে লাগে [৩] দিন
 > • Acadigma-তে হাজিরা [৪৮] সেকেন্ডে, পুরো শাখার প্রগতিপত্র ২ মিনিটে
-> • দাম: Starter ২,৯৯৯ টাকা/মাস, Pro ৭,৯৯৯ টাকা/মাস, ফ্রি প্ল্যানও আছে
+> • দাম: Starter ২,২০০ টাকা/মাস (১৫০ ছাত্র পর্যন্ত), Pro ৪,৯০০ টাকা/মাস (৩০০ ছাত্র পর্যন্ত) · অনবোর্ডিং ফি ১০,০০০ টাকা (একবার, মওকুফ হয় না)
 >
 > **পরের ধাপ:** [তারিখ, সময়] আমি এসে/অনলাইনে [শাখার নাম]-এর সেটআপ করে দেব — ছাত্রদের তালিকা তোলা, শিক্ষকদের যুক্ত করা, প্রগতিপত্রের ফরম্যাট বসানো। দুই সপ্তাহ চলবে, কোনো খরচ নেই।
 >
@@ -246,7 +246,7 @@ _Get the WhatsApp confirmation. That's the real win from a "call me later."_
 >
 > • You currently have [12] sections, attendance on paper, report cards take [3] days
 > • On Acadigma: attendance in [48] seconds, a full section's report cards in 2 minutes
-> • Price: Starter ৳2,999/month, Pro ৳7,999/month; there is also a Free plan
+> • Price: Starter ৳2,200/month (150 students included, no teacher caps), Pro ৳4,900/month (300 students included) · onboarding fee ৳10,000, one-time, never waived
 >
 > **Next step:** on [date, time] I'll set up [section] myself — student import, teacher invites, your report card format. Two weeks, no charge.
 >
@@ -265,34 +265,34 @@ Send as a PDF, one page, school's name in the header, your photo and phone at th
 **[স্কুলের নাম] · [তারিখ]**
 
 **কী করব**
-আপনাদের [১–৩টি শাখা]-য় দুই সপ্তাহের জন্য অ্যাকাডিগমা ক্যাম্পাস চালু করব। কোনো খরচ নেই, কোনো চুক্তি নেই, কার্ড লাগবে না।
+আপনাদের [১–৩টি শাখা]-য় ৮–১০ সপ্তাহের একটা পাইলট চালাব — একটা পুরো সাময়িক পরীক্ষা কভার করে। খরচ মাসে মাত্র ২,০০০ টাকা, লিখিত সফলতার শর্তসহ। _(amended per SYNTHESIS — একমাত্র পাইলট অফার এটাই; আগের "দুই সপ্তাহ, বিনামূল্যে" প্রস্তাব বাদ দেওয়া হলো)_
 
 **আমি যা করব (সব আমার দায়িত্বে)**
 
 - স্কুল তৈরি, লোগো ও ঠিকানা বসানো
-- ছাত্রছাত্রীদের তালিকা Excel থেকে তুলে দেওয়া
+- ছাত্রছাত্রীদের তালিকা তোলা — ভর্তি রেজিস্টারের **ছবি থেকেই** (বেশিরভাগ স্কুলের কোনো Excel ফাইল থাকে না); অনবোর্ডিং ফি ১০,০০০ টাকা শুরুতেই বলা হয়, এটা কখনো মওকুফ হয় না _(amended per SYNTHESIS — আগের "বিনামূল্যে Excel import" প্রতিশ্রুতি বাদ)_
 - শ্রেণি, শাখা, বিষয় ও শিক্ষক সাজানো
 - আপনাদের গ্রেড পদ্ধতি (A+ থেকে F, GPA ৫.০০) ও কর্মদিবস (শনি–বৃহস্পতি) সেট করা
 - আপনাদের ফরম্যাটে প্রগতিপত্র তৈরি করে দেওয়া
 - শিক্ষকদের জন্য ৩০ মিনিটের প্রশিক্ষণ
-- পুরো দুই সপ্তাহ WhatsApp-এ পাশে থাকা
+- পুরো পাইলট জুড়ে WhatsApp-এ পাশে থাকা
 
 **আপনাদের যা করতে হবে**
 শুধু একটাই কাজ — শিক্ষকরা প্রতিদিন ফোনে হাজিরা নেবেন। আর কিছু না।
 
-**সফল বলব যদি (দুই সপ্তাহ শেষে)**
+**সফল বলব যদি (পাইলট শেষে)**
 ১. ৮০% বা তার বেশি দিনে হাজিরা নেওয়া হয়েছে
 ২. অন্তত একটি প্রগতিপত্র বা নম্বরপত্র তৈরি হয়েছে
 ৩. শ্রেণি শিক্ষক বলেছেন — খাতার চেয়ে দ্রুত
 
 **এরপর**
-১৫তম দিনে ২০ মিনিট বসব। তিনটি শর্ত পূরণ হলে [তারিখ] থেকে [Starter ২,৯৯৯ / Pro ৭,৯৯৯] টাকার মাসিক প্ল্যান শুরু হবে, এবং পুরো স্কুলের সেটআপ আমি করে দেব। পূরণ না হলে কোনো খরচ নেই — আমি শুধু জানতে চাইব কোথায় সমস্যা হলো।
+পাইলট শেষে ২০ মিনিট বসব। তিনটি শর্ত পূরণ হলে [তারিখ] থেকে [Starter ২,২০০ (১৫০ ছাত্র পর্যন্ত) / Pro ৪,৯০০ (৩০০ ছাত্র পর্যন্ত)] টাকার মাসিক প্ল্যান শুরু হবে, এবং পুরো স্কুলের সেটআপ আমি করে দেব। শর্ত পূরণ না হলেও পাইলটের মাসিক ২,০০০ টাকা ফেরত হয় না — আমি শুধু জানতে চাইব কোথায় সমস্যা হলো।
 
 **আপনার তথ্য আপনারই**
-যেকোনো সময় সব তথ্য Excel-এ নামিয়ে নিতে পারবেন। ফ্রি প্ল্যানে থাকলেও আপনার তথ্য কখনো মুছে ফেলা হয় না। এক স্কুলের তথ্য অন্য স্কুল কখনো দেখতে পায় না — প্রতিটি রিলিজে এটি স্বয়ংক্রিয়ভাবে পরীক্ষা করা হয়। শিশুদের তথ্য সংক্রান্ত ২০২৫ সালের অধ্যাদেশ আমরা মেনে চলি।
+যেকোনো সময় সব তথ্য Excel-এ নামিয়ে নিতে পারবেন। ফ্রি প্ল্যানে থাকলেও আপনার তথ্য কখনো মুছে ফেলা হয় না। এক স্কুলের তথ্য অন্য স্কুল কখনো দেখতে পায় না — প্রতিটি রিলিজে এটি স্বয়ংক্রিয়ভাবে পরীক্ষা করা হয়। শিশুদের তথ্য সংক্রান্ত ব্যক্তিগত তথ্য সুরক্ষা আইন ২০২৬ আমরা মেনে চলি।
 
 **পাইলট শুরুর তারিখ:** ____________ **চ্যাম্পিয়ন (স্কুলের পক্ষে):** ____________
-**১৫তম দিনের বৈঠক:** ____________
+**পাইলট-শেষের বৈঠক:** ____________
 
 [নাম] · প্রতিষ্ঠাতা, অ্যাকাডিগমা · [ফোন] · [ইমেইল]
 
@@ -302,21 +302,27 @@ Send as a PDF, one page, school's name in the header, your photo and phone at th
 
 **[School name] · [Date]**
 
-**Scope.** Two weeks, [1–3 sections], free. No contract, no card.
+**Scope.** 8–10 weeks, [1–3 sections], spanning one terminal exam, written success criteria. ৳2,000/month. _(amended per SYNTHESIS — this is the one pilot offer; the earlier "free two-week" pilot is withdrawn)_
 
-**We do:** workspace setup, logo and address, student import from your Excel, classes/sections/subjects/teachers, your grade scale (A+…F, GPA 5.00) and working days (Sat–Thu), a report card in your format, a 30-minute teacher training, and WhatsApp support throughout.
+**We do:** workspace setup, logo and address, student import **from photographs of your admission register** (most schools have no Excel file), classes/sections/subjects/teachers, your grade scale (A+…F, GPA 5.00) and working days (Sat–Thu), a report card in your format, a 30-minute teacher training, and WhatsApp support throughout. Onboarding fee ৳10,000, stated up front, one-time, never waived. _(amended per SYNTHESIS — "free data import" is withdrawn)_
 
 **You do:** teachers mark attendance daily on their phones. That's all.
 
-**Success means, at day 14:** (1) attendance marked on ≥80% of school days (2) at least one report card or mark sheet generated (3) the class teacher says it's faster than the register.
+**Success means, at the end of the pilot:** (1) attendance marked on ≥80% of school days (2) at least one report card or mark sheet generated (3) the class teacher says it's faster than the register.
 
-**Then:** a 20-minute review on day 15. If all three are met, the [Starter ৳2,999 / Pro ৳7,999] monthly plan starts from [date] and I set up the whole school. If not, there's no charge — I'll just ask what went wrong.
+**Then:** a 20-minute review at the end of the pilot. If all three are met, the [Starter ৳2,200 (150 students included) / Pro ৳4,900 (300 students included)] monthly plan starts from [date] and I set up the whole school. If not, the pilot's ৳2,000/month is not refunded — I'll just ask what went wrong.
 
-**Your data is yours.** Export everything to Excel at any time. Data is never deleted, even on the Free plan. One school can never see another school's data — tested automatically on every release. We comply with the Personal Data Protection Ordinance 2025 for children's data.
+**Your data is yours.** Export everything to Excel at any time. Data is never deleted, even on the Free plan. One school can never see another school's data — tested automatically on every release. We comply with the Personal Data Protection Act 2026 (Act 63 of 2026) for children's data.
 
-Pilot start: ________ · School champion: ________ · Day-15 review: ________
+Pilot start: ________ · School champion: ________ · End-of-pilot review: ________
 
 [Name] · Founder, Acadigma · [phone] · [email]
+
+---
+
+### 5.1 Committee proposal artefact — TODO
+
+**TODO: committee proposal artefact needed.** _(added per SYNTHESIS)_ The "কমিটিতে আলোচনা করব" objection response (§9) promises a one-pager to take into a school committee meeting, but no such artefact exists in this file yet. It needs, at minimum: cost per student, a three-year total cost figure, our company's BIN, a sample Mushak 6.3 invoice, and two reference principals willing to be called. This is a stub flag only — full authoring is out of scope for this pass.
 
 ---
 
@@ -342,17 +348,7 @@ Pilot start: ________ · School champion: ________ · Day-15 review: ________
 
 ### 6b. Teacher → teacher
 
-**বাংলা**
-
-> আপা/ভাই, আপনি তো এখন নিয়মিত হাজিরা নিচ্ছেন ফোনেই। আপনার রেফারেল কোড: **[CODE]**
->
-> আপনার পরিচিত কোনো শিক্ষক এই কোড দিয়ে ফ্রি অ্যাকাউন্ট খুললে তিনি পাবেন ২০০ AI ক্রেডিট, আর তিনি একবার ব্যবহার করলেই আপনিও পাবেন ২০০ ক্রেডিট। পাঠ পরিকল্পনা, ওয়ার্কশিট — সব এই ক্রেডিট দিয়ে তৈরি করা যায়।
->
-> কোডটা স্টাফ রুমে বা গ্রুপে শেয়ার করে দিতে পারেন।
-
-**English**
-
-> Your referral code is **[CODE]**. Any teacher who opens a free account with it gets 200 AI credits — and once they use it for something real, you get 200 credits too. Lesson plans, worksheets and parent messages all run on those credits. Share it in your staff room or teacher group.
+_(amended per SYNTHESIS — this template offered a personal teacher↔teacher referral code for AI credits. Personal referral codes are cut entirely; deleted here without replacement.)_
 
 ### 6c. Teacher → her school (the pull-through)
 
@@ -433,47 +429,15 @@ Pilot start: ________ · School champion: ________ · Day-15 review: ________
 
 ## 8. Seller recruitment
 
+_(amended per SYNTHESIS — cold-DM seller recruitment to individual teachers is cut. Seller outreach runs only through group-admin routes (school champions, pilot schools, institutional relationships already established elsewhere in this file) — never a cold message to a teacher or page owner with no prior relationship.)_
+
 ### 8a. To a teacher you already know (pilot school, ambassador, community member)
 
-**বাংলা**
-
-> আপা/ভাই, আপনার তৈরি [ওয়ার্কশিট / প্রশ্নপত্র / পাঠ পরিকল্পনা]-গুলো আমি দেখেছি — সত্যিই ভালো কাজ।
->
-> Acadigma-তে আমরা শিক্ষকদের জন্য একটা বাজার চালু করছি, যেখানে আপনি নিজের তৈরি উপকরণ বিক্রি করতে পারবেন। **আপনি পাবেন ৭০%**, আমরা ৩০% রাখি — তার বিনিময়ে পেমেন্ট, ডেলিভারি আর ফাইল চুরি ঠেকানোর পুরো কাজটা আমরা করি।
->
-> প্রথম যে ৫০ জন শুরু করবেন, তাঁদের জন্য:
-> • প্রথম ৯০ দিন **কোনো কমিশন নেই** — পুরো ১০০% আপনার
-> • **"প্রতিষ্ঠাতা বিক্রেতা"** ব্যাজ, চিরস্থায়ী
-> • আপনার নিজের একটা পাবলিক পেজ, যেটা Facebook-এ শেয়ার করতে পারবেন
-> • আপনার প্রথম ৩টি আইটেম আমি নিজেই আপলোড করে দেব
->
-> আগ্রহ থাকলে "হ্যাঁ" লিখে পাঠালেই আমি বাকিটা শুরু করে দিচ্ছি।
-
-**English**
-
-> I've seen the [worksheets / question papers / lesson plans] you make — genuinely good work.
->
-> We're opening a marketplace on Acadigma where teachers sell their own materials. **You keep 70%**, we take 30% — and for that we handle payment, delivery and protecting your files from being re-shared.
->
-> For the first 50 sellers: **0% commission for 90 days** (you keep 100%), a permanent **Founding Seller** badge, your own public storefront page you can share on Facebook, and I'll personally upload and format your first 3 items.
->
-> Reply "yes" and I'll start it for you.
+_(amended per SYNTHESIS — deleted. This was a cold-DM template with an আপা/ভাই cold opener and an unproven "আপনি পাবেন ৭০%" seller-earnings claim. Cold-DM seller recruitment is cut entirely; see the note at the top of §8. The 70% earnings claim is withdrawn until the marketplace pilot produces real numbers.)_
 
 ### 8b. To a Bengali education page / YouTube channel owner (influencer)
 
-**বাংলা**
-
-> আসসালামু আলাইকুম। আমি [নাম], Acadigma Campus-এর প্রতিষ্ঠাতা। আপনার পেজে যে প্রশ্নপত্র ও নোটগুলো নিয়মিত শেয়ার করেন, সেগুলো অনেক শিক্ষকের কাজে লাগে — আমি নিজেও দেখেছি।
->
-> একটা প্রস্তাব: আমরা বাংলাদেশের শিক্ষকদের জন্য একটা মার্কেটপ্লেস চালু করছি। আপনার মতো যাঁদের আগে থেকেই দর্শক আছে, তাঁদের জন্য আমরা একটা দোকান বানিয়ে দিচ্ছি — আপনি শুধু ফাইল দেবেন, বাকি সব (পেমেন্ট, ডেলিভারি, ওয়াটারমার্ক) আমরা দেখব।
->
-> আপনার জন্য:
-> • প্রথম ৯০ দিন ০% কমিশন, এরপর ৭০/৩০
-> • আপনার নিজের স্টোরফ্রন্ট পেজ — আমি নিজে সাজিয়ে দেব
-> • ক্যাটাগরিতে ৩০ দিন ফিচার্ড থাকবেন
-> • "প্রতিষ্ঠাতা বিক্রেতা" ব্যাজ
->
-> ১০ মিনিট সময় দিলে ফোনে বিস্তারিত বলতে পারি — কবে সুবিধা হবে?
+_(amended per SYNTHESIS — deleted. This was a cold-DM template to an influencer with no prior relationship. Cold-DM seller recruitment is cut entirely; see the note at the top of §8.)_
 
 ### 8c. To a training institute or coaching chain
 
@@ -489,9 +453,7 @@ Pilot start: ________ · School champion: ________ · Day-15 review: ________
 
 ### 8d. Seller activation nudge (approved but hasn't listed anything in 7 days)
 
-> আসসালামু আলাইকুম। আপনার বিক্রেতা অ্যাকাউন্ট অনুমোদন হয়ে গেছে, কিন্তু এখনো কিছু আপলোড হয়নি।
->
-> আপলোডের ঝামেলাটাই সবচেয়ে বড় বাধা — তাই একটা প্রস্তাব: আপনার যেকোনো ৩টি ফাইল WhatsApp-এ পাঠিয়ে দিন, আমি নিজে সাজিয়ে, দাম বসিয়ে, প্রিভিউ বানিয়ে আপলোড করে দেব। আপনি শুধু দেখে অনুমোদন দেবেন।
+_(amended per SYNTHESIS — deleted. This asked the seller to send files over WhatsApp ("আপনার যেকোনো ৩টি ফাইল WhatsApp-এ পাঠিয়ে দিন"). Any file upload flow must go into an account the teacher controls — never "send me your files." A guided in-app upload/preview flow belongs here instead; not drafted in this pass.)_
 
 ---
 
@@ -499,22 +461,22 @@ Pilot start: ________ · School champion: ________ · Day-15 review: ________
 
 Short versions for live use. Full reasoning in `GO-TO-MARKET.md §1.5`.
 
-| Objection                      | বাংলা                                                                                                                                                                                                                                                                                                                | English                                                                                                                                                                                                                                                                     |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **আমাদের সফটওয়্যার আছে**      | "ভালো। কিন্তু সেটা কি শিক্ষকরা প্রতিদিন ফোনে ব্যবহার করেন, নাকি শুধু অফিসে? হিসাবের কাজটা ওখানেই রাখুন — শুধু হাজিরা আর ফলাফলটা এক মাস এখানে চালিয়ে দেখুন।"                                                                                                                                                         | "Good — but do teachers use it daily on their phones, or is it office-only? Keep your accounts there; just run attendance and results here for one month and compare."                                                                                                      |
-| **দাম বেশি**                   | "যিনি প্রতি পরীক্ষার পর দুই সপ্তাহ Excel-এ নম্বর তোলেন, তাঁর একদিনের বেতনের সমান মাসিক খরচ। আর ফ্রি প্ল্যানটা সত্যিই ফ্রি — সেখান থেকেই শুরু করুন।"                                                                                                                                                                  | "It's about one day of the salary of the person who types marks for two weeks every term. And the Free plan is genuinely free — start there."                                                                                                                               |
-| **শিক্ষকরা পারবেন না**         | "তাঁরা তো Facebook আর বিকাশ চালান। যিনি Messenger-এ ভয়েস পাঠাতে পারেন, তিনি হাজিরাও নিতে পারবেন। দেখুন —" _(then hand your phone to the most senior teacher present and let her do it)_                                                                                                                             | "They already use Facebook and bKash. If a teacher can send a voice note, she can take attendance. Watch —" _(hand over your phone)_                                                                                                                                        |
-| **ইন্টারনেট/ডেটার খরচ**        | "১২,০০০ টাকার ফোনে মোবাইল ডেটাতেই চলার জন্য বানানো। হাজিরা নেট ছাড়াও নেওয়া যায়, পরে নিজে থেকেই সিঙ্ক হয়। মাসে কয়েক টাকার ডেটাই যথেষ্ট।"                                                                                                                                                                         | "Built for a ৳12,000 Android on mobile data. Attendance works offline and syncs later. A teacher's whole month costs a few taka of data."                                                                                                                                   |
-| **ডেটা নিরাপদ তো?**            | "এক স্কুলের তথ্য অন্য স্কুল কখনো দেখতে পায় না — প্রতিটি রিলিজে এটা স্বয়ংক্রিয়ভাবে পরীক্ষা করা হয়, আর চালুর আগে স্বাধীন নিরাপত্তা পরীক্ষাও করানো হয়েছে। কে কী বদলেছে, সব লেখা থাকে — আপনি নিজে দেখতে পারবেন। শিশুদের তথ্য নিয়ে ২০২৫ সালের নতুন অধ্যাদেশ আমরা মেনে চলি, এবং শিশুদের কাছে কোনো বিজ্ঞাপন যায় না।" | "One school can never see another's data — tested on every release, plus an independent security test before launch. Every change is logged and you can see it. We follow the 2025 data protection ordinance for children's data, and we never advertise to minors."        |
-| **আপনারা বন্ধ হয়ে গেলে?**     | "ন্যায্য প্রশ্ন। তিনটা কথা: সব তথ্য যেকোনো সময় Excel-এ নামিয়ে নিতে পারবেন — এটা আপনার তথ্য; ফ্রি প্ল্যান থাকায় আপনি কখনো নিজের তথ্য থেকে বিচ্ছিন্ন হবেন না; আর এখন [N]টি স্কুল চালাচ্ছে — চাইলে ফোন করে কথা বলতে পারেন।"                                                                                          | "Fair. Export everything to Excel any time — it's your data; the Free plan means you're never locked out; and [N] schools use it now — call them."                                                                                                                          |
-| **কমিটিতে আলোচনা করব**         | "কালই এক পাতার প্রস্তাব পাঠিয়ে দিচ্ছি। তবে কমিটি সাধারণত যেটা চোখে দেখেছে সেটাই অনুমোদন করে — মিটিংয়ের আগে একটা শাখা ফ্রিতে চালু করে দিই? তাহলে সত্যিকারের স্ক্রিন দেখাতে পারবেন।"                                                                                                                                 | "I'll send a one-pager tonight. Committees approve what they've seen work — shall I set up one section free before the meeting so you have a real screen to show?"                                                                                                          |
-| **আমাদের প্রগতিপত্র আলাদা**    | "দেখান। হেডার, লোগো, বিষয়, গ্রেড পদ্ধতি, মন্তব্য — সব মিলিয়ে দেব। আজকের ফরম্যাটের একটা ছবি পাঠান, কালকের মধ্যে আপনাদের লোগোসহ একটা বানিয়ে পাঠাচ্ছি।"                                                                                                                                                              | "Show me. We'll match header, logo, subjects, grade scale and comments. Send a photo of your current one and I'll send back a generated version with your logo by tomorrow."                                                                                                |
-| **অভিভাবকরা অ্যাপ চালাবেন না** | "চালাতে হবে না। বিজ্ঞপ্তি আর ফলাফল আপনারা লিংক হিসেবে পাঠাবেন, স্কুলের নামসহ — কিছু নামাতে হবে না। যাঁরা বেশি দেখতে চান তাঁরা লগইন করবেন।"                                                                                                                                                                           | "They don't have to. You send notices and results as a link with your school's name on it — nothing to install. Parents who want more can log in."                                                                                                                          |
-| **আগামী বছর শুরু করব**         | "ঠিক এই কারণেই এখন শুরু করা উচিত — ফ্রিতে, এক শাখায়। জানুয়ারিতে যখন ২০০ ছাত্র ভর্তি হচ্ছে, তখন সেটআপ করা সবচেয়ে কঠিন। এখন করে রাখলে জানুয়ারিতে এক ক্লিকেই হয়ে যাবে।"                                                                                                                                            | "That's exactly why we should start now, free, on one section. January — when you're admitting 200 students — is the worst time to set up. Do it now and January is one click."                                                                                             |
-| **ফি কালেকশন আছে?**            | "না, এই ভার্সনে নেই — সত্যি কথাটাই বলি। Campus করে পড়াশোনার দিকটা: হাজিরা, নম্বর, প্রগতিপত্র, যোগাযোগ, শিক্ষক ব্যবস্থাপনা। ফি আর হিসাব-নিকাশ আলাদা একটা অ্যাপে আসছে। যদি শুধু ফি-ই আপনার মূল সমস্যা হয়, তাহলে বরং অপেক্ষা করুন — আমি চাই না আপনি হতাশ হন।"                                                         | "No, not in this version — I'd rather be straight with you. Campus does academics, attendance, exams, report cards, communication and staff. Fees and accounts are a separate app on our roadmap. If fees are your only problem, I'd rather you wait than be disappointed." |
-| **মার্কেটপ্লেস বাধ্যতামূলক?**  | "একদমই না, ওটা আলাদা ও ঐচ্ছিক। যে শিক্ষক উপকরণ বিক্রি করেন তিনি ৭০% পান, আমরা ৩০% রাখি। স্কুলকে এর জন্য এক টাকাও দিতে হয় না।"                                                                                                                                                                                       | "Not at all — it's separate and optional. Teachers who sell keep 70%; we take 30%. Your school pays nothing for it."                                                                                                                                                        |
-| **কাস্টমাইজ করতে পারবেন?**     | "কী ফল চান সেটা বলুন। বেশিরভাগ অনুরোধই আসলে সেটিংস — গ্রেড পদ্ধতি, কর্মদিবস, প্রগতিপত্রের ব্র্যান্ডিং, 'অধ্যক্ষ'-এর মতো পদবি — সবই আছে। সত্যিই নতুন কিছু হলে এবং অন্য স্কুলেরও দরকার হলে সেটা রোডম্যাপে যাবে, আপনি বিনামূল্যেই পাবেন। আলাদা কপি বানাই না।"                                                           | "Tell me the outcome you need. Most requests are settings we already have — grade scale, working days, report-card branding, custom titles. If it's genuinely new and others need it too, it goes on the roadmap and you get it free. We don't build one-off forks."        |
-| **ফ্রি পাওয়া যাবে?**          | "হ্যাঁ, সত্যিই। ফ্রি প্ল্যানে ৫ জন শিক্ষক, ১৫০ জন ছাত্র। আর আপনারা যদি মাদ্রাসা বা এনজিও-পরিচালিত স্কুল হন, আমাদের একটা আলাদা ব্যবস্থা আছে — Starter এক বছর ফ্রি। বলুন, আমি দেখি।"                                                                                                                                   | "Yes, genuinely. Free plan: 5 teachers, 150 students. And if you're a madrasa or NGO-run school, ask me about the sponsored plan — Starter free for 12 months."                                                                                                             |
+| Objection                      | বাংলা                                                                                                                                                                                                                                                                                                                       | English                                                                                                                                                                                                                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **আমাদের সফটওয়্যার আছে**      | "ভালো। কিন্তু সেটা কি শিক্ষকরা প্রতিদিন ফোনে ব্যবহার করেন, নাকি শুধু অফিসে? হিসাবের কাজটা ওখানেই রাখুন — শুধু হাজিরা আর ফলাফলটা এক মাস এখানে চালিয়ে দেখুন।"                                                                                                                                                                | "Good — but do teachers use it daily on their phones, or is it office-only? Keep your accounts there; just run attendance and results here for one month and compare."                                                                                                                   |
+| **দাম বেশি**                   | "যিনি প্রতি পরীক্ষার পর দুই সপ্তাহ Excel-এ নম্বর তোলেন, তাঁর একদিনের বেতনের সমান মাসিক খরচ। আর ফ্রি প্ল্যানটা সত্যিই ফ্রি — সেখান থেকেই শুরু করুন।"                                                                                                                                                                         | "It's about one day of the salary of the person who types marks for two weeks every term. And the Free plan is genuinely free — start there."                                                                                                                                            |
+| **শিক্ষকরা পারবেন না**         | "তাঁরা তো Facebook আর বিকাশ চালান। যিনি Messenger-এ ভয়েস পাঠাতে পারেন, তিনি হাজিরাও নিতে পারবেন। দেখুন —" _(then hand your phone to the most senior teacher present and let her do it)_                                                                                                                                    | "They already use Facebook and bKash. If a teacher can send a voice note, she can take attendance. Watch —" _(hand over your phone)_                                                                                                                                                     |
+| **ইন্টারনেট/ডেটার খরচ**        | "১২,০০০ টাকার ফোনে মোবাইল ডেটাতেই চলার জন্য বানানো। হাজিরা নেট ছাড়াও নেওয়া যায়, পরে নিজে থেকেই সিঙ্ক হয়। মাসে কয়েক টাকার ডেটাই যথেষ্ট।"                                                                                                                                                                                | "Built for a ৳12,000 Android on mobile data. Attendance works offline and syncs later. A teacher's whole month costs a few taka of data."                                                                                                                                                |
+| **ডেটা নিরাপদ তো?**            | "এক স্কুলের তথ্য অন্য স্কুল কখনো দেখতে পায় না — প্রতিটি রিলিজে এটা স্বয়ংক্রিয়ভাবে পরীক্ষা করা হয়, আর চালুর আগে স্বাধীন নিরাপত্তা পরীক্ষাও করানো হয়েছে। কে কী বদলেছে, সব লেখা থাকে — আপনি নিজে দেখতে পারবেন। শিশুদের তথ্য নিয়ে ব্যক্তিগত তথ্য সুরক্ষা আইন ২০২৬ আমরা মেনে চলি, এবং শিশুদের কাছে কোনো বিজ্ঞাপন যায় না।" | "One school can never see another's data — tested on every release, plus an independent security test before launch. Every change is logged and you can see it. We follow the Personal Data Protection Act 2026 (Act 63 of 2026) for children's data, and we never advertise to minors." |
+| **আপনারা বন্ধ হয়ে গেলে?**     | "ন্যায্য প্রশ্ন। তিনটা কথা: সব তথ্য যেকোনো সময় Excel-এ নামিয়ে নিতে পারবেন — এটা আপনার তথ্য; ফ্রি প্ল্যান থাকায় আপনি কখনো নিজের তথ্য থেকে বিচ্ছিন্ন হবেন না; আর এখন [N]টি স্কুল চালাচ্ছে — চাইলে ফোন করে কথা বলতে পারেন।"                                                                                                 | "Fair. Export everything to Excel any time — it's your data; the Free plan means you're never locked out; and [N] schools use it now — call them."                                                                                                                                       |
+| **কমিটিতে আলোচনা করব**         | "কালই এক পাতার প্রস্তাব পাঠিয়ে দিচ্ছি। তবে কমিটি সাধারণত যেটা চোখে দেখেছে সেটাই অনুমোদন করে — মিটিংয়ের আগে একটা শাখা ফ্রিতে চালু করে দিই? তাহলে সত্যিকারের স্ক্রিন দেখাতে পারবেন।"                                                                                                                                        | "I'll send a one-pager tonight. Committees approve what they've seen work — shall I set up one section free before the meeting so you have a real screen to show?"                                                                                                                       |
+| **আমাদের প্রগতিপত্র আলাদা**    | "দেখান। হেডার, লোগো, বিষয়, গ্রেড পদ্ধতি, মন্তব্য — সব মিলিয়ে দেব। আজকের ফরম্যাটের একটা ছবি পাঠান, কালকের মধ্যে আপনাদের লোগোসহ একটা বানিয়ে পাঠাচ্ছি।"                                                                                                                                                                     | "Show me. We'll match header, logo, subjects, grade scale and comments. Send a photo of your current one and I'll send back a generated version with your logo by tomorrow."                                                                                                             |
+| **অভিভাবকরা অ্যাপ চালাবেন না** | "চালাতে হবে না। বিজ্ঞপ্তি আর ফলাফল আপনারা লিংক হিসেবে পাঠাবেন, স্কুলের নামসহ — কিছু নামাতে হবে না। যাঁরা বেশি দেখতে চান তাঁরা লগইন করবেন।"                                                                                                                                                                                  | "They don't have to. You send notices and results as a link with your school's name on it — nothing to install. Parents who want more can log in."                                                                                                                                       |
+| **আগামী বছর শুরু করব**         | "ঠিক এই কারণেই এখন শুরু করা উচিত — ফ্রিতে, এক শাখায়। জানুয়ারিতে যখন ২০০ ছাত্র ভর্তি হচ্ছে, তখন সেটআপ করা সবচেয়ে কঠিন। এখন করে রাখলে জানুয়ারিতে এক ক্লিকেই হয়ে যাবে।"                                                                                                                                                   | "That's exactly why we should start now, free, on one section. January — when you're admitting 200 students — is the worst time to set up. Do it now and January is one click."                                                                                                          |
+| **ফি কালেকশন আছে?**            | "না, এই ভার্সনে নেই — সত্যি কথাটাই বলি। Campus করে পড়াশোনার দিকটা: হাজিরা, নম্বর, প্রগতিপত্র, যোগাযোগ, শিক্ষক ব্যবস্থাপনা। ফি আর হিসাব-নিকাশ আলাদা একটা অ্যাপে আসছে। যদি শুধু ফি-ই আপনার মূল সমস্যা হয়, তাহলে বরং অপেক্ষা করুন — আমি চাই না আপনি হতাশ হন।"                                                                | "No, not in this version — I'd rather be straight with you. Campus does academics, attendance, exams, report cards, communication and staff. Fees and accounts are a separate app on our roadmap. If fees are your only problem, I'd rather you wait than be disappointed."              |
+| **মার্কেটপ্লেস বাধ্যতামূলক?**  | "একদমই না, ওটা আলাদা ও ঐচ্ছিক। যে শিক্ষক উপকরণ বিক্রি করেন তিনি ৭০% পান, আমরা ৩০% রাখি। স্কুলকে এর জন্য এক টাকাও দিতে হয় না।"                                                                                                                                                                                              | "Not at all — it's separate and optional. Teachers who sell keep 70%; we take 30%. Your school pays nothing for it."                                                                                                                                                                     |
+| **কাস্টমাইজ করতে পারবেন?**     | "কী ফল চান সেটা বলুন। বেশিরভাগ অনুরোধই আসলে সেটিংস — গ্রেড পদ্ধতি, কর্মদিবস, প্রগতিপত্রের ব্র্যান্ডিং, 'অধ্যক্ষ'-এর মতো পদবি — সবই আছে। সত্যিই নতুন কিছু হলে এবং অন্য স্কুলেরও দরকার হলে সেটা রোডম্যাপে যাবে, আপনি বিনামূল্যেই পাবেন। আলাদা কপি বানাই না।"                                                                  | "Tell me the outcome you need. Most requests are settings we already have — grade scale, working days, report-card branding, custom titles. If it's genuinely new and others need it too, it goes on the roadmap and you get it free. We don't build one-off forks."                     |
+| **ফ্রি পাওয়া যাবে?**          | "হ্যাঁ, সত্যিই। ফ্রি প্ল্যানে ৫ জন শিক্ষক, ১৫০ জন ছাত্র। আর আপনারা যদি মাদ্রাসা বা এনজিও-পরিচালিত স্কুল হন, আমাদের একটা আলাদা ব্যবস্থা আছে — Starter এক বছর ফ্রি। বলুন, আমি দেখি।"                                                                                                                                          | "Yes, genuinely. Free plan: 5 teachers, 150 students. And if you're a madrasa or NGO-run school, ask me about the sponsored plan — Starter free for 12 months."                                                                                                                          |
 
 ---
 
@@ -600,8 +562,8 @@ Before you send anything from this file:
 Figures quoted to prospects must be defensible. The ones that appear above:
 
 - **"60 seconds attendance", "2 minutes report cards", "70% weekly active teachers"** — product targets from `../PRD.md` §3. **Do not quote these to a prospect until measured in a real school**; until then say "built to do X", not "does X".
-- **Plan prices (Free ৳0 / Starter ৳2,999 / Pro ৳7,999), 14-day Pro trial, 30/70 commission split, monthly payouts with ৳1,000 minimum and 7-day hold** — `../PRODUCT-DECISIONS.md` §5.1, §5.2, §4.2, §4.3.
+- **Plan prices (Starter ৳2,200/mo, 150 students included, +৳9/student above, no teacher caps; Pro ৳4,900/mo, 300 students included, +৳11/student above; Enterprise from ৳18,000; onboarding fee ৳10,000, never waived; pilot ৳2,000/mo for 8–10 weeks) — see `MARKET-STRATEGY.md` §c for the canonical price list**, 30/70 commission split, monthly payouts with ৳1,000 minimum and 7-day hold — `../PRODUCT-DECISIONS.md` §5.1, §5.2, §4.2, §4.3. _(amended per SYNTHESIS — old ৳2,999/৳7,999/Free-tier/14-day-trial figures were superseded)_
 - **Tenant isolation, audit log, private files with signed URLs, watermarking, pentest before launch** — `../PRD.md` §6 and `../PRODUCT-DECISIONS.md` §4.7, §6.5, §6.8.
-- **Personal Data Protection Ordinance 2025** (promulgated 6 November 2025; parental consent for children's data; prohibition on tracking, profiling and targeted advertising aimed at children) — `GO-TO-MARKET.md` §14, source 17.
+- **Personal Data Protection Act 2026 (Act 63 of 2026)** — parental consent for children's data; prohibition on tracking, profiling and targeted advertising aimed at children. The predecessor Personal Data Protection Ordinance 2025 (promulgated 6 November 2025) was repealed and replaced by this Act, passed by Parliament in April 2026; cite the Act, not the ordinance, in all customer-facing material. — `GO-TO-MARKET.md` §14, source 17. _(amended per SYNTHESIS)_
 - **Android ~95% of Bangladesh's mobile OS share; mobile data ~৳33/GB; Facebook ~74.9M and Messenger ~71.1M users** — `GO-TO-MARKET.md` §14, sources 2, 4 and 5. These underpin the "built for a cheap Android on mobile data" claim.
 - **All Bengali terminology** (হাজিরা, প্রগতিপত্র, নম্বরপত্র, রুটিন, অভিভাবক, শাখা) — `../GLOSSARY-EN-BN.md`. Do not invent alternate wording in any script; add it to the glossary first.

@@ -66,7 +66,7 @@ This agreement sits alongside the Acadigma Terms of Service. It covers how we ha
 
 3.4 **We will not**: sell your data; use it for advertising or profiling; use it to train artificial-intelligence models; use it to build products for anyone else; or access it except as clause 5 allows.
 
-3.5 **Aggregated and anonymised statistics.** We may produce statistics that cannot identify any person or any school (for example, average attendance across all schools using Acadigma) to improve the service and to describe our product publicly. We will only do so where no figure is drawn from fewer than **{{5}} schools** or **{{50}} students**, and the result cannot be traced back to you. If you do not want your school included, tell us and we will exclude it.
+3.5 **[Deleted — see note.]** _This clause previously granted Acadigma a benchmarking/marketing purpose over school data ("to improve the service and to describe our product publicly"), with an opt-out. It is removed for two reasons: a data processor cannot grant itself a **new purpose** inside its own standard-form contract — the school's instruction has to create that purpose, not our own terms — and an **opt-out is not a valid lawful basis** for that purpose in any case; silence is not consent. Aggregated, de-identified benchmarking (`COMPLIANCE-PDPA.md` §2.2) requires the school's own affirmative, documented instruction, not a clause it can only decline._
 
 3.6 If we think an instruction from you breaks the law, we will tell you and may pause that instruction until it is resolved.
 
@@ -79,6 +79,8 @@ This agreement sits alongside the Acadigma Terms of Service. It covers how we ha
 4.3 **We will provide** the means for you to obtain and record that consent: the guardian invitation flow, which records who agreed, when, by which channel (email or SMS), to exactly which words (with a version and a cryptographic hash of the text), in which language, and from which device — plus a way to record a consent given to you on paper.
 
 4.4 **Neither of us** will use students' information for advertising, behavioural profiling or targeted marketing, and we will not make automated decisions about a student that have a significant effect on them without a person reviewing it. The attendance-and-marks indicator in the software is a published, explainable calculation shown to teachers with its reasons, subject to a teacher's override.
+
+4.4a **The same protection extends to your staff.** Any workload, punctuality or eligibility metric the software calculates about a staff member is **advisory only** and is **never used as the basis for an automated employment decision** — not hiring, not termination, not a disciplinary action, not a pay decision. A person at your school always makes that call, informed by the metric but not bound by it.
 
 4.5 We collect no biometric information (fingerprints, facial or iris data) from students or anyone else. If either of us ever wishes to introduce it, it will require a fresh written agreement and a data-protection impact assessment.
 
@@ -121,7 +123,7 @@ This agreement sits alongside the Acadigma Terms of Service. It covers how we ha
 8.3 **Full notice — within 72 hours** of us confirming it, in writing, with:
 (a) what happened and when, and for how long;
 (b) the categories of personal information involved, and the approximate number of people and records;
-(c) whether the information was **actually accessed**, or only accessible — we keep access logs precisely so we can answer this;
+(c) whether the information was **actually accessed**, or only accessible, **for the categories where we keep a read log** — today that is documents delivered through our private file store (medical documents, identity scans, KYC images: every signed-URL issue is logged with who, what and when, per `SECURITY.md` §5.3). For sensitive information held as ordinary database columns rather than files (for example health or religion fields recorded directly on a student), our audit trail today records **writes** (who changed what, and when) but not every **read** — we have not confirmed a proxied, byte-level read-logging layer exists for that case. Where we cannot say a field was or was not read, we will say so plainly rather than imply certainty we don't have. **[VERIFY / build: extending signed, logged access to sensitive-kind column reads — not only file downloads — is needed before this sub-clause can be read as an unqualified promise; until then, treat (c) as accurate for files and qualified for inline sensitive columns.]**
 (d) the likely consequences for the people affected;
 (e) what we have done and what we will do;
 (f) a list of the affected individuals, supplied securely.
@@ -136,13 +138,13 @@ This agreement sits alongside the Acadigma Terms of Service. It covers how we ha
 
 9.1 **You instruct us** to store and process your personal information as follows, and you confirm you have a lawful basis for it:
 
-| Where                                         | What                                                                                              | Who            |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------- |
-| **Mumbai, India** (AWS region `ap-south-1`)   | Your database, files, and user authentication                                                     | Supabase       |
-| **Mumbai, India** + a global delivery network | Application servers; pages delivered from the nearest location, which does not store your records | Vercel         |
-| **United States**                             | Text of AI requests and their results only, with the removals in clause 9.3                       | Anthropic      |
-| **United States / Europe**                    | Transactional emails; error reports containing identifiers only                                   | Resend; Sentry |
-| **Bangladesh**                                | Payment processing                                                                                | SSLCommerz     |
+| Where                                         | What                                                                                                                                                                                                                                                                                | Who            |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| **Mumbai, India** (AWS region `ap-south-1`)   | Your database, files, and user authentication                                                                                                                                                                                                                                       | Supabase       |
+| **Mumbai, India** + a global delivery network | Application servers; pages delivered from the nearest location. That layer does not store your school's records — it does enforce a request-rate check keyed to a user id or a hashed IP address, backed by a small counter table (not your records) in Mumbai (`SECURITY.md` §5.6) | Vercel         |
+| **United States**                             | Text of AI requests and their results only, with the removals in clause 9.3                                                                                                                                                                                                         | Anthropic      |
+| **United States / Europe**                    | Transactional emails; error reports containing identifiers only                                                                                                                                                                                                                     | Resend; Sentry |
+| **Bangladesh**                                | Payment processing                                                                                                                                                                                                                                                                  | SSLCommerz     |
 
 9.2 **We do not store your data in Bangladesh today.** We tell you this plainly rather than letting you assume otherwise. The rules on which categories of personal information must stay in Bangladesh are still being settled by the government. We are planning for a Bangladesh-resident option and will tell you before any change. If the law requires your data to be held in Bangladesh, we will either provide that or let you leave without penalty. **[VERIFY: counsel must confirm whether health records, ID scans and similar fall within the "confidential" or "restricted" classes that must be stored in Bangladesh — `COMPLIANCE-PDPA.md` §5.5 and §11 Q2.]**
 
@@ -242,7 +244,7 @@ _To be regenerated from the live data model before signature. This version mirro
 | Files uploaded by your staff                                                        | May contain sensitive information              |
 | Payment and invoice records for your subscription and purchases                     |                                                |
 
-**Retention:** as set in the software by you, subject to the defaults in our Privacy Policy — student records {{7}} years after leaving; health information and medical documents until {{1}} year after leaving; identity scans {{90}} days after admission; messages {{2}} years (configurable); financial records {{6}} years.
+**Retention:** as set in the software by you, subject to the defaults in our Privacy Policy — student records {{7}} years after leaving; health information and medical documents until {{1}} year after leaving; identity scans **14 days after the admission decision**; messages {{2}} years (configurable); financial records {{6}} years. _For reference, not because it is processed on your instruction: marketplace seller KYC documents (a matter for which Acadigma is the controller, clause 2.4) are retained 180 days after approval / 90 days after rejection._
 
 ## Annex B — Security measures
 

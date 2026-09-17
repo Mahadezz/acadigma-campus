@@ -14,7 +14,9 @@
 
 Every AI call in Acadigma Campus costs the business money. This feature is the single gate that decides whether a call happens, records what it cost, and shows a school what it has spent. It is not a feature teachers ask for — it is the reason the product can have AI at all.
 
-A workspace has a **daily credit allowance** from its plan. Credits are spent by named actions at fixed prices. A teacher sees their balance before they press Generate. At zero, generation is **hard-blocked** with a one-tap "Request credits" to the owner. Owners can grant extra credits, switch between a shared pool and per-teacher allocations, buy top-up packs with bKash/card through SSLCommerz, and see exactly where the month went.
+A workspace has a **monthly credit allowance** from its plan, **pooled** across the workspace (not a per-day drip). Credits are spent by named actions at fixed prices. A teacher sees their balance before they press Generate. At zero, generation is **hard-blocked** with a one-tap "Request credits" to the owner. Owners can grant extra credits, switch between a shared pool and per-teacher allocations, buy top-up packs with bKash/card through SSLCommerz, and see exactly where the month went.
+
+**Superseded by the research-debate synthesis (D-39, M0-0.5): allowances moved from daily to monthly, pooled.** Trial is **100 actions, lifetime** (not renewing); Starter **200 credits/month**; Pro **600 credits/month, pooled**; Enterprise **contractual**. A top-up pack is **৳1,200 / 500 credits**, and total monthly spend (allowance + top-ups) is capped at a **hard ceiling of 3× the monthly allowance** (§5.1).
 
 **What Base44 intended, and what was broken.** The prototype shipped five entities for this — `DailyAILimit`, `AIBillingModel`, `CreditAllocation`, `CreditRequest`, `AIUsageLog` — a full admin approval UI, a permissions entry, and **zero enforcement**. Verified by exhaustive grep: `AIUsageLog.create` appeared 0 times; `DailyAILimit` and `AIBillingModel` were referenced by 0 files; `CreditAllocation` was never created, only listed and updated; `CreditRequest` was never created because the teacher-facing form did not exist. No Generate button in the app was ever disabled for lack of credits — only while in flight. A teacher could call the LLM an unlimited number of times, at unlimited cost, and nothing was recorded. The admin panel that governed all this showed `—` for every teacher (because no allocation row could exist) and its three charts were literally `Math.random()` with the comment `// Mock chart data`. Every prompt lived in the browser, so any quota check placed there would have been trivially bypassed.
 
@@ -31,12 +33,12 @@ A workspace has a **daily credit allowance** from its plan. Credits are spent by
 | Approve/reject a request                     | `ai_credits.request.review` | ✓     | ✓     | —       | —     | —      | —                  |
 | Grant extra credits directly                 | `ai_credits.grant`          | ✓     | ✓     | —       | —     | —      | —                  |
 | Change the billing model (pool ↔ individual) | `ai_credits.billing_model`  | ✓     | —     | —       | —     | —      | —                  |
-| Set per-teacher daily caps                   | `ai_credits.allocate`       | ✓     | ✓     | —       | —     | —      | —                  |
+| Set per-teacher monthly caps                 | `ai_credits.allocate`       | ✓     | ✓     | —       | —     | —      | —                  |
 | Buy a top-up pack                            | `ai_credits.topup`          | ✓     | —     | —       | —     | —      | —                  |
 | View AI usage analytics                      | `ai_credits.analytics`      | ✓     | ✓     | —       | —     | —      | ✓ (all workspaces) |
 | Edit the `ai_actions` price list             | `platform.ai_pricing`       | —     | —     | —       | —     | —      | ✓ only             |
 
-**Deliberate change from the prototype.** Base44 made the billing model support-only (`ai_billing_model_change: []`, an empty allow-list). PRODUCT-DECISIONS 5.3 overrules that: **the owner can change it themselves**. Owners should not need to open a support ticket for a toggle. The change is audited and takes effect at the next daily reset, not mid-day (§5.9).
+**Deliberate change from the prototype.** Base44 made the billing model support-only (`ai_billing_model_change: []`, an empty allow-list). PRODUCT-DECISIONS 5.3 overrules that: **the owner can change it themselves**. Owners should not need to open a support ticket for a toggle. The change is audited and takes effect at the next monthly reset, not mid-month (§5.9).
 
 ## 3. Data
 
@@ -46,22 +48,22 @@ A workspace has a **daily credit allowance** from its plan. Credits are spent by
 
 Not tenant-scoped. One row per named AI action in the product.
 
-| column                                   | type                          | notes                                                                                |
-| ---------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
-| `key`                                    | text pk                       | e.g. `lesson_plan.generate`                                                          |
-| `label`                                  | text not null                 | "Generate a lesson plan"                                                             |
-| `category`                               | `ai_action_category` enum     | `planning \| curriculum \| assessment \| communication \| media`                     |
-| `credit_cost`                            | integer not null check > 0    | the price                                                                            |
-| `model_id`                               | text not null                 | e.g. `claude-sonnet-5` — the model is a property of the action, never of the request |
-| `prompt_version`                         | text not null                 | e.g. `lesson_plan.v1`                                                                |
-| `max_output_tokens`                      | integer not null              | hard ceiling, also a cost ceiling                                                    |
-| `timeout_ms`                             | integer not null              |                                                                                      |
-| `est_input_tokens` / `est_output_tokens` | integer                       | for the cost-basis report (§5.12)                                                    |
-| `min_plan_tier`                          | text null                     | null = every plan; otherwise the lowest `plans.tier` allowed                         |
-| `enabled`                                | boolean not null default true | a kill switch per action, per platform                                               |
-| `updated_at`, `updated_by`               |                               |                                                                                      |
+| column                                   | type                                           | notes                                                                                |
+| ---------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `key`                                    | text pk                                        | e.g. `lesson_plan.generate`                                                          |
+| `label`                                  | text not null                                  | "Generate a lesson plan"                                                             |
+| `category`                               | `ai_action_category` enum                      | `planning \| curriculum \| assessment \| communication \| media`                     |
+| `credit_cost`                            | integer not null check > 0                     | the price                                                                            |
+| `model_id`                               | text not null                                  | e.g. `claude-sonnet-5` — the model is a property of the action, never of the request |
+| `prompt_version`                         | text not null                                  | e.g. `lesson_plan.v1`                                                                |
+| `max_output_tokens`                      | integer not null                               | hard ceiling, also a cost ceiling                                                    |
+| `timeout_ms`                             | integer not null                               |                                                                                      |
+| `est_input_tokens` / `est_output_tokens` | integer                                        | for the cost-basis report (§5.12)                                                    |
+| `language_risk`                          | `ai_language_risk` not null default `standard` | `standard \| bangla_or_parent_facing` — drives model routing, §5.12; **not** a gate  |
+| `enabled`                                | boolean not null default true                  | a kill switch per action, per platform                                               |
+| `updated_at`, `updated_by`               |                                                |                                                                                      |
 
-RLS: SELECT to every authenticated user (the client needs prices to render). INSERT/UPDATE/DELETE only `app.is_platform_admin()`. **The client never sends a price, a model id, or a prompt version** — it sends an action key, and the server reads this row.
+RLS: SELECT to every authenticated user (the client needs prices to render). INSERT/UPDATE/DELETE only `app.is_platform_admin()`. **The client never sends a price, a model id, or a prompt version** — it sends an action key, and the server reads this row. **No plan-tier gating exists on this table or anywhere in this feature** (research-debate synthesis, D-26(4)/A-04, M0-0.5): the prototype-era `min_plan_tier` column that restricted the Free tier to haiku-backed actions is deleted outright, not deprecated. Every plan, including Free/Trial, can call every enabled action; what varies by plan is the monthly credit allowance (§5.1), not which actions are reachable. The replacement control is **model routing by language risk** (§5.12): `language_risk='bangla_or_parent_facing'` actions always call the strongest available model, on every plan, regardless of tier.
 
 ### 3.2 `ai_credit_ledger` — append-only, the source of truth
 
@@ -70,14 +72,14 @@ RLS: SELECT to every authenticated user (the client needs prices to render). INS
 | `id`               | uuid pk                              |                                                                                                                                                                       |
 | `workspace_id`     | uuid not null                        | tenant key                                                                                                                                                            |
 | `user_id`          | uuid null                            | the spender; null for workspace-level entries (grants, resets, purchases)                                                                                             |
-| `entry_type`       | `ai_ledger_entry_type` enum not null | `daily_grant \| plan_change_grant \| trial_grant \| topup_purchase \| admin_grant \| reservation \| settlement \| release \| expiry \| adjustment \| refund`          |
+| `entry_type`       | `ai_ledger_entry_type` enum not null | `monthly_grant \| plan_change_grant \| trial_grant \| topup_purchase \| admin_grant \| reservation \| settlement \| release \| expiry \| adjustment \| refund`        |
 | `credits`          | integer not null                     | **signed**: positive adds spendable credits, negative removes. A `reservation` is negative, a `release` is positive, a `settlement` is the net correction (usually 0) |
 | `balance_after`    | integer not null                     | materialised running balance for the bucket, written inside the same transaction under a row lock                                                                     |
 | `bucket`           | `ai_credit_bucket` enum not null     | `pool` or `individual` — which balance this entry moves                                                                                                               |
 | `action_key`       | text null → `ai_actions`             | on reservation/settlement/release                                                                                                                                     |
 | `ai_generation_id` | uuid null → `ai_generations`         |                                                                                                                                                                       |
 | `reservation_id`   | uuid null                            | self-reference: settlement/release point at their reservation                                                                                                         |
-| `expires_on`       | date null                            | on `daily_grant` — the date after which unused credits expire                                                                                                         |
+| `expires_on`       | date null                            | on `monthly_grant` — the date after which unused credits expire (month-end, not day-end)                                                                              |
 | `reason`           | text null                            | required for `admin_grant` and `adjustment`                                                                                                                           |
 | `idempotency_key`  | text null                            | unique per workspace                                                                                                                                                  |
 | `correlation_id`   | uuid                                 | request tracing                                                                                                                                                       |
@@ -90,7 +92,7 @@ Constraints: **no UPDATE and no DELETE grants for any role**, including service 
 
 A table, not a view, because the balance is read on every page render and locked on every spend.
 
-`workspace_id`, `user_id` (null row = the shared pool), `bucket`, `granted_today` integer, `reserved` integer, `spent_today` integer, `carryover` integer (top-ups and admin grants that do **not** expire daily), `balance` integer generated as `granted_today + carryover - reserved - spent_today`, `as_of_date` date, `updated_at`. Primary key `(workspace_id, coalesce(user_id, '00000000-…'))`.
+`workspace_id`, `user_id` (null row = the shared pool), `bucket`, `granted_this_month` integer, `reserved` integer, `spent_this_month` integer, `carryover` integer (top-ups and admin grants that do **not** expire monthly), `balance` integer generated as `granted_this_month + carryover - reserved - spent_this_month`, `as_of_month` date (first of the month), `updated_at`. Primary key `(workspace_id, coalesce(user_id, '00000000-…'))`.
 
 Invariant, asserted by a nightly reconciliation job and by a pgTAP test: `ai_credit_balances.balance` equals the ledger's `balance_after` on the latest entry for that bucket. If they diverge, the job writes an `adjustment` entry with a reason and alerts platform staff — it never silently rewrites the ledger.
 
@@ -114,15 +116,15 @@ Invariant, asserted by a nightly reconciliation job and by a pgTAP test: `ai_cre
 
 ### 3.8 Workspace settings (columns on `school_profiles` / `workspaces`)
 
-`ai_billing_model` enum `ai_billing_model` (`shared_pool | individual_allocation`) default `shared_pool`; `ai_daily_credits_override` integer null (platform-set, overrides the plan); `ai_enabled` boolean default true (an owner can switch AI off entirely for their school).
+`ai_billing_model` enum `ai_billing_model` (`shared_pool | individual_allocation`) default `shared_pool`; `ai_monthly_credits_override` integer null (platform-set, overrides the plan); `ai_enabled` boolean default true (an owner can switch AI off entirely for their school).
 
 ### 3.9 `ai_teacher_allocations`
 
-Used only when `ai_billing_model = 'individual_allocation'`. `workspace_id`, `user_id`, `daily_credits` integer not null, `updated_by`, `updated_at`. Primary key `(workspace_id, user_id)`. Members without a row get `plans.default_teacher_daily_credits` (proposed column).
+Used only when `ai_billing_model = 'individual_allocation'`. `workspace_id`, `user_id`, `monthly_credits` integer not null, `updated_by`, `updated_at`. Primary key `(workspace_id, user_id)`. Members without a row get `plans.default_teacher_monthly_credits` (proposed column).
 
 ### 3.10 RLS in words
 
-- `ai_credit_ledger`: SELECT for owner/admin on the whole workspace; a teacher sees only rows where `user_id = app.current_user_id()` or `bucket='pool'` entries of type `daily_grant`/`admin_grant` (so they can see what the school got). **No INSERT/UPDATE/DELETE policy for anyone** — every write goes through `SECURITY DEFINER` functions called by the server (`app.ai_reserve`, `app.ai_settle`, `app.ai_release`, `app.ai_grant`), which is what makes "append-only" true rather than aspirational.
+- `ai_credit_ledger`: SELECT for owner/admin on the whole workspace; a teacher sees only rows where `user_id = app.current_user_id()` or `bucket='pool'` entries of type `monthly_grant`/`admin_grant` (so they can see what the school got). **No INSERT/UPDATE/DELETE policy for anyone** — every write goes through `SECURITY DEFINER` functions called by the server (`app.ai_reserve`, `app.ai_settle`, `app.ai_release`, `app.ai_grant`), which is what makes "append-only" true rather than aspirational.
 - `ai_credit_balances`: SELECT as above; no client write.
 - `ai_credit_requests`: teacher SELECT/INSERT own; owner/admin SELECT/UPDATE all in the workspace; nobody may UPDATE `requested_by`, `workspace_id` or `credits_requested` after insert.
 - `ai_generations`: teacher SELECT own; owner/admin SELECT all; platform read bypass. No client write.
@@ -136,7 +138,9 @@ Every AI action in the product, without exception, runs this sequence inside `ad
 
 ```
 1. resolve   ctx        -> WorkspaceContext (workspaceId, userId, role, plan)
-2. load      action     -> ai_actions[key]; 404 if missing, 403 if !enabled or plan tier too low
+2. load      action     -> ai_actions[key]; 404 if missing, 403 if !enabled (no plan-tier check — deleted, §5.12)
+2b. route    model      -> language-risk override (§5.12): if action.language_risk='bangla_or_parent_facing',
+                           force the strongest current model regardless of workspace plan
 3. guard     ai_enabled -> 403 AI_DISABLED if the owner switched AI off
 4. rate      limit      -> per-user and per-workspace token bucket; 429 RATE_LIMITED
 5. reserve              -> app.ai_reserve(workspace, user, key, idempotency_key)
@@ -158,17 +162,17 @@ Steps 5, 8a and 8b are single `SECURITY DEFINER` functions, each one transaction
 
 **Settlement is not "debit the actual cost".** Credits are a fixed retail price per action, not a token pass-through — so the settlement entry is normally `0` credits and exists to close the reservation and record real usage. The only case where settlement moves credits is a **partial refund**: if the model returned `stop_reason='max_tokens'` and the feature declares the result unusable, the action refunds in full (release path). Recording real tokens on `ai_generations` is what lets the owner reprice later with data rather than guesses.
 
-### 4.2 Daily reset
+### 4.2 Monthly reset (superseded from a daily reset — D-39, M0-0.5)
 
-A `pg_cron` job at **00:00 Asia/Dhaka** (`0 18 * * *` UTC — and the job reads the workspace's own timezone, so a future non-Dhaka school resets on its own midnight):
+A `pg_cron` job at **00:00 Asia/Dhaka on the 1st of each month** (and the job reads the workspace's own timezone, so a future non-Dhaka school resets on its own month boundary):
 
-1. For every active workspace with `ai_enabled`, compute today's allowance: `ai_daily_credits_override ?? plans.ai_daily_credits`.
-2. Write an `expiry` entry for yesterday's unused `granted_today` (daily credits **do not** carry over — this is Base44's documented intent, _"Unused credits expire at midnight"_, and it is what keeps the plan's daily number meaningful).
-3. Write a `daily_grant` entry with `expires_on = today` and reset `granted_today`, `spent_today = 0`, `reserved = 0` (any reservation still open at midnight is first released by the reaper).
-4. `carryover` (top-ups, admin grants) is untouched — **purchased credits never expire**.
+1. For every active workspace with `ai_enabled`, compute this month's allowance: `ai_monthly_credits_override ?? plans.ai_monthly_credits` (Starter 200, Pro 600, Enterprise contractual — §5.1). Trial workspaces do **not** run through this monthly grant at all: the trial's 100-action allowance is a **lifetime** cap granted once, not renewed each month (§5.1).
+2. Write an `expiry` entry for last month's unused `granted_this_month` (monthly credits **do not** carry over — this keeps the plan's monthly number meaningful, the same rationale Base44's daily design had, now at month granularity).
+3. Write a `monthly_grant` entry with `expires_on = end of this month` and reset `granted_this_month`, `spent_this_month = 0`, `reserved = 0` (any reservation still open at the boundary is first released by the reaper).
+4. `carryover` (top-ups, admin grants) is untouched — **purchased credits never expire**, but total spend in any month is still bounded by the **hard ceiling of 3× the monthly allowance** (§5.1), which the reserve function enforces against `granted_this_month + carryover` for that month regardless of how large `carryover` has grown.
 5. In `individual_allocation` mode, step 1–3 run per member with an `ai_teacher_allocations` row or the plan default; in `shared_pool` mode they run once for the workspace with `user_id = null`.
 
-Failure of the cron job is an alert, not a silent zero: if no `daily_grant` exists for today by 00:30, the `ai_reserve` function falls back to computing the allowance inline and writes the grant itself (idempotent on `(workspace_id, user_id, 'daily_grant', today)`), so a cron outage cannot block a whole country's teachers.
+Failure of the cron job is an alert, not a silent zero: if no `monthly_grant` exists for this month by 00:30 on the 1st, the `ai_reserve` function falls back to computing the allowance inline and writes the grant itself (idempotent on `(workspace_id, user_id, 'monthly_grant', month)`), so a cron outage cannot block a whole country's teachers.
 
 ### 4.3 Hitting zero
 
@@ -187,15 +191,15 @@ Failure of the cron job is an alert, not a silent zero: if no `daily_grant` exis
 3. Buyer pays. The **IPN Edge Function** validates the transaction against SSLCommerz's validation API, writes `inbound_events`, then — idempotently on the provider event id — marks the topup `paid` and calls `app.ai_grant(..., entry_type='topup_purchase', bucket=pool, credits=pack.credits)` into `carryover`.
 4. Notification `ai_credits.topup_completed`; receipt PDF via F-BI-04.
 5. **The browser return URL grants nothing.** A user who closes the tab still gets their credits; a user who forges a success URL gets nothing.
-6. Refund (platform staff, F-BI §4.8) writes a negative `refund` entry; if the balance would go negative, it goes negative and the next daily grant absorbs it — the ledger never lies to make a screen look tidy.
+6. Refund (platform staff, F-BI §4.8) writes a negative `refund` entry; if the balance would go negative, it goes negative and the next monthly grant absorbs it — the ledger never lies to make a screen look tidy.
 
 ### 4.5 Switching billing model
 
-Owner toggles in `/app/settings/ai`. A confirm dialog explains the effect in plain words ("Every teacher gets their own 20 credits a day instead of sharing one pool of 400"). The change writes `workspaces.ai_billing_model` + an audit event and is **effective at the next daily reset**; today's balances are untouched. Switching to `individual_allocation` opens the allocation table pre-filled with the plan default so the owner can adjust before it takes effect.
+Owner toggles in `/app/settings/ai`. A confirm dialog explains the effect in plain words ("Every teacher gets their own 50 credits a month instead of sharing one pool of 600"). The change writes `workspaces.ai_billing_model` + an audit event and is **effective at the next monthly reset**; this month's balances are untouched. Switching to `individual_allocation` opens the allocation table pre-filled with the plan default so the owner can adjust before it takes effect.
 
 ### 4.6 Usage analytics
 
-`/app/settings/ai` → Usage tab. Real numbers only, from `ai_generations` and `ai_credit_ledger` (§5.11): credits used today / this month, by teacher, by action, by day; the workspace's 30-day trend; average latency; failure rate by error code; and — the number the owner cares about — "credits left today". Every chart reads a SQL view defined in F-TE-07 §4.5. Platform staff get the same across all workspaces plus `cost_usd_micros`, which schools never see.
+`/app/settings/ai` → Usage tab. Real numbers only, from `ai_generations` and `ai_credit_ledger` (§5.11): credits used this month, by teacher, by action, by day; the workspace's 30-day trend; average latency; failure rate by error code; and — the number the owner cares about — "credits left this month". Every chart reads a SQL view defined in F-TE-07 §4.5. Platform staff get the same across all workspaces plus `cost_usd_micros`, which schools never see.
 
 ### 4.7 Phone flow
 
@@ -206,7 +210,7 @@ Owner toggles in `/app/settings/ai`. A confirm dialog explains the effect in pla
 
 ## 5. Business rules and calculations
 
-**5.1 Plan allowances** (PRODUCT-DECISIONS 5.1, placeholders): Free **20**/day · Starter **100**/day · Pro **400**/day · Enterprise **1,500**/day. Stored on `plans.ai_daily_credits`, editable from `/platform`. Trial = 14 days of Pro → 400/day.
+**5.1 Plan allowances — monthly, pooled** (supersedes the earlier daily placeholders; research-debate synthesis D-39, M0-0.5): **Trial 100 actions, lifetime** (not renewing, not time-sliced by the 14-day trial window — it is a hard lifetime cap independent of how many days the trial has run) · **Starter 200 credits/month** · **Pro 600 credits/month, pooled** · **Enterprise contractual**. **Top-up pack: ৳1,200 / 500 credits.** A **hard ceiling of 3× the monthly allowance** applies to total spend in any calendar month — base allowance plus any top-ups combined — enforced by `app.ai_reserve`, which is what stops an unbounded top-up spiral from turning into unbounded model spend. Stored on `plans.ai_monthly_credits`, editable from `/platform`. (D-39 does not restate a Free-plan number here — see PRODUCT-DECISIONS and OQ-22 for the separate Free-plan-retirement question, which this feature does not decide.)
 
 **5.2 Price list** (PRODUCT-DECISIONS 3.3 placeholders, plus the actions this area adds):
 
@@ -224,7 +228,7 @@ Owner toggles in `/app/settings/ai`. A confirm dialog explains the effect in pla
 | `illustration.generate`    | 4       | `claude-sonnet-5`  | F-TE-04 (see the image conflict in §11)                         |
 | `report_comment.generate`  | 1       | `claude-haiku-4-5` | F-OP-06 — listed here because it must route through this ledger |
 
-**5.3 Balance resolution.** `shared_pool` → one balance row per workspace (`user_id is null`), every member draws from it. `individual_allocation` → one balance row per member; a member with no allocation row gets `plans.default_teacher_daily_credits`. Owners and admins draw from their own allocation in individual mode, from the pool in pool mode. `carryover` (top-ups, grants) always lands in the **pool** bucket and is spendable by anyone in pool mode; in individual mode an admin grant may target a specific member's carryover.
+**5.3 Balance resolution.** `shared_pool` → one balance row per workspace (`user_id is null`), every member draws from it. `individual_allocation` → one balance row per member; a member with no allocation row gets `plans.default_teacher_monthly_credits`. Owners and admins draw from their own allocation in individual mode, from the pool in pool mode. `carryover` (top-ups, grants) always lands in the **pool** bucket and is spendable by anyone in pool mode; in individual mode an admin grant may target a specific member's carryover.
 
 **5.4 Nothing is charged for our failures.** A reservation is released in full — no partial charge — for: timeout, connection error, HTTP 5xx, `stop_reason='refusal'`, schema validation failure after the configured retries, `PII_BLOCKED`, and orphan reaping. A charge stands for: a successful generation the user dislikes, a successful generation the user then discards, and a regeneration.
 
@@ -236,9 +240,9 @@ Owner toggles in `/app/settings/ai`. A confirm dialog explains the effect in pla
 
 **5.8 Concurrency.** `app.ai_reserve` takes `SELECT … FOR UPDATE` on the single balance row. Two simultaneous 3-credit reservations against a balance of 4 serialise: the first succeeds, the second raises `INSUFFICIENT_CREDITS`. There is no "check then write" window. This is the specific failure the prototype could not even have, because it never checked at all.
 
-**5.9 Billing-model changes take effect at the next reset** (§4.5), so a mid-day switch cannot double-grant. Enforced by making the reset job the only writer of `daily_grant`.
+**5.9 Billing-model changes take effect at the next reset** (§4.5), so a mid-month switch cannot double-grant. Enforced by making the reset job the only writer of `monthly_grant`.
 
-**5.10 Expiry.** Daily grants expire at the next reset (`expiry` entry). `carryover` never expires. Expiry is recorded, not silent — the usage view can show "you let 180 credits expire unused this month", which is the strongest possible argument for a school to downgrade honestly or use the product more.
+**5.10 Expiry.** Monthly grants expire at the next reset (`expiry` entry) — unused credits do not carry into the following month. `carryover` (top-ups, admin grants) never expires on its own, but is still bounded within any given month by the 3× hard ceiling (§5.1). Expiry is recorded, not silent — the usage view can show "you let 180 credits expire unused this month", which is the strongest possible argument for a school to downgrade honestly or use the product more.
 
 **5.11 Analytics definitions** (each a SQL view, exact text in F-TE-07 §4.5): `analytics_ai_usage_daily`, `analytics_ai_usage_by_teacher`, `analytics_ai_usage_by_action`, `analytics_ai_failures`, `analytics_ai_balance_now`. No client-side aggregation of raw ledger rows.
 
@@ -257,13 +261,14 @@ Owner toggles in `/app/settings/ai`. A confirm dialog explains the effect in pla
 | `notice.generate`          | haiku-4-5 | 600 / 700            | $0.0041   | ৳0.49      | 1       | +৳0.51         |
 | `syllabus.extract` (40 pp) | sonnet-5  | ~70,000 / 4,000      | $0.180    | **৳21.60** | 10      | **−৳11.60** ⚠⚠ |
 
-Three findings for the owner, carried to the README's conflicts list:
+Findings for the owner, carried to the README's conflicts list:
 
 - **`syllabus.extract` at 10 credits loses money on any document over ~18 pages.** Recommendation: price it **10 credits + 1 credit per 2 pages beyond 10**, computed from the real page count at upload (known before the reservation), capped at 40 credits. The `ai_actions` table gains a nullable `credit_cost_formula` column for this one case.
 - **The 3-credit and 2-credit actions sit on or below cost.** Recommendation: worksheet 4, quiz 4, rubric 3, differentiation 3, illustration 5.
-- **Free plan exposure.** 20 credits/day × 30 days ≈ ৳420/month of model cost per free school at these rates, uncapped by revenue. Recommendation: keep 20/day but restrict the Free plan's `ai_actions` to the haiku-backed set plus `lesson_plan.generate` via `min_plan_tier`, which drops the worst case to well under ৳100/month.
+- **Plan-tier action gating is deleted (research-debate synthesis, D-26(4)/A-04, M0-0.5).** The earlier recommendation to restrict the Free plan's `ai_actions` to the haiku-backed set via `min_plan_tier` is **superseded, not adopted** — `min_plan_tier` no longer exists (§3.1). The replacement mechanism is **routing by language risk**: any action whose output is Bangla or parent-facing (`parent_message.generate`, `notice.generate`, `report_comment.generate` today; anything a guardian reads tomorrow) always calls the strongest available model, **on every plan including Free/Trial**, because a mistranslated or badly-toned message to a Bangladeshi parent is a worse outcome than the marginal cost difference between models. Free-plan cost exposure is instead bounded by the **monthly, pooled allowance** (§5.1) — a hard ceiling in credits, not a menu of which actions a cheaper plan may reach.
+- **Stated assumption — AI COGS budget.** Cost planning assumes **৳1.45/action** today, **budgeted at cost + 30%** for the next tokenizer/model generation (rates go stale as Anthropic revises pricing and tokenization), **with a 1.1× contingency multiplier on top of that if data-residency requirements ever force regional inference pinning** (a dedicated region typically carries a premium over the default routing this feature assumes). This assumption feeds the price list (§5.2) and the plan-allowance sizing (§5.1) and should be revisited whenever `model_rates` is next refreshed (§11 item 7).
 
-All three are recommendations; **the placeholder prices in PRODUCT-DECISIONS 3.3 remain canonical until the owner decides.** The `ai_actions` table makes any of them a one-row edit from `/platform`.
+**The placeholder prices in PRODUCT-DECISIONS 3.3 remain canonical until the owner decides** on the repricing recommendations above (the plan-tier-gating deletion is decided, not a recommendation). The `ai_actions` table makes any repricing a one-row edit from `/platform`.
 
 **5.13 Prompt caching.** Every prompt's system block and the stable school-context block carry `cache_control: {type:'ephemeral'}`, so repeat generations within the cache window read those tokens at the cached rate instead of full price. The volatile per-request fields go after the last breakpoint. `ai_generations.cache_read_tokens` records the effect; if it is persistently zero, something in the "stable" prefix is not stable and the nightly report flags it. This does not change credit prices — it changes our cost.
 
@@ -286,29 +291,29 @@ Components: `CreditBadge`, `StatTile`, `BarList`, `Stepper`, `SegmentedControl`,
 
 ## 7. Server contracts
 
-| Name                                                               | Input                                                                           | Output                                                                         | Errors                                                        | Idempotency               | Rate limit   |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- | ------------------------- | ------------ |
-| `aiCredits.balance`                                                | `{}`                                                                            | `{ bucket, balance, grantedToday, spentToday, carryover, reserved, resetsAt }` | —                                                             | —                         | 240/min      |
-| `aiCredits.prices`                                                 | `{}`                                                                            | `AiAction[]` (key, label, cost, category, enabled-for-my-plan)                 | —                                                             | —                         | cached 5 min |
-| `aiCredits.ledger`                                                 | `{ from?, to?, userId?, entryType?, cursor, limit<=100 }`                       | `{ items, nextCursor }`                                                        | `FORBIDDEN`                                                   | —                         | 60/min       |
-| `aiCredits.request`                                                | `{ credits: 1..500, reason: string(10..500) }`                                  | `CreditRequest`                                                                | `REQUEST_PENDING`, `VALIDATION`, `FORBIDDEN`                  | key                       | 5/hour/user  |
-| `aiCredits.reviewRequest`                                          | `{ id, decision: 'approve'\|'reject', grantedCredits?, note? }`                 | `CreditRequest`                                                                | `NOT_FOUND`, `ALREADY_REVIEWED`, `FORBIDDEN`                  | key **required**          | 60/min       |
-| `aiCredits.grant`                                                  | `{ userId?, credits: 1..5000, reason: string(10..500) }`                        | `{ ledgerId, balance }`                                                        | `FORBIDDEN`, `VALIDATION`                                     | key **required**          | 30/hour      |
-| `aiCredits.setBillingModel`                                        | `{ model: 'shared_pool'\|'individual_allocation' }`                             | `{ effectiveFrom }`                                                            | `FORBIDDEN` (owner only)                                      | key                       | 10/day       |
-| `aiCredits.setAllocations`                                         | `{ rows: [{ userId, dailyCredits: 0..5000 }] }`                                 | `{ updated: n }`                                                               | `FORBIDDEN`, `MEMBER_NOT_ACTIVE`                              | key                       | 60/min       |
-| `aiCredits.setEnabled`                                             | `{ enabled: boolean }`                                                          | `{ ok }`                                                                       | `FORBIDDEN` (owner only)                                      | key                       | 10/day       |
-| `aiCredits.packs`                                                  | `{}`                                                                            | `AiCreditPack[]`                                                               | —                                                             | —                         | cached       |
-| `aiCredits.startTopup`                                             | `{ packId }`                                                                    | `{ orderId, checkoutUrl }`                                                     | `FORBIDDEN`, `PROVIDER_ERROR`                                 | key **required**          | 10/hour      |
-| `aiCredits.usage`                                                  | `{ range: 'today'\|'7d'\|'30d'\|'month', groupBy: 'teacher'\|'action'\|'day' }` | rows from the analytics views                                                  | `FORBIDDEN`                                                   | —                         | 60/min       |
-| **internal** `app.ai_reserve(workspace, user, actionKey, idemKey)` | SQL `SECURITY DEFINER`                                                          | `(reservation_id, generation_id, credit_cost)`                                 | raises `INSUFFICIENT_CREDITS`, `ACTION_DISABLED`, `PLAN_TIER` | key                       | —            |
-| **internal** `app.ai_settle(reservationId, usage jsonb)`           | SQL                                                                             | `void`                                                                         | raises `RESERVATION_NOT_OPEN`                                 | —                         | —            |
-| **internal** `app.ai_release(reservationId, errorCode)`            | SQL                                                                             | `void`                                                                         | idempotent                                                    | —                         | —            |
-| **internal** `app.ai_grant(...)`                                   | SQL                                                                             | `ledger_id`                                                                    | —                                                             | key                       | —            |
-| Edge Function `sslcommerz-ipn`                                     | provider payload                                                                | 200                                                                            | signature/validation failure → 400, logged                    | provider event id         | —            |
-| Cron `ai_daily_reset` (pg_cron, 00:00 Asia/Dhaka)                  | —                                                                               | —                                                                              | alert on failure                                              | `(workspace, user, date)` | —            |
-| Cron `ai_reservation_reaper` (every 5 min)                         | —                                                                               | —                                                                              | —                                                             | per reservation           | —            |
-| Cron `ai_request_expiry` (hourly)                                  | —                                                                               | —                                                                              | —                                                             | —                         | —            |
-| Cron `ai_ledger_reconcile` (nightly)                               | —                                                                               | —                                                                              | writes `adjustment` + platform alert on drift                 | —                         | —            |
+| Name                                                               | Input                                                                           | Output                                                                                 | Errors                                                                                                      | Idempotency                | Rate limit   |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------- | ------------ |
+| `aiCredits.balance`                                                | `{}`                                                                            | `{ bucket, balance, grantedThisMonth, spentThisMonth, carryover, reserved, resetsAt }` | —                                                                                                           | —                          | 240/min      |
+| `aiCredits.prices`                                                 | `{}`                                                                            | `AiAction[]` (key, label, cost, category, enabled-for-my-plan)                         | —                                                                                                           | —                          | cached 5 min |
+| `aiCredits.ledger`                                                 | `{ from?, to?, userId?, entryType?, cursor, limit<=100 }`                       | `{ items, nextCursor }`                                                                | `FORBIDDEN`                                                                                                 | —                          | 60/min       |
+| `aiCredits.request`                                                | `{ credits: 1..500, reason: string(10..500) }`                                  | `CreditRequest`                                                                        | `REQUEST_PENDING`, `VALIDATION`, `FORBIDDEN`                                                                | key                        | 5/hour/user  |
+| `aiCredits.reviewRequest`                                          | `{ id, decision: 'approve'\|'reject', grantedCredits?, note? }`                 | `CreditRequest`                                                                        | `NOT_FOUND`, `ALREADY_REVIEWED`, `FORBIDDEN`                                                                | key **required**           | 60/min       |
+| `aiCredits.grant`                                                  | `{ userId?, credits: 1..5000, reason: string(10..500) }`                        | `{ ledgerId, balance }`                                                                | `FORBIDDEN`, `VALIDATION`                                                                                   | key **required**           | 30/hour      |
+| `aiCredits.setBillingModel`                                        | `{ model: 'shared_pool'\|'individual_allocation' }`                             | `{ effectiveFrom }`                                                                    | `FORBIDDEN` (owner only)                                                                                    | key                        | 10/day       |
+| `aiCredits.setAllocations`                                         | `{ rows: [{ userId, monthlyCredits: 0..5000 }] }`                               | `{ updated: n }`                                                                       | `FORBIDDEN`, `MEMBER_NOT_ACTIVE`                                                                            | key                        | 60/min       |
+| `aiCredits.setEnabled`                                             | `{ enabled: boolean }`                                                          | `{ ok }`                                                                               | `FORBIDDEN` (owner only)                                                                                    | key                        | 10/day       |
+| `aiCredits.packs`                                                  | `{}`                                                                            | `AiCreditPack[]`                                                                       | —                                                                                                           | —                          | cached       |
+| `aiCredits.startTopup`                                             | `{ packId }`                                                                    | `{ orderId, checkoutUrl }`                                                             | `FORBIDDEN`, `PROVIDER_ERROR`                                                                               | key **required**           | 10/hour      |
+| `aiCredits.usage`                                                  | `{ range: 'today'\|'7d'\|'30d'\|'month', groupBy: 'teacher'\|'action'\|'day' }` | rows from the analytics views                                                          | `FORBIDDEN`                                                                                                 | —                          | 60/min       |
+| **internal** `app.ai_reserve(workspace, user, actionKey, idemKey)` | SQL `SECURITY DEFINER`                                                          | `(reservation_id, generation_id, credit_cost)`                                         | raises `INSUFFICIENT_CREDITS`, `ACTION_DISABLED` (`PLAN_TIER` removed — plan-tier gating is deleted, §5.12) | key                        | —            |
+| **internal** `app.ai_settle(reservationId, usage jsonb)`           | SQL                                                                             | `void`                                                                                 | raises `RESERVATION_NOT_OPEN`                                                                               | —                          | —            |
+| **internal** `app.ai_release(reservationId, errorCode)`            | SQL                                                                             | `void`                                                                                 | idempotent                                                                                                  | —                          | —            |
+| **internal** `app.ai_grant(...)`                                   | SQL                                                                             | `ledger_id`                                                                            | —                                                                                                           | key                        | —            |
+| Edge Function `sslcommerz-ipn`                                     | provider payload                                                                | 200                                                                                    | signature/validation failure → 400, logged                                                                  | provider event id          | —            |
+| Cron `ai_monthly_reset` (pg_cron, 00:00 Asia/Dhaka on the 1st)     | —                                                                               | —                                                                                      | alert on failure                                                                                            | `(workspace, user, month)` | —            |
+| Cron `ai_reservation_reaper` (every 5 min)                         | —                                                                               | —                                                                                      | —                                                                                                           | per reservation            | —            |
+| Cron `ai_request_expiry` (hourly)                                  | —                                                                               | —                                                                                      | —                                                                                                           | —                          | —            |
+| Cron `ai_ledger_reconcile` (nightly)                               | —                                                                               | —                                                                                      | writes `adjustment` + platform alert on drift                                                               | —                          | —            |
 
 ## 8. Parts (build chunks)
 
@@ -324,10 +329,10 @@ Files: `packages/adapters/ai/{client,invoke,errors,pricing}.ts`, `packages/contr
 Tests: unit with a mocked Anthropic client for every branch in the error taxonomy; assert the ledger after each; assert the CI rule fails a fixture file that imports the SDK directly.
 **Demo:** a script that runs a fake action 5 times — success, timeout, refusal, schema-invalid-then-recovered, insufficient — and prints the resulting ledger, showing exactly two debits.
 
-**Part 3 — Daily reset, reaper, reconciliation (≤1 day).**
-Scope: `pg_cron` jobs, timezone-correct reset, expiry entries, carryover preservation, orphan reaping, nightly reconciliation with the drift alert, the inline fallback grant.
-Tests: a fixture clock advancing across a Dhaka midnight; unused credits expire and carryover survives; a workspace with the cron disabled still gets a grant on first reserve; drift injected into `ai_credit_balances` is detected and corrected with an `adjustment` entry, never by editing history.
-**Demo:** move the fixture clock past midnight; balances reset, top-up credits remain.
+**Part 3 — Monthly reset, reaper, reconciliation (≤1 day).**
+Scope: `pg_cron` jobs, timezone-correct **monthly** reset, expiry entries, carryover preservation, orphan reaping, nightly reconciliation with the drift alert, the inline fallback grant, the 3×-allowance hard ceiling enforcement.
+Tests: a fixture clock advancing across a Dhaka month boundary; unused monthly credits expire and carryover survives; a workspace with the cron disabled still gets a grant on first reserve of the new month; drift injected into `ai_credit_balances` is detected and corrected with an `adjustment` entry, never by editing history; spend attempting to exceed the 3× monthly ceiling is refused.
+**Demo:** move the fixture clock past the month boundary; balances reset, top-up credits remain.
 
 **Part 4 — Balance UI and enforcement in one caller (≤1 day).**
 Scope: `aiCredits.balance` / `.prices`, the `CreditBadge` component, the disabled-below-cost state, the balance sheet, and wiring exactly one real caller (F-TE-01's `lessonPlan.generate`) end to end.
@@ -341,7 +346,7 @@ Tests: pgTAP on the partial unique index; integration on `ALREADY_REVIEWED` unde
 
 **Part 6 — Billing model, allocations, and the settings screen (≤1 day).**
 Scope: the owner-only model toggle with the plain-words confirm and next-reset semantics, the allocation table with "apply to all", `ai_enabled` kill switch, the whole `/app/settings/ai` stack.
-Tests: an admin (not owner) gets `FORBIDDEN` on the toggle; switching mid-day does not change today's balances; allocations cannot target a `removed` member.
+Tests: an admin (not owner) gets `FORBIDDEN` on the toggle; switching mid-month does not change this month's balances; allocations cannot target a `removed` member.
 **Demo:** switch a school to per-teacher allocations, set three caps, advance the clock past midnight, see three separate balances.
 
 **Part 7 — Top-up packs and usage analytics (≤2 days).**
@@ -364,11 +369,11 @@ Order: 1 → 2 → 3 → 4 → 5 → 6 → 7. **Parts 1–4 are a hard prerequis
 9. **Given** a teacher, **when** they attempt any INSERT, UPDATE or DELETE on `ai_credit_ledger` through the browser client, **then** it is refused by RLS and by the absent grants.
 10. **Given** a service-role connection, **when** it attempts UPDATE or DELETE on `ai_credit_ledger`, **then** Postgres refuses — append-only is a grant, not a convention.
 11. **Given** a workspace in school A, **when** a member of school B queries balances, ledger, requests or generations, **then** zero rows are returned.
-12. **Given** a workspace with 40 unused daily credits and 100 purchased credits at 23:59 Asia/Dhaka, **when** the clock passes midnight, **then** the 40 expire (with an `expiry` entry), 100 remain, and today's grant is added.
-13. **Given** the daily reset cron fails, **when** a teacher generates at 09:00, **then** the reserve function creates today's grant inline and the generation proceeds.
+12. **Given** a workspace with 40 unused monthly credits and 100 purchased credits at 23:59 Asia/Dhaka on the last day of the month, **when** the clock passes into the new month, **then** the 40 expire (with an `expiry` entry), 100 remain, and the new month's grant is added.
+13. **Given** the monthly reset cron fails, **when** a teacher generates on the 1st, **then** the reserve function creates that month's grant inline and the generation proceeds.
 14. **Given** `shared_pool` mode, **when** three teachers each spend 10 credits, **then** the workspace balance drops by 30 and every teacher sees the same remaining number.
 15. **Given** `individual_allocation` mode with caps of 20/20/50, **when** teacher one exhausts 20, **then** teachers two and three are unaffected.
-16. **Given** an owner switches billing model at 14:00, **when** the change saves, **then** today's balances are unchanged and the new model applies from the next reset; an audit event records who changed it.
+16. **Given** an owner switches billing model mid-month, **when** the change saves, **then** this month's balances are unchanged and the new model applies from the next monthly reset; an audit event records who changed it.
 17. **Given** an admin (not owner), **when** they call `aiCredits.setBillingModel`, **then** they get `FORBIDDEN`.
 18. **Given** a teacher at zero credits, **when** they open any AI action, **then** the button is disabled with "Not enough credits" and a "Request credits" affordance, and no AI call is possible even via a crafted request.
 19. **Given** a pending request, **when** the same teacher requests again, **then** they get `REQUEST_PENDING` and exactly one request row exists.
@@ -381,7 +386,7 @@ Order: 1 → 2 → 3 → 4 → 5 → 6 → 7. **Parts 1–4 are a hard prerequis
 26. **Given** a user makes 11 generation requests in one minute, **when** the 11th arrives, **then** it returns `RATE_LIMITED` with `retry_after`, and no reservation was made.
 27. **Given** `ai_credit_balances` is manually corrupted, **when** the nightly reconciliation runs, **then** an `adjustment` ledger entry restores agreement, the ledger's history is unmodified, and platform staff are alerted.
 28. **Given** the usage view for a month, **when** compared against a hand-summed fixture of the ledger, **then** every number matches exactly — no chart in this feature is populated by anything other than a SQL view.
-29. **Given** a Free-plan workspace and an action whose `min_plan_tier` is `pro`, **when** a teacher triggers it, **then** they get `PLAN_TIER` with an upgrade link and no reservation.
+29. **Given** a Free-plan (or Trial) workspace and any enabled action, **when** a teacher triggers it, **then** it is never blocked by plan tier — `PLAN_TIER` does not exist as an error code — and is only blocked by `INSUFFICIENT_CREDITS` if the monthly allowance is exhausted. **Given** an action with `language_risk='bangla_or_parent_facing'` (e.g. `parent_message.generate`), **when** it is triggered on any plan from Free through Enterprise, **then** it is routed to the strongest available model every time, never a cheaper model chosen because of plan tier.
 30. **Given** two repeated generations of the same action within the cache window, **when** the second completes, **then** `cache_read_tokens > 0` on the second `ai_generations` row.
 
 ## 10. Tests
@@ -398,8 +403,8 @@ Order: 1 → 2 → 3 → 4 → 5 → 6 → 7. **Parts 1–4 are a hard prerequis
 
 1. **Page-weighted pricing for `syllabus.extract`** (§5.12). Default assumed until the owner rules: flat 10 credits, losing money on long PDFs. Recommended: `10 + ceil(max(0, pages − 10) / 2)`, capped at 40.
 2. **Repricing the thin actions** (worksheet, quiz, rubric, differentiation, illustration). Default assumed: PRODUCT-DECISIONS placeholders stand.
-3. **Free-plan AI scope** (§5.12 third finding). Default assumed: all actions available on Free at 20/day. Recommended: restrict Free to haiku-backed actions + lesson plan via `min_plan_tier`.
-4. **Do credits roll over for paid plans?** Base44's schema comment says daily credits expire at midnight and this spec follows it. An alternative — a 7-day rolling bucket — would smooth the "I planned my whole week on Sunday" pattern that BD teachers actually have. Default assumed: daily expiry, because it is what the plan matrix communicates.
-5. **Personal workspaces.** PRODUCT-DECISIONS 5.5 says personal workspaces can buy credit packs but have no subscription. What is a personal workspace's free daily allowance? Default assumed: **0 daily, purchased credits only** — a teacher's personal tutoring space does not get free AI.
+3. ~~**Free-plan AI scope** (§5.12 third finding).~~ **Resolved by the research-debate synthesis (D-26(4)/A-04, M0-0.5):** `min_plan_tier` gating is deleted outright. All actions are available on every plan; cost is bounded by the monthly pooled allowance (§5.1), and Bangla/parent-facing actions always route to the strongest model regardless of tier (§5.12).
+4. **Do credits roll over for paid plans?** Superseded from daily to monthly (D-39, M0-0.5): allowances are now granted and expired **monthly**, not at each midnight. Whether unused monthly credits should roll over is still open; a rolling multi-month bucket would smooth an uneven usage pattern across the term. Default assumed: monthly expiry, no rollover, because it is what the new plan matrix communicates — revisit if schools report the same "I planned my whole term on day one" friction the old daily cadence had within a day.
+5. **Personal workspaces.** PRODUCT-DECISIONS 5.5 says personal workspaces can buy credit packs but have no subscription. What is a personal workspace's free monthly allowance? Default assumed: **0/month, purchased credits only** — a teacher's personal tutoring space does not get free AI.
 6. **Per-teacher caps in shared-pool mode.** An owner may want a pool _and_ a per-teacher ceiling so one teacher cannot drain it on day one. Not in v1. Default assumed: pool mode is genuinely first-come-first-served, and the usage view is the control.
 7. **`model_rates` maintenance.** Rates are seeded from published pricing and go stale silently. Default assumed: a platform screen showing rate age with a warning past 90 days; no automatic fetch.

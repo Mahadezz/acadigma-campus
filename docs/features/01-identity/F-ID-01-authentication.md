@@ -150,7 +150,9 @@ Security screen lists rows from `device_registrations` joined to live Supabase s
 - **Revoke** one device → `revokeSession` → Supabase admin `signOut(scope: session)` on that refresh token + `revoked_at` set. The revoked device is signed out within one refresh cycle (≤ 1 h) and immediately on its next server action.
 - **Sign out everywhere** → revokes all sessions including the current one, returns to `/login`.
 
-**Audit:** `session.revoked`, `session.revoked_all`.
+**Realtime revocation is not reconnect-only.** On any `workspace_members.status` change (removal, suspension) or session revocation, the server pushes a **server-initiated disconnect broadcast** on that user's Realtime channel(s) — it does not wait for the client to reconnect and re-authorise. A test asserts that flipping `status` on an **already-open, subscribed socket** stops delivery within N seconds (target N = 5s), not merely that a fresh reconnect re-authorises correctly.
+
+**Audit:** `session.revoked`, `session.revoked_all`, `session.realtime_disconnect_broadcast`.
 **Phone layout:** a `DataList` of cards, one device per card, revoke is a secondary button inside the card (never a swipe-only action).
 
 ### 4.9 Account deletion with a grace period
@@ -193,6 +195,15 @@ Clears the Supabase session, deletes the `acx_ws` workspace cookie, clears the T
 | Sole-owner deletion block     | blocked when `count(active members in that workspace) > 1`                                                         | `packages/domain/workspace/ownership.ts`     |
 | New-device notification       | fired when a `session_ref` is unseen **and** the user already has ≥ 1 non-revoked device                           | `packages/domain/auth/deviceRules.ts`        |
 | Email enumeration             | reset, magic link and phone OTP responses are always identical; registration is not                                | `passwordPolicy.ts` docblock                 |
+
+**Compensating controls for the 30-day sliding session, no-MFA posture (teachers/staff/parents).** The 30-day sliding refresh and the absence of MFA for teachers, staff and parents are both **kept as-is** — the product still needs a school-issued Android phone to stay signed in for a term. Instead of MFA, the following controls are mandatory [MUST]:
+
+| Control                         | Value                                                                                                                                                              | Where it lives                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Step-up re-authentication       | Required (password or OTP, even on an otherwise-valid session) immediately before rendering any `read_sensitive` view, any health record, or the **Documents tab** | `packages/domain/auth/stepUp.ts`                     |
+| Idle timeout on step-up screens | Step-up screens above auto-lock and demand re-authentication again after **5 minutes** of inactivity                                                               | same                                                 |
+| App-level lock                  | A PIN or device biometric (WebAuthn platform authenticator) lock gates re-entry to the installed PWA after backgrounding — independent of the Supabase session     | `packages/domain/auth/appLock.ts`                    |
+| Notification preview redaction  | Push/in-app previews never render marks, message content, or job/hiring activity in the lock-screen or notification-centre preview — only a generic event label    | `packages/domain/notifications/preview.ts` (F-ID-07) |
 
 ## 6. UI
 

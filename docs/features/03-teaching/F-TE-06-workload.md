@@ -14,7 +14,7 @@
 
 Two numbers, side by side, for every teacher: **what the timetable says they teach** and **what they actually taught**. The first is the school's plan; the second is the truth. The gap between them is the most useful management number a head teacher has — it shows who is drowning, who is covering for everyone else, and which sections are quietly losing periods.
 
-Teachers get a personal cockpit: this week's periods, what I have logged, what is due, my extra cover hours. Admins get a balance view: periods per teacher, burnout banding against school-set thresholds, suggested rebalances, and a variance report. Nothing here is AI.
+Teachers get a personal cockpit: this week's periods, what I have logged, what is due, my extra cover hours. Admins get a balance view: **scheduled** periods per teacher, burnout banding against school-set thresholds (computed from scheduled + cover, never from logged periods), and suggested rebalances. **Logged periods and variance are teacher-private by default** (research-debate synthesis T-01, R1) — an admin sees a teacher's variance report only if that teacher has opted to share it; see §5.5a. Nothing here is AI.
 
 **What Base44 intended, and what was broken.** The Workload Balancer counted `ScheduleSlot` rows per teacher and banded them — real maths over real rows, but joined **by display-name string**: `ScheduleSlot.class_id → Class.teacher_name`, matched against `TeacherAttendance.teacher_name`. No user ids anywhere. Two spellings of "S. Rahman" produced two teachers; renaming a teacher orphaned their history; and `Class.teacher_name` was a single free-text field, so co-teaching could not exist. Its "Absences (last 30 days)" label had **no date filter at all** — the query was the most recent 200 attendance rows school-wide over any time range. And `LessonLog.periods_used` — the ground truth of teaching load, already captured — was not used by the balancer at all. The teacher-facing `/workload` page was three read-only tabs (an assignment-deadline calendar, a flagged-student list, a quick log form) with a deadline countdown computed as a millisecond diff, so a deadline two hours away rendered as "Tomorrow".
 
@@ -22,17 +22,21 @@ Teachers get a personal cockpit: this week's periods, what I have logged, what i
 
 ## 2. Roles and permissions
 
-| Action                                | permission key              | owner | admin | teacher | staff | parent | platform    |
-| ------------------------------------- | --------------------------- | ----- | ----- | ------- | ----- | ------ | ----------- |
-| See my own workload                   | `workload.read.own`         | ✓     | ✓     | ✓       | ✓     | —      | —           |
-| See every teacher's workload          | `workload.read.any`         | ✓     | ✓     | —       | —     | —      | read bypass |
-| See the balance suggestions           | `workload.balance`          | ✓     | ✓     | —       | —     | —      | —           |
-| Act on a suggestion (reassign a slot) | `timetable.write` (F-AC-06) | ✓     | ✓     | —       | —     | —      | —           |
-| Edit burnout thresholds               | `workload.settings`         | ✓     | ✓     | —       | —     | —      | —           |
-| Export the variance report            | `workload.read.any`         | ✓     | ✓     | —       | —     | —      | —           |
-| See hourly rates alongside workload   | `staff.compensation.read`   | ✓     | ✓     | —       | —     | —      | —           |
+| Action                                                                                    | permission key                                            | owner | admin | teacher | staff | parent | platform    |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------- | ----- | ----- | ------- | ----- | ------ | ----------- |
+| See my own workload (scheduled + logged + variance)                                       | `workload.read.own`                                       | ✓     | ✓     | ✓       | ✓     | —      | —           |
+| See every teacher's **scheduled** load + band (always)                                    | `workload.read.any`                                       | ✓     | ✓     | —       | —     | —      | read bypass |
+| See a teacher's **logged periods / variance** (only if that teacher has opted in — §5.5a) | `workload.read.any` + the teacher's `share_variance` flag | ✓     | ✓     | —       | —     | —      | read bypass |
+| Opt my own variance in/out of admin visibility                                            | `workload.share.own`                                      | ✓     | ✓     | ✓       | ✓     | —      | —           |
+| See the balance suggestions                                                               | `workload.balance`                                        | ✓     | ✓     | —       | —     | —      | —           |
+| Act on a suggestion (reassign a slot)                                                     | `timetable.write` (F-AC-06)                               | ✓     | ✓     | —       | —     | —      | —           |
+| Edit burnout thresholds                                                                   | `workload.settings`                                       | ✓     | ✓     | —       | —     | —      | —           |
+| Export the variance report                                                                | `workload.read.any`                                       | ✓     | ✓     | —       | —     | —      | —           |
+| See hourly rates alongside workload                                                       | `staff.compensation.read`                                 | ✓     | ✓     | —       | —     | —      | —           |
 
 Hourly rates (`staff_records.hourly_rate`) are admin-only visibility per PRODUCT-DECISIONS 6.3 and are never returned to a teacher's own workload payload, even for themselves — pay lives in the staff module, not here.
+
+**Owner/admin are never blocked from `workload.read.any`, but that permission alone only ever returns scheduled periods, cover and band.** Logged periods and variance are a second, narrower grant gated additionally by the individual teacher's own sharing choice (§5.5a) — a platform-level or role-level "can read workload" permission is not sufficient to see what a teacher actually taught versus what was timetabled.
 
 ## 3. Data
 
@@ -53,11 +57,15 @@ This feature **owns almost no tables**. It is calculations over other modules' r
 
 ### 3.2 Settings this feature adds (proposed columns on `school_profiles`)
 
-`workload_thresholds jsonb not null default '{"healthy_max":20,"moderate_max":24,"burnout_min":25,"window":"week"}'`.
+`workload_thresholds jsonb not null default '{"healthy_max":26,"moderate_max":30,"burnout_min":32,"window":"week"}'`.
 `workload_variance_tolerance_pct smallint not null default 15`.
 `workload_count_assistants boolean not null default false` — whether an assistant teacher's slot counts toward their load (default: no, it counts at 0.5 in the display but not toward the burnout band; see §5.3).
 
-Defaults 20/25 are carried directly from the prototype's `WARN_THRESHOLD = 20` / `BURNOUT_THRESHOLD = 25` periods per week — they are the one piece of that file worth keeping, but as a **setting**, because a BD school with 8-period days and a Sat–Thu week has a different normal from an international school.
+**Defaults corrected from the research-debate synthesis (T-02, R1).** The prototype's `WARN_THRESHOLD = 20` / `BURNOUT_THRESHOLD = 25` periods/week were carried forward unexamined in an earlier draft and flagged normal Bangladeshi private-school load as burnout: BD private-school teachers routinely teach **28–32 periods/week**, so a 20/25 default banded most of a real staff room as "High" on day one. Corrected fixed defaults: **`healthy_max 26 / moderate_max 30 / burnout_min 32`**. These remain a **setting**, not a hard-coded constant, because a BD school with 8-period days and a Sat–Thu week still has a different normal from an international school — but the shipped default now reflects the BD norm rather than the prototype's unexamined number.
+
+### 3.2a `workload_sharing_prefs` (new; proposed — teacher-private variance, R1)
+
+Per-teacher, per-workspace: `workspace_id`, `user_id`, `share_variance boolean not null default false`, `updated_at`. Primary key `(workspace_id, user_id)`. **Default off** — a teacher's logged-periods and variance numbers are private until they explicitly opt in from their own `/app/workload` page. Admin's default balance-view row (§4.2) and the variance report (§4.4) show only what §5.5a permits regardless of this row's existence; the row simply upgrades a specific teacher's visibility when they set it `true`. RLS: a teacher can read/write only their own row; owner/admin can read all rows in their workspace (to know who has opted in) but cannot write another member's row — the choice belongs to the teacher, not the school.
 
 ### 3.3 Views this feature owns
 
@@ -77,17 +85,18 @@ Suggestions are computed per request, not persisted. Acting on one is a normal `
 2. **Two big numbers side by side:** "Scheduled 22 periods" and "Logged 18 periods", with the difference as a labelled delta ("4 not yet logged") — never as a bare negative number.
 3. Below: a day strip (Sat…Thu) showing each day's periods as small blocks, logged blocks filled, unlogged blocks outlined, cover periods marked with a distinct token. Tapping an unlogged block opens F-TE-02's quick-log sheet pre-filled for that slot. This is the single most valuable interaction in the feature: the workload view is also the logging prompt.
 4. Cards: **Extra cover this month** (hours and count), **Sections I teach** (with my role, primary or assistant), **Unlogged periods older than 7 days** (a nudge list, capped at 10).
-5. **Outcome:** read-only; the only write is the quick log, which belongs to F-TE-02.
-6. **Failures:** a section-subject with no timetable slot renders as "not timetabled" rather than as zero; a week with no instructional days (holidays) says so instead of showing an empty grid.
+5. **Share my variance with admin** — a toggle, **off by default** (§5.5a, §3.2a). Off explains itself: _"Your admin sees your scheduled periods and band. Your logged periods and variance stay private unless you turn this on."_ On adds: _"Your admin can now see how your logged periods compare to your schedule."_ The toggle is the teacher's own, revocable at any time, and takes effect immediately.
+6. **Outcome:** read-only except for the quick log (F-TE-02) and this sharing toggle.
+7. **Failures:** a section-subject with no timetable slot renders as "not timetabled" rather than as zero; a week with no instructional days (holidays) says so instead of showing an empty grid.
 
 ### 4.2 Balance view (admin)
 
 **Trigger:** `/app/workload/balance`.
 
-1. A ranked list of active teaching members for the selected window (week / month / term), each row: name, scheduled periods, logged periods, variance %, cover hours, absences in the window, and a RAG band.
+1. A ranked list of active teaching members for the selected window (week / month / term), each row: name, **scheduled** periods, cover hours, absences in the window, and a RAG band (computed from scheduled + cover, §5.6 — never from logged periods). **Logged periods and variance % show only for a teacher who has opted in (§5.5a, `workload_sharing_prefs.share_variance = true`)**; for everyone else the cell reads "Private" with a small lock glyph, never a blank or a zero that could be misread as "taught nothing."
 2. Sort defaults to scheduled periods descending — the drowning teacher is at the top.
-3. Filters: subject, grade, band, "has variance beyond tolerance".
-4. Tapping a row opens a drawer: their week grid, their sections, their variance by subject, their absences **in the stated window** (§5.7 — the prototype labelled a window it did not apply), and the suggestions for them.
+3. Filters: subject, grade, band, "has variance beyond tolerance" (the last filter naturally excludes teachers who have not shared variance, and says so).
+4. Tapping a row opens a drawer: their week grid, their sections, their absences **in the stated window** (§5.7 — the prototype labelled a window it did not apply), and the suggestions for them. **Variance by subject appears in the drawer only if that teacher has opted in**; otherwise the drawer shows the same "Private" state as the list row.
 5. **Failures:** a workspace with no timetable shows "Build a timetable to see workload" rather than a page of zeros.
 
 ### 4.3 Balance suggestions
@@ -106,9 +115,11 @@ Failure: if applying would break a constraint the timetable module owns (double-
 
 **Trigger:** `/app/workload/variance`, or Export from the balance view.
 
-Per section-subject and per teacher over a chosen range: scheduled periods, logged periods, variance count and %, periods logged as `skipped`, periods spent off-syllabus, and the top reasons where notes exist. CSV export uses the same view, so the exported numbers and the on-screen numbers cannot disagree.
+Per section-subject over a chosen range: scheduled periods, logged periods, variance count and %, periods logged as `skipped`, periods spent off-syllabus, and the top reasons where notes exist — **section-subject aggregates are always visible to admin**, since they answer a coverage question about the timetable, not a judgement about one teacher.
 
-Two readings the report is built to support: "6-C English has lost 11 periods this term" (a coverage problem) and "S. Rahman logs 30 % fewer periods than they teach" (a logging-discipline problem, not a teaching problem). The report labels the difference rather than implying blame.
+**Per-teacher rows are gated by §5.5a.** A teacher who has not opted in via `workload_sharing_prefs.share_variance` does not appear as a named row in the per-teacher breakdown or export — their periods still count in the section-subject aggregate (anonymously), but there is no on-screen or CSV path that names them next to a variance number without their consent. CSV export uses the same view as the screen, so the exported numbers and the on-screen numbers cannot disagree, and cannot disagree about _who_ is named either.
+
+Two readings the report is built to support: "6-C English has lost 11 periods this term" (a coverage problem, always visible) and "S. Rahman logs 30 % fewer periods than they teach" (a logging-discipline problem about one named teacher, visible to admin only once S. Rahman has shared it). The report labels the difference rather than implying blame.
 
 ### 4.5 Thresholds
 
@@ -153,11 +164,13 @@ Expressed per week, per month or per term by the chosen range. Never `slots × w
 `variance_pct = round(100 × variance_periods / NULLIF(scheduled_periods, 0))`.
 Beyond `±workload_variance_tolerance_pct` (default 15), the row is flagged. A **positive** variance (taught more than scheduled) is flagged too — it usually means uncredited cover or an unrecorded timetable change, both of which matter.
 
+**5.5a Variance visibility is teacher-private by default (research-debate synthesis T-01, R1; PRODUCT-DECISIONS §3.8).** `logged_periods`, `variance_periods` and `variance_pct` for a **named teacher** are computed for that teacher's own view unconditionally, but are only ever returned to an admin/owner query when `workload_sharing_prefs.share_variance = true` for that `user_id` (§3.2a). Everything admin sees **by default** — the balance-view band (§5.6), the suggestion engine (§5.9) — is derived from `scheduled_periods` and `cover_periods` alone, never from `logged_periods`, so none of it requires this opt-in to function correctly. This exists because logged-vs-scheduled variance can read as a proxy for "is this teacher slacking," and turning it into an always-on admin surveillance number — for a metric whose primary purpose is the teacher's own logging prompt (§4.1) — is exactly the kind of advisory-only staff metric the safeguarding decision (`docs/product/research/DECISION-CHANGES.md` §2, C-03/T-03) requires be opt-in and never an automated basis for an employment decision.
+
 **5.6 Banding.** Against `total_load = scheduled_periods_this_week + cover_periods_this_week`:
 
-- `total_load >= burnout_min` (default 25) → **High**
-- `moderate_max >= total_load >= healthy_max` … precisely: `healthy_max < total_load < burnout_min` (default 20 < x < 25) → **Moderate**
-- `total_load <= healthy_max` (default ≤20) → **Healthy**
+- `total_load >= burnout_min` (default 32) → **High**
+- `moderate_max >= total_load >= healthy_max` … precisely: `healthy_max < total_load < burnout_min` (default 26 < x < 32) → **Moderate**
+- `total_load <= healthy_max` (default ≤26) → **Healthy**
   Thresholds are per week; when the window is a month or term, the threshold is scaled by the number of instructional weeks in the window, not applied raw. The prototype applied a weekly threshold to an unbounded row set.
 
 **5.7 Absences are always windowed.** `absences(user, from, to) = count of staff_attendance rows for that user in [from, to] with status ∈ {absent, on_leave}`. The UI label states the window explicitly ("absent 2 days, 1–31 March"). There is no code path in this feature that counts attendance without a date range — the prototype's "(last 30 days)" label over an unfiltered query is a regression test (§9.9).
@@ -202,16 +215,17 @@ Components: `StatTile`, `PeriodBlockGrid`, `WeekNav`, `RagBadge`, `DataList`, `D
 
 ## 7. Server contracts
 
-| Name                                | Input                                                                         | Output                                                                                                                                       | Errors                                                | Idempotency      | Rate limit                    |
-| ----------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------------- | ----------------------------- |
-| `workload.me`                       | `{ from, to }` (defaults to the current week in workspace tz)                 | `{ scheduledPeriods, loggedPeriods, blocks: [{ date, periodNumber, sectionSubject, logged, isCover }], coverHours, sections[], unlogged[] }` | —                                                     | —                | 120/min                       |
-| `workload.school`                   | `{ from, to, subjectId?, gradeLevelId?, band?, flaggedOnly?, sort, cursor }`  | `{ rows: [{ userId, name, scheduled, logged, variancePct, coverHours, absences, band }], nextCursor }`                                       | `FORBIDDEN`                                           | —                | 60/min                        |
-| `workload.teacher`                  | `{ userId, from, to }`                                                        | the drawer payload (grid, sections, variance by subject, windowed absences)                                                                  | `FORBIDDEN`, `NOT_FOUND`                              | —                | 120/min                       |
-| `workload.suggestions`              | `{ from, to, userId? }`                                                       | `{ suggestions: [{ slotId, fromUserId, toUserId, rationale, fromLoadAfter, toLoadAfter, score }] }`                                          | `FORBIDDEN`                                           | —                | 30/min                        |
-| `workload.dismissSuggestion`        | `{ slotId, toUserId }`                                                        | `{ ok }`                                                                                                                                     | —                                                     | key              | 60/min                        |
-| `workload.variance`                 | `{ from, to, groupBy: 'teacher'\|'section_subject', format?: 'json'\|'csv' }` | rows or a CSV stream                                                                                                                         | `FORBIDDEN`                                           | —                | 30/min                        |
-| `workload.settings.get` / `.set`    | thresholds object                                                             | settings                                                                                                                                     | `FORBIDDEN`, `VALIDATION` (healthy_max < burnout_min) | key              | 20/day                        |
-| _(reused)_ `timetable.reassignSlot` | `{ slotId, toUserId, effectiveFrom }`                                         | slot                                                                                                                                         | `SLOT_CONFLICT`, `NOT_QUALIFIED`, `FORBIDDEN`         | key **required** | 30/min — **owned by F-AC-06** |
+| Name                                | Input                                                                         | Output                                                                                                                                                                                  | Errors                                                | Idempotency      | Rate limit                    |
+| ----------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------------- | ----------------------------- |
+| `workload.me`                       | `{ from, to }` (defaults to the current week in workspace tz)                 | `{ scheduledPeriods, loggedPeriods, blocks: [{ date, periodNumber, sectionSubject, logged, isCover }], coverHours, sections[], unlogged[] }`                                            | —                                                     | —                | 120/min                       |
+| `workload.school`                   | `{ from, to, subjectId?, gradeLevelId?, band?, flaggedOnly?, sort, cursor }`  | `{ rows: [{ userId, name, scheduled, coverHours, absences, band, logged?, variancePct?, shared: boolean }], nextCursor }` — `logged`/`variancePct` present **only** where `shared=true` | `FORBIDDEN`                                           | —                | 60/min                        |
+| `workload.teacher`                  | `{ userId, from, to }`                                                        | the drawer payload (grid, sections, windowed absences, plus variance-by-subject **only if that teacher has opted in**, else `variance: null, shared: false`)                            | `FORBIDDEN`, `NOT_FOUND`                              | —                | 120/min                       |
+| `workload.share.set`                | `{ shareVariance: boolean }`                                                  | `{ shareVariance }`                                                                                                                                                                     | `FORBIDDEN`                                           | key              | 20/day                        |
+| `workload.suggestions`              | `{ from, to, userId? }`                                                       | `{ suggestions: [{ slotId, fromUserId, toUserId, rationale, fromLoadAfter, toLoadAfter, score }] }`                                                                                     | `FORBIDDEN`                                           | —                | 30/min                        |
+| `workload.dismissSuggestion`        | `{ slotId, toUserId }`                                                        | `{ ok }`                                                                                                                                                                                | —                                                     | key              | 60/min                        |
+| `workload.variance`                 | `{ from, to, groupBy: 'teacher'\|'section_subject', format?: 'json'\|'csv' }` | rows or a CSV stream — `groupBy:'section_subject'` is always full; `groupBy:'teacher'` includes only teachers with `share_variance=true`                                                | `FORBIDDEN`                                           | —                | 30/min                        |
+| `workload.settings.get` / `.set`    | thresholds object                                                             | settings                                                                                                                                                                                | `FORBIDDEN`, `VALIDATION` (healthy_max < burnout_min) | key              | 20/day                        |
+| _(reused)_ `timetable.reassignSlot` | `{ slotId, toUserId, effectiveFrom }`                                         | slot                                                                                                                                                                                    | `SLOT_CONFLICT`, `NOT_QUALIFIED`, `FORBIDDEN`         | key **required** | 30/min — **owned by F-AC-06** |
 
 No action in this feature writes a timetable, a log or an attendance row. It reads and it suggests; the writes belong to the modules that own the data.
 
@@ -231,7 +245,7 @@ Tests: e2e at 360×800 — tap an unlogged block, log it, watch the block fill a
 **Part 3 — Balance view and thresholds (≤1.5 days).**
 Scope: `workload.school`, the ranked card list and desktop table, filters, the per-teacher drawer with **windowed** absences, `/app/settings/workload` with the live re-band preview, settings validation and audit.
 Tests: integration — absences honour the requested window exactly (the regression test for the prototype's unfiltered query); changing `burnout_min` re-bands without a reload; a non-admin gets `FORBIDDEN` from both the action and RLS.
-**Demo:** slide `burnout_min` from 25 to 22 and watch three teachers move to High before saving.
+**Demo:** slide `burnout_min` from 32 to 28 and watch three teachers move to High before saving.
 
 **Part 4 — Suggestions and the variance report (≤2 days).**
 Scope: the §5.9 ranking engine, suggestion cards with the plain-sentence rationale, Apply through `timetable.reassignSlot` with both teachers notified, Dismiss with a 30-day memory, the variance report with grouping, and CSV export sharing the view.
@@ -251,10 +265,10 @@ Order: 1 → 2 → 3 → 4. Parts 2 and 3 can proceed in parallel after Part 1.
 7. **Given** a teacher scheduled 22 and logged 18, **when** my workload renders, **then** it shows "22 scheduled", "18 logged" and "4 not yet logged" — never a bare "−4".
 8. **Given** a teacher who logged 26 against 22 scheduled, **when** variance is computed, **then** it is flagged as +18 % and the flag reason distinguishes over-teaching from under-logging.
 9. **Given** a request for absences over March, **when** the drawer renders, **then** it counts only `staff_attendance` rows dated in March and the label states the window — no unfiltered attendance query exists in this feature.
-10. **Given** thresholds 20/25 and a teacher on 26 scheduled including 2 cover periods, **when** banding runs, **then** they are **High**, and cover periods were included in `total_load`.
+10. **Given** thresholds 26/32 and a teacher on 33 scheduled including 2 cover periods, **when** banding runs, **then** they are **High**, and cover periods were included in `total_load`.
 11. **Given** a month-long window, **when** the band is computed, **then** the weekly threshold is scaled by the number of instructional weeks, not applied raw.
-12. **Given** an admin changes `burnout_min` from 25 to 22, **when** the preview updates, **then** it names exactly the teachers who would change band, before the setting is saved.
-13. **Given** `healthy_max = 25` and `burnout_min = 20`, **when** the admin saves, **then** validation rejects it.
+12. **Given** an admin changes `burnout_min` from 32 to 28, **when** the preview updates, **then** it names exactly the teachers who would change band, before the setting is saved.
+13. **Given** `healthy_max = 32` and `burnout_min = 26`, **when** the admin saves, **then** validation rejects it.
 14. **Given** an overloaded teacher, **when** suggestions are computed, **then** every suggested target is free at that period, teaches an eligible subject where possible, and would stay under `burnout_min`.
 15. **Given** no teacher is above `burnout_min`, **when** suggestions load, **then** the empty state says everyone is inside the thresholds.
 16. **Given** a suggestion, **when** I press Apply, **then** the slot's teacher changes through `timetable.reassignSlot`, both teachers are notified, an audit event records the actor, and the suggestion list re-computes.
@@ -267,6 +281,9 @@ Order: 1 → 2 → 3 → 4. Parts 2 and 3 can proceed in parallel after Part 1.
 23. **Given** a teacher, **when** they call `workload.school` or `workload.suggestions`, **then** they get `FORBIDDEN` and RLS also blocks the underlying reads.
 24. **Given** a teacher's own workload payload, **when** it is inspected, **then** it contains no `hourly_rate` field for anyone, including themselves.
 25. **Given** an unlogged period from 12 days ago, **when** my workload loads, **then** it appears in the nudge list, oldest first, and tapping it opens the quick-log sheet pre-filled with that date and period.
+26. **Given** a teacher who has never set `workload_sharing_prefs.share_variance`, **when** an admin queries `workload.school` or `workload.teacher`, **then** the response's `scheduled`, `coverHours`, `absences` and `band` fields are populated normally but `logged` and `variancePct` are absent (or `null`) with `shared: false`, and the band is unaffected because it was never computed from logged periods.
+27. **Given** a teacher turns `share_variance` on, **when** an admin next queries their row, **then** `logged` and `variancePct` appear with `shared: true`; **given** the teacher later turns it off, **when** an admin queries again, **then** those fields are absent again — the toggle is live, not a one-time grant.
+28. **Given** a mixed set of teachers where some have opted in and some have not, **when** the variance report is exported with `groupBy:'teacher'`, **then** only opted-in teachers appear as named rows, while the same period's `groupBy:'section_subject'` export still includes every section-subject's aggregate numbers in full.
 
 ## 10. Tests
 

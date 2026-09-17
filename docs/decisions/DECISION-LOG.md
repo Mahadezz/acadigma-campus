@@ -224,3 +224,94 @@ PRODUCT-DECISIONS §3.3/§5.1 said "credits/day"; costed at ৳1.45/action that 
 ## D-12 — Node 24 + pnpm 10 · ACCEPTED · 2026-09-17
 
 **Why:** Node 24.19 is what's installed. The old plan pinned pnpm 11.19.0 which does not exist on this machine's corepack; pnpm 10 (current stable) is used and pinned via `packageManager`.
+
+---
+
+## Research-debate synthesis, adopted · 2026-09-17
+
+Source: `docs/product/research/debate/SYNTHESIS.md` and `docs/product/research/DECISION-CHANGES.md`. The lead adopts the synthesis verdicts as defaults: Free school plan abolished pending owner sign-off, the MARKET-STRATEGY §c price list as given, attendance default unmarked, fees offline P1–6 inside the R1 gate, hiring M4 apply-only, marketplace gate immediately after M3, the listed PLG loops killed, compliance MUSTs accepted. Amendments to previously-numbered decisions are appended below rather than rewritten in place, to keep the original reasoning intact; brand-new rules are numbered D-40 onward.
+
+## Amendment to D-22 — Attendance no longer pre-fills present · AMENDED · 2026-09-17
+
+**Amends:** D-22 point 1 (`defaulted_present = true`, pre-fill present + confirm).
+**New rule:** Default `unmarked`. "সবাই উপস্থিত / Mark all present" ships as **one explicit header tap writing an audited bulk action** carrying the actor's user id, surfaced in the monthly register. `defaulted_present` is dropped; `bulk_marked_by` / `bulk_marked_at` are recorded instead. The undo toast is retained.
+**Why:** A default that fabricates attendance records poisons every downstream number (%, risk score, health score, GPA denominators) and cannot be fixed retroactively once schools rely on the history. Read-back audits catch a bad _action_ fast; a bad _default_ is invisible until it is load-bearing (SYNTHESIS X-01). Priority: R1, before M2 2.4.
+
+## Amendment to D-27 (finalized) · 2026-09-17
+
+**Amends:** D-27 points (1), (2), (3), (8).
+
+1. **Fees:** offline recording (F-CM-08 P1–6) moves inside the **R1 launch gate** (M3, not M4); online payment (P7–14) stays R1.5. The CFO's objection was to the online rail's unbudgeted cost, not to recording fees at all — separating them satisfies both critics.
+2. **SMS:** priced per UCS-2 segment (৳0.75) with margin, and recognised as a **legal-entity dependency** (BTRC enlistment needs a company name, trade licence, TIN, NID), not two engineering glue parts.
+3. **Pricing:** band + overage confirmed as the shape; **teacher caps are deleted** on every plan.
+4. **Market sizing:** BANBEIS 2022 (137 schools / 71,456 students) is the number of record; BEMA's "300+/300,000+" is a labelled trade-body claim; Eduman, ClassTune and IEIMS/EMIS are added to the competitive map as the real incumbents.
+   **Why:** Fees are the market's anchor module — a school will not switch to a system that cannot collect money — and the offline half has no gateway dependency, so there is no reason to hold it for M4. SMS lead time is regulatory, not engineering, and treating it as "2 glue parts" hid a company-formation dependency from the schedule. Per-seat pricing was suppressing our own north-star metric (login frequency) by making schools ration accounts.
+
+## Resolution of D-28 — RESOLVED from PROVISIONAL · 2026-09-17
+
+1. Plan shape and numbers are final (MARKET-STRATEGY §c; migration `20260917010300_plans_and_notifications.sql`).
+2. AI approval is universal **except that parent-facing text may never be bulk-approved** — a per-student edit or typed sentence before `parent_visible`, teacher's name on the comment.
+3. `open_to_work` is a private preference; **candidate browse is deleted; hiring is apply-only.**
+4. Pilot = 8–10 weeks paid, spanning one terminal exam; self-serve trial = **30 days**. **Hiring timing resolved: M4, minimal 4 parts (P1–4), apply-only.**
+   **Why:** The debate round closed every item D-28 left provisional. "Approve all" for forty children at 9pm is one tap and the first wrong comment costs the school; a browsable teacher directory is safe only for the unemployed in a city where forty principals share a WhatsApp group (SYNTHESIS A-05, H-03).
+
+## Completion of D-39 · 2026-09-17
+
+**Completes** the D-39 entry above (allowances restated as per-MONTH). Final numbers: **trial 100 AI actions lifetime · Starter 200/month · Pro 600/month, pooled · Enterprise contractual cap.** Top-up **৳1,200 / 500 actions**, hard ceiling **3× plan allowance / month**. COGS planning at **৳1.45/action**, budgeted at **cost + 30%**.
+**Why:** Pooling matches how teachers actually work — Thursday-night bursts, not daily quotas — and a hard ceiling with a priced top-up keeps an uncapped top-up from becoming an unsecured credit line against a monthly invoice-and-pay subscription (MARKET-STRATEGY §h).
+
+## Supersession of D-26(4) · 2026-09-17
+
+**Supersedes:** `ai_actions.min_plan_tier` gating (Free limited to haiku-backed actions).
+**New rule:** Model routing is **by language risk, not plan tier.** Any Bangla, parent-facing output uses the stronger model on every plan; cost is controlled by _which actions_ a tier may call, never by degrading Bangla.
+**Why:** `min_plan_tier` gates by cost, cost tracks model size, and model size determines Bangla quality — so the old rule guaranteed the worst Bengali went to the schools least able to notice the errors, directly contradicting "never ship unreviewed Bangla to parents" (SYNTHESIS A-04).
+
+## Amendment to D-34 — Minimisation strengthened · AMENDED · 2026-09-17
+
+**Amends:** D-34's minimisation clause.
+**New rule:** **Student/guardian NID and birth-certificate _numbers_, and `monthly_income_bdt`, are dropped entirely** — replaced by an attestation record `{type, last4, verified_at, verified_by}`. Scans purge at **admission decision + 14 days** (not 90). KYC images retained **180 days** (F-CM-02 wins over COMPLIANCE §4.4's "2 years"). `redactForAI()` moves to M0/M1 and **fails closed**. Localisation gains a roadmap item, a named owner and a decision gate at M6.
+**Why:** A number we never store cannot leak, be subpoenaed wrongly, or need a retention clock at all; "we don't archive" is only a true claim once the numbers themselves are gone, not just the scans. Priority: MUST.
+
+## Update to D-17 — OPEN to the owner, recommendation attached · 2026-09-17
+
+Current rule: payout minimum ৳1,000, monthly on the 1st. **Recommendation: ৳300, weekly auto-payout, instant-on-request with the fee stated**, bKash cash-out cost shown honestly in the earnings screen. ৳1,000 **stands until the owner rules** (OQ-15).
+**Why:** Median new marketplace sellers earn ~$32 in month 2; at ৳1,000 most first-cohort sellers never cash out and never make a second product — the 29-day wait to a first payout is the retention event we are currently failing. Priority: later (M6).
+
+## D-40 — Attendance is never fabricated by default · ADDED · 2026-09-17
+
+The full rule is D-22 (amended) above. **Why:** a default that fabricates records poisons every downstream number and cannot be fixed later (SYNTHESIS X-01). Priority: R1.
+
+## D-41 — One price list · ADDED · 2026-09-17
+
+The grid in `MARKET-STRATEGY.md` §c is the **only** price list. `OUTREACH-TEMPLATES.md` and the pricing page quote it verbatim; no document may state a different number.
+**Why:** Three research documents were quoting three different prices (৳2,999/৳7,999, ৳1,500/৳3,500, and the new ৳2,200/৳4,900 grid); a prospect who sees two numbers trusts neither. Priority: M0-0.5.
+
+## D-42 — The Free school plan is abolished · ADDED · 2026-09-17
+
+The free teacher personal workspace (zero AI) replaces it, plus a capped NGO/madrasa programme. Cash effect ≈ **+৳87,000/month at 100 free schools** (removed burn). **Pending owner confirmation (OQ-22)** — the plans seed removes the `free` row now; `personal_free` is kept.
+**Why:** ৳870/school/month of burn against a ~5% free-to-paid conversion is 19 loss-making schools per convert; it also anchors the market at ৳0 and is trivially matched by an incumbent bundling free hardware (MARKET-STRATEGY §c). Priority: M0-0.5.
+
+## D-43 — Hiring is apply-only and is not an acquisition channel · ADDED · 2026-09-17
+
+Candidate browse is deleted; `open_to_work` is a private preference that surfaces jobs to the teacher, never the teacher to schools; the verification badge is renamed "Documents checked by Acadigma on {date}" with the method stated.
+**Why:** The 3.7M-membership NTRCA cluster waits for a central government recommendation a school cannot post against, so hiring cannot be the acquisition engine; a browsable availability directory in a city where forty principals share a WhatsApp group is safe only for the unemployed (MARKET-STRATEGY §f). Priority: later.
+
+## D-44 — No child-scoped data on an unauthenticated surface · ADDED · 2026-09-17
+
+Covers the parent invite loop (it sends an **invitation**, never a view), OG/share images (school-mark only, never a child's name/photo/marks/attendance), and QR codes on student-facing artefacts (none, ever).
+**Why:** An unauthenticated single-child URL is fetched and cached by link-preview crawlers before any consent exists; a marketing QR code on a report card or ID card is a second, uncontrolled distribution channel for a child's record (SYNTHESIS G-09, G-10, G-11). Priority: MUST.
+
+## D-45 — Company formation is on the critical path · ADDED · 2026-09-17
+
+RJSC + trade licence + TIN + VAT BIN gate BTRC sender ID, bKash merchant, SSLCommerz eligibility, Mushak 6.3 invoicing and DPA signature. Added as roadmap item 0.
+**Why:** It was on nobody's critical path despite blocking five other workstreams and taking 6–10 weeks; starting it late is a pure schedule tax with no offsetting benefit (SYNTHESIS F-06). Priority: MUST, owner action this fortnight (OQ-20).
+
+## D-46 — The roadmap is anchored to the BD school calendar · ADDED · 2026-09-17
+
+Pilot-ready **1 Sep 2027**; base closes **January 2028**; proof on the **April–May 2028 terminal exam**. **Sep 2026 and January 2027 are already lost** — stated plainly so nobody plans against them.
+**Why:** R1 needs 149 parts and today is 17 Sep 2026; pretending an already-passed window is still open produces a schedule nobody can hit and a funnel nobody can trust (MARKET-STRATEGY §i, G-01, G-02). Priority: R1.
+
+## D-47 — Teacher metrics are not management surveillance · ADDED · 2026-09-17
+
+Admins see **scheduled periods only**; workload variance is teacher-private by default (per-teacher opt-in to share); thresholds are BD-calibrated (26/30/32 periods/week, not 20/24/25); a first-run disclosure page states plainly what the school can and cannot see.
+**Why:** BD private-school teachers routinely teach 28–32 periods/week, so the old thresholds flagged normal load as burnout on day one; and a workload dashboard that reads as surveillance is how `lesson_logs` fills with fiction (SYNTHESIS T-01, T-02). Priority: R1.

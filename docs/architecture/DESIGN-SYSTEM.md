@@ -147,6 +147,21 @@ Type scale (`tokens.css` §2): 11 · 12 · 13 · 15 · 16 · 18 · 22 · 28 · 3
 characters per line in a student-name column, and Inter holds at 15 where most
 faces do not. Inputs stay at 16.
 
+**Addendum — Bengali needs its own base size (amended per SYNTHESIS).** The
+15px value above is derived from Latin-script reasoning only (character count,
+Inter's hinting at small sizes) and must not be assumed to transfer to Bengali.
+Bengali script — with its matras, conjuncts (যুক্তাক্ষর) and generally taller
+x-height-equivalent shapes — typically needs to run **larger than Latin at the
+same perceived size** to stay legible and to avoid the conjunct-crowding that
+Bengali reviewers call out by name (§4.9 of `VOICE-OF-CUSTOMER.md`: a 4★ review
+line-by-line-correcting glyph and spelling errors). This does not necessarily
+change the 15px Latin value in `--text-base`; it means Bengali runs need their
+own reviewed size (and, per the mixed-script rule above, Hind Siliguri already
+gets its own `line-height: 1.75`) rather than inheriting the Latin scale
+unexamined. Set and verify a Bengali-specific base size before shipping any
+Bengali-heavy screen (report cards, parent-facing PDFs) rather than assuming
+15px reads the same in both scripts.
+
 ### 1.7 Light and dark
 
 Both ship from day one and neither is a derivative of the other. Dark mode is
@@ -949,16 +964,23 @@ markable in under 60 seconds.
 1. Open Attendance. The correct section and today's date are **pre-selected**
    from the teacher's timetable and the workspace timezone. If the teacher
    teaches one section this period, there is no picker at all.
-2. The roster is already **pre-filled to `present`** — a deliberate default,
-   because in a real classroom most students are present. A bar at the top says
-   _"All 45 marked present — change the exceptions"_ with an **Undo** to clear.
-3. The teacher taps only the exceptions: **one tap** on the `A` segment of that
-   student's row. Done.
+2. **(amended per SYNTHESIS — mirrors D-22/D-40)** The roster's default status
+   is **`unmarked`**, not pre-filled to `present`. A default that fabricates
+   attendance records poisons every downstream number (attendance %, risk
+   score, GPA denominators) and cannot be fixed retroactively once a school
+   relies on the history — attendance must never be invented on the teacher's
+   behalf. "সবাই উপস্থিত / Mark all present" is available as **one explicit
+   header tap** that writes an audited bulk action (`bulk_marked_by`,
+   `bulk_marked_at`, surfaced in the monthly register), with an **Undo** toast.
+3. After that explicit bulk tap (or per-student), the teacher taps only the
+   exceptions: **one tap** on the relevant segment of that student's row. Done.
 4. Not-present statuses that need a reason (`excused`) open a one-field note
    sheet — that is the **second tap**, and it is the only case that has one.
 
-So: **0 taps for a present student, 1 tap for absent/late/half-day, 2 for
-excused.** Worst realistic case for a 45-student class with 5 absences: 5 taps.
+So: **1 header tap to bulk-mark present (audited) + 1 tap per exception, or 1
+tap per student if marking individually from `unmarked`; 2 taps for excused.**
+Worst realistic case for a 45-student class with 5 absences: 1 bulk tap + 5
+exception taps.
 
 **Rules.**
 
@@ -968,7 +990,9 @@ excused.** Worst realistic case for a 45-student class with 5 absences: 5 taps.
 - The row **never moves or reorders** after a tap. Reordering under a moving
   finger is how mis-marks happen.
 - The list is virtualised and keeps a **sticky section header** with a live
-  count: `Present 40 · Absent 3 · Late 1 · Excused 1`.
+  count, including the unmarked default: `Unmarked 5 · Present 35 · Absent 3 ·
+Late 1 · Excused 1` (amended per SYNTHESIS — an `Unmarked` bucket exists
+  because the roster no longer defaults to present).
 - **Bulk header actions:** _Mark all present_ · _Mark all absent_ · _Clear_, each
   followed by an undo toast. Never a confirmation dialog — undo is faster and
   less punishing.
@@ -1223,19 +1247,19 @@ per ARCHITECTURE §9. Items marked **manual** are on the PR review template.
 Target device: a 4-core entry Android on **"Fast 3G"** (1.6 Mbps, 150ms RTT) —
 the CI Lighthouse profile.
 
-| Metric                  | Budget                                                    |
-| ----------------------- | --------------------------------------------------------- |
-| **LCP**                 | **< 2.5s** on Fast 3G / low-end Android (< 1.8s on cable) |
-| **INP**                 | < 200ms, every route                                      |
-| **CLS**                 | < 0.1                                                     |
-| **TTFB**                | < 600ms (Vercel ap-south / edge for the shell)            |
-| **JS per route**        | **< 200 KB** gzipped, including shared chunks             |
-| **Shared app-shell JS** | < 120 KB gzipped                                          |
-| **CSS**                 | < 40 KB gzipped total                                     |
-| **Fonts**               | 48 KB (English) / 186 KB (Bengali, on demand)             |
-| **Route HTML**          | < 60 KB gzipped                                           |
-| **Images**              | AVIF/WebP, explicit dimensions, lazy below the fold       |
-| **Lighthouse PWA**      | ≥ 90 on the app shell (ARCHITECTURE §9)                   |
+| Metric                  | Budget                                                                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **LCP**                 | **< 2.5s** on Fast 3G / low-end Android (< 1.8s on cable)                                                                                                                            |
+| **INP**                 | < 200ms, every route                                                                                                                                                                 |
+| **CLS**                 | < 0.1                                                                                                                                                                                |
+| **TTFB**                | < 600ms (Vercel ap-south / edge for the shell)                                                                                                                                       |
+| **JS per route**        | **< 200 KB** gzipped, including shared chunks                                                                                                                                        |
+| **Shared app-shell JS** | < 120 KB gzipped                                                                                                                                                                     |
+| **CSS**                 | < 40 KB gzipped total                                                                                                                                                                |
+| **Fonts**               | 48 KB (English session) / **186 KB (Bengali session — 48 KB Inter + 138 KB Hind Siliguri subset, budgeted explicitly, amended per SYNTHESIS)**, loaded on demand per `unicode-range` |
+| **Route HTML**          | < 60 KB gzipped                                                                                                                                                                      |
+| **Images**              | AVIF/WebP, explicit dimensions, lazy below the fold                                                                                                                                  |
+| **Lighthouse PWA**      | ≥ 90 on the app shell (ARCHITECTURE §9)                                                                                                                                              |
 
 **How the budget is met, not just asserted.**
 
@@ -1254,7 +1278,15 @@ the CI Lighthouse profile.
 - **Route-level code splitting** by App Router segment; the app shell is cached
   by the service worker so a repeat open is instant even on EDGE.
 - **`font-display: swap`** with `adjustFontFallback` metric overrides, so the
-  fallback render is not a layout shift.
+  fallback render is not a layout shift. **(amended per SYNTHESIS — fallback-
+  flash behavior specified explicitly.)** For the ~200–400ms before the Hind
+  Siliguri Bengali webfont arrives, the UI shows Bengali text set in a
+  metric-matched **system-font fallback** (the fallback stack's Bengali-capable
+  system font, with `ascent-override`/`descent-override`/`size-adjust` tuned to
+  Hind Siliguri's metrics via `adjustFontFallback`) rather than invisible text
+  or a blank region — the fallback glyphs may look slightly different, but the
+  line box, line count and layout do not visibly jump or reflow when the
+  webfont swaps in.
 - **Explicit dimensions on every image and skeleton**, and gridlines/axes drawn
   before chart data arrives, so CLS stays near zero.
 - CI fails the build on a budget regression; the numbers above are the gate, not

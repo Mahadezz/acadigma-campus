@@ -165,6 +165,8 @@ All four are readable by everyone (including anonymous) and writable by platform
 
 Accepted primary types: `application/pdf`, `.docx`, `.pptx`, `.xlsx`, `.zip`. Max 100 MB (plan-independent; the seller's storage is not charged against their school's quota because listings are user-scoped, not workspace-scoped). Magic-byte sniffed; `.zip` is scanned for path traversal entries and for nested executables before acceptance. A ClamAV scan runs as a job before a listing may be submitted (`listings` cannot move to `submitted` while a file's `scan_status` is `pending` or `infected`).
 
+**CI-enforced, not a review convention (R1).** The private-vs-public split above was previously guarded only by developers remembering the rule in code review — the same class of gap `coverage.sql` closes for RLS (SECURITY.md). A CI check (`supabase/ci/public-bucket-guard.*`, run alongside `coverage.sql`) statically enumerates every code path that writes to the `listing-previews` / `listing-covers` public buckets against an explicit allowlist (only the preview-generation job of §5.5 and the cover-upload path) and **fails the build** on any other write target, any write of a primary/extra listing file object key into a public bucket, or a new public-bucket reference added outside the allowlist. This turns "the source file never enters a public bucket" from a sentence a reviewer might miss into a build gate.
+
 ---
 
 ## 4. Workflows
@@ -414,7 +416,7 @@ Tests: honest counts (a row that fails does **not** count as created); ZIP entry
 - **DB (pgTAP):** the `listing_files` isolation test in five caller personas (anonymous, other user, entitled buyer, school admin of the seller's school, platform admin); frozen-listing update denial; trigger protection on counters; `listing_public_v` column set frozen; catalogue write denial.
 - **Integration:** upload → scan → preview job chain with a fixture PDF; infected-file path with the EICAR test file; bulk commit counting; re-review delta application atomicity.
 - **e2e (360×800 and 1280×800):** draft → submit → approve → publish → visible in browse; request-changes loop; bulk upload with errors; report a listing; axe on all screens.
-- **Security:** enumerate the public bucket and assert no object under a `listings/` prefix; assert a signed URL for a listing file expires and 403s afterwards; attempt to `update listings set status='published'` directly with a seller JWT (denied by trigger **and** policy).
+- **Security:** enumerate the public bucket and assert no object under a `listings/` prefix; the CI public-bucket-guard check (§3.7) is itself covered by a fixture that adds a disallowed public write and asserts the build fails; assert a signed URL for a listing file expires and 403s afterwards; attempt to `update listings set status='published'` directly with a seller JWT (denied by trigger **and** policy).
 - **Performance:** editor autosave p95 < 250 ms; queue list p95 < 400 ms at 20,000 listings; preview job p95 < 12 s for a 20-page PDF.
 
 ---
