@@ -10,16 +10,19 @@
     "./result": "./src/result.ts",
     "./common": "./src/common.ts",
     "./settings": "./src/settings.ts",
-    "./notifications": "./src/notifications.ts"
+    "./notifications": "./src/notifications.ts",
+    "./plans": "./src/plans.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "zod": "3.25.76"
   },
   "devDependencies": {
     "@acadigma/config": "workspace:*",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
   }
 }
