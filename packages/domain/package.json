@@ -9,7 +9,9 @@
     "./permissions": "./src/permissions.ts",
     "./money": "./src/money.ts",
     "./ids": "./src/ids.ts",
-    "./time": "./src/time.ts"
+    "./time": "./src/time.ts",
+    "./settings": "./src/settings/index.ts",
+    "./notifications": "./src/notifications/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

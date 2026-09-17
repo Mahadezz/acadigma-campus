@@ -182,5 +182,275 @@
     "paymentFailed": "Payment failed",
     "creditExhausted": "AI credits are used up for today",
     "unknown": "An unknown error occurred"
+  },
+  "notifications": {
+    "events": {
+      "auth": {
+        "new_device_signin": {
+          "title": "New sign-in to your account",
+          "body": "Your account was signed in from a new device. If this wasn't you, secure your account now."
+        }
+      },
+      "account": {
+        "deletion_scheduled": {
+          "title": "Account deletion scheduled",
+          "body": "Your account is scheduled for deletion in 30 days. You can cancel any time before then."
+        },
+        "deletion_cancelled": {
+          "title": "Account deletion cancelled",
+          "body": "Your scheduled account deletion has been cancelled. Your account stays active."
+        }
+      },
+      "invite": {
+        "received": {
+          "title": "You've been invited to {schoolName}",
+          "body": "{inviterName} invited you to join {schoolName} as {role}."
+        },
+        "accepted": {
+          "title": "Invitation accepted",
+          "body": "{memberName} accepted the invitation and joined as {role}."
+        },
+        "declined": {
+          "title": "Invitation declined",
+          "body": "{memberName} declined the invitation to join."
+        },
+        "expired": {
+          "title": "Invitation expired",
+          "body": "The invitation you sent to {memberName} has expired without a response."
+        }
+      },
+      "join_request": {
+        "received": {
+          "title": "New request to join",
+          "body": "{requesterName} asked to join {schoolName}."
+        },
+        "approved": {
+          "title": "Your request was approved",
+          "body": "You've been approved to join {schoolName}."
+        },
+        "rejected": {
+          "title": "Your request was not approved",
+          "body": "Your request to join {schoolName} was not approved."
+        }
+      },
+      "member": {
+        "role_changed": {
+          "title": "Your role has changed",
+          "body": "Your role at {schoolName} is now {role}."
+        },
+        "removed": {
+          "title": "You've been removed",
+          "body": "You've been removed from {schoolName}."
+        },
+        "left": {
+          "title": "A member left",
+          "body": "{memberName} left {schoolName}."
+        }
+      },
+      "workspace": {
+        "ownership_transferred": {
+          "title": "Ownership transferred",
+          "body": "{schoolName}'s ownership moved from {fromName} to {toName}."
+        }
+      },
+      "guardian": {
+        "invited": {
+          "title": "You've been invited as a guardian",
+          "body": "{schoolName} invited you as {studentName}'s guardian."
+        },
+        "linked": {
+          "title": "Guardian linked",
+          "body": "{guardianName} is now linked as {studentName}'s guardian."
+        }
+      },
+      "document_request": {
+        "received": {
+          "title": "Document requested",
+          "body": "{requesterName} requested a document from you: {documentName}."
+        },
+        "approved": {
+          "title": "Document approved",
+          "body": "{candidateName}'s {documentName} was approved."
+        },
+        "declined": {
+          "title": "Document declined",
+          "body": "{candidateName}'s {documentName} was declined."
+        },
+        "revoked": {
+          "title": "Document access revoked",
+          "body": "Access to {candidateName}'s {documentName} was revoked."
+        },
+        "expiring": {
+          "title": "Document access expiring soon",
+          "body": "Access to {documentName} expires soon."
+        }
+      },
+      "attendance": {
+        "low": {
+          "title": "Attendance below threshold",
+          "body": "{sectionName}'s attendance has fallen below {threshold}%."
+        }
+      },
+      "exam": {
+        "reminder": {
+          "title": "Exam reminder",
+          "body": "{examName} starts {when}."
+        }
+      },
+      "assignment": {
+        "due_soon": {
+          "title": "Assignment due soon",
+          "body": "{assignmentName} is due {when}."
+        }
+      },
+      "marks": {
+        "published": {
+          "title": "Marks published",
+          "body": "{examName} marks for {studentName} are now available."
+        }
+      },
+      "report_card": {
+        "ready": {
+          "title": "Report card ready",
+          "body": "{studentName}'s {examName} report card is ready."
+        }
+      },
+      "behaviour": {
+        "logged": {
+          "title": "Behaviour note added",
+          "body": "A new behaviour note was added for {studentName}."
+        }
+      },
+      "cover": {
+        "assigned": {
+          "title": "Cover assigned to you",
+          "body": "You're covering {className} on {date}."
+        }
+      },
+      "print": {
+        "ready": {
+          "title": "Print job ready",
+          "body": "Your print job \"{jobName}\" is ready to collect."
+        },
+        "failed": {
+          "title": "Print job failed",
+          "body": "Your print job \"{jobName}\" failed. Please try again."
+        }
+      },
+      "ai_credits": {
+        "low": {
+          "title": "AI credits running low",
+          "body": "{schoolName} has {remaining} AI credits left this month."
+        },
+        "exhausted": {
+          "title": "AI credits exhausted",
+          "body": "{schoolName} has used all its AI credits for this month."
+        },
+        "requested": {
+          "title": "More AI credits requested",
+          "body": "{teacherName} requested more AI credits."
+        }
+      },
+      "billing": {
+        "trial_ending": {
+          "title": "Trial ending soon",
+          "body": "{schoolName}'s trial ends {when}. Add a payment method to keep access."
+        },
+        "payment_failed": {
+          "title": "Payment failed",
+          "body": "{schoolName}'s last payment failed. Please update your payment details."
+        },
+        "invoice_ready": {
+          "title": "Invoice ready",
+          "body": "A new invoice for {schoolName} is ready to view."
+        }
+      },
+      "marketplace": {
+        "sale": {
+          "title": "You made a sale",
+          "body": "{buyerName} bought \"{listingName}\"."
+        },
+        "listing_approved": {
+          "title": "Listing approved",
+          "body": "\"{listingName}\" was approved and is now live."
+        },
+        "changes_requested": {
+          "title": "Changes requested on your listing",
+          "body": "\"{listingName}\" needs changes before it can go live."
+        },
+        "rejected": {
+          "title": "Listing rejected",
+          "body": "\"{listingName}\" was rejected."
+        },
+        "payout_paid": {
+          "title": "Payout sent",
+          "body": "Your payout of {amount} has been sent."
+        },
+        "refund_issued": {
+          "title": "Refund issued",
+          "body": "A refund was issued for order {orderId}."
+        }
+      },
+      "kyc": {
+        "approved": {
+          "title": "Verification approved",
+          "body": "Your seller verification (KYC) was approved."
+        },
+        "rejected": {
+          "title": "Verification rejected",
+          "body": "Your seller verification (KYC) was rejected."
+        }
+      },
+      "hiring": {
+        "application_received": {
+          "title": "New application received",
+          "body": "{candidateName} applied for {roleName}."
+        },
+        "interview_scheduled": {
+          "title": "Interview scheduled",
+          "body": "An interview for {roleName} is scheduled {when}."
+        },
+        "offer_made": {
+          "title": "You've received an offer",
+          "body": "{schoolName} made you an offer for {roleName}."
+        }
+      },
+      "message": {
+        "mention": {
+          "title": "You were mentioned",
+          "body": "{senderName} mentioned you in {channelName}."
+        },
+        "dm": {
+          "title": "New message",
+          "body": "{senderName} sent you a message."
+        }
+      },
+      "announcement": {
+        "published": {
+          "title": "New announcement",
+          "body": "{publisherName} published: {announcementTitle}."
+        }
+      },
+      "platform": {
+        "broadcast": {
+          "title": "{broadcastTitle}",
+          "body": "{broadcastBody}"
+        }
+      },
+      "support": {
+        "grant_requested": {
+          "title": "Support access requested",
+          "body": "Acadigma support requested temporary access to {schoolName}."
+        },
+        "granted": {
+          "title": "Support access granted",
+          "body": "Temporary support access to {schoolName} was granted, valid for 24 hours."
+        },
+        "expired": {
+          "title": "Support access expired",
+          "body": "Temporary support access to {schoolName} has expired."
+        }
+      }
+    }
   }
 }

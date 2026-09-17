@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./workspace-context": "./src/workspace-context.ts",
-    "./types": "./src/types.generated.ts"
+    "./types": "./src/types.generated.ts",
+    "./repositories/settings": "./src/repositories/settings.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

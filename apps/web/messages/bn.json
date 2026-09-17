@@ -182,5 +182,275 @@
     "paymentFailed": "পেমেন্ট ব্যর্থ হয়েছে",
     "creditExhausted": "আজকের এআই ক্রেডিট শেষ হয়ে গেছে",
     "unknown": "অজানা ত্রুটি ঘটেছে"
+  },
+  "notifications": {
+    "events": {
+      "auth": {
+        "new_device_signin": {
+          "title": "আপনার অ্যাকাউন্টে নতুন ডিভাইস থেকে প্রবেশ",
+          "body": "একটি নতুন ডিভাইস থেকে আপনার অ্যাকাউন্টে প্রবেশ করা হয়েছে। এটি আপনি না করে থাকলে এখনই অ্যাকাউন্ট সুরক্ষিত করুন।"
+        }
+      },
+      "account": {
+        "deletion_scheduled": {
+          "title": "অ্যাকাউন্ট মুছে ফেলার সময়সূচি নির্ধারিত",
+          "body": "৩০ দিনের মধ্যে আপনার অ্যাকাউন্ট মুছে ফেলা হবে। এর আগে যেকোনো সময় বাতিল করতে পারবেন।"
+        },
+        "deletion_cancelled": {
+          "title": "অ্যাকাউন্ট মুছে ফেলা বাতিল হয়েছে",
+          "body": "আপনার নির্ধারিত অ্যাকাউন্ট মুছে ফেলা বাতিল করা হয়েছে। আপনার অ্যাকাউন্ট সচল থাকবে।"
+        }
+      },
+      "invite": {
+        "received": {
+          "title": "{schoolName}-এ আপনাকে আমন্ত্রণ জানানো হয়েছে",
+          "body": "{inviterName} আপনাকে {role} হিসেবে {schoolName}-এ যোগ দিতে আমন্ত্রণ জানিয়েছেন।"
+        },
+        "accepted": {
+          "title": "আমন্ত্রণ গৃহীত হয়েছে",
+          "body": "{memberName} আমন্ত্রণ গ্রহণ করে {role} হিসেবে যোগ দিয়েছেন।"
+        },
+        "declined": {
+          "title": "আমন্ত্রণ প্রত্যাখ্যাত হয়েছে",
+          "body": "{memberName} যোগ দেওয়ার আমন্ত্রণ প্রত্যাখ্যান করেছেন।"
+        },
+        "expired": {
+          "title": "আমন্ত্রণের মেয়াদ শেষ",
+          "body": "{memberName}-কে পাঠানো আমন্ত্রণের মেয়াদ কোনো সাড়া ছাড়াই শেষ হয়ে গেছে।"
+        }
+      },
+      "join_request": {
+        "received": {
+          "title": "যোগ দেওয়ার নতুন অনুরোধ",
+          "body": "{requesterName} {schoolName}-এ যোগ দিতে অনুরোধ করেছেন।"
+        },
+        "approved": {
+          "title": "আপনার অনুরোধ অনুমোদিত হয়েছে",
+          "body": "{schoolName}-এ যোগ দেওয়ার জন্য আপনাকে অনুমোদন দেওয়া হয়েছে।"
+        },
+        "rejected": {
+          "title": "আপনার অনুরোধ অনুমোদিত হয়নি",
+          "body": "{schoolName}-এ যোগ দেওয়ার আপনার অনুরোধ অনুমোদিত হয়নি।"
+        }
+      },
+      "member": {
+        "role_changed": {
+          "title": "আপনার ভূমিকা পরিবর্তন হয়েছে",
+          "body": "{schoolName}-এ আপনার ভূমিকা এখন {role}।"
+        },
+        "removed": {
+          "title": "আপনাকে সরিয়ে দেওয়া হয়েছে",
+          "body": "আপনাকে {schoolName} থেকে সরিয়ে দেওয়া হয়েছে।"
+        },
+        "left": {
+          "title": "একজন সদস্য চলে গেছেন",
+          "body": "{memberName} {schoolName} ছেড়ে চলে গেছেন।"
+        }
+      },
+      "workspace": {
+        "ownership_transferred": {
+          "title": "মালিকানা হস্তান্তরিত হয়েছে",
+          "body": "{schoolName}-এর মালিকানা {fromName} থেকে {toName}-এর কাছে হস্তান্তরিত হয়েছে।"
+        }
+      },
+      "guardian": {
+        "invited": {
+          "title": "আপনাকে অভিভাবক হিসেবে আমন্ত্রণ জানানো হয়েছে",
+          "body": "{schoolName} আপনাকে {studentName}-এর অভিভাবক হিসেবে আমন্ত্রণ জানিয়েছে।"
+        },
+        "linked": {
+          "title": "অভিভাবক যুক্ত হয়েছে",
+          "body": "{guardianName} এখন {studentName}-এর অভিভাবক হিসেবে যুক্ত হয়েছেন।"
+        }
+      },
+      "document_request": {
+        "received": {
+          "title": "নথি অনুরোধ করা হয়েছে",
+          "body": "{requesterName} আপনার কাছে একটি নথি অনুরোধ করেছেন: {documentName}।"
+        },
+        "approved": {
+          "title": "নথি অনুমোদিত হয়েছে",
+          "body": "{candidateName}-এর {documentName} অনুমোদিত হয়েছে।"
+        },
+        "declined": {
+          "title": "নথি প্রত্যাখ্যাত হয়েছে",
+          "body": "{candidateName}-এর {documentName} প্রত্যাখ্যান করা হয়েছে।"
+        },
+        "revoked": {
+          "title": "নথির প্রবেশাধিকার প্রত্যাহার হয়েছে",
+          "body": "{candidateName}-এর {documentName}-এর প্রবেশাধিকার প্রত্যাহার করা হয়েছে।"
+        },
+        "expiring": {
+          "title": "নথির প্রবেশাধিকারের মেয়াদ শীঘ্রই শেষ",
+          "body": "{documentName}-এর প্রবেশাধিকারের মেয়াদ শীঘ্রই শেষ হয়ে যাবে।"
+        }
+      },
+      "attendance": {
+        "low": {
+          "title": "উপস্থিতি নির্ধারিত সীমার নিচে",
+          "body": "{sectionName}-এর উপস্থিতি {threshold}%-এর নিচে নেমে গেছে।"
+        }
+      },
+      "exam": {
+        "reminder": {
+          "title": "পরীক্ষার অনুস্মারক",
+          "body": "{examName} শুরু হচ্ছে {when}।"
+        }
+      },
+      "assignment": {
+        "due_soon": {
+          "title": "অ্যাসাইনমেন্টের সময়সীমা শীঘ্রই",
+          "body": "{assignmentName}-এর জমা দেওয়ার সময়সীমা {when}।"
+        }
+      },
+      "marks": {
+        "published": {
+          "title": "নম্বর প্রকাশিত হয়েছে",
+          "body": "{studentName}-এর {examName}-এর নম্বর এখন দেখা যাচ্ছে।"
+        }
+      },
+      "report_card": {
+        "ready": {
+          "title": "রিপোর্ট কার্ড প্রস্তুত",
+          "body": "{studentName}-এর {examName}-এর রিপোর্ট কার্ড প্রস্তুত হয়েছে।"
+        }
+      },
+      "behaviour": {
+        "logged": {
+          "title": "আচরণের নোট যোগ হয়েছে",
+          "body": "{studentName}-এর জন্য একটি নতুন আচরণের নোট যোগ করা হয়েছে।"
+        }
+      },
+      "cover": {
+        "assigned": {
+          "title": "আপনাকে কভার দায়িত্ব দেওয়া হয়েছে",
+          "body": "{date}-এ আপনি {className}-এর কভার নিচ্ছেন।"
+        }
+      },
+      "print": {
+        "ready": {
+          "title": "প্রিন্ট কাজ প্রস্তুত",
+          "body": "আপনার প্রিন্ট কাজ \"{jobName}\" সংগ্রহের জন্য প্রস্তুত।"
+        },
+        "failed": {
+          "title": "প্রিন্ট কাজ ব্যর্থ হয়েছে",
+          "body": "আপনার প্রিন্ট কাজ \"{jobName}\" ব্যর্থ হয়েছে। আবার চেষ্টা করুন।"
+        }
+      },
+      "ai_credits": {
+        "low": {
+          "title": "এআই ক্রেডিট কমে আসছে",
+          "body": "{schoolName}-এর এই মাসে {remaining}টি এআই ক্রেডিট বাকি আছে।"
+        },
+        "exhausted": {
+          "title": "এআই ক্রেডিট শেষ হয়ে গেছে",
+          "body": "{schoolName} এই মাসের সব এআই ক্রেডিট ব্যবহার করে ফেলেছে।"
+        },
+        "requested": {
+          "title": "আরও এআই ক্রেডিট অনুরোধ করা হয়েছে",
+          "body": "{teacherName} আরও এআই ক্রেডিট অনুরোধ করেছেন।"
+        }
+      },
+      "billing": {
+        "trial_ending": {
+          "title": "ট্রায়াল শীঘ্রই শেষ হচ্ছে",
+          "body": "{schoolName}-এর ট্রায়াল {when} শেষ হবে। অ্যাক্সেস রাখতে পেমেন্ট মাধ্যম যোগ করুন।"
+        },
+        "payment_failed": {
+          "title": "পেমেন্ট ব্যর্থ হয়েছে",
+          "body": "{schoolName}-এর সর্বশেষ পেমেন্ট ব্যর্থ হয়েছে। পেমেন্টের তথ্য হালনাগাদ করুন।"
+        },
+        "invoice_ready": {
+          "title": "চালান প্রস্তুত",
+          "body": "{schoolName}-এর একটি নতুন চালান দেখার জন্য প্রস্তুত।"
+        }
+      },
+      "marketplace": {
+        "sale": {
+          "title": "আপনার একটি বিক্রি হয়েছে",
+          "body": "{buyerName} \"{listingName}\" কিনেছেন।"
+        },
+        "listing_approved": {
+          "title": "তালিকা অনুমোদিত হয়েছে",
+          "body": "\"{listingName}\" অনুমোদিত হয়ে এখন প্রকাশিত হয়েছে।"
+        },
+        "changes_requested": {
+          "title": "আপনার তালিকায় পরিবর্তন চাওয়া হয়েছে",
+          "body": "\"{listingName}\" প্রকাশ করার আগে পরিবর্তন প্রয়োজন।"
+        },
+        "rejected": {
+          "title": "তালিকা প্রত্যাখ্যাত হয়েছে",
+          "body": "\"{listingName}\" প্রত্যাখ্যান করা হয়েছে।"
+        },
+        "payout_paid": {
+          "title": "পাওনা পরিশোধ করা হয়েছে",
+          "body": "আপনার {amount} পরিমাণ পাওনা পাঠানো হয়েছে।"
+        },
+        "refund_issued": {
+          "title": "রিফান্ড দেওয়া হয়েছে",
+          "body": "{orderId} অর্ডারের জন্য রিফান্ড দেওয়া হয়েছে।"
+        }
+      },
+      "kyc": {
+        "approved": {
+          "title": "যাচাই অনুমোদিত হয়েছে",
+          "body": "আপনার বিক্রেতা যাচাই (KYC) অনুমোদিত হয়েছে।"
+        },
+        "rejected": {
+          "title": "যাচাই প্রত্যাখ্যাত হয়েছে",
+          "body": "আপনার বিক্রেতা যাচাই (KYC) প্রত্যাখ্যান করা হয়েছে।"
+        }
+      },
+      "hiring": {
+        "application_received": {
+          "title": "নতুন আবেদন এসেছে",
+          "body": "{candidateName} {roleName} পদে আবেদন করেছেন।"
+        },
+        "interview_scheduled": {
+          "title": "সাক্ষাৎকার নির্ধারিত হয়েছে",
+          "body": "{roleName}-এর জন্য {when} সাক্ষাৎকার নির্ধারিত হয়েছে।"
+        },
+        "offer_made": {
+          "title": "আপনি একটি প্রস্তাব পেয়েছেন",
+          "body": "{schoolName} আপনাকে {roleName} পদে প্রস্তাব দিয়েছে।"
+        }
+      },
+      "message": {
+        "mention": {
+          "title": "আপনাকে উল্লেখ করা হয়েছে",
+          "body": "{senderName} {channelName}-এ আপনাকে উল্লেখ করেছেন।"
+        },
+        "dm": {
+          "title": "নতুন বার্তা",
+          "body": "{senderName} আপনাকে একটি বার্তা পাঠিয়েছেন।"
+        }
+      },
+      "announcement": {
+        "published": {
+          "title": "নতুন ঘোষণা",
+          "body": "{publisherName} প্রকাশ করেছেন: {announcementTitle}।"
+        }
+      },
+      "platform": {
+        "broadcast": {
+          "title": "{broadcastTitle}",
+          "body": "{broadcastBody}"
+        }
+      },
+      "support": {
+        "grant_requested": {
+          "title": "সাপোর্ট অ্যাক্সেস অনুরোধ করা হয়েছে",
+          "body": "Acadigma সাপোর্ট {schoolName}-এ সাময়িক অ্যাক্সেস অনুরোধ করেছে।"
+        },
+        "granted": {
+          "title": "সাপোর্ট অ্যাক্সেস অনুমোদিত হয়েছে",
+          "body": "{schoolName}-এ ২৪ ঘণ্টার জন্য সাময়িক সাপোর্ট অ্যাক্সেস অনুমোদিত হয়েছে।"
+        },
+        "expired": {
+          "title": "সাপোর্ট অ্যাক্সেসের মেয়াদ শেষ",
+          "body": "{schoolName}-এ সাময়িক সাপোর্ট অ্যাক্সেসের মেয়াদ শেষ হয়েছে।"
+        }
+      }
+    }
   }
 }

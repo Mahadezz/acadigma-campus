@@ -8,7 +8,9 @@
     ".": "./src/index.ts",
     "./errors": "./src/errors.ts",
     "./result": "./src/result.ts",
-    "./common": "./src/common.ts"
+    "./common": "./src/common.ts",
+    "./settings": "./src/settings.ts",
+    "./notifications": "./src/notifications.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
