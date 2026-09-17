@@ -72,17 +72,16 @@ Outputs consumed by later jobs: the store cache key, and a `changed` matrix (`ap
 
 ### 2.3 `db` → **`CI / db`**
 
-The authorization gate. Needs the Supabase dev branch.
+The authorization gate. Runs against a disposable **Postgres 17 service container**, not the Supabase dev branch — branching needs the Supabase Pro plan, which is deferred until launch (D-20).
 
-1. `pnpm supabase link --project-ref $SUPABASE_PROJECT_REF`.
-2. **Migration dry-run:** verify every file in `supabase/migrations` is new-only relative to the applied head (no edits to already-applied migrations — forward-only is checked mechanically, not trusted). Fail with the offending filename.
-3. `pnpm supabase db push` **against the dev branch** (`--linked` with the branch selected). Never production; the job asserts the resolved ref is not the production ref before pushing.
-4. `pnpm db:seed` — deterministic synthetic seed.
-5. `psql -f supabase/tests/coverage.sql` — **fails if any table with a `workspace_id` column has `relrowsecurity = false`, has no `supabase/tests/rls/<table>.sql` (the bootstrap suite `01_app_helpers` / `02_tenant_isolation` / `03_role_escalation` counts for the tables it already names), or is missing the audit trigger.** Prints the offending table names.
-6. `pnpm db:test` — every pgTAP file. TAP output parsed into a Markdown table (table · isolation assertions · escalation assertions · result) appended to `$GITHUB_STEP_SUMMARY`.
-7. Emits the dev-branch connection details and the resulting migration head as job outputs for `unit` and `e2e`.
+1. **Migration append-only check** (PRs only): `scripts/check-migrations-append-only.mjs` verifies every file in `supabase/migrations` is new-only relative to `origin/<base-ref>` (no edits to already-applied migrations — forward-only is checked mechanically, not trusted). Fails with the offending filename.
+2. pgTAP is installed **inside the service container** (`apt-get install postgresql-17-pgtap` against the official `postgres:17` image); `psql` and `pg_prove` (`libtap-parser-sourcehandler-pgtap-perl`) are installed on the runner.
+3. `supabase/ci/bootstrap.sql` creates the Supabase-shaped roles and schemas the migrations expect.
+4. Every file in `supabase/migrations/*.sql` is applied in sorted order with `psql`.
+5. **RLS coverage:** if `supabase/tests/coverage.sql` exists it runs and fails the job on any gap. **It does not exist yet** — the job emits a `::warning::` instead of failing until the database agent lands it.
+6. `pg_prove --verbose --ext .sql supabase/tests/*.sql`; the TAP output is tee'd to `pgtap.tap`, tailed into `$GITHUB_STEP_SUMMARY`, and uploaded as the `pgtap` artifact (14 days).
 
-Fails on: any pgTAP assertion failure, any coverage gap, an edited historical migration, or a push error. Concurrency-limited to 1 across the repo (`group: supabase-dev`) because there is one shared dev branch — parallel pushes are the only way this job can lie.
+Fails on: an edited historical migration, or any pgTAP assertion failure. Coverage gaps only warn until `supabase/tests/coverage.sql` exists. No shared-resource concurrency lock is needed — every run gets its own throwaway container.
 
 ### 2.4 `unit` → **`CI / unit`**
 
@@ -127,7 +126,7 @@ Skipped on draft PRs. Needs `build` and `db`.
 
 1. Wait for the Vercel preview deployment for this commit, or start the built app locally with `pnpm start` — preview is preferred because it exercises the real edge/runtime path. `E2E_BASE_URL` is set from whichever was used and is recorded in the summary.
 2. `pnpm exec playwright install --with-deps chromium` (cached).
-3. Run `auth.setup.ts`, then both projects — **`mobile-360` (360×800) and `desktop-1280` (1280×800)** — sharded across 4 runners, merged with `playwright merge-reports`.
+3. Run both projects — **`phone` (360×800) and `desktop` (1280×800)** — against the single spec file (`e2e/smoke.spec.ts`). No sharding, no `playwright merge-reports` step.
 4. `@axe-core/playwright` runs inside the journeys. **Serious and critical violations fail the job**; moderate/minor are attached.
 5. Security-header assertions run here too (CSP, HSTS, `X-Content-Type-Options`, `Referrer-Policy`) — they are only observable against a real response.
 6. Artifacts: `playwright-report` (HTML, merged, 30 days), traces and videos for failures only.
@@ -164,11 +163,12 @@ Aggregates the job summaries into one PR comment (updated in place, never append
 These exact names go in the branch protection rule. They are contract — renaming a job silently disables its gate, so a rename is a reviewed change in this document too.
 
 ```
+CI / guard
 CI / lint
 CI / typecheck
+CI / db
 CI / unit
 CI / contracts
-CI / db
 CI / build
 CI / security
 CI / e2e
@@ -231,14 +231,13 @@ Never cache anything derived from a secret or from database content. Caches rest
 
 ---
 
-## 6. Previews and the Supabase dev branch
+## 6. Previews and the Supabase project
 
-- Vercel builds a preview per PR commit, with preview env vars pointing at the **Supabase dev branch** (ARCHITECTURE §8). There is no per-PR database: the machine has no Docker (D-12 context) and Supabase branches are a shared resource, so one dev branch is the pragmatic answer.
-- `CI / db` applies the PR's migrations to that branch before `e2e` runs, so the preview and the tests see the PR's schema.
-- **The consequence to respect:** the dev branch's schema is whichever PR pushed last. The `supabase-dev` concurrency group serialises pushes, and `db` re-applies from the full migration list rather than assuming state, so a run is self-consistent. Two PRs with conflicting migrations will collide — that is intentional and visible, not silent.
-- The dev branch is disposable: `pnpm supabase branches reset dev`, re-apply, re-seed. It holds no real data and never will.
-- `preview-db.yml` on PR close removes the PR's seeded test workspaces so the branch does not accumulate junk.
-- If the branch drifts badly, resetting it is the fix — not a hand-edit.
+- There is no Supabase dev branch yet: branching needs the Pro plan, and until Release 1 launches `acadigma-suite` is deliberately both dev and prod (D-20). The dev machine also has no Docker, so there is no per-PR local database either.
+- Vercel builds a preview per PR commit. Where a preview needs data, it points at the same production Supabase project **read-only** — previews never seed, migrate, or otherwise write against it.
+- `CI / db` never touches that project: a PR's migrations are applied and pgTAP-tested against a disposable Postgres 17 service container (§2.3), not the shared project. Only the `push` job in `db.yml`, triggered by a `push` to `main`, applies migrations to production; previews see the new schema once that lands.
+- Seed data on the shared project is marked demo and is wiped before launch.
+- At launch: upgrade to Supabase Pro (backups, PITR, branching) and switch previews to real per-PR branches — tracked as a `db.yml` config change only (D-20).
 
 ---
 

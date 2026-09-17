@@ -10,21 +10,56 @@ Documents marked **binding** are contracts. Deviating from one requires a decisi
 
 ## product/ — what we are building and why
 
-| File                                                         | One line                                                                                                                                     |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`PRD.md`](product/PRD.md)                                   | The product requirements: who it is for, what ships in v1, the non-functional requirements, and what success looks like.                     |
-| [`PRODUCT-DECISIONS.md`](product/PRODUCT-DECISIONS.md)       | **Binding.** Every product ambiguity from the prototype resolved — one answer per question, with the reasoning; owner-made decisions marked. |
-| [`FUTURE.md`](product/FUTURE.md)                             | Explicitly deferred: what is out of scope for v1, what would trigger it, and what v1 already prepares for it.                                |
-| [`GLOSSARY-EN-BN.md`](product/GLOSSARY-EN-BN.md)             | **Binding for UI copy.** English ↔ Bengali domain vocabulary; add a term here before using it in feature code, PDFs or notifications.        |
-| [`research/COMPETITORS.md`](product/research/COMPETITORS.md) | Competitive landscape for Bangladeshi school software, and where Campus differs.                                                             |
+| File                                                   | One line                                                                                                                                     |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`PRD.md`](product/PRD.md)                             | The product requirements: who it is for, what ships in v1, the non-functional requirements, and what success looks like.                     |
+| [`PRODUCT-DECISIONS.md`](product/PRODUCT-DECISIONS.md) | **Binding.** Every product ambiguity from the prototype resolved — one answer per question, with the reasoning; owner-made decisions marked. |
+| [`FUTURE.md`](product/FUTURE.md)                       | Explicitly deferred: what is out of scope for v1, what would trigger it, and what v1 already prepares for it.                                |
+| [`GLOSSARY-EN-BN.md`](product/GLOSSARY-EN-BN.md)       | **Binding for UI copy.** English ↔ Bengali domain vocabulary; add a term here before using it in feature code, PDFs or notifications.        |
+| [`OWNER-QUESTIONS.md`](product/OWNER-QUESTIONS.md)     | Batched, non-blocking questions for the owner, each with the default the code assumes until answered.                                        |
+| [`COMPLIANCE-PDPA.md`](product/COMPLIANCE-PDPA.md)     | Draft data-protection compliance plan for Bangladesh's PDPA 2026 — internal working document, for lawyer review, not legal advice.           |
+
+### product/legal/ — draft legal documents (not legal advice)
+
+| File                                                               | One line                                                                                |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| [`DPA-DRAFT.md`](product/legal/DPA-DRAFT.md)                       | Draft Data Processing Agreement — for lawyer review, not legal advice, not for use yet. |
+| [`PRIVACY-POLICY-DRAFT.md`](product/legal/PRIVACY-POLICY-DRAFT.md) | Draft privacy policy — for lawyer review, not legal advice, not for publication.        |
+
+### product/research/ — market and competitive research
+
+| File                                                              | One line                                                                                                      |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [`COMPETITORS.md`](product/research/COMPETITORS.md)               | Competitive landscape for Bangladeshi school software, and where Campus differs.                              |
+| [`GO-TO-MARKET.md`](product/research/GO-TO-MARKET.md)             | Go-to-market, outreach and growth playbook — the operating plan, reviewed monthly.                            |
+| [`OUTREACH-TEMPLATES.md`](product/research/OUTREACH-TEMPLATES.md) | Bengali and English outreach scripts, companion to `GO-TO-MARKET.md`.                                         |
+| [`PRICING-AND-SALES.md`](product/research/PRICING-AND-SALES.md)   | How school software is actually priced, sold and paid for in Bangladesh, and what that implies for our model. |
+| [`SOURCES.md`](product/research/SOURCES.md)                       | Every URL behind `COMPETITORS.md`, with the date each was accessed.                                           |
+| [`TEACHER-SIDE.md`](product/research/TEACHER-SIDE.md)             | Research from the teacher's side of the product: what they want, what they will pay for.                      |
+| [`VOICE-OF-CUSTOMER.md`](product/research/VOICE-OF-CUSTOMER.md)   | What teachers, parents and admins actually say about school apps, from app-store reviews and public forums.   |
+| `MARKET-STRATEGY.md`                                              | _In progress._                                                                                                |
+| `DECISION-CHANGES.md`                                             | _In progress._                                                                                                |
+
+#### product/research/debate/ — adversarial review of the research and plan
+
+| File                                                                           | One line                                                                                                                                                |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`01-school-owner.md`](product/research/debate/01-school-owner.md)             | Adversarial review from a Bangla-medium private-school owner persona.                                                                                   |
+| [`02-teacher.md`](product/research/debate/02-teacher.md)                       | Adversarial review from a working teacher persona.                                                                                                      |
+| [`03-competitor-pm.md`](product/research/debate/03-competitor-pm.md)           | Adversarial review from an incumbent school-ERP vendor's product head persona.                                                                          |
+| [`04-cfo.md`](product/research/debate/04-cfo.md)                               | Adversarial review from a fractional CFO / seed-investor persona.                                                                                       |
+| [`05-regulator-security.md`](product/research/debate/05-regulator-security.md) | Adversarial review from a data-protection lawyer / security-engineer persona.                                                                           |
+| [`SYNTHESIS.md`](product/research/debate/SYNTHESIS.md)                         | Adjudication of all five adversarial reviews: a verdict, evidence strength and reasoning per contested claim, ruling on the critic-vs-critic conflicts. |
 
 ## architecture/ — how the system is built
 
-| File                                                | One line                                                                                                                                                                  |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`ARCHITECTURE.md`](architecture/ARCHITECTURE.md)   | **Binding.** The contract for everything in this repo: stack, tenancy, RLS pattern, server layer, client architecture, environments, quality gates, threat model summary. |
-| [`DESIGN-SYSTEM.md`](architecture/DESIGN-SYSTEM.md) | **Binding.** How the app looks, reads and responds: tokens, typography, spacing, colour, component inventory, phone-first layout rules.                                   |
-| `DATA-MODEL.md`                                     | **Binding.** Every table, column, enum, index, relation and RLS policy, kept in step with `supabase/migrations`. _To be written._                                         |
+| File                                                                  | One line                                                                                                                                                                  |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`ARCHITECTURE.md`](architecture/ARCHITECTURE.md)                     | **Binding.** The contract for everything in this repo: stack, tenancy, RLS pattern, server layer, client architecture, environments, quality gates, threat model summary. |
+| [`DESIGN-SYSTEM.md`](architecture/DESIGN-SYSTEM.md)                   | **Binding.** How the app looks, reads and responds: tokens, typography, spacing, colour, component inventory, phone-first layout rules.                                   |
+| [`DESIGN-SYSTEM-ADDENDUM.md`](architecture/DESIGN-SYSTEM-ADDENDUM.md) | Proposed additions to `DESIGN-SYSTEM.md` from an external article review, pending merge decisions.                                                                        |
+| [`MIGRATION-FROM-BASE44.md`](architecture/MIGRATION-FROM-BASE44.md)   | What happens to each of the 64 prototype entities, and how untrusted rows are reconciled before import.                                                                   |
+| `DATA-MODEL.md`                                                       | **Binding.** Every table, column, enum, index, relation and RLS policy, kept in step with `supabase/migrations`. _To be written._                                         |
 
 ## features/ — one spec per feature, five areas
 
@@ -43,19 +78,24 @@ A spec describes _what_; `ARCHITECTURE.md` fixes _how_. Each spec breaks into Pa
 | [`F-ID-07-notifications.md`](features/01-identity/F-ID-07-notifications.md)                           | Notification types, delivery, read state and preferences.                                    |
 | [`F-ID-08-platform-console-shell.md`](features/01-identity/F-ID-08-platform-console-shell.md)         | The `/platform` shell for `is_platform_admin` accounts and the queues it hosts.              |
 | [`F-ID-09-audit-viewer.md`](features/01-identity/F-ID-09-audit-viewer.md)                             | Reading the append-only audit trail: who changed what, when, and under which correlation id. |
+| [`README.md`](features/01-identity/README.md)                                                         | Area overview: how the nine identity features fit together.                                  |
 
 ### 02-academics/ — the school's core records
 
-| File                                                                                                   | One line                                                                            |
-| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| [`F-AC-01-academic-structure.md`](features/02-academics/F-AC-01-academic-structure.md)                 | Years, terms, grades, sections and subjects — the spine everything else hangs from. |
-| [`F-AC-02-students-and-admission.md`](features/02-academics/F-AC-02-students-and-admission.md)         | Admission, student records, guardians, enrollment and parent access.                |
-| [`F-AC-03-attendance.md`](features/02-academics/F-AC-03-attendance.md)                                 | Daily student attendance, the offline queue, percentages and alerts.                |
-| [`F-AC-04-staff-attendance-and-leave.md`](features/02-academics/F-AC-04-staff-attendance-and-leave.md) | Staff attendance, leave requests and approvals.                                     |
-| [`F-AC-05-timetable.md`](features/02-academics/F-AC-05-timetable.md)                                   | Bell schedule, slots, assignment, clash detection and exports.                      |
-| [`F-AC-06-exams-and-marks.md`](features/02-academics/F-AC-06-exams-and-marks.md)                       | Exams, mark entry, grading scales, GPA, ranking and results publication.            |
-| [`F-AC-07-assignments-and-homework.md`](features/02-academics/F-AC-07-assignments-and-homework.md)     | Setting, submitting and marking assignments and homework.                           |
-| [`F-AC-08-behaviour.md`](features/02-academics/F-AC-08-behaviour.md)                                   | Behaviour logs, points and conduct records.                                         |
+| File                                                                                                   | One line                                                                                                         |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| [`F-AC-01-academic-structure.md`](features/02-academics/F-AC-01-academic-structure.md)                 | Years, terms, grades, sections and subjects — the spine everything else hangs from.                              |
+| [`F-AC-02-students-and-admission.md`](features/02-academics/F-AC-02-students-and-admission.md)         | Admission, student records, guardians, enrollment and parent access.                                             |
+| [`F-AC-03-attendance.md`](features/02-academics/F-AC-03-attendance.md)                                 | Daily student attendance, the offline queue, percentages and alerts.                                             |
+| [`F-AC-04-staff-attendance-and-leave.md`](features/02-academics/F-AC-04-staff-attendance-and-leave.md) | Staff attendance, leave requests and approvals.                                                                  |
+| [`F-AC-05-timetable.md`](features/02-academics/F-AC-05-timetable.md)                                   | Bell schedule, slots, assignment, clash detection and exports.                                                   |
+| [`F-AC-06-exams-and-marks.md`](features/02-academics/F-AC-06-exams-and-marks.md)                       | Exams, mark entry, grading scales, GPA, ranking and results publication.                                         |
+| [`F-AC-07-assignments-and-homework.md`](features/02-academics/F-AC-07-assignments-and-homework.md)     | Setting, submitting and marking assignments and homework.                                                        |
+| [`F-AC-08-behaviour.md`](features/02-academics/F-AC-08-behaviour.md)                                   | Behaviour logs, points and conduct records.                                                                      |
+| [`F-AC-09-student-analytics-and-risk.md`](features/02-academics/F-AC-09-student-analytics-and-risk.md) | Deterministic, explainable risk scoring from attendance, marks, behaviour and missing work.                      |
+| [`F-AC-10-parent-portal.md`](features/02-academics/F-AC-10-parent-portal.md)                           | The `/family` parent portal shell, child switcher and guardian-scoped read views.                                |
+| [`F-AC-11-calendar.md`](features/02-academics/F-AC-11-calendar.md)                                     | Holidays, events, exam dates and working-day overrides — the day-level truth attendance and timetable depend on. |
+| [`README.md`](features/02-academics/README.md)                                                         | Area overview: how the eleven academic-core features fit together.                                               |
 
 ### 03-teaching/ — what teachers actually do each day
 
@@ -68,18 +108,21 @@ A spec describes _what_; `ARCHITECTURE.md` fixes _how_. Each spec breaks into Pa
 | [`F-TE-05-resources-and-library.md`](features/03-teaching/F-TE-05-resources-and-library.md) | Teaching resources, the school library, and private file handling.                 |
 | [`F-TE-06-workload.md`](features/03-teaching/F-TE-06-workload.md)                           | Teacher workload: scheduled periods against what was actually logged.              |
 | [`F-TE-07-analytics-dashboards.md`](features/03-teaching/F-TE-07-analytics-dashboards.md)   | Analytics dashboards over teaching, attendance and results data.                   |
+| [`README.md`](features/03-teaching/README.md)                                               | Area overview: how the seven teaching-intelligence features fit together.          |
 
 ### 04-commerce/ — money, in and out
 
-| File                                                                                                            | One line                                                                                   |
-| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| [`F-CM-01-payments-core.md`](features/04-commerce/F-CM-01-payments-core.md)                                     | The `PaymentProvider` interface, SSLCommerz, orders, IPN validation, refunds and receipts. |
-| [`F-CM-02-seller-onboarding-and-kyc.md`](features/04-commerce/F-CM-02-seller-onboarding-and-kyc.md)             | Becoming a seller, identity verification, and payout methods.                              |
-| [`F-CM-03-listings-and-moderation.md`](features/04-commerce/F-CM-03-listings-and-moderation.md)                 | Creating listings, their files, and the platform review queue that gates publication.      |
-| [`F-CM-04-marketplace-browse-and-purchase.md`](features/04-commerce/F-CM-04-marketplace-browse-and-purchase.md) | Browsing, purchase, entitlement, and delivery of the purchased file.                       |
-| [`F-CM-05-earnings-and-payouts.md`](features/04-commerce/F-CM-05-earnings-and-payouts.md)                       | Seller earnings, the 7-day hold, adjustments and the monthly payout run.                   |
-| [`F-CM-06-plans-and-subscriptions.md`](features/04-commerce/F-CM-06-plans-and-subscriptions.md)                 | Plans, limits, trials, invoices, renewals and dunning.                                     |
-| [`F-CM-07-school-billing-and-expenses.md`](features/04-commerce/F-CM-07-school-billing-and-expenses.md)         | The school billing hub, AI credit packs, and the expense ledger.                           |
+| File                                                                                                            | One line                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [`F-CM-01-payments-core.md`](features/04-commerce/F-CM-01-payments-core.md)                                     | The `PaymentProvider` interface, SSLCommerz, orders, IPN validation, refunds and receipts.                       |
+| [`F-CM-02-seller-onboarding-and-kyc.md`](features/04-commerce/F-CM-02-seller-onboarding-and-kyc.md)             | Becoming a seller, identity verification, and payout methods.                                                    |
+| [`F-CM-03-listings-and-moderation.md`](features/04-commerce/F-CM-03-listings-and-moderation.md)                 | Creating listings, their files, and the platform review queue that gates publication.                            |
+| [`F-CM-04-marketplace-browse-and-purchase.md`](features/04-commerce/F-CM-04-marketplace-browse-and-purchase.md) | Browsing, purchase, entitlement, and delivery of the purchased file.                                             |
+| [`F-CM-05-earnings-and-payouts.md`](features/04-commerce/F-CM-05-earnings-and-payouts.md)                       | Seller earnings, the 7-day hold, adjustments and the monthly payout run.                                         |
+| [`F-CM-06-plans-and-subscriptions.md`](features/04-commerce/F-CM-06-plans-and-subscriptions.md)                 | Plans, limits, trials, invoices, renewals and dunning.                                                           |
+| [`F-CM-07-school-billing-and-expenses.md`](features/04-commerce/F-CM-07-school-billing-and-expenses.md)         | The school billing hub, AI credit packs, and the expense ledger.                                                 |
+| [`F-CM-08-fee-collection.md`](features/04-commerce/F-CM-08-fee-collection.md)                                   | Student fee collection where the school is merchant of record; Acadigma facilitates but never touches the money. |
+| [`README.md`](features/04-commerce/README.md)                                                                   | Area overview: how the eight commerce features fit together.                                                     |
 
 ### 05-operations/ — running the school
 
@@ -106,6 +149,7 @@ End-to-end journeys crossing several features. Read the workflow before building
 
 | File                                                                                                   | One line                                                                                                            |
 | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| [`README.md`](workflows/README.md)                                                                     | What a workflow document is, how it derives from feature specs, and the source-of-truth order when they disagree.   |
 | [`WF-01-school-onboarding.md`](workflows/WF-01-school-onboarding.md)                                   | Register → workspace → staff → academic structure → first timetable.                                                |
 | [`WF-02-student-admission-to-parent-access.md`](workflows/WF-02-student-admission-to-parent-access.md) | Admission draft → enrolment → guardian invite → parent sees the child.                                              |
 | [`WF-03-daily-attendance.md`](workflows/WF-03-daily-attendance.md)                                     | Roll-call in ≤ 60 s → offline → alert → parent → register → print.                                                  |
@@ -122,15 +166,17 @@ End-to-end journeys crossing several features. Read the workflow before building
 
 ## engineering/ — how we work
 
-| File                                               | One line                                                                                                                                                                                                          |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`HANDBOOK.md`](engineering/HANDBOOK.md)           | Branches, commits, PR flow, the Definition of Done, feature flags, local setup on Windows, environment variables, code conventions, folder ownership, and how to write a decision.                                |
-| [`TESTING.md`](engineering/TESTING.md)             | The test pyramid for this stack: Vitest, pgTAP RLS isolation and escalation, Playwright at both viewports with axe, contract parity, performance budgets, test reports and the flaky-test policy.                 |
-| [`SECURITY.md`](engineering/SECURITY.md)           | STRIDE threat model per surface, the six critical prototype findings mapped to control and proving test, secure coding rules, auth hardening, dependency policy, incident response and the security testing plan. |
-| [`CI.md`](engineering/CI.md)                       | The exact pipeline stages and gates, the required status check names for branch protection, secrets, caching, how previews get a database, and the weekly jobs.                                                   |
-| [`RELEASES.md`](engineering/RELEASES.md)           | Changesets, semver (`v0.x` now, `v1.0.0` at Release 1), changelog, tags, GitHub Releases, Vercel and Supabase promotion, the rollback playbook and the release checklist.                                         |
-| [`OBSERVABILITY.md`](engineering/OBSERVABILITY.md) | Log fields and the PII rules, Sentry setup and scrubbing, the health endpoint, uptime monitoring, alert rules, and what to do when paged.                                                                         |
-| [`I18N.md`](engineering/I18N.md)                   | How English and Bengali UI ship: message catalogues, Bengali-capable fonts in UI and PDFs, `Asia/Dhaka` time and BDT formatting.                                                                                  |
+| File                                                               | One line                                                                                                                                                                                                          |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`HANDBOOK.md`](engineering/HANDBOOK.md)                           | Branches, commits, PR flow, the Definition of Done, feature flags, local setup on Windows, environment variables, code conventions, folder ownership, and how to write a decision.                                |
+| [`TESTING.md`](engineering/TESTING.md)                             | The test pyramid for this stack: Vitest, pgTAP RLS isolation and escalation, Playwright at both viewports with axe, contract parity, performance budgets, test reports and the flaky-test policy.                 |
+| [`SECURITY.md`](engineering/SECURITY.md)                           | STRIDE threat model per surface, the six critical prototype findings mapped to control and proving test, secure coding rules, auth hardening, dependency policy, incident response and the security testing plan. |
+| [`CI.md`](engineering/CI.md)                                       | The exact pipeline stages and gates, the required status check names for branch protection, secrets, caching, how previews get a database, and the weekly jobs.                                                   |
+| [`RELEASES.md`](engineering/RELEASES.md)                           | Changesets, semver (`v0.x` now, `v1.0.0` at Release 1), changelog, tags, GitHub Releases, Vercel and Supabase promotion, the rollback playbook and the release checklist.                                         |
+| [`OBSERVABILITY.md`](engineering/OBSERVABILITY.md)                 | Log fields and the PII rules, Sentry setup and scrubbing, the health endpoint, uptime monitoring, alert rules, and what to do when paged.                                                                         |
+| [`I18N.md`](engineering/I18N.md)                                   | How English and Bengali UI ship: message catalogues, Bengali-capable fonts in UI and PDFs, `Asia/Dhaka` time and BDT formatting.                                                                                  |
+| [`CLAUDE-CODE-PRACTICES.md`](engineering/CLAUDE-CODE-PRACTICES.md) | Token-efficiency and session-hygiene practices for Claude Code, proposed from an external article review.                                                                                                         |
+| [`GRAPH-ENGINEERING.md`](engineering/GRAPH-ENGINEERING.md)         | The repo as a queryable knowledge graph: how it is built and what it is used for.                                                                                                                                 |
 
 ## decisions/ — the reasoning, in order
 
@@ -140,9 +186,9 @@ End-to-end journeys crossing several features. Read the workflow before building
 
 ## plan/ — the order of work
 
-| File         | One line                                                                                                                           |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `ROADMAP.md` | The build order: numbered chunks, which area each belongs to, dependencies, and what Release 1 means. _To be written by the lead._ |
+| File                            | One line                                                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`ROADMAP.md`](plan/ROADMAP.md) | The build order: milestones merged from the five feature-area READMEs, what must be true before each counts as done, and what Release 1 means. |
 
 ## reference/ — inherited and external material, read-only
 
@@ -158,24 +204,31 @@ A snapshot of what the prototype was and what tooling we surveyed. These files a
 | [`base44-inventory/05-operations.md`](reference/base44-inventory/05-operations.md)                       | Prototype inventory: messaging, hiring, cover, printing and operations screens.                                                                          |
 | [`TOOLING-AND-REFERENCES.md`](reference/TOOLING-AND-REFERENCES.md)                                       | The tools, skills, registries and external references this build uses, and when to reach for each.                                                       |
 | [`EXTERNAL-ASSETS.md`](reference/EXTERNAL-ASSETS.md)                                                     | Triage of external material: what was adopted, what was ignored, and why. Its §3 login-security checklist is folded into `engineering/SECURITY.md` §5.7. |
+| [`EXTERNAL-ARTICLES.md`](reference/EXTERNAL-ARTICLES.md)                                                 | What we read and what we took from six articles supplied by the owner; raw captures live in `articles/`.                                                 |
+
+#### reference/articles/ — raw captures of the external articles
+
+| File                                                                                                                      | One line                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`23-things-that-stop-claude-eating-your-tokens.md`](reference/articles/23-things-that-stop-claude-eating-your-tokens.md) | Source for `engineering/CLAUDE-CODE-PRACTICES.md`.                           |
+| [`42-css-motion-recipes.md`](reference/articles/42-css-motion-recipes.md)                                                 | CSS motion recipes reviewed for the design system.                           |
+| [`ai-design-system.md`](reference/articles/ai-design-system.md)                                                           | "How to quit AI slop" — source for `architecture/DESIGN-SYSTEM-ADDENDUM.md`. |
+| [`graph-engineering-claude-code.md`](reference/articles/graph-engineering-claude-code.md)                                 | Source for `engineering/GRAPH-ENGINEERING.md`.                               |
+| [`resource-vault-gate.md`](reference/articles/resource-vault-gate.md)                                                     | Capture of the landing page behind two of the reviewed article URLs.         |
 
 ## test-reports/ — evidence per shipped part
 
-| File                                        | One line                                                                                                                                                               |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`_TEMPLATE.md`](test-reports/_TEMPLATE.md) | The report every feature part ships with: scope, environment, unit and database and e2e result tables, coverage, performance, security checks, known issues, sign-off. |
-| `<feature>-part-<n>.md`                     | One per shipped part, committed in the PR that ships it, with numbers copied from real runs.                                                                           |
-| `security-<date>.md`                        | Record of an authorized dynamic security test against a preview deployment.                                                                                            |
-| `restore-drill-<date>.md`                   | Record of a quarterly backup restore drill: time to restore, data loss window, what broke.                                                                             |
+| File                                                                | One line                                                                                                                                                               |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`_TEMPLATE.md`](test-reports/_TEMPLATE.md)                         | The report every feature part ships with: scope, environment, unit and database and e2e result tables, coverage, performance, security checks, known issues, sign-off. |
+| [`2026-09-17-foundation.md`](test-reports/2026-09-17-foundation.md) | Test report for `chore/foundation`: monorepo toolchain, foundation migrations 0001–0004, packages, app shell, CI workflows.                                            |
+| `<feature>-part-<n>.md`                                             | One per shipped part, committed in the PR that ships it, with numbers copied from real runs.                                                                           |
+| `security-<date>.md`                                                | Record of an authorized dynamic security test against a preview deployment.                                                                                            |
+| `restore-drill-<date>.md`                                           | Record of a quarterly backup restore drill: time to restore, data loss window, what broke.                                                                             |
 
 ## superpowers/ — historical planning artifacts
 
-Kept for provenance. Superseded by the documents above; do not build from them.
-
-| File                                                                                                                         | One line                                                                                                      |
-| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| [`specs/2026-09-15-acadigma-campus-production-design.md`](superpowers/specs/2026-09-15-acadigma-campus-production-design.md) | The earlier production design built around a Fastify API and self-hosted infrastructure — superseded by D-02. |
-| [`plans/2026-09-15-production-foundation.md`](superpowers/plans/2026-09-15-production-foundation.md)                         | The implementation plan for that design — superseded by D-02 and D-11; its useful parts were ported.          |
+Archive. The earlier Fastify/self-hosted production design and its implementation plan, superseded by D-02 and D-11; kept for provenance, do not build from them.
 
 ---
 
