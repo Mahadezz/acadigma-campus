@@ -11,8 +11,18 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 # Supply-chain hardening: refuse transitive deps pulled from untrusted
-# sources, wait 7 days before installing newly published versions, and never
+# sources, wait 2 days before installing newly published versions (7 broke exact pins of fresh releases — D-49), and never
 # let a package update silently downgrade these settings.
 blockExoticSubdeps: true
-minimumReleaseAge: 10080
+minimumReleaseAge: 2880
 trustPolicy: no-downgrade
+
+# Security patches bypass the release-age cooldown (advisories on these two, 2026-09-17).
+minimumReleaseAgeExclude:
+  - postcss
+  - browserslist
+
+# Security overrides (advisories 2026-09-17): force patched versions across the tree.
+overrides:
+  postcss: 8.5.28
+  browserslist: 4.29.0
