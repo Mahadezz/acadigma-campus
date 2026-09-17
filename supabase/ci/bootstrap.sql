@@ -15,6 +15,41 @@ create schema if not exists extensions;
 -- has to exist here; the real definitions live in the managed auth service.
 create schema if not exists auth;
 
+-- Minimal shape of the table GoTrue manages. Columns cover what the pgTAP
+-- fixtures (`tests.mkuser`) insert and what app.handle_new_user() reads.
+create table if not exists auth.users (
+  instance_id          uuid,
+  id                   uuid primary key default gen_random_uuid(),
+  aud                  text,
+  role                 text,
+  email                text,
+  encrypted_password   text,
+  email_confirmed_at   timestamptz,
+  phone                text,
+  raw_app_meta_data    jsonb default '{}',
+  raw_user_meta_data   jsonb default '{}',
+  created_at           timestamptz default now(),
+  updated_at           timestamptz
+);
+
+-- Mirrors the real GoTrue/PostgREST definitions: read the GUCs PostgREST sets
+-- from the JWT on every request. The pgTAP fixtures' `tests.login()` sets
+-- `request.jwt.claims` the same way, so RLS behaves exactly as it does live.
+create or replace function auth.uid() returns uuid
+  language sql stable as $$
+  select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid;
+$$;
+
+create or replace function auth.jwt() returns jsonb
+  language sql stable as $$
+  select coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb);
+$$;
+
+create or replace function auth.role() returns text
+  language sql stable as $$
+  select nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role';
+$$;
+
 do $$
 begin
   if not exists (select from pg_roles where rolname = 'anon') then
@@ -37,3 +72,8 @@ $$;
 
 grant anon, authenticated, service_role to authenticator;
 grant usage on schema public to anon, authenticated, service_role;
+
+-- Supabase grants USAGE on `auth` (but not on its tables) to these roles so
+-- `auth.uid()`/`auth.jwt()`/`auth.role()` are callable from RLS policies.
+grant usage on schema auth to anon, authenticated, service_role;
+grant usage on schema extensions to anon, authenticated, service_role;
