@@ -14,6 +14,7 @@ import {
   isRole,
   isWorkspaceRole,
   rolesWithAction,
+  type Action,
   type Role,
 } from "./permissions"
 
@@ -106,16 +107,22 @@ describe("role shapes", () => {
     expect(can("parent", "policies.manage")).toBe(false)
   })
 
-  it("gives office staff no write action at all", () => {
+  it("gives office staff no administrative write action", () => {
+    // F-ID-03 §2 grants staff exactly one ".write" action: editing their OWN
+    // staff fields (row-scoped, enforced outside this coarse matrix — see the
+    // ACTIONS comment). Every other write/manage/create action stays denied.
+    const ownRowException: readonly Action[] = ["members.staff_fields.write"]
     const writeActions = ACTIONS.filter(
       (action) =>
-        action.endsWith(".write") ||
-        action.endsWith(".manage") ||
-        action.endsWith(".create")
+        (action.endsWith(".write") ||
+          action.endsWith(".manage") ||
+          action.endsWith(".create")) &&
+        !ownRowException.includes(action)
     )
     for (const action of writeActions) {
       expect(can("staff", action)).toBe(false)
     }
+    expect(can("staff", "members.staff_fields.write")).toBe(true)
   })
 })
 
@@ -172,6 +179,85 @@ describe("type guards", () => {
     expect(isWorkspaceRole("teacher")).toBe(true)
     expect(isWorkspaceRole("platform")).toBe(false)
     expect(isWorkspaceRole(undefined)).toBe(false)
+  })
+})
+
+describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () => {
+  // One row per F-ID-03 §2 table row, in the table's own order. If a reviewer
+  // changes the spec table, this is the one test that must change with it —
+  // and any row left out here fails the "every action has an entry" check below.
+  const TABLE: Record<Action, readonly Role[]> = {
+    "workspace.read": [
+      "owner",
+      "admin",
+      "teacher",
+      "staff",
+      "parent",
+      "platform",
+    ],
+    "workspace.settings.write": ["owner", "admin"],
+    "workspace.branding.write": ["owner", "admin"],
+    "members.read": ["owner", "admin", "teacher", "staff", "platform"],
+    "members.contact.read": ["owner", "admin", "platform"],
+    "members.invite": ["owner", "admin"],
+    "members.approve": ["owner", "admin"],
+    "members.role.write": ["owner", "admin"],
+    "members.staff_fields.write": ["owner", "admin", "teacher", "staff"],
+    "members.remove": ["owner", "admin"],
+    "members.leave": ["owner", "admin", "teacher", "staff", "parent"],
+    "workspace.ownership.transfer": ["owner"],
+    "labels.write": ["owner", "admin"],
+    "labels.assign": ["owner", "admin"],
+    "modules.visibility.write": ["owner"],
+    "workspace.archive": ["owner", "platform"],
+    "platform.workspace.suspend": ["platform"],
+    // The rest of ACTIONS predates F-ID-03 and is out of this table's scope;
+    // TypeScript still requires every key, so they are asserted against the
+    // matrix as-is (a no-op check that keeps this Record exhaustive).
+    "attendance.read": [...rolesWithAction("attendance.read")],
+    "attendance.write": [...rolesWithAction("attendance.write")],
+    "students.read": [...rolesWithAction("students.read")],
+    "students.write": [...rolesWithAction("students.write")],
+    "marks.read": [...rolesWithAction("marks.read")],
+    "marks.write": [...rolesWithAction("marks.write")],
+    "timetable.read": [...rolesWithAction("timetable.read")],
+    "timetable.manage": [...rolesWithAction("timetable.manage")],
+    "members.manage": [...rolesWithAction("members.manage")],
+    "billing.read": [...rolesWithAction("billing.read")],
+    "billing.manage": [...rolesWithAction("billing.manage")],
+    "settings.manage": [...rolesWithAction("settings.manage")],
+    "reports.read": [...rolesWithAction("reports.read")],
+    "messages.send": [...rolesWithAction("messages.send")],
+    "ai.use": [...rolesWithAction("ai.use")],
+    "listing.create": [...rolesWithAction("listing.create")],
+    "listing.review": [...rolesWithAction("listing.review")],
+    "payouts.manage": [...rolesWithAction("payouts.manage")],
+    "platform.console": [...rolesWithAction("platform.console")],
+  }
+
+  it("gives every declared action in ACTIONS an entry in this table", () => {
+    for (const action of ACTIONS) {
+      expect(TABLE).toHaveProperty(action)
+    }
+    // and no stray keys that are not real actions
+    for (const key of Object.keys(TABLE)) {
+      expect(ACTIONS).toContain(key)
+    }
+  })
+
+  it("matches PERMISSIONS exactly for every §2 action, role by role", () => {
+    for (const [action, expectedRoles] of Object.entries(TABLE) as [
+      Action,
+      readonly Role[],
+    ][]) {
+      for (const role of ROLES) {
+        const expected = expectedRoles.includes(role)
+        expect(
+          can(role, action),
+          `can(${role}, ${action}) should be ${expected}`
+        ).toBe(expected)
+      }
+    }
   })
 })
 
