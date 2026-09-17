@@ -284,10 +284,12 @@ jobs:
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: build
-          # Bare directory patterns paired with a `!` exclusion match zero files
-          # (a known actions/upload-artifact glob quirk), which uploaded no
-          # artifact at all and left lighthouse/e2e downloading a name that
-          # never existed. Explicit `/**` globs fix the match.
+          # `.next` is itself a dot-directory, and upload-artifact excludes any
+          # path with a dot-prefixed segment by default, so with
+          # include-hidden-files left at its default `false` the whole tree
+          # matched zero files and no "build" artifact was ever created —
+          # leaving lighthouse/e2e downloading a name that never existed.
+          include-hidden-files: true
           path: |
             apps/web/.next/**
             !apps/web/.next/cache/**
