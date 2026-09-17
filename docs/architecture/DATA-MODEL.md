@@ -790,13 +790,13 @@ It is a **table rather than a document** so CI can assert coverage: a test walks
 
 ### 7.6 Retention
 
-| Data                                   | Window                            | Mechanism                                                |
-| -------------------------------------- | --------------------------------- | -------------------------------------------------------- |
-| `audit_events`                         | 7 years, rolling                  | `app.purge_expired_audit_events()` monthly under pg_cron |
-| `file_access_log`, `email_log`         | 1 year                            | pg_cron purge                                            |
-| NID and birth-certificate scans        | 90 days after admission completes | `files.purge_after`                                      |
-| KYC documents                          | 2 years after the last payout     | `files.purge_after`                                      |
-| `consent_records`, `legal_acceptances` | indefinite                        | they are the evidence                                    |
+| Data                                   | Window                                                    | Mechanism                                                |
+| -------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------- |
+| `audit_events`                         | 7 years, rolling                                          | `app.purge_expired_audit_events()` monthly under pg_cron |
+| `file_access_log`, `email_log`         | 1 year                                                    | pg_cron purge                                            |
+| NID and birth-certificate scans        | 90 days after admission completes                         | `files.purge_after`                                      |
+| KYC documents                          | 180 days after the last payout (F-CM-02 §5; D-34 amended) | `files.purge_after`                                      |
+| `consent_records`, `legal_acceptances` | indefinite                                                | they are the evidence                                    |
 
 `files.purge_after` is set on upload, not discovered later by a classifier. Deleting a scan we no longer need is not housekeeping: an ID scan we still hold is a breach we have not had yet.
 

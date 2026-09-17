@@ -40,3 +40,6 @@ graphify-out/
 
 # Claude Code per-user overrides
 .claude/settings.local.json
+
+# git worktrees used by build agents
+.worktrees/

@@ -28,17 +28,17 @@ Documents marked **binding** are contracts. Deviating from one requires a decisi
 
 ### product/research/ — market and competitive research
 
-| File                                                              | One line                                                                                                      |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| [`COMPETITORS.md`](product/research/COMPETITORS.md)               | Competitive landscape for Bangladeshi school software, and where Campus differs.                              |
-| [`GO-TO-MARKET.md`](product/research/GO-TO-MARKET.md)             | Go-to-market, outreach and growth playbook — the operating plan, reviewed monthly.                            |
-| [`OUTREACH-TEMPLATES.md`](product/research/OUTREACH-TEMPLATES.md) | Bengali and English outreach scripts, companion to `GO-TO-MARKET.md`.                                         |
-| [`PRICING-AND-SALES.md`](product/research/PRICING-AND-SALES.md)   | How school software is actually priced, sold and paid for in Bangladesh, and what that implies for our model. |
-| [`SOURCES.md`](product/research/SOURCES.md)                       | Every URL behind `COMPETITORS.md`, with the date each was accessed.                                           |
-| [`TEACHER-SIDE.md`](product/research/TEACHER-SIDE.md)             | Research from the teacher's side of the product: what they want, what they will pay for.                      |
-| [`VOICE-OF-CUSTOMER.md`](product/research/VOICE-OF-CUSTOMER.md)   | What teachers, parents and admins actually say about school apps, from app-store reviews and public forums.   |
-| `MARKET-STRATEGY.md`                                              | _In progress._                                                                                                |
-| `DECISION-CHANGES.md`                                             | _In progress._                                                                                                |
+| File                                                              | One line                                                                                                                                                                                   |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`COMPETITORS.md`](product/research/COMPETITORS.md)               | Competitive landscape for Bangladeshi school software, and where Campus differs.                                                                                                           |
+| [`GO-TO-MARKET.md`](product/research/GO-TO-MARKET.md)             | Go-to-market, outreach and growth playbook — the operating plan, reviewed monthly.                                                                                                         |
+| [`OUTREACH-TEMPLATES.md`](product/research/OUTREACH-TEMPLATES.md) | Bengali and English outreach scripts, companion to `GO-TO-MARKET.md`.                                                                                                                      |
+| [`PRICING-AND-SALES.md`](product/research/PRICING-AND-SALES.md)   | How school software is actually priced, sold and paid for in Bangladesh, and what that implies for our model.                                                                              |
+| [`SOURCES.md`](product/research/SOURCES.md)                       | Every URL behind `COMPETITORS.md`, with the date each was accessed.                                                                                                                        |
+| [`TEACHER-SIDE.md`](product/research/TEACHER-SIDE.md)             | Research from the teacher's side of the product: what they want, what they will pay for.                                                                                                   |
+| [`VOICE-OF-CUSTOMER.md`](product/research/VOICE-OF-CUSTOMER.md)   | What teachers, parents and admins actually say about school apps, from app-store reviews and public forums.                                                                                |
+| [`MARKET-STRATEGY.md`](product/research/MARKET-STRATEGY.md)       | The surviving strategy after the five-critic debate: ICP order, positioning, one price list, fees/SMS/hiring/marketplace/AI stances, GTM calendar, compliance commitments, unit economics. |
+| [`DECISION-CHANGES.md`](product/research/DECISION-CHANGES.md)     | The executable change list produced by the synthesis and applied on 2026-09-17 (kept as the audit trail of what changed where).                                                            |
 
 #### product/research/debate/ — adversarial review of the research and plan
 
@@ -53,13 +53,13 @@ Documents marked **binding** are contracts. Deviating from one requires a decisi
 
 ## architecture/ — how the system is built
 
-| File                                                                  | One line                                                                                                                                                                  |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`ARCHITECTURE.md`](architecture/ARCHITECTURE.md)                     | **Binding.** The contract for everything in this repo: stack, tenancy, RLS pattern, server layer, client architecture, environments, quality gates, threat model summary. |
-| [`DESIGN-SYSTEM.md`](architecture/DESIGN-SYSTEM.md)                   | **Binding.** How the app looks, reads and responds: tokens, typography, spacing, colour, component inventory, phone-first layout rules.                                   |
-| [`DESIGN-SYSTEM-ADDENDUM.md`](architecture/DESIGN-SYSTEM-ADDENDUM.md) | Proposed additions to `DESIGN-SYSTEM.md` from an external article review, pending merge decisions.                                                                        |
-| [`MIGRATION-FROM-BASE44.md`](architecture/MIGRATION-FROM-BASE44.md)   | What happens to each of the 64 prototype entities, and how untrusted rows are reconciled before import.                                                                   |
-| `DATA-MODEL.md`                                                       | **Binding.** Every table, column, enum, index, relation and RLS policy, kept in step with `supabase/migrations`. _To be written._                                         |
+| File                                                                  | One line                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`ARCHITECTURE.md`](architecture/ARCHITECTURE.md)                     | **Binding.** The contract for everything in this repo: stack, tenancy, RLS pattern, server layer, client architecture, environments, quality gates, threat model summary.                                                  |
+| [`DESIGN-SYSTEM.md`](architecture/DESIGN-SYSTEM.md)                   | **Binding.** How the app looks, reads and responds: tokens, typography, spacing, colour, component inventory, phone-first layout rules.                                                                                    |
+| [`DESIGN-SYSTEM-ADDENDUM.md`](architecture/DESIGN-SYSTEM-ADDENDUM.md) | Proposed additions to `DESIGN-SYSTEM.md` from an external article review, pending merge decisions.                                                                                                                         |
+| [`MIGRATION-FROM-BASE44.md`](architecture/MIGRATION-FROM-BASE44.md)   | What happens to each of the 64 prototype entities, and how untrusted rows are reconciled before import.                                                                                                                    |
+| [`DATA-MODEL.md`](architecture/DATA-MODEL.md)                         | **Binding.** Every table, column, enum, index, relation and RLS policy, kept in step with `supabase/migrations`. 129 tables across 9 modules; `app.*` helper SQL; migration map from Base44 in `MIGRATION-FROM-BASE44.md`. |
 
 ## features/ — one spec per feature, five areas
 

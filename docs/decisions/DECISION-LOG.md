@@ -52,7 +52,7 @@ Format: **D-nn — title** · status (PROPOSED / ACCEPTED / REJECTED / SUPERSEDE
 
 Claude API (`claude-sonnet-5` for planner generation, `claude-haiku-4-5` for cheap classification/extraction). Called only from server code with a per-workspace credit ledger checked **before** the call and debited **after**, in one transaction. Reason: the Base44 app never checks quota before `InvokeLLM` (`AIPlanner.jsx:88`); the credit model in the entities (AIBillingModel / CreditAllocation / CreditRequest / DailyAILimit) is the clear intent and is implemented server-side.
 
-## D-02 / D-03 — ACCEPTED by owner · 2026-09-17
+## Owner acceptance of D-02 and D-03 · 2026-09-17
 
 Next.js on Vercel + Supabase; web PWA only for v1.
 
@@ -159,7 +159,7 @@ From `docs/features/01-identity/*`: (1) shell = workspace type ∧ role (parents
 
 From `docs/features/03-teaching/*`: (1) Claude has no image generation → the "image" tool produces **sanitised SVG illustrations**; photoreal images need a new vendor (future); (2) `syllabus.extract` uses `claude-sonnet-5` (accuracy over cost — a bad topic list poisons every downstream number); D-08 amended: Haiku only for low-stakes classification/rewrites; (3) credit prices corrected to cover model cost at ৳120/USD: syllabus.extract `10 + ceil(max(0,pages−10)/2)` capped at 40; worksheet 4, quiz 4, rubric 3, differentiation 3, illustration 5 (lesson plan 5, parent message 1, pacing 8 unchanged); (4) Free plan limited to haiku-backed actions via `ai_actions.min_plan_tier`; (5) CI rule: only `packages/adapters/ai` may import `@anthropic-ai/sdk`; anti-mock grep fails CI on numeric/array literals in analytics routes; (6) eligibility ranking shared between cover-teacher and workload in `packages/domain/eligibility.ts`.
 
-## D-21 (amended) — required checks are the eleven in `docs/engineering/CI.md`
+## Amendment to D-21 — required checks are the eleven in `docs/engineering/CI.md`
 
 `CI / lint, typecheck, unit, contracts, db, build, security, e2e, lighthouse, changeset, docs-sync` (+ `guard`). Supersedes the seven names listed earlier.
 
