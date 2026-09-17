@@ -1,0 +1,48 @@
+{
+  "name": "acadigma-campus",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Acadigma Campus — school operations platform (Next.js 15 + Supabase).",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint .",
+    "test": "vitest run --coverage",
+    "test:cov": "vitest run --coverage",
+    "test:db": "supabase test db",
+    "test:e2e": "pnpm --filter @acadigma/web test:e2e",
+    "format": "prettier --write . --cache",
+    "format:check": "prettier --check . --cache",
+    "db:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" --schema public > packages/db/src/types.generated.ts",
+    "db:diff": "supabase db diff --linked",
+    "db:push": "supabase db push --linked",
+    "db:test": "supabase test db",
+    "changeset": "changeset",
+    "release": "changeset tag",
+    "postinstall": "node scripts/ensure-tokens.mjs"
+  },
+  "devDependencies": {
+    "@acadigma/config": "workspace:*",
+    "@changesets/cli": "3.0.3",
+    "@eslint/js": "9.39.5",
+    "@types/node": "24.10.1",
+    "@vitest/coverage-v8": "3.2.7",
+    "eslint": "9.39.5",
+    "eslint-config-next": "15.5.25",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "16.5.0",
+    "prettier": "3.9.7",
+    "supabase": "2.117.0",
+    "turbo": "2.10.13",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0",
+    "vitest": "3.2.7"
+  }
+}

@@ -1,0 +1,186 @@
+{
+  "common": {
+    "appName": "Acadigma Campus",
+    "actions": {
+      "save": "সংরক্ষণ করুন",
+      "cancel": "বাতিল করুন",
+      "submit": "জমা দিন",
+      "edit": "সম্পাদনা করুন",
+      "delete": "মুছুন",
+      "confirm": "নিশ্চিত করুন",
+      "back": "পিছনে",
+      "next": "পরবর্তী",
+      "close": "বন্ধ করুন",
+      "search": "খুঁজুন",
+      "filter": "ফিল্টার",
+      "retry": "আবার চেষ্টা করুন",
+      "viewAll": "সব দেখুন",
+      "seeMore": "আরও দেখুন",
+      "download": "ডাউনলোড",
+      "upload": "আপলোড",
+      "print": "প্রিন্ট করুন",
+      "share": "শেয়ার করুন",
+      "copy": "কপি করুন",
+      "yes": "হ্যাঁ",
+      "no": "না",
+      "ok": "ঠিক আছে"
+    },
+    "labels": {
+      "today": "আজ",
+      "yesterday": "গতকাল",
+      "tomorrow": "আগামীকাল",
+      "allSections": "সব শাখা",
+      "allGrades": "সব শ্রেণি",
+      "selectDate": "তারিখ নির্বাচন করুন",
+      "selectSection": "শাখা নির্বাচন করুন",
+      "status": "অবস্থা",
+      "active": "সক্রিয়",
+      "inactive": "নিষ্ক্রিয়",
+      "pending": "অপেক্ষমাণ",
+      "required": "আবশ্যক",
+      "optional": "ঐচ্ছিক"
+    },
+    "pagination": {
+      "page": "পৃষ্ঠা",
+      "of": "এর মধ্যে",
+      "next": "পরবর্তী পৃষ্ঠা",
+      "previous": "পূর্ববর্তী পৃষ্ঠা",
+      "rowsPerPage": "প্রতি পৃষ্ঠায় সারি"
+    },
+    "time": {
+      "am": "পূর্বাহ্ন",
+      "pm": "অপরাহ্ন"
+    },
+    "workspaceType": {
+      "school": "বিদ্যালয়",
+      "personal": "ব্যক্তিগত"
+    },
+    "currencySymbol": "৳",
+    "empty": {
+      "noResults": "কোনো ফলাফল পাওয়া যায়নি",
+      "noData": "কোনো তথ্য নেই",
+      "comingSoon": "শীঘ্রই আসছে"
+    },
+    "itemsCount": "{count, plural, one {#টি আইটেম} other {#টি আইটেম}}"
+  },
+  "auth": {
+    "login": {
+      "title": "লগইন করুন",
+      "subtitle": "আপনার অ্যাকাউন্টে প্রবেশ করুন",
+      "emailLabel": "ইমেইল",
+      "phoneLabel": "ফোন নম্বর",
+      "passwordLabel": "পাসওয়ার্ড",
+      "submitButton": "প্রবেশ করুন",
+      "forgotPasswordLink": "পাসওয়ার্ড ভুলে গেছেন?",
+      "magicLinkButton": "লিংক দিয়ে প্রবেশ করুন",
+      "otpButton": "ওটিপি দিয়ে প্রবেশ করুন"
+    },
+    "register": {
+      "title": "অ্যাকাউন্ট তৈরি করুন",
+      "subtitle": "Acadigma Campus-এ যোগ দিন",
+      "confirmPasswordLabel": "পাসওয়ার্ড নিশ্চিত করুন",
+      "submitButton": "নিবন্ধন করুন",
+      "termsNotice": "নিবন্ধন করে আপনি শর্তাবলিতে সম্মত হচ্ছেন"
+    },
+    "verify": {
+      "title": "যাচাই করুন",
+      "checkYourEmail": "আপনার ইমেইল দেখুন",
+      "otpSentMessage": "আপনার ফোনে একটি ওটিপি পাঠানো হয়েছে"
+    },
+    "reset": {
+      "title": "পাসওয়ার্ড পুনরায় সেট করুন",
+      "submitButton": "পাসওয়ার্ড পরিবর্তন করুন"
+    },
+    "logout": {
+      "confirmMessage": "আপনি কি লগআউট করতে চান?",
+      "button": "লগআউট"
+    },
+    "session": {
+      "expiredMessage": "আপনার সেশনের মেয়াদ শেষ হয়ে গেছে, আবার প্রবেশ করুন"
+    }
+  },
+  "nav": {
+    "dashboard": "ড্যাশবোর্ড",
+    "attendance": "উপস্থিতি",
+    "timetable": "রুটিন",
+    "classes": "শ্রেণি",
+    "students": "শিক্ষার্থী",
+    "exams": "পরীক্ষা",
+    "marks": "নম্বর",
+    "assignments": "অ্যাসাইনমেন্ট",
+    "lessons": "পাঠ পরিকল্পনা",
+    "curriculum": "পাঠ্যক্রম",
+    "resources": "শিক্ষা উপকরণ",
+    "library": "লাইব্রেরি",
+    "reports": "রিপোর্ট",
+    "print": "প্রিন্ট",
+    "messages": "বার্তা",
+    "hiring": "নিয়োগ",
+    "cover": "বিকল্প শিক্ষক",
+    "staff": "কর্মী",
+    "billing": "বিলিং",
+    "settings": "সেটিংস",
+    "ai": "এআই",
+    "market": "মার্কেটপ্লেস",
+    "sell": "বিক্রয়",
+    "family": "পরিবার",
+    "platform": "প্ল্যাটফর্ম",
+    "more": "আরও",
+    "notifications": "বিজ্ঞপ্তি",
+    "profile": "প্রোফাইল",
+    "switchWorkspace": "ওয়ার্কস্পেস পরিবর্তন করুন"
+  },
+  "attendance": {
+    "title": "উপস্থিতি",
+    "takeAttendance": "হাজিরা নিন",
+    "sectionLabel": "শাখা",
+    "dateLabel": "তারিখ",
+    "periodLabel": "পিরিয়ড",
+    "status": {
+      "present": "উপস্থিত",
+      "absent": "অনুপস্থিত",
+      "late": "বিলম্বে",
+      "excused": "অনুমোদিত অনুপস্থিতি",
+      "halfDay": "অর্ধদিবস"
+    },
+    "markAllPresent": "সবাইকে উপস্থিত চিহ্নিত করুন",
+    "saveButton": "হাজিরা সংরক্ষণ করুন",
+    "savedToast": "হাজিরা সংরক্ষিত হয়েছে",
+    "editWindowClosed": "সম্পাদনার সময় শেষ হয়ে গেছে",
+    "monthlyRegister": "মাসিক হাজিরা খাতা",
+    "percentageLabel": "উপস্থিতির হার",
+    "belowThresholdWarning": "উপস্থিতির হার নির্ধারিত সীমার নিচে",
+    "offlineQueued": "অফলাইনে সংরক্ষিত, সংযোগ ফিরলে পাঠানো হবে",
+    "syncing": "সিঙ্ক হচ্ছে...",
+    "staffAttendance": "কর্মীদের উপস্থিতি",
+    "selfCheckIn": "নিজে চেক-ইন করুন",
+    "checkInButton": "চেক-ইন",
+    "checkOutButton": "চেক-আউট",
+    "summary": {
+      "presentCount": "{count, plural, one {#জন শিক্ষার্থী উপস্থিত} other {#জন শিক্ষার্থী উপস্থিত}}",
+      "absentCount": "{count, plural, one {#জন শিক্ষার্থী অনুপস্থিত} other {#জন শিক্ষার্থী অনুপস্থিত}}"
+    }
+  },
+  "errors": {
+    "generic": "কিছু একটা সমস্যা হয়েছে",
+    "network": "নেটওয়ার্ক সংযোগ পাওয়া যায়নি",
+    "unauthorized": "অনুগ্রহ করে আবার প্রবেশ করুন",
+    "forbidden": "এই কাজটি করার অনুমতি আপনার নেই",
+    "notFound": "পাওয়া যায়নি",
+    "validation": "অনুগ্রহ করে চিহ্নিত ঘরগুলো ঠিক করুন",
+    "sessionExpired": "সেশনের মেয়াদ শেষ হয়ে গেছে",
+    "rateLimited": "অনেকবার চেষ্টা করা হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন",
+    "serverError": "সার্ভারে সমস্যা হয়েছে",
+    "tryAgain": "আবার চেষ্টা করুন",
+    "fieldRequired": "এই ঘরটি পূরণ করা আবশ্যক",
+    "invalidEmail": "সঠিক ইমেইল ঠিকানা দিন",
+    "invalidPhone": "সঠিক ফোন নম্বর দিন",
+    "passwordTooShort": "পাসওয়ার্ড খুব ছোট",
+    "fileTooLarge": "ফাইলের আকার সীমার চেয়ে বেশি",
+    "unsupportedFileType": "ফাইলের ধরনটি সমর্থিত নয়",
+    "offline": "আপনি অফলাইনে আছেন",
+    "paymentFailed": "পেমেন্ট ব্যর্থ হয়েছে",
+    "creditExhausted": "আজকের এআই ক্রেডিট শেষ হয়ে গেছে",
+    "unknown": "অজানা ত্রুটি ঘটেছে"
+  }
+}

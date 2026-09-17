@@ -1,0 +1,28 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Postinstall scripts are code execution at install time, so they are opt-in.
+# These three need theirs: esbuild and unrs-resolver fetch their native binary, and
+# @sentry/cli its uploader.
+onlyBuiltDependencies:
+  - "@sentry/cli"
+  - esbuild
+  - unrs-resolver
+
+# Supply-chain hardening: refuse transitive deps pulled from untrusted
+# sources, wait 2 days before installing newly published versions (7 broke exact pins of fresh releases — D-49), and never
+# let a package update silently downgrade these settings.
+blockExoticSubdeps: true
+minimumReleaseAge: 2880 # nosemgrep: package_managers.pnpm.pnpm-missing-minimum-release-age.pnpm-minimum-release-age -- 2 days by decision D-49; 7 days aborts installs of exactly-pinned fresh releases
+trustPolicy: no-downgrade
+
+# Security patches bypass the release-age cooldown (advisories on these two, 2026-09-17).
+minimumReleaseAgeExclude:
+  - postcss
+  - browserslist
+
+# Security overrides (advisories 2026-09-17): force patched versions across the tree.
+overrides:
+  postcss: 8.5.28
+  browserslist: 4.29.0

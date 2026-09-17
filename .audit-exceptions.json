@@ -1,0 +1,4 @@
+{
+  "$comment": "Reviewed, time-limited acceptances of a high or critical advisory we cannot fix yet. Every entry needs an advisory id, an owner, a reason and an expiry; an expired entry fails CI on its own (CI.md §2.7). Adding one is a reviewed change, not a convenience.",
+  "exceptions": []
+}

@@ -1,0 +1,162 @@
+name: Bug report
+description: Something in Acadigma Campus does not work the way it should
+title: "bug: "
+labels: ["bug", "triage"]
+assignees: ["Mahadezz"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this.
+
+        **Two things first:**
+
+        - If this is a **security vulnerability** — data you should not be able to see,
+          an action you should not be able to take, an exposed secret — **stop and close this form.**
+          Report it privately: [SECURITY.md](../blob/main/SECURITY.md).
+        - **Do not paste anyone's real personal data** — names, phone numbers, ID numbers,
+          medical details. Use the reference code and ids instead; we can resolve them.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+      placeholder: |
+        I saved attendance for Class 6A and the screen showed "saved", but reopening the
+        register showed everyone as unmarked. I expected the marks to still be there.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered, from a signed-out state if possible. The more exact, the faster the fix.
+      placeholder: |
+        1. Sign in as a teacher
+        2. Go to /app/attendance
+        3. Open "Class 6A · Period 1"
+        4. Mark one student absent, tap Save
+        5. Go back and reopen the same register
+    validations:
+      required: true
+
+  - type: input
+    id: reference-code
+    attributes:
+      label: Reference code
+      description: >
+        If an error screen showed a code (it looks like ABC123), paste it here.
+        It maps to a correlation id and finds the exact request, logs and database changes
+        in one step — it is by far the most useful thing you can give us.
+      placeholder: ABC123
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How bad is it
+      options:
+        - Blocking — I cannot do my work at all
+        - Serious — there is a workaround but it is painful
+        - Annoying — wrong, but I can work around it
+        - Cosmetic — looks wrong, works fine
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Sign in / registration / invitations
+        - School workspace — attendance, timetable, classes, students
+        - Exams, marks, reports
+        - Lessons, curriculum, resources, library
+        - Messages, notifications
+        - Hiring / cover
+        - Marketplace / selling
+        - Billing / plans
+        - Personal workspace
+        - Parent portal
+        - Print centre
+        - AI features
+        - Platform console
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Your role in the workspace where this happened
+      options:
+        - Owner
+        - Admin
+        - Teacher
+        - Staff
+        - Parent
+        - Platform staff
+        - Not signed in
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      description: We build phone-first, so this genuinely changes where we look.
+      options:
+        - Android phone — browser
+        - Android phone — installed app
+        - iPhone — browser
+        - Windows — browser
+        - Windows — installed app
+        - Tablet
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 141 on Android 14
+
+  - type: input
+    id: when
+    attributes:
+      label: When did it happen
+      description: Date and rough time, with your timezone. Needed to find the logs.
+      placeholder: 21 Sep 2026, around 09:15 (Dhaka)
+
+  - type: textarea
+    id: ids
+    attributes:
+      label: Relevant ids
+      description: >
+        Workspace id, and the id from the URL of the affected record if there is one.
+        Ids, not names.
+      placeholder: |
+        workspace: 3f2c1a9e-…
+        record:    /app/students/7b4d…
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or a screen recording
+      description: >
+        Drag files in. **Blur or crop out any real personal data first** —
+        names, phone numbers, ID numbers, medical information.
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: This is not a security vulnerability (those go to SECURITY.md, privately)
+          required: true
+        - label: I have not included anyone's real personal data in this report
+          required: true
+        - label: I searched existing issues and this is not already reported
+          required: true

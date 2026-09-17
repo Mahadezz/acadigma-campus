@@ -1,0 +1,53 @@
+# CODEOWNERS — Acadigma Campus
+#
+# @Mahadezz owns the repository and is the required reviewer on every pull request
+# (branch protection: "Require review from Code Owners" — see docs/engineering/CI.md §3).
+#
+# The later a rule appears, the higher its precedence. The sections below therefore go
+# from general to most sensitive. Today they all resolve to the same owner; they are
+# written out so that adding a second reviewer later is a one-line change in the right
+# place rather than a re-think.
+
+# ── Everything ───────────────────────────────────────────────────────────────
+*                                   @Mahadezz
+
+# ── Binding documents: architecture, product, decisions ───────────────────────
+/docs/architecture/                 @Mahadezz
+/docs/product/                      @Mahadezz
+/docs/decisions/                    @Mahadezz
+/docs/engineering/                  @Mahadezz
+
+# ── The security boundary: database schema, policies, RLS tests ──────────────
+/supabase/                          @Mahadezz
+/supabase/migrations/               @Mahadezz
+/supabase/tests/                    @Mahadezz
+/supabase/functions/                @Mahadezz
+
+# ── Tenancy and access control in application code ──────────────────────────
+/packages/db/                       @Mahadezz
+/packages/domain/src/permissions/   @Mahadezz
+/apps/web/middleware.ts             @Mahadezz
+/apps/web/app/(auth)/               @Mahadezz
+/apps/web/app/(platform)/           @Mahadezz
+/apps/web/app/api/                  @Mahadezz
+
+# ── Money ───────────────────────────────────────────────────────────────────
+/apps/web/app/(market)/             @Mahadezz
+/apps/web/app/(seller)/             @Mahadezz
+/packages/domain/src/billing/       @Mahadezz
+/packages/domain/src/market/        @Mahadezz
+
+# ── Pipeline, release and repository policy ─────────────────────────────────
+/.github/                           @Mahadezz
+/.github/workflows/                 @Mahadezz
+/.changeset/                        @Mahadezz
+/.semgrep/                          @Mahadezz
+/.gitleaks.toml                     @Mahadezz
+/.audit-exceptions.json             @Mahadezz
+/package.json                       @Mahadezz
+/pnpm-lock.yaml                     @Mahadezz
+/turbo.json                         @Mahadezz
+/CLAUDE.md                          @Mahadezz
+/SECURITY.md                        @Mahadezz
+/CONTRIBUTING.md                    @Mahadezz
+/CODE_OF_CONDUCT.md                 @Mahadezz

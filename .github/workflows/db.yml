@@ -1,0 +1,105 @@
+name: Database
+
+# SQL style on PRs, and the production migration promotion on main.
+# The pgTAP suite is the `db` job in ci.yml, because it is a merge gate (CI.md §3).
+# Nobody applies a migration to production by hand — there is no exception
+# (RELEASES §6.2).
+
+on:
+  pull_request:
+    paths:
+      - "supabase/**"
+      - ".github/workflows/db.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Never cancel a migration that is being applied to production.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  sql-lint:
+    name: sql-lint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Install pg_format
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends pgformatter
+
+      # Reformats each file in memory and diffs, so the log shows exactly what to change.
+      - name: Check SQL formatting
+        # Style only — pg_format disagrees with hand-formatted DO blocks. The executable gate is CI / db.
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! diff -q "$file" <(pg_format "$file") >/dev/null 2>&1; then
+              echo "::error file=$file::not pg_format-clean — run: pg_format --inplace $file"
+              diff -u "$file" <(pg_format "$file") | head -40 || true
+              status=1
+            fi
+          done < <(find supabase -name '*.sql' -print0)
+          exit $status
+
+      - name: Summary
+        if: always()
+        run: echo "### sql-lint" >> "$GITHUB_STEP_SUMMARY"
+
+  push:
+    name: push
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - uses: supabase/setup-cli@fe52e8551e5e65c2c6a20121b1c0998d6c5e3e1f # v1.4.0
+        with:
+          version: 2.117.0
+
+      - name: Record the migration head before the push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
+          {
+            echo "### Migration head before"
+            echo '```'
+            supabase migration list --linked || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apply migrations to production
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --linked
+
+      # The migration is already applied by this point, so what follows is an alert,
+      # not a gate (RELEASES §6.2).
+      - name: Record the migration head after the push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        continue-on-error: true
+        run: |
+          {
+            echo "### Migration head after"
+            echo '```'
+            supabase migration list --linked || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

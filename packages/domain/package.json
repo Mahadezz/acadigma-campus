@@ -1,0 +1,26 @@
+{
+  "name": "@acadigma/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure business rules: permissions, money, id formatting, workspace time. No I/O.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./permissions": "./src/permissions.ts",
+    "./money": "./src/money.ts",
+    "./ids": "./src/ids.ts",
+    "./time": "./src/time.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@acadigma/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@acadigma/config": "workspace:*",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}

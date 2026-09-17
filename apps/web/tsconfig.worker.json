@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Service worker",
+  "extends": "@acadigma/config/tsconfig/base",
+  "compilerOptions": {
+    // The service worker runs in a WorkerGlobalScope, not a window — it needs a
+    // different lib set, which is why it is typechecked separately from the app.
+    "lib": ["ES2023", "WebWorker"],
+    "types": ["@serwist/next/typings"]
+  },
+  "include": ["app/sw.ts"]
+}

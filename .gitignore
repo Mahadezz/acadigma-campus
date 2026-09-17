@@ -1,0 +1,45 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+.next/
+out/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# env
+.env*.local
+
+# test artefacts
+playwright-report/
+test-results/
+coverage/
+blob-report/
+.playwright/
+
+# supabase
+supabase/.temp/
+supabase/.branches/
+
+# editors / os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# graphify knowledge-graph cache — regenerated on demand, never reviewed
+graphify-out/
+
+# Claude Code per-user overrides
+.claude/settings.local.json
+
+# git worktrees used by build agents
+.worktrees/

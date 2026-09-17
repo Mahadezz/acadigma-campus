@@ -1,0 +1,105 @@
+# Dependabot — Acadigma Campus
+#
+# Policy: docs/engineering/SECURITY.md §6.
+#   - Security updates arrive immediately and are not grouped.
+#   - Routine updates arrive weekly, grouped so review is one PR rather than thirty.
+#   - Majors are always separate PRs; anything touching auth, Supabase, Next.js or the
+#     payment adapter gets a human reading the changelog before merge.
+#   - GitHub Actions are pinned to commit SHAs; Dependabot updates the SHA and the
+#     version comment together.
+
+version: 2
+
+updates:
+  # ── npm / pnpm workspace ──────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Asia/Dhaka"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    versioning-strategy: "increase"
+    labels: ["dependencies", "chore"]
+    reviewers: ["Mahadezz"]
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      # Everything low-risk in one PR: merge on green CI.
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+        exclude-patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "@supabase/*"
+          - "supabase"
+          - "zod"
+      # Framework and data layer move together or not at all.
+      next-react:
+        applies-to: version-updates
+        patterns:
+          [
+            "next",
+            "react",
+            "react-dom",
+            "@types/react",
+            "@types/react-dom",
+            "eslint-config-next",
+          ]
+      supabase:
+        applies-to: version-updates
+        patterns: ["@supabase/*", "supabase"]
+      # Test tooling churns often and breaks nothing but itself.
+      testing:
+        applies-to: version-updates
+        patterns:
+          [
+            "vitest",
+            "@vitest/*",
+            "@playwright/*",
+            "playwright",
+            "@axe-core/*",
+            "@testing-library/*",
+          ]
+      # Security updates: grouped so a single PR closes the advisory set.
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+    ignore:
+      # Pinned by D-12 and enforced by `packageManager`; bumping it is a deliberate change.
+      - dependency-name: "pnpm"
+      - dependency-name: "node"
+      # Majors of the security boundary are never automated.
+      - dependency-name: "@supabase/supabase-js"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
+
+  # ── GitHub Actions (pinned to SHAs) ───────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Asia/Dhaka"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "ci", "chore"]
+    reviewers: ["Mahadezz"]
+    commit-message:
+      prefix: "ci(deps)"
+      include: "scope"
+    groups:
+      actions:
+        patterns: ["*"]

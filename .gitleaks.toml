@@ -1,0 +1,20 @@
+# gitleaks configuration. The default rule set is the baseline and nothing here
+# weakens it. False positives are allowlisted individually, with a reason — a rule is
+# never disabled wholesale (CI.md §2.7).
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-public values and generated files"
+
+paths = [
+  '''pnpm-lock\.yaml''',
+  '''packages/db/src/types\.generated\.ts''',
+]
+
+regexes = [
+  # The Supabase publishable key is browser-safe by design and appears in
+  # .env.example, the CI workflow and DECISION-LOG D-19 on purpose.
+  '''sb_publishable_6POCbYjBAcrSiT1AlCPSVQ_SG3ohfsL''',
+]

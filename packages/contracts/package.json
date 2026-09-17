@@ -1,0 +1,23 @@
+{
+  "name": "@acadigma/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zod schemas and inferred types shared by UI, server actions, jobs and tests.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./errors": "./src/errors.ts",
+    "./result": "./src/result.ts",
+    "./common": "./src/common.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@acadigma/config": "workspace:*",
+    "typescript": "5.9.3"
+  }
+}

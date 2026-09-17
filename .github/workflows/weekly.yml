@@ -1,0 +1,140 @@
+name: Weekly Checks
+
+# Not merge gates (CI.md §7). These fail loudly and open or update one issue labelled
+# `weekly`, because a scheduled job that fails into an empty inbox is a job nobody runs.
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # Monday 03:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  advisors:
+    name: advisors
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - uses: supabase/setup-cli@fe52e8551e5e65c2c6a20121b1c0998d6c5e3e1f # v1.4.0
+        with:
+          version: 2.117.0
+
+      # A new *security* advisory fails; performance advisories are reported.
+      - name: Supabase advisors
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
+          {
+            echo "### Supabase advisors"
+            echo '```'
+            supabase inspect db index-usage --linked 2>&1 | head -60 || true
+            supabase inspect db outliers --linked 2>&1 | head -40 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: ./.github/actions/setup
+
+      # Weekly runs at `moderate`, stricter than the merge gate's `high`: the point
+      # is to see something coming, not to block a PR on it.
+      - name: Dependency audit
+        run: |
+          set -euo pipefail
+          {
+            echo "### Dependency audit"
+            echo '```'
+            pnpm audit --audit-level moderate || true
+            echo '```'
+            echo "### Outdated"
+            echo '```'
+            pnpm outdated --recursive || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # An expired exception is a commitment that came due; it fails on its own.
+      - name: Audit exceptions are current
+        run: node scripts/audit-with-exceptions.mjs
+
+  secrets-history:
+    name: secrets-history
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+
+      # The whole history, not just the week's commits: a key committed in March and
+      # deleted in April is still a leaked key.
+      - name: gitleaks over full history
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  notify:
+    name: notify
+    needs: [advisors, audit, secrets-history]
+    if: always() && contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open or update the weekly issue
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const results = ${{ toJSON(needs) }}
+            const failed = Object.entries(results)
+              .filter(([, r]) => r.result === "failure")
+              .map(([job]) => job)
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const title = "Weekly checks failing"
+            const body = [
+              `Failing job(s): ${failed.join(", ")}.`,
+              "",
+              `[Run details and summaries](${run})`,
+              "",
+              "_Opened automatically by .github/workflows/weekly.yml._",
+            ].join("\n")
+
+            const { data: open } = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: "open",
+              labels: "weekly",
+              per_page: 20,
+            })
+            const existing = open.find((issue) => issue.title === title)
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: existing.number,
+                body,
+              })
+            } else {
+              await github.rest.issues.create({
+                ...context.repo,
+                title,
+                body,
+                labels: ["weekly"],
+                assignees: ["Mahadezz"],
+              })
+            }
