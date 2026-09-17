@@ -117,11 +117,23 @@ with attempted as (
 select is((select count(*)::int from attempted), 0,
           'a teacher activating their own school''s subscription affects ZERO rows...');
 
+-- subscriptions_select (F-CM-06 §3.10) is owner/admin + platform staff
+-- ONLY — a teacher genuinely cannot SELECT this row, so reading it back
+-- as the teacher would return NULL / zero rows regardless of whether the
+-- write was blocked, making the assertion pass or fail for the wrong
+-- reason. Borrow School B's owner, who the RLS select policy does admit,
+-- for the read-back only (mirrors 03_role_escalation.sql's admin-actor
+-- pattern for the same check); the write attempts stay attributed to the
+-- teacher.
+select tests.login('bbbbbbbb-0000-0000-0000-000000000001');
+
 select is(
   (select status::text from public.subscriptions
     where workspace_id = '22222222-2222-2222-2222-222222222222'),
   'trialing',
   '...and it is still on trial');
+
+select tests.login('bbbbbbbb-0000-0000-0000-000000000002');
 
 -- The mirror of the UPDATE case: `authenticated` also holds DELETE on
 -- subscriptions, guarded only by subscriptions_write_platform's USING. A
@@ -133,11 +145,15 @@ with attempted as (
 select is((select count(*)::int from attempted), 0,
           'a teacher deleting their school''s subscription affects ZERO rows...');
 
+select tests.login('bbbbbbbb-0000-0000-0000-000000000001');
+
 select is(
   (select count(*)::int from public.subscriptions
     where workspace_id = '22222222-2222-2222-2222-222222222222'),
   1,
   '...and the subscription row survives');
+
+select tests.login('bbbbbbbb-0000-0000-0000-000000000002');
 
 -- =====================================================================
 -- limits and usage are readable by an ordinary member

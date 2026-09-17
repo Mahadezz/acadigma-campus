@@ -233,6 +233,46 @@ end
 $$;
 
 -- ---------------------------------------------------------------------
+-- 5b. app.is_privileged_context — fix a false-positive inside nested
+--     SECURITY DEFINER calls (0004's version broke every caller check
+--     built on top of it, including the two functions just above and
+--     app.set_access_mode below).
+--
+-- 0004's body was `select current_user not in ('authenticated', 'anon')`.
+-- That works when this function is called directly from a PostgREST
+-- statement (current_user = 'authenticated'/'anon') or from a trusted
+-- backend connection (current_user = 'service_role' etc.) — but the
+-- moment it runs *inside* another SECURITY DEFINER function, Postgres
+-- substitutes current_user for that function's OWNER (e.g. `postgres`)
+-- for the duration of the call, regardless of who invoked the outer
+-- function. Every caller check in this file (`app.workspace_plan`,
+-- `app.within_limit`, `app.set_access_mode`) is itself SECURITY DEFINER,
+-- so `current_user` inside them was never the real caller — it was
+-- always the function owner, making `is_privileged_context()` return
+-- TRUE unconditionally and silently disarming every one of those checks
+-- (an ordinary member could flip access_mode; within_limit/workspace_plan
+-- never refused a non-member).
+--
+-- The `role` GUC does not have this problem: PostgREST issues `SET ROLE
+-- <role>` (equivalently, `set_config('role', ..., true)`, which is what
+-- supabase/tests/README.md's `tests.login()` does too) once per request
+-- at the session level, and entering a SECURITY DEFINER function does
+-- not re-issue that SET — only the *effective privilege role* used for
+-- permission checks changes, not the `role` GUC's stored value. Reading
+-- `current_setting('role', true)` therefore reports the ACTUAL caller's
+-- role at every nesting depth. With no SET ROLE ever issued (a bare
+-- superuser/service connection), it reads the literal string 'none',
+-- which is correctly treated as privileged.
+create or replace function app.is_privileged_context()
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(current_setting('role', true), 'none') not in ('authenticated', 'anon')
+$$;
+
+-- ---------------------------------------------------------------------
 -- 6. app.set_access_mode — add the permission check 0004 left out
 -- ---------------------------------------------------------------------
 -- The 0004 definition had no caller check at all: granted to `authenticated`
