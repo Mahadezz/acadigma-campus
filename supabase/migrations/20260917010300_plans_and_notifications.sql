@@ -135,7 +135,7 @@ create table if not exists public.plan_prices (
   constraint plan_prices_band_no_overlap
     exclude using gist (
       plan_id with =,
-      int4range(student_min, coalesce(student_max, 2147483647), '[]') with &&
+      int4range(student_min, coalesce(student_max, 2147483646), '[]') with &&
     )
 );
 
@@ -433,7 +433,7 @@ begin
     (new.id, v_plan.id, v_price.id, 'trialing', 'monthly', v_plan.currency,
      0,
      int4range(coalesce(v_price.student_min, 0),
-               coalesce(v_price.student_max, 2147483647), '[]'),
+               coalesce(v_price.student_max, 2147483646), '[]'),
      0,
      now() + make_interval(days => v_plan.trial_days),
      (now() at time zone 'Asia/Dhaka')::date,
