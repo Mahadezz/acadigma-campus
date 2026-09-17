@@ -122,22 +122,41 @@ on conflict (plan_id, module) do nothing;
 -- ---------------------------------------------------------------------
 create or replace function app.workspace_plan(p_workspace_id uuid)
 returns public.plans
-language sql
+language plpgsql
 stable
 security definer
 set search_path = ''
 as $$
-  select p.*
+declare
+  v_plan public.plans;
+begin
+  -- A definer bypasses RLS by design, so it must re-impose the tenancy check
+  -- RLS would otherwise have applied (SECURITY.md §5.8 — "the narrowest
+  -- possible job"; supabase/tests/README.md §2). Without this, any caller
+  -- holding EXECUTE could read any workspace's plan, including non-public
+  -- ones, for an id they merely guessed.
+  if not (app.is_privileged_context()
+          or app.is_platform_admin()
+          or app.member_role(p_workspace_id) is not null) then
+    raise exception 'not a member of this workspace'
+      using errcode = '42501';
+  end if;
+
+  select p.* into v_plan
   from public.workspaces w
   join public.plans p on p.id = w.plan_id
-  where w.id = p_workspace_id
+  where w.id = p_workspace_id;
+
+  return v_plan;
+end;
 $$;
 
 comment on function app.workspace_plan(uuid) is
   'The plan a workspace is entitled to, via workspaces.plan_id — the fast '
   'denormalised path (PRODUCT-DECISIONS 1.20), not a join through '
   'subscriptions. Definer because plan_limits/plan_modules lookups run for '
-  'every member, not only owner/admin.';
+  'every member, not only owner/admin — and it refuses a caller who is not '
+  'an active member, platform staff, or a privileged context (42501).';
 
 -- ---------------------------------------------------------------------
 -- 5. app.within_limit — the read-side check the limits engine calls
@@ -148,11 +167,27 @@ create or replace function app.within_limit(
   p_delta        integer default 1,
   p_period       text default 'all')
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = ''
 as $$
+declare
+  v_within boolean;
+begin
+  -- Same reasoning as app.workspace_plan: this function reads
+  -- public.usage_counters, whose own policy is member-scoped, and the
+  -- definer exists to escape that policy for a member's OWN workspace — not
+  -- to publish every school's student and teacher counts to anyone who can
+  -- guess a workspace id. Omitting the check would make a boolean oracle out
+  -- of p_delta (binary-search the counter), so it fails closed here.
+  if not (app.is_privileged_context()
+          or app.is_platform_admin()
+          or app.member_role(p_workspace_id) is not null) then
+    raise exception 'not a member of this workspace'
+      using errcode = '42501';
+  end if;
+
   select case
     -- No limit row for this key on this plan, or an explicit NULL, both
     -- mean unlimited (plan_limits' own convention) — adding a limit later
@@ -160,12 +195,16 @@ as $$
     when l.value_int is null then true
     else coalesce(u.value, 0) + p_delta <= l.value_int
   end
+  into v_within
   from public.workspaces w
   left join public.plan_limits l
     on l.plan_id = w.plan_id and l.key = p_key
   left join public.usage_counters u
     on u.workspace_id = w.id and u.key = p_key and u.period = p_period
-  where w.id = p_workspace_id
+  where w.id = p_workspace_id;
+
+  return v_within;
+end;
 $$;
 
 comment on function app.within_limit(uuid, text, integer, text) is
@@ -175,8 +214,15 @@ comment on function app.within_limit(uuid, text, integer, text) is
   'never needed since deletes always reduce a counter within its own '
   'limit. `-1` in plan_limits.value_int is not used in this schema (NULL '
   'is the unlimited sentinel, per plan_limits); callers pass p_period '
-  '''all'' for standing counters and ''YYYY-MM'' for ai_actions_per_month.';
+  '''all'' for standing counters and ''YYYY-MM'' for ai_actions_per_month '
+  '(packages/domain usagePeriodForKey derives the same string). Refuses a '
+  'caller who is not an active member, platform staff, or a privileged '
+  'context (42501) — a definer must re-impose the tenancy check it bypasses.';
 
+-- The EXECUTE grants stay on `authenticated`: a function invoked from inside
+-- an RLS policy or an invoker-side trigger runs with the QUERYING role's
+-- privileges, so revoking it would break those call paths. The caller check
+-- inside each function body — not the grant — is the access control.
 do $$
 begin
   revoke all on function app.workspace_plan(uuid) from public;
