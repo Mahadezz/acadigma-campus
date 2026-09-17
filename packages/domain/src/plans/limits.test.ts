@@ -6,6 +6,7 @@ import {
   isUnlimited,
   isWriteAllowedOverLimit,
   remainingCapacity,
+  usagePeriodForKey,
 } from "./limits"
 
 describe("assertWithinLimit", () => {
@@ -140,5 +141,35 @@ describe("isWriteAllowedOverLimit — §5.6 exact semantics", () => {
 
   it("blocks only create", () => {
     expect(isWriteAllowedOverLimit("create")).toBe(false)
+  })
+})
+
+describe("usagePeriodForKey — which usage_counters bucket a key is counted in", () => {
+  // Load-bearing: reading the wrong bucket does not error, it returns zero, and
+  // a hard cap that always reads zero is not a cap (D-39).
+  it("puts standing counters in the 'all' bucket", () => {
+    expect(usagePeriodForKey("max_students")).toBe("all")
+    expect(usagePeriodForKey("max_teachers")).toBe("all")
+    expect(usagePeriodForKey("storage_gb")).toBe("all")
+  })
+
+  it("puts any *_per_month key in that calendar month's bucket", () => {
+    const instant = new Date("2027-03-14T12:00:00Z")
+    expect(usagePeriodForKey("ai_actions_per_month", instant)).toBe("2027-03")
+  })
+
+  it("resolves the month in the workspace timezone, not UTC", () => {
+    // 31 Mar 2027 21:30 UTC is already 03:30 on 1 Apr in Dhaka (UTC+6), so the
+    // allowance must have reset. Computing this in UTC would bill an April
+    // action against March's exhausted pool.
+    const instant = new Date("2027-03-31T21:30:00Z")
+    expect(usagePeriodForKey("ai_actions_per_month", instant)).toBe("2027-04")
+    expect(usagePeriodForKey("ai_actions_per_month", instant, "UTC")).toBe(
+      "2027-03"
+    )
+  })
+
+  it("matches the 'YYYY-MM' shape app.within_limit's p_period expects", () => {
+    expect(usagePeriodForKey("ai_actions_per_month")).toMatch(/^\d{4}-\d{2}$/)
   })
 })

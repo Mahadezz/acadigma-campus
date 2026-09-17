@@ -23,6 +23,7 @@ function queryResult(result: {
   const builder: Record<string, unknown> = {
     select: () => builder,
     eq: () => builder,
+    in: () => builder,
     order: () => builder,
     limit: () => builder,
     maybeSingle: () => Promise.resolve(result),
@@ -73,7 +74,7 @@ describe("getUsage", () => {
         error: null,
       }),
       usage_counters: queryResult({
-        data: [{ key: "max_students", value: 340 }],
+        data: [{ key: "max_students", value: 340, period: "all" }],
         error: null,
       }),
     })

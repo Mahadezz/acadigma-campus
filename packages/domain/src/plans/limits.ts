@@ -11,11 +11,37 @@
 
 import { err, ok, type Result } from "@acadigma/contracts"
 
+import { DEFAULT_TIMEZONE, todayIn } from "../time"
+
 /** `plan_limits.value_int` per key. `null`/absent = unlimited (the table's own convention). */
 export type PlanLimits = Readonly<Record<string, number | null>>
 
 /** `usage_counters.value` per key, for the workspace and period being checked. */
 export type UsageCounters = Readonly<Record<string, number>>
+
+/**
+ * Which `usage_counters.period` bucket a limit key is counted in.
+ *
+ * `usage_counters` is keyed `(workspace_id, key, period)`. Standing counters
+ * (`max_students`, `storage_gb`) live in the `'all'` bucket; anything measured
+ * per calendar month — `ai_actions_per_month` above all, whose hard cap is the
+ * whole of D-39's cost control — lives in a `'YYYY-MM'` bucket. Reading the
+ * wrong bucket does not error, it silently returns zero, which turns a hard cap
+ * into no cap at all; so the period is DERIVED from the key here rather than
+ * passed in, and no call site can get it wrong.
+ *
+ * `app.within_limit`'s `p_period` argument takes the same string, and the month
+ * is computed in the workspace timezone (Asia/Dhaka by default) so a reset
+ * happens at local midnight on the 1st, not at 06:00 on the last day.
+ */
+export function usagePeriodForKey(
+  key: string,
+  now: Date = new Date(),
+  timeZone: string = DEFAULT_TIMEZONE
+): string {
+  if (!key.endsWith("_per_month")) return "all"
+  return todayIn(timeZone, now).slice(0, 7)
+}
 
 /**
  * The structured payload a `LIMIT_EXCEEDED` error carries (F-CM-06 §4.6), so the UI
