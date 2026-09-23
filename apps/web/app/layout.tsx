@@ -1,5 +1,6 @@
 import { SkipToContent } from "@acadigma/ui/primitives/app-shell"
 
+import { hindSiliguri, inter } from "./fonts"
 import { Providers } from "./providers"
 
 import type { Metadata, Viewport } from "next"
@@ -41,7 +42,11 @@ export default function RootLayout({
   return (
     // suppressHydrationWarning is required by next-themes, which sets the theme
     // class on <html> from an inline script before React hydrates.
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${hindSiliguri.variable}`}
+      suppressHydrationWarning
+    >
       <body className="antialiased">
         <SkipToContent />
         <Providers>{children}</Providers>

@@ -161,15 +161,18 @@
    --------------------------------------------------------------------------- */
 
 :root {
+  /* Bound to the next/font variables declared in apps/web/app/fonts.ts (see
+     tokens/README.md "Fonts"); the named families stay as the fallback for any
+     surface that loads the Google stylesheet directly instead. */
   --font-sans:
-    "Inter", "Inter Fallback", Roboto, system-ui, -apple-system, "Segoe UI",
-    sans-serif;
+    var(--font-inter, "Inter"), "Inter Fallback", Roboto, system-ui,
+    -apple-system, "Segoe UI", sans-serif;
   /* --font-bn is applied by <BnEnText> to Bengali runs only; Inter stays in the
      stack after it so Latin words inside a Bengali sentence keep Inter's
      figures and do not fall back to Hind Siliguri's weaker Latin. */
   --font-bn:
-    "Hind Siliguri", "Hind Siliguri Fallback", "Noto Sans Bengali", "Inter",
-    sans-serif;
+    var(--font-hind-siliguri, "Hind Siliguri"), "Hind Siliguri Fallback",
+    "Noto Sans Bengali", var(--font-inter, "Inter"), sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
 
   /* type scale — 1.125 minor third at phone, 1.200 from lg up (fluid, capped) */
