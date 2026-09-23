@@ -129,6 +129,21 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn: "{actor} {workspace} আর্কাইভ করেছেন",
     isGeneric: false,
   },
+  // Written by app.set_access_mode() (F-CM-06 plans/limits engine), one per access_mode value.
+  {
+    action: "workspace.access_mode_read_only",
+    severity: "critical",
+    sentenceEn: "{actor} put {workspace} into read-only mode",
+    sentenceBn: "{actor} {workspace} শুধু-পড়া মোডে রেখেছেন",
+    isGeneric: false,
+  },
+  {
+    action: "workspace.access_mode_normal",
+    severity: "notable",
+    sentenceEn: "{actor} restored {workspace} to normal access",
+    sentenceBn: "{actor} {workspace} স্বাভাবিক অ্যাক্সেসে ফিরিয়ে এনেছেন",
+    isGeneric: false,
+  },
   {
     action: "school_profile.created",
     severity: "notable",
