@@ -3,7 +3,7 @@
 |                  |                                                                                                                                                                                     |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Area             | platform                                                                                                                                                                            |
-| Status           | Parts 1-3 shipped (append-only substrate + catalogue, owner viewer, correlation/per-record history); Part 4 (export, platform viewer, integrity job) planned                       |
+| Status           | Parts 1-3 shipped (append-only substrate + catalogue, owner viewer, correlation/per-record history); Part 4 (export, platform viewer, integrity job) planned                        |
 | Owner branch     | `feat/identity-audit`                                                                                                                                                               |
 | Depends on       | F-ID-01, F-ID-03, F-ID-08                                                                                                                                                           |
 | Plan             | `docs/plan/ROADMAP.md` chunk 3                                                                                                                                                      |
