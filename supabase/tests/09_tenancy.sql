@@ -216,10 +216,11 @@ select tests.logout();
 -- this migration's RPCs (D-50): switch_workspace / list_my_workspaces /
 -- the tenancy.context_rejected tripwire
 -- =====================================================================
-select tests.login('99990001-0000-0000-0000-000000000002');  -- teacher A (still active there... wait, removed above)
-
--- Re-add an active membership for a clean RPC test, independent of attack 4's
--- removal above (a fresh user keeps this section legible on its own).
+-- Fixture work runs as postgres: tests.mkuser() inserts into auth.users, which
+-- the authenticated role may not touch (CI failed here with 'permission denied
+-- for table users' while still logged in as teacher A from attack 4).
+-- A fresh user keeps this section legible on its own, independent of attack 4's
+-- removal above.
 select tests.mkuser('99990001-0000-0000-0000-000000000003', 'teacher.a2@t09.local', 'Teacher A2');
 insert into public.workspace_members (workspace_id, user_id, role, status, joined_at)
 values ('99991111-1111-1111-1111-111111111111', '99990001-0000-0000-0000-000000000003',
