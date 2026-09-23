@@ -226,6 +226,7 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "billing.read": [...rolesWithAction("billing.read")],
     "billing.manage": [...rolesWithAction("billing.manage")],
     "settings.manage": [...rolesWithAction("settings.manage")],
+    "policies.manage": [...rolesWithAction("policies.manage")],
     "reports.read": [...rolesWithAction("reports.read")],
     "messages.send": [...rolesWithAction("messages.send")],
     "ai.use": [...rolesWithAction("ai.use")],
