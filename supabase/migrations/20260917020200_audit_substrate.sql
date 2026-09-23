@@ -274,6 +274,11 @@ insert into public.audit_action_catalog (action, severity, sentence_en, sentence
     '{actor} {workspace} হালনাগাদ করেছেন ({fields})', false),
   ('workspace.archived',                 'notable',  '{actor} archived {workspace}',
     '{actor} {workspace} আর্কাইভ করেছেন', false),
+  -- Written by app.set_access_mode() (F-CM-06 plans/limits engine), one row per access_mode value.
+  ('workspace.access_mode_read_only',   'critical', '{actor} put {workspace} into read-only mode',
+    '{actor} {workspace} শুধু-পড়া মোডে রেখেছেন', false),
+  ('workspace.access_mode_normal',      'notable',  '{actor} restored {workspace} to normal access',
+    '{actor} {workspace} স্বাভাবিক অ্যাক্সেসে ফিরিয়ে এনেছেন', false),
   ('school_profile.created',             'notable',  '{actor} set up school settings',
     '{actor} স্কুলের সেটিংস তৈরি করেছেন', false),
   ('school_profile.updated',             'notable',  '{actor} changed school settings ({fields})',
