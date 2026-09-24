@@ -58,9 +58,13 @@ values ('11111111-1111-1111-1111-111111111111', 'school', 'School A', 'school-a'
 insert into public.workspace_members (workspace_id, user_id, role, status, joined_at)
 values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000002', 'teacher', 'active', now());
 
+-- 'Head of Maths', not one of F-OP-06's nine seeded default names
+-- (app.tg_workspace_bootstrap(), 20260925000600_staff_schema.sql) — a
+-- school workspace now gets those seeded automatically on insert, and
+-- 'Senior Teacher' collided with custom_labels_workspace_name_key here.
 insert into public.custom_labels (id, workspace_id, base_role, name, created_by)
 values ('cccc1111-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
-        'teacher', 'Senior Teacher', 'aaaaaaaa-0000-0000-0000-000000000001'),
+        'teacher', 'Head of Maths', 'aaaaaaaa-0000-0000-0000-000000000001'),
        ('cccc2222-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222',
         'teacher', 'Head of Science', 'bbbbbbbb-0000-0000-0000-000000000001');
 

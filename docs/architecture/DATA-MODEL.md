@@ -1017,9 +1017,11 @@ $$;
 -- that pay never becomes a column a colleague can read: staff_compensation
 -- is owner/admin (or self)-only, and the payroll calculation gets one
 -- number instead of access to the row. Two arguments, not three: the
--- caller's own membership of the STAFF RECORD'S workspace is checked
+-- caller's own standing against the STAFF RECORD'S workspace is checked
 -- inline rather than trusting a passed-in workspace_id, so there is
--- exactly one way to call this safely.
+-- exactly one way to call this safely. owner/admin only for the "not
+-- self" branch (D-63 item 7 — teacher/staff was a real leak, caught by
+-- pgTAP against a live Postgres, not by the design read alone).
 create or replace function app.staff_hourly_rate(p_user_id uuid, p_on_date date)
 returns bigint language sql stable security definer set search_path = ''
 as $$
@@ -1031,7 +1033,7 @@ as $$
     and (c.effective_to is null or c.effective_to >= p_on_date)
     and (
       p_user_id = app.current_user_id()
-      or app.has_role(sr.workspace_id, array['owner', 'admin', 'teacher', 'staff'])
+      or app.has_role(sr.workspace_id, array['owner', 'admin'])
     )
   order by c.effective_from desc
   limit 1

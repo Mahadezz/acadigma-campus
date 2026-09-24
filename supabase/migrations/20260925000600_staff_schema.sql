@@ -150,6 +150,11 @@ create policy staff_records_update_self on public.staff_records
 
 -- No DELETE policy and no grant: rows are never deleted (PRODUCT-DECISIONS 1.14).
 
+-- Supabase (and supabase/ci/bootstrap.sql, mirroring it) grants ALL on every
+-- new public table to anon/authenticated/service_role by default privilege
+-- — the table-grant equivalent of D-54. Explicit revoke first, same as
+-- every other table in this schema (e.g. onboarding_progress).
+revoke all on public.staff_records from anon, authenticated;
 grant select, insert, update on public.staff_records to authenticated;
 
 -- Column-scoped self-update guard (F-OP-06 §2 footnote 1): "employment
@@ -297,6 +302,7 @@ create policy staff_compensation_update on public.staff_compensation
 
 -- No DELETE policy and no grant: "it never edits history" (F-OP-06 §3.2).
 
+revoke all on public.staff_compensation from anon, authenticated;
 grant select, insert, update on public.staff_compensation to authenticated;
 
 -- Closes the previously-open period when a later one starts, so the
@@ -330,13 +336,22 @@ create trigger staff_compensation_close_prior
 select app.attach_freeze_workspace('public.staff_compensation');
 select app.attach_audit('public.staff_compensation');
 
--- app.staff_hourly_rate — the ONLY way a non-owner/admin ever learns a
--- rate (F-OP-06 §3.2, §5.8). SECURITY DEFINER + search_path pinned so it
--- reads staff_compensation on the caller's behalf without granting the
--- caller table access; STABLE so the planner can call it once per row in
--- a loop (F-OP-02's cover engine). Self-check inside the function, not
--- trusted RLS on a join, because the caller here is never the row's own
--- workspace context — just two scalars.
+-- app.staff_hourly_rate — the ONLY way anyone ever learns a rate that is
+-- not their own (F-OP-06 §3.2, §5.8). SECURITY DEFINER + search_path
+-- pinned so it reads staff_compensation on the caller's behalf without
+-- granting the caller table access; STABLE so the planner can call it
+-- once per row in a loop (F-OP-02's cover engine). Self-check inside the
+-- function, not trusted RLS on a join, because the caller here is never
+-- the row's own workspace context — just two scalars.
+--
+-- owner/admin only for the "not self" branch — NOT teacher/staff. A first
+-- draft allowed any active member (any role) of the row's workspace,
+-- mirroring staff_compensation_select's OWN roster-membership-implies-
+-- read-access shape; that is wrong for a colleague-to-colleague call:
+-- staff_compensation_select never lets a teacher see a colleague's row at
+-- all, so this function must not open a side door to the same data. Caught
+-- by 20_staff_schema.sql's own "never returns a colleague's rate to a
+-- teacher" assertion failing against a live Postgres (D-63 item 7).
 create or replace function app.staff_hourly_rate(p_user_id uuid, p_on_date date)
 returns bigint
 language sql
@@ -352,7 +367,7 @@ as $$
     and (c.effective_to is null or c.effective_to >= p_on_date)
     and (
       p_user_id = app.current_user_id()
-      or app.has_role(sr.workspace_id, array['owner', 'admin', 'teacher', 'staff'])
+      or app.has_role(sr.workspace_id, array['owner', 'admin'])
     )
   order by c.effective_from desc
   limit 1
@@ -361,8 +376,9 @@ $$;
 comment on function app.staff_hourly_rate(uuid, date) is
   'The rate in force for p_user_id on p_on_date, or null when unset '
   '(F-OP-06 §3.2, §5.8) — never today''s rate applied retroactively. Only '
-  'returns a value when the caller is that same user or an active member '
-  '(any role) of the staff record''s own workspace; a caller from another '
+  'returns a value when the caller is that same user, or owner/admin of '
+  'the staff record''s own workspace — never a teacher or staff colleague '
+  '(matches staff_compensation_select exactly). A caller from another '
   'workspace, or with no membership at all, gets null exactly as if the '
   'rate did not exist — never an error that would leak workspace shape.';
 
@@ -437,6 +453,7 @@ create policy staff_documents_delete_admin on public.staff_documents
   for delete to authenticated
   using (app.has_role(workspace_id, array['owner', 'admin']));
 
+revoke all on public.staff_documents from anon, authenticated;
 grant select, insert, update, delete on public.staff_documents to authenticated;
 
 select app.attach_updated_at('public.staff_documents');
