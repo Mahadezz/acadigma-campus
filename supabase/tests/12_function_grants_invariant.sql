@@ -73,7 +73,8 @@ with allowed as (
     ('public.throttle_record_failure(text, text)'),
     ('public.throttle_reset(text)'),
     ('public.log_auth_event(text, jsonb)'),
-    ('app.pre_request()')
+    ('app.pre_request()'),
+    ('public.pre_request()')  -- D-65: the hook's public wrapper
   ) as a(sig)
   union all
   select p.oid
@@ -109,7 +110,8 @@ with allowed as (
     ('public.log_auth_event(text, jsonb)'),
     ('public.switch_workspace(uuid)'),
     ('public.list_my_workspaces()'),
-    ('public.log_tenancy_context_rejected(uuid)')
+    ('public.log_tenancy_context_rejected(uuid)'),
+    ('public.pre_request()')  -- D-65: the hook's public wrapper
   ) as a(sig)
   union all
   select p.oid
