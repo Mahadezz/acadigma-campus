@@ -55,9 +55,16 @@ select plan(10);
 
 -- ---------------------------------------------------------------------
 -- A1. anon — allowed ONLY for the pre-session throttle/auth surface, plus
---     the platform-owned `rls_auto_enable` if this Postgres happens to have
---     it (it is created by the Supabase platform, not by us, and does not
---     exist on a plain postgres:17 container — tolerated, not asserted).
+--     `app.pre_request()` (D-51, 20260924000100_audit_substrate.sql §9):
+--     PostgREST's `db-pre-request` hook runs this on EVERY request,
+--     including anonymous ones, BEFORE RLS — it is wired via `alter role
+--     authenticator set pgrst.db_pre_request = 'app.pre_request'`, so it has
+--     to be anon-executable for an anonymous request to work at all. Its
+--     body only ever copies a regex-validated `x-correlation-id` header into
+--     a transaction-local GUC (`set_config`); it reads and writes nothing.
+--     Plus the platform-owned `rls_auto_enable` if this Postgres happens to
+--     have it (it is created by the Supabase platform, not by us, and does
+--     not exist on a plain postgres:17 container — tolerated, not asserted).
 -- ---------------------------------------------------------------------
 with allowed as (
   select sig::regprocedure::oid as oid
@@ -65,7 +72,8 @@ with allowed as (
     ('public.throttle_status(text)'),
     ('public.throttle_record_failure(text, text)'),
     ('public.throttle_reset(text)'),
-    ('public.log_auth_event(text, jsonb)')
+    ('public.log_auth_event(text, jsonb)'),
+    ('app.pre_request()')
   ) as a(sig)
   union all
   select p.oid
