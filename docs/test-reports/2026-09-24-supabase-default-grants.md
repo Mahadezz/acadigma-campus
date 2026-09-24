@@ -178,6 +178,19 @@ Not applicable.
 
 **Signed off by:** Claude (Sonnet 5, builder session)
 **Date:** 2026-09-24
-**Commit:** `95ccddc7001ed577a104e8bb6f634635ce894d40`
+**Commit:** `95ccddc7001ed577a104e8bb6f634635ce894d40` (original); `4014369d62d9668ebc3994592c308e0cc0d3c1fe` (after the Opus-review follow-up below)
 
 > I ran `pnpm verify`-equivalent local checks and read the pgTAP files myself; the live-project evidence in §1/§7 was gathered by the main coordinating session via the Supabase management API, not reproduced independently by this builder session. The CI `db` job numbers in §4 and the job table in §7 are copied from the actual run for this PR (`35974593255`/`35974593277`) — not fabricated. One required check (`contracts`) is red for a pre-existing, unrelated reason documented in §7/§8; every other required check is green.
+
+---
+
+## 10. Follow-up: Opus review (same PR, after merging `main`)
+
+`main` had moved on (PR #6 D-51, PR #12 D-52, PR #13 D-53, PR #15 D-55 all merged) since §1–§9 above were written. This branch was merged with `main` (normal merge, no rebase) and an Opus review of the original fix found one real gap plus two lower-priority improvements, all addressed in this same PR:
+
+1. **HIGH, real gap:** the schema-scoped `revoke execute on functions from anon, authenticated` in `20260924030000` is not actually deny-by-default, because a schema-scoped default privilege only _adds to_ Postgres's built-in role-wide default ("grant EXECUTE to PUBLIC"), never replaces it — every role, `anon` included, is a member of PUBLIC. Fixed with a role-wide `alter default privileges for role postgres revoke execute on functions from public` (migration step 2b). Verified with a new live probe in `12_function_grants_invariant.sql` (create an ungranted throwaway function inside the test transaction, assert anon/authenticated cannot execute it, service_role can) — this probe would have failed before 2b existed.
+2. **Knock-on:** the role-wide revoke broke pgTAP's own `tests.*` helper functions (they relied on the same implicit PUBLIC grant). Fixed in `supabase/ci/bootstrap.sql` only (test infrastructure, never shipped) with a `tests`-schema-scoped default that restores PUBLIC's EXECUTE for that schema alone.
+3. **LOW, table/sequence parity:** extended `bootstrap.sql` to also mirror Supabase's default `GRANT ALL ON TABLES/SEQUENCES TO anon, authenticated, service_role`. **Result: stayed green — nothing turned red.** Full suite after this change: `Files=12, Tests=273, Result: PASS` (CI run `35982882697`, job `db`). No table/sequence-grant regression was found; this is recorded as a clean parity improvement, not a papered-over defect.
+4. **LOW, invoker coverage:** dropped the `prosecdef` filter in the A1/A2 allowlist checks so SECURITY INVOKER functions in `public`/`app` are covered too. Cost nothing — every function in both schemas is already either DEFINER or an already-excluded `app` utility. Merging in `main`'s new `app.pre_request()` (D-51, PostgREST's `db-pre-request` hook, deliberately anon-executable) surfaced one real allowlist omission, fixed by adding it to A1 with its rationale inline — a true positive from the wider check, not a false one.
+
+**CI after the full follow-up** (run `35982882697` / `35982882684`, commit `4014369`): `lint` PASS · `typecheck` PASS · `db` PASS (`Files=12, Tests=273, Result: PASS`) · `unit` PASS · `contracts` PASS (D-55's fix, now comparing against this PR's own migrations — the pre-existing failure from §7/§8 is resolved) · `build` PASS · `security` PASS · `e2e` PASS · `lighthouse` PASS · `changeset` PASS · `docs-sync` PASS · `sql-lint` PASS. **Every required check is green.**
