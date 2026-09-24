@@ -1148,18 +1148,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "staff_compensation_staff_record_id_fkey"
-            columns: ["staff_record_id"]
+            foreignKeyName: "staff_compensation_staff_record_fk"
+            columns: ["workspace_id", "staff_record_id"]
             isOneToOne: false
             referencedRelation: "staff_directory"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
           },
           {
-            foreignKeyName: "staff_compensation_staff_record_id_fkey"
-            columns: ["staff_record_id"]
+            foreignKeyName: "staff_compensation_staff_record_fk"
+            columns: ["workspace_id", "staff_record_id"]
             isOneToOne: false
             referencedRelation: "staff_records"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
           },
           {
             foreignKeyName: "staff_compensation_workspace_id_fkey"
@@ -1225,18 +1225,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "staff_documents_staff_record_id_fkey"
-            columns: ["staff_record_id"]
+            foreignKeyName: "staff_documents_staff_record_fk"
+            columns: ["workspace_id", "staff_record_id"]
             isOneToOne: false
             referencedRelation: "staff_directory"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
           },
           {
-            foreignKeyName: "staff_documents_staff_record_id_fkey"
-            columns: ["staff_record_id"]
+            foreignKeyName: "staff_documents_staff_record_fk"
+            columns: ["workspace_id", "staff_record_id"]
             isOneToOne: false
             referencedRelation: "staff_records"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
           },
           {
             foreignKeyName: "staff_documents_uploaded_by_fkey"
