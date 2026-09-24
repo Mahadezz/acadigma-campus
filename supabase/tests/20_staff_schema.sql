@@ -232,13 +232,21 @@ select throws_ok(
   '42501', null,
   'a teacher cannot insert a staff_compensation row');
 
--- AC 11 also holds for a 'staff' role, not only 'teacher' (lead review, PR #32).
+-- AC 11 also holds for a 'staff' role, not only 'teacher' (lead review, PR
+-- #32). tests.login() looks up auth.users as WHOEVER is currently calling
+-- it (SECURITY INVOKER) before switching role to 'authenticated' — calling
+-- it again while already logged in as someone else fails with "permission
+-- denied for table users" (authenticated has no grant on auth.users).
+-- Always tests.logout() (-> role postgres) between two logins, never login
+-- directly on top of another login (found by CI, run 36062815602).
+select tests.logout();
 select tests.login('aaaaaaaa-0000-0000-0000-000000000008');
 select throws_ok(
   $$insert into public.staff_compensation (workspace_id, staff_record_id, hourly_rate_paisa, effective_from)
     values ('11111111-1111-1111-1111-111111111111', 'ee000008-0000-0000-0000-000000000008', 99999, '2026-01-01')$$,
   '42501', null,
   'a staff member cannot insert a staff_compensation row either');
+select tests.logout();
 select tests.login('aaaaaaaa-0000-0000-0000-000000000003');
 
 -- a teacher CAN edit their own contact/emergency fields (AC 3).
