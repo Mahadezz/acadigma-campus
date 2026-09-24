@@ -42,6 +42,13 @@ export const THROTTLE_LIMITS = {
   },
   /** "changePassword ... 10/h per user" */
   changePassword: { maxAttempts: 10, windowSeconds: 3600, blockSeconds: 3600 },
+  /** PR #34 follow-up (security review, medium): `checkEiinAvailability` is a
+   * boolean-only probe, but with no limit at all one signed-in account can
+   * enumerate which of the ~10^6 possible EIINs are already on the platform.
+   * "30 per (user, 15 min) -> 15 min block" — every call counts, not just a
+   * "failed" one (D-67): the thing being capped is enumeration volume, not
+   * wrong guesses. */
+  eiinCheck: { maxAttempts: 30, windowSeconds: 900, blockSeconds: 900 },
 } as const
 
 export type ThrottleBucket = keyof typeof THROTTLE_LIMITS

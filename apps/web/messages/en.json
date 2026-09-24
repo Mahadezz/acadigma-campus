@@ -209,6 +209,8 @@
       "boardLabel": "Education board",
       "boardPlaceholder": "Select a board",
       "timezoneLabel": "Timezone",
+      "timezoneSearchPlaceholder": "Search timezone…",
+      "timezoneNoResults": "No matching timezone.",
       "timezoneSuggestion": "Use {timezone}",
       "workingDaysLabel": "Working days",
       "workingDaysHelp": "Attendance and timetables use this.",

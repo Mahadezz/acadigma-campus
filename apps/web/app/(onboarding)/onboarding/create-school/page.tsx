@@ -62,6 +62,7 @@ export default async function CreateSchoolWizardPage() {
       t={t.onboarding.wizard}
       initialStage={initialStage}
       initialDraft={state.draft}
+      backLabel={t.common.actions.back}
     />
   )
 }

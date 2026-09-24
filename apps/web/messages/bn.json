@@ -209,6 +209,8 @@
       "boardLabel": "শিক্ষা বোর্ড",
       "boardPlaceholder": "একটি বোর্ড নির্বাচন করুন",
       "timezoneLabel": "টাইমজোন",
+      "timezoneSearchPlaceholder": "টাইমজোন খুঁজুন…",
+      "timezoneNoResults": "কোনো মিল পাওয়া যায়নি।",
       "timezoneSuggestion": "{timezone} ব্যবহার করুন",
       "workingDaysLabel": "কর্মদিবস",
       "workingDaysHelp": "উপস্থিতি ও রুটিন এই সেটিং ব্যবহার করে।",

@@ -23,7 +23,10 @@ import {
 } from "@acadigma/db"
 import { resolveOnboardingExitRoute } from "@acadigma/domain/onboarding"
 
+import { getMessages } from "@/lib/i18n"
+import { throttleKey } from "@/lib/request-context"
 import { createClient } from "@/lib/supabase/server"
+import { throttleRecordFailure, throttleStatus } from "@/lib/throttle"
 
 import { listMyWorkspaces } from "../(shared)/workspace/actions"
 
@@ -109,6 +112,17 @@ export async function completeOnboarding(
   return ok({ landingRoute: resolveOnboardingExitRoute(parsed.data.exit) })
 }
 
+/**
+ * Security review (PR #34, medium) / D-67: `public.check_eiin_available` is
+ * a boolean-only probe, but a signed-in caller with no rate limit at all
+ * could call it repeatedly and enumerate which of the ~10^6 possible EIINs
+ * are already on the platform. Keyed per user id (there is no IP-based case
+ * here — the RPC already requires `authenticated`) and checked/recorded
+ * BEFORE the RPC runs, same ordering as every other throttled action in
+ * `(auth)/actions.ts`. Every call counts against the bucket, not just a
+ * "failed" one (`throttleRecordFailure` runs unconditionally here) — the
+ * thing being capped is enumeration volume, not wrong guesses.
+ */
 export async function checkEiinAvailability(
   raw: unknown
 ): Promise<Result<CheckEiinAvailabilityOutput, ApiError>> {
@@ -122,6 +136,22 @@ export async function checkEiinAvailability(
   if (!user) {
     return err(apiError("unauthenticated", "Please sign in to continue."))
   }
+
+  const key = throttleKey("eiin-check", user.id)
+  const status = await throttleStatus(supabase, key)
+  if (status.blocked) {
+    const { t } = await getMessages()
+    return err(
+      apiError(
+        "rate_limited",
+        t.auth.login.throttled.replace(
+          "{seconds}",
+          String(status.retryAfterSeconds)
+        )
+      )
+    )
+  }
+  await throttleRecordFailure(supabase, "eiinCheck", key)
 
   return checkEiinAvailabilityRow(supabase, parsed.data.eiin)
 }

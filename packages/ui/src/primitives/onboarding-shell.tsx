@@ -16,6 +16,12 @@ import { cn } from "../lib/utils"
  * and each step's `<h1>` (rendered here) is where focus should land on
  * navigation — the page component is responsible for moving focus to it,
  * since only it knows when a client-side step transition just happened.
+ * This component forwards a ref to that `<h1>` (a `tabIndex={-1}` heading,
+ * not natively focusable otherwise) for exactly that purpose; a caller
+ * moves focus itself, typically from a `useEffect` that fires when its own
+ * step component mounts (React 19 attaches this ref as a plain prop —
+ * `forwardRef` is not required, but is kept for compatibility with any
+ * caller still on an older React types version within this monorepo).
  *
  * The back link is a plain `<a>`, not `next/link` — see `choice-card.tsx`'s
  * docblock for why (Opus review, PR #24): no primitive in this
@@ -41,16 +47,22 @@ export type OnboardingShellProps = {
   className?: string
 }
 
-export function OnboardingShell({
-  title,
-  progress,
-  backHref,
-  onBack,
-  backLabel = "Back",
-  actions,
-  children,
-  className,
-}: OnboardingShellProps) {
+export const OnboardingShell = React.forwardRef<
+  HTMLHeadingElement,
+  OnboardingShellProps
+>(function OnboardingShell(
+  {
+    title,
+    progress,
+    backHref,
+    onBack,
+    backLabel = "Back",
+    actions,
+    children,
+    className,
+  },
+  ref
+) {
   return (
     <div
       className={cn(
@@ -103,7 +115,11 @@ export function OnboardingShell({
       ) : null}
 
       {title ? (
-        <h1 className="mb-6 text-xl font-bold tracking-tight sm:text-2xl">
+        <h1
+          ref={ref}
+          tabIndex={-1}
+          className="mb-6 text-xl font-bold tracking-tight outline-none sm:text-2xl"
+        >
           {title}
         </h1>
       ) : null}
@@ -111,4 +127,4 @@ export function OnboardingShell({
       <div className="flex-1">{children}</div>
     </div>
   )
-}
+})

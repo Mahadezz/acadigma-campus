@@ -64,18 +64,23 @@ test("create-school wizard: steps 1-2 persist across a reload, then stops at the
 
   // Sat-Thu is preselected by default (§5); Friday stays off. Toggle Sunday
   // off to prove a real change round-trips through the reload below.
-  await expect(
-    page.getByRole("checkbox", { name: "Saturday" })
-  ).toHaveAttribute("aria-checked", "true")
-  await page.getByRole("checkbox", { name: "Sunday" }).click()
+  // PR #34 follow-up: the working-days picker is now a shadcn `ToggleGroup`
+  // (`type="multiple"`, Radix role="toolbar") instead of the hand-rolled
+  // `DayPickerRow` — each day is a plain button with `aria-pressed`, not a
+  // `role="checkbox"` chip.
+  await expect(page.getByRole("button", { name: "Saturday" })).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  )
+  await page.getByRole("button", { name: "Sunday" }).click()
 
   // --- Reload: the draft must still be there (§8 Part 3 demo) -------------
   await page.reload()
   await expect(
     page.getByRole("heading", { name: /where and when/i })
   ).toBeVisible()
-  await expect(page.getByRole("checkbox", { name: "Sunday" })).toHaveAttribute(
-    "aria-checked",
+  await expect(page.getByRole("button", { name: "Sunday" })).toHaveAttribute(
+    "aria-pressed",
     "false"
   )
 
