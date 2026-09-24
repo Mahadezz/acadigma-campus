@@ -493,8 +493,8 @@ xl  1280  tables gain optional columns; detail pages gain a right rail
 - `env(safe-area-inset-bottom)` padding, with `--inset-bottomnav` reserved as
   scroll padding on the content region so the last row is never trapped.
 
-**Desktop ≥ 1024.** BottomNav is replaced by the navy `Sidebar`
-(`--size-sidebar: 264px`, collapsible to 68px), carrying the **full** nav — the
+**Desktop ≥ 1024.** BottomNav is replaced by the paper/chalk `Sidebar`
+(amended per D-57; was navy) (`--size-sidebar: 264px`, collapsible to 68px), carrying the **full** nav — the
 "More" grouping disappears entirely, since the constraint that created it is
 gone. The TopBar keeps the workspace switcher, adds breadcrumbs, and adds
 `⌘K / Ctrl+K`. Same nav config object, different renderer.
