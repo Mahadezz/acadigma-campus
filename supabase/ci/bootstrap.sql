@@ -91,3 +91,24 @@ grant usage on schema extensions to anon, authenticated, service_role;
 -- silently override that for every schema created after this point.
 alter default privileges for role postgres grant usage on schemas
   to authenticated;
+
+-- Supabase provisions every project with
+-- `ALTER DEFAULT PRIVILEGES FOR ROLE postgres, supabase_admin IN SCHEMA
+-- public GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role`,
+-- once, before any of our migrations ever run — verified against the live
+-- project `kekfmibwjejdhxjkmezo`'s `pg_default_acl` on 2026-09-24
+-- (docs/decisions/DECISION-LOG.md D-54). `postgres` is the role that runs
+-- migrations both here and on the platform, so every function this repo
+-- creates in `public` without its own explicit revoke is EXECUTE-able by
+-- anon/authenticated on the real project the instant it is created —
+-- `revoke all on function ... from public` does NOT undo this, because a
+-- default privilege hands out an explicit per-role grant, not a PUBLIC one.
+--
+-- A plain `postgres:17` container has no such default, so without this line
+-- CI's pgTAP grant assertions ("anon cannot execute switch_workspace", "anon
+-- may not call log_auth_event_service", …) passed for the wrong reason —
+-- this line is the fix for that gap, not a preference. See
+-- supabase/tests/12_function_grants_invariant.sql for the standing
+-- assertion and docs/engineering/CI.md §2.3 for the narrative.
+alter default privileges for role postgres in schema public
+  grant execute on functions to anon, authenticated, service_role;
