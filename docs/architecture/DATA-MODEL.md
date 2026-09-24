@@ -755,6 +755,8 @@ No application role holds `INSERT` on `audit_events` — not `authenticated`, no
 
 **`tenancy.context_rejected` tripwire** — written only through `public.log_tenancy_context_rejected(uuid)` (F-ID-03 §4.3, D-52), `authenticated`-only EXECUTE (D-54). It refuses a caller with no `auth.uid()` (`42501`, `20260924040000_tripwire_requires_auth.sql`), so the row always has an actor, and it records the caller's own `membership_status` (`none`/`pending`/`removed`) and `severity` (`forgery`/`inactive`) in `after`, looked up server-side.
 
+**Pre-request hook wiring (D-65)** — PostgREST calls `public.pre_request()`, a SECURITY DEFINER wrapper around `app.pre_request()`, because the hook runs as the request role and `anon` has no USAGE on `app`.
+
 **Correlation-id threading** — `app.pre_request()` is a PostgREST `db-pre-request` hook (wired via `alter role authenticator set pgrst.db_pre_request`, guarded like the 0001 `pg_cron` block) that copies the `x-correlation-id` request header into the `app.correlation_id` transaction setting for every statement of one request, before RLS runs — so the generic trigger sees it automatically for a browser-driven server action. `app.set_correlation_id(uuid)` is the explicit fallback for a caller not reachable through that hook (a job, a webhook handler issuing one RPC).
 
 **Append-only** — `revoke insert, update, delete, truncate` from `anon`, `authenticated` and `service_role`, _and_ a `BEFORE UPDATE OR DELETE` trigger, because a GRANT alone does not stop the table owner or a `bypassrls` role.
