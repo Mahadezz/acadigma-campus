@@ -19,19 +19,26 @@ import type * as AcadigmaDomainAuth from "@acadigma/domain/auth"
  */
 const mockCallOrder: string[] = []
 
+/** Tracks every `cookies().delete(...)` call, name included — the fix under
+ * test for both `signInWithPassword` and `resetPassword` (F-ID-03 review:
+ * a stale `acadigma_workspace` cookie from a previous session on a shared
+ * device must not survive into a newly-minted one). */
+const mockCookieDelete = vi.fn()
+
 vi.mock("next/headers", () => ({
   headers: vi.fn(async () => new Headers()),
   cookies: vi.fn(async () => ({
     getAll: () => [],
     get: () => undefined,
     set: () => {},
-    delete: () => {},
+    delete: mockCookieDelete,
   })),
 }))
 
 vi.mock("next/navigation", () => ({
-  redirect: vi.fn(() => {
-    throw new Error("redirect() should not be called by resetPassword")
+  redirect: vi.fn((path: string) => {
+    mockCallOrder.push(`redirect:${path}`)
+    throw new Error("NEXT_REDIRECT")
   }),
 }))
 
@@ -39,6 +46,8 @@ const mockVerifyOtp = vi.fn()
 const mockUpdateUser = vi.fn()
 const mockSignOut = vi.fn()
 const mockRpc = vi.fn()
+const mockSignInWithPassword = vi.fn()
+const mockMaybeSingleProfile = vi.fn()
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
@@ -46,8 +55,21 @@ vi.mock("@/lib/supabase/server", () => ({
       verifyOtp: mockVerifyOtp,
       updateUser: mockUpdateUser,
       signOut: mockSignOut,
+      signInWithPassword: mockSignInWithPassword,
     },
     rpc: mockRpc,
+    from: (table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: mockMaybeSingleProfile,
+            }),
+          }),
+        }
+      }
+      throw new Error(`fake supabase client: unexpected table "${table}"`)
+    },
   })),
 }))
 
@@ -59,6 +81,12 @@ vi.mock("@/lib/throttle", () => ({
   throttleStatus: mockThrottleStatus,
   throttleRecordFailure: mockThrottleRecordFailure,
   throttleReset: mockThrottleReset,
+}))
+
+const mockResolveLandingRoute = vi.fn()
+
+vi.mock("@/lib/resolve-landing-route", () => ({
+  resolveLandingRoute: mockResolveLandingRoute,
 }))
 
 vi.mock("@acadigma/domain/auth", async (importOriginal) => {
@@ -74,7 +102,7 @@ vi.mock("@acadigma/domain/auth", async (importOriginal) => {
   }
 })
 
-const { resetPassword } = await import("./actions")
+const { resetPassword, signInWithPassword } = await import("./actions")
 
 const FAKE_USER = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -110,6 +138,21 @@ beforeEach(() => {
     return { error: null }
   })
   mockRpc.mockImplementation(async () => ({ data: null, error: null }))
+  mockCookieDelete.mockImplementation((name: string) => {
+    mockCallOrder.push(`cookieDelete:${name}`)
+  })
+  mockSignInWithPassword.mockImplementation(async () => {
+    mockCallOrder.push("signInWithPassword")
+    return { data: { user: FAKE_USER }, error: null }
+  })
+  mockMaybeSingleProfile.mockImplementation(async () => {
+    mockCallOrder.push("profiles.maybeSingle")
+    return { data: { suspended_at: null }, error: null }
+  })
+  mockResolveLandingRoute.mockImplementation(async () => {
+    mockCallOrder.push("resolveLandingRoute")
+    return "/app"
+  })
 })
 
 describe("resetPassword ordering (security review N9)", () => {
@@ -169,6 +212,7 @@ describe("resetPassword ordering (security review N9)", () => {
       "throttleStatus",
       "checkPassword",
       "verifyOtp",
+      "cookieDelete:acadigma_workspace",
       "checkPassword",
       "signOut:local",
     ])
@@ -177,5 +221,68 @@ describe("resetPassword ordering (security review N9)", () => {
     if (!result.ok) {
       expect(result.error.code).toBe("validation_failed")
     }
+  })
+
+  it("clears the acadigma_workspace cookie as soon as verifyOtp mints a session, even before the password is accepted", async () => {
+    const result = await resetPassword({
+      tokenHash: "tok-4",
+      password: "Xk9$mQ2pLr7z",
+    })
+
+    expect(result.ok).toBe(true)
+    expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_workspace")
+    expect(mockCallOrder.indexOf("verifyOtp")).toBeLessThan(
+      mockCallOrder.indexOf("cookieDelete:acadigma_workspace")
+    )
+  })
+})
+
+describe("signInWithPassword (F-ID-03 review: stale workspace cookie on a shared device)", () => {
+  it("clears the acadigma_workspace cookie on a successful sign-in, before resolving the landing route", async () => {
+    await expect(
+      signInWithPassword({
+        email: "person@test.local",
+        password: "whatever-they-typed",
+        remember: true,
+      })
+    ).rejects.toThrow("NEXT_REDIRECT")
+
+    expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_workspace")
+    expect(
+      mockCallOrder.indexOf("cookieDelete:acadigma_workspace")
+    ).toBeLessThan(mockCallOrder.indexOf("resolveLandingRoute"))
+    expect(mockResolveLandingRoute).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not clear the cookie when the credentials are rejected", async () => {
+    mockSignInWithPassword.mockImplementation(async () => {
+      mockCallOrder.push("signInWithPassword")
+      return { data: { user: null }, error: { status: 400, code: "invalid" } }
+    })
+
+    const result = await signInWithPassword({
+      email: "person@test.local",
+      password: "wrong-password",
+      remember: true,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(mockCookieDelete).not.toHaveBeenCalled()
+  })
+
+  it("still clears the cookie even when the account turns out to be suspended", async () => {
+    mockMaybeSingleProfile.mockImplementation(async () => {
+      mockCallOrder.push("profiles.maybeSingle")
+      return { data: { suspended_at: "2026-01-01T00:00:00Z" }, error: null }
+    })
+
+    const result = await signInWithPassword({
+      email: "person@test.local",
+      password: "whatever-they-typed",
+      remember: true,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_workspace")
   })
 })
