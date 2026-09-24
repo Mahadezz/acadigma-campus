@@ -1787,6 +1787,7 @@ export type Database = {
       }
     }
     Functions: {
+      expire_pro_trials: { Args: never; Returns: number }
       list_my_workspaces: {
         Args: never
         Returns: {
