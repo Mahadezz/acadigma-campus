@@ -20,7 +20,7 @@ const testConfig: NavConfig = {
       href: "/app/attendance",
       labelEn: "Attendance",
       labelBn: "হাজিরা",
-      icon: "check-square",
+      icon: "clipboard-check",
       roles: ["teacher"],
     },
     {
@@ -43,7 +43,7 @@ const testConfig: NavConfig = {
           href: "/app/reports",
           labelEn: "Reports",
           labelBn: "রিপোর্ট",
-          icon: "bar-chart",
+          icon: "bar-chart-3",
           badge: { count: 3 },
         },
         {
@@ -52,7 +52,10 @@ const testConfig: NavConfig = {
           labelEn: "Audit log",
           labelBn: "অডিট লগ",
           icon: "shield-check",
-          ownerOnly: true,
+          // Owner-only within More (DESIGN-SYSTEM §3.2 footnote) is
+          // `roles: ["owner"]`, not a separate `ownerOnly` flag — `owner` is
+          // already its own `WorkspaceRole` (D-56).
+          roles: ["owner"],
         },
       ],
     },
@@ -89,30 +92,27 @@ function renderNav(filter: NavFilterContext, pathname = "/app") {
 
 describe("BottomNavFromConfig — role/plan/owner filtering", () => {
   it("hides a role-gated item for a role that lacks it", () => {
-    renderNav({ role: "staff", isOwner: false, hasModule: () => true })
+    renderNav({ role: "staff", hasModule: () => true })
     expect(screen.queryByText("Attendance")).not.toBeInTheDocument()
   })
 
   it("shows a role-gated item for a role that has it", () => {
-    renderNav({ role: "teacher", isOwner: false, hasModule: () => true })
+    renderNav({ role: "teacher", hasModule: () => true })
     expect(screen.getByText("Attendance")).toBeInTheDocument()
   })
 
   it("hides a module-gated item when the module is not entitled", () => {
-    renderNav({ role: "teacher", isOwner: false, hasModule: () => false })
+    renderNav({ role: "teacher", hasModule: () => false })
     expect(screen.queryByText("Billing")).not.toBeInTheDocument()
   })
 
   it("shows a module-gated item once the module is entitled", () => {
-    renderNav({ role: "teacher", isOwner: false, hasModule: () => true })
+    renderNav({ role: "teacher", hasModule: () => true })
     expect(screen.getByText("Billing")).toBeInTheDocument()
   })
 
   it("marks the item matching the current route as active", () => {
-    renderNav(
-      { role: "teacher", isOwner: false, hasModule: () => true },
-      "/app/attendance"
-    )
+    renderNav({ role: "teacher", hasModule: () => true }, "/app/attendance")
     expect(screen.getByText("Attendance").closest("a")).toHaveAttribute(
       "aria-current",
       "page"
@@ -126,7 +126,7 @@ describe("BottomNavFromConfig — role/plan/owner filtering", () => {
 describe("BottomNavFromConfig — the More sheet", () => {
   it("renders a More tab that opens a sheet with the remaining items", async () => {
     const user = userEvent.setup()
-    renderNav({ role: "teacher", isOwner: false, hasModule: () => true })
+    renderNav({ role: "teacher", hasModule: () => true })
 
     expect(screen.queryByText("Reports")).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: /more/i }))
@@ -135,21 +135,21 @@ describe("BottomNavFromConfig — the More sheet", () => {
 
   it("hides an owner-only item from a non-owner", async () => {
     const user = userEvent.setup()
-    renderNav({ role: "teacher", isOwner: false, hasModule: () => true })
+    renderNav({ role: "teacher", hasModule: () => true })
     await user.click(screen.getByRole("button", { name: /more/i }))
     expect(screen.queryByText("Audit log")).not.toBeInTheDocument()
   })
 
   it("shows an owner-only item to the owner", async () => {
     const user = userEvent.setup()
-    renderNav({ role: "owner", isOwner: true, hasModule: () => true })
+    renderNav({ role: "owner", hasModule: () => true })
     await user.click(screen.getByRole("button", { name: /more/i }))
     expect(screen.getByText("Audit log")).toBeInTheDocument()
   })
 
   it("points the More trigger's aria-controls at the sheet content's id", async () => {
     const user = userEvent.setup()
-    renderNav({ role: "teacher", isOwner: false, hasModule: () => true })
+    renderNav({ role: "teacher", hasModule: () => true })
 
     const trigger = screen.getByRole("button", { name: /more/i })
     const controlsId = trigger.getAttribute("aria-controls")
@@ -176,7 +176,7 @@ describe("BottomNavFromConfig — the More sheet", () => {
               labelEn: "X",
               labelBn: "এক্স",
               icon: "settings",
-              ownerOnly: true,
+              roles: ["owner"],
             },
           ],
         },
@@ -185,7 +185,7 @@ describe("BottomNavFromConfig — the More sheet", () => {
     render(
       <BottomNavFromConfig
         config={emptyMoreConfig}
-        filter={{ role: "teacher", isOwner: false, hasModule: () => true }}
+        filter={{ role: "teacher", hasModule: () => true }}
         pathname="/app"
         renderLink={testRenderLink}
       />

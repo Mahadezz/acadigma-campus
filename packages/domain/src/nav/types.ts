@@ -39,6 +39,15 @@ export function isNavModuleKey(value: unknown): value is NavModuleKey {
 }
 
 /**
+ * A pre-resolved unread/pending count for a nav item's badge. `packages/ui`
+ * renders it (and aggregates it onto "More" when the item is inside a
+ * group) — this package never fetches a count itself, callers pass one in.
+ */
+export type NavBadge = {
+  count?: number
+}
+
+/**
  * One nav entry (DESIGN-SYSTEM §3.2). `icon` is a name, not a component — this
  * package has no UI dependency; `packages/ui`'s `BottomNav`/`Sidebar` map the
  * name to a `lucide-react` icon.
@@ -49,10 +58,17 @@ export type NavItem = {
   labelEn: string
   labelBn: string
   icon: string
-  /** Omitted = visible to every role the surrounding config already applies to. */
+  /**
+   * Omitted = visible to every role the surrounding config already applies
+   * to. An "owner-only within More" item (DESIGN-SYSTEM §3.2 footnote, e.g.
+   * Billing & plan, Audit log) is expressed as `roles: ["owner"]` — `owner`
+   * is already its own `WorkspaceRole`, distinct from `admin`, so no separate
+   * `ownerOnly` flag is needed (D-56).
+   */
   roles?: readonly WorkspaceRole[]
   /** Gated by plan entitlement ∧ owner visibility (PRODUCT-DECISIONS §1.12). */
   module?: NavModuleKey
+  badge?: NavBadge
 }
 
 /** A labelled section inside the "More" sheet. */
