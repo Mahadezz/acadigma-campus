@@ -5,11 +5,22 @@
 -- a migration is entitled to assume they exist. Everything here is `if not exists`:
 -- the file is re-runnable and creates nothing the real project does not already have.
 
-create extension if not exists pgtap;
-create extension if not exists pgcrypto;
-
--- Supabase keeps extensions in their own schema and on the search path.
+-- Supabase keeps extensions in their own schema and puts that schema on every
+-- role's search path. Mirror both (D-55): an extension created without a schema
+-- lands in `public`, where pgTAP's ~900 helpers and pgcrypto would show up in
+-- `supabase gen types --schema public` and in the app's generated types.
 create schema if not exists extensions;
+create extension if not exists pgtap    with schema extensions;
+create extension if not exists pgcrypto with schema extensions;
+
+do $$
+begin
+  execute format(
+    'alter database %I set search_path = "$user", public, extensions',
+    current_database());
+end
+$$;
+set search_path = "$user", public, extensions;
 
 -- GoTrue owns `auth`. Migrations reference auth.uid() and auth.users, so the schema
 -- has to exist here; the real definitions live in the managed auth service.
