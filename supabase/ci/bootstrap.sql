@@ -123,3 +123,54 @@ alter default privileges for role postgres grant usage on schemas
 -- assertion and docs/engineering/CI.md §2.3 for the narrative.
 alter default privileges for role postgres in schema public
   grant execute on functions to anon, authenticated, service_role;
+
+-- Test infrastructure only — never shipped to the real project.
+--
+-- 20260924030000_revoke_default_function_grants.sql (D-54, Opus review) adds
+-- a ROLE-WIDE `alter default privileges for role postgres revoke execute on
+-- functions from public` on top of the schema-scoped fix above, because a
+-- schema-scoped default only ADDS to the role-wide one — it does not replace
+-- it — and Postgres's built-in role-wide default for functions is "grant
+-- EXECUTE to PUBLIC". Without the role-wide revoke, any schema other than
+-- `public` (where we deliberately did not repeat the schema-scoped grant)
+-- would still hand every new function to PUBLIC, which is every role,
+-- `anon` included — the exact hole this migration exists to close.
+--
+-- That role-wide revoke has a real knock-on here: pg_prove connects as
+-- `postgres` and each spec file creates its own throwaway `tests.mkuser()` /
+-- `tests.login()` / `tests.logout()` helpers, then calls them after
+-- `SET ROLE authenticated`. Those calls relied on the same implicit PUBLIC
+-- grant the migration above revokes — with nothing else, `tests.login()`
+-- would become uncallable by `authenticated` the moment that migration
+-- applies, and every test file after it would fail with "permission denied
+-- for function login", which is a CI-only false failure, not a security
+-- finding (this schema never exists on the real project).
+--
+-- The fix is symmetric with the `public` schema fix above: a schema-scoped
+-- default is additive on top of the (now-revoked) role-wide one, so give
+-- `tests` its own schema-scoped default that puts PUBLIC's EXECUTE back,
+-- scoped to that schema alone. Created here, before any migration runs, so
+-- the default privilege has a schema to attach to; each spec file's own
+-- `create schema if not exists tests` later is then a no-op.
+create schema if not exists tests;
+grant usage on schema tests to public;
+alter default privileges for role postgres in schema tests
+  grant execute on functions to public;
+
+-- Supabase's per-project default also covers tables and sequences, not only
+-- functions: `ALTER DEFAULT PRIVILEGES ... IN SCHEMA public GRANT ALL ON
+-- TABLES/SEQUENCES TO anon, authenticated, service_role`. Mirrored here so a
+-- table-grant pgTAP assertion ("anon cannot select workspace_members",
+-- "authenticated cannot delete audit_events") can't pass in CI for the same
+-- wrong reason the function ones did before D-54: a plain postgres:17
+-- container never grants anything to anon/authenticated/service_role on a
+-- new table unless a migration says so, so those assertions were previously
+-- proving "nothing was granted" rather than "the grant was explicitly
+-- revoked". If this parity line turns any existing assertion red, that red
+-- is real (the live project's table/sequence grants disagree with this
+-- repo's intent the same way the function grants did) — see this PR's test
+-- report for whether that happened and what was done about it.
+alter default privileges for role postgres in schema public
+  grant all on tables to anon, authenticated, service_role;
+alter default privileges for role postgres in schema public
+  grant all on sequences to anon, authenticated, service_role;

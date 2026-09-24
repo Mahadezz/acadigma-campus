@@ -14,27 +14,44 @@
 -- 20260924030000_revoke_default_function_grants.sql — see that migration
 -- and DECISION-LOG D-54.
 --
--- Two invariants, checked directly against Postgres catalogs (no RLS/session
+-- Four invariants, checked directly against Postgres catalogs (no RLS/session
 -- fixtures needed — this is grant introspection, run as `postgres`):
 --
---   A. Every SECURITY DEFINER function in `public`/`app` — anon and
---      authenticated get EXECUTE ONLY on an explicit allowlist. `app` is
---      never on anon's allowlist (anon has no USAGE on `app` at all —
---      02_tenant_isolation.sql — but the ACL bit itself must still be
---      absent, not merely unreachable). The `authenticated` allowlist is
---      scoped to `public` only: every function in `app` is deliberately
---      granted to `authenticated` en masse by the do-block loop in
+--   A. Every function in `public`/`app` — SECURITY DEFINER or INVOKER alike
+--      (Opus review: an allowlist that only looked at `prosecdef` functions
+--      would miss a future plain SQL/PLpgSQL invoker function granted too
+--      broadly; today every function in both schemas happens to be DEFINER
+--      except `app`'s trigger/utility helpers, and those are never anon- or
+--      authenticated-allowlisted either, so dropping the `prosecdef` filter
+--      costs nothing and closes a real gap) — anon and authenticated get
+--      EXECUTE ONLY on an explicit allowlist. `app` is never on anon's
+--      allowlist (anon has no USAGE on `app` at all — 02_tenant_isolation.sql
+--      — but the ACL bit itself must still be absent, not merely
+--      unreachable). The `authenticated` allowlist is scoped to `public`
+--      only: every function in `app` is deliberately granted to
+--      `authenticated` en masse by the do-block loop in
 --      20260917010000_extensions_and_app_schema.sql §9 (D-50 — `app` is the
 --      server-internal SECURITY DEFINER layer, not itself the security
 --      boundary; PostgREST cannot reach it because only `public` is
 --      exposed), so an allowlist over `app` would fail every function in
 --      that schema by design and would test nothing real.
---   B. The default itself, for functions created after
---      20260924030000: anon/authenticated no longer inherit EXECUTE;
---      service_role still does.
+--   B. `log_auth_event_service` — service_role only.
+--   C. The default itself, for functions created after
+--      20260924030000: anon/authenticated no longer inherit EXECUTE
+--      (neither the `public`-schema-scoped default nor the role-wide one —
+--      D-54's Opus-review fix); service_role still does, schema-scoped.
+--   D. A LIVE probe (Opus review): C only inspects `pg_default_acl`, which
+--      proves the catalog entry is *recorded* correctly but not that it
+--      actually governs a newly created function. This section creates a
+--      throwaway, ungranted function inside this test's own transaction and
+--      asserts its actual privileges — a probe that genuinely exercises the
+--      default rather than re-describing it, and one that WOULD have failed
+--      before 20260924030000_revoke_default_function_grants.sql's role-wide
+--      revoke (2b) existed, because the role-wide "grant EXECUTE to PUBLIC"
+--      built-in default would have made it anon-executable.
 -- =====================================================================
 begin;
-select plan(7);
+select plan(10);
 
 -- ---------------------------------------------------------------------
 -- A1. anon — allowed ONLY for the pre-session throttle/auth surface, plus
@@ -62,14 +79,13 @@ violations as (
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where n.nspname in ('public', 'app')
-    and p.prosecdef
     and has_function_privilege('anon', p.oid, 'execute')
     and p.oid not in (select oid from allowed)
 )
 select is(
   (select coalesce(array_agg(sig order by sig), array[]::text[]) from violations),
   array[]::text[],
-  'anon has EXECUTE on no SECURITY DEFINER function in public/app outside the throttle/auth allowlist');
+  'anon has EXECUTE on no function (definer or invoker) in public/app outside the throttle/auth allowlist');
 
 -- ---------------------------------------------------------------------
 -- A2. authenticated — allowed ONLY on the explicit public-schema allowlist
@@ -99,14 +115,13 @@ violations as (
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
-    and p.prosecdef
     and has_function_privilege('authenticated', p.oid, 'execute')
     and p.oid not in (select oid from allowed)
 )
 select is(
   (select coalesce(array_agg(sig order by sig), array[]::text[]) from violations),
   array[]::text[],
-  'authenticated has EXECUTE on no public SECURITY DEFINER function outside its explicit allowlist');
+  'authenticated has EXECUTE on no public function (definer or invoker) outside its explicit allowlist');
 
 -- ---------------------------------------------------------------------
 -- B. log_auth_event_service — service_role ONLY. A caller-supplied
@@ -170,6 +185,33 @@ select ok(
     where r.rolname = 'service_role' and e.privilege_type = 'EXECUTE'
   ),
   'default privileges (role postgres, schema public, functions) still grant EXECUTE to service_role');
+
+-- ---------------------------------------------------------------------
+-- D. Live probe (Opus review): create a throwaway function with NO grants
+--    section at all, inside this test's own transaction (rolled back at the
+--    end, so it never persists), and check what it can actually be executed
+--    by. This is the assertion that would have FAILED before
+--    20260924030000's role-wide revoke (2b) existed: without it, a brand
+--    new function in `public` still inherits EXECUTE via Postgres's built-in
+--    role-wide "grant to PUBLIC" default (anon is a member of PUBLIC), even
+--    though the schema-scoped revoke (2a) looks like it should have been
+--    enough. Section C above only reads the recorded pg_default_acl catalog
+--    entry; this section proves that entry actually governs a new object.
+-- ---------------------------------------------------------------------
+create function public.zz_probe_default_acl() returns int
+  language sql as 'select 1';
+
+select ok(
+  not has_function_privilege('anon', 'public.zz_probe_default_acl()', 'execute'),
+  'a brand-new, ungranted public function is NOT anon-executable by default');
+
+select ok(
+  not has_function_privilege('authenticated', 'public.zz_probe_default_acl()', 'execute'),
+  'a brand-new, ungranted public function is NOT authenticated-executable by default');
+
+select ok(
+  has_function_privilege('service_role', 'public.zz_probe_default_acl()', 'execute'),
+  'a brand-new, ungranted public function IS service_role-executable by default (platform parity, D-54)');
 
 select * from finish();
 rollback;

@@ -31,6 +31,21 @@
 --      explicitly — deny-by-default, matching D-50's "every client-callable
 --      RPC gets a thin, explicitly-granted `public` wrapper" model instead
 --      of silently trusting the platform default to agree with it.
+--
+--      Opus review of this PR: step 2 above, on its own, is NOT actually
+--      deny-by-default. `ALTER DEFAULT PRIVILEGES ... IN SCHEMA public
+--      REVOKE ...` only removes what the SCHEMA-scoped default was granting
+--      in `public`; it does not touch Postgres's own ROLE-WIDE built-in
+--      default for functions, which is "grant EXECUTE to PUBLIC" — and every
+--      role, `anon` included, is a member of PUBLIC. A schema-scoped default
+--      is additive on top of the role-wide one, never a replacement for it,
+--      so a future function created in ANY schema this repo did not
+--      explicitly re-grant in (or even in `public`, once the schema-scoped
+--      revoke above is somehow bypassed) would still be PUBLIC-executable —
+--      i.e. anon-executable — through the untouched role-wide default. Step
+--      2b below closes that: it revokes EXECUTE from PUBLIC at the role-wide
+--      level too, so there is no longer an implicit grant left for the
+--      schema-scoped revoke to merely shadow.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -55,28 +70,55 @@ revoke execute on function public.log_auth_event_service(text, uuid, jsonb, inet
 --     itself was still wrong and would have been a live hole the moment
 --     either function's null-check was ever loosened.
 --
---     log_tenancy_context_rejected has NO such check today (it happily
---     writes `app.log_audit_event` with `auth.uid()` = null and an
---     attacker-supplied `attempted_workspace_id`) — this is a real,
---     currently-exploitable hole: anon can write an audit row into any
---     workspace's `audit_events` right now. The grant fix here closes the
---     PostgREST path; the null-check itself is intentionally NOT added in
---     this migration — PR #12 (branch fix/tenancy-review-followups) is
---     already replacing this function's body in
---     20260924020000_tenancy_tripwire_membership_status.sql, and touching
---     it here would conflict. See this PR's description for the follow-up.
+--     log_tenancy_context_rejected had NO such check when this migration
+--     was written (it happily writes `app.log_audit_event` with `auth.uid()`
+--     = null and an attacker-supplied `attempted_workspace_id`) — this was a
+--     real, currently-exploitable hole: anon could write an audit row into
+--     any workspace's `audit_events`. The grant fix here closes the
+--     PostgREST path; the null-check itself was intentionally NOT added in
+--     this migration — PR #12 (`fix/tenancy-review-followups`, merged as
+--     D-52) was already replacing this function's body in
+--     20260924020000_tenancy_tripwire_membership_status.sql, and touching it
+--     here would have conflicted. That migration's own header confirms
+--     "Signature and grants are unchanged" — it still has no null check —
+--     so this revoke still targets the live signature and the gap (now
+--     closed only at the grant layer) is unchanged; a small follow-up to add
+--     the check belongs to a separate PR.
 -- ---------------------------------------------------------------------
 revoke execute on function public.switch_workspace(uuid) from anon;
 revoke execute on function public.list_my_workspaces() from anon;
 revoke execute on function public.log_tenancy_context_rejected(uuid) from anon;
 
 -- ---------------------------------------------------------------------
--- 2. Deny by default for every `public` function created from here on.
---    service_role keeps the platform default; anon/authenticated do not.
---    A migration that adds a function and forgets its grants section now
---    fails supabase/tests/12_function_grants_invariant.sql (and simply
---    cannot be called by anon/authenticated at all) instead of silently
---    inheriting EXECUTE the way `log_tenancy_context_rejected` did.
+-- 2a. Deny by default, schema-scoped: every `public` function created from
+--     here on. service_role keeps the platform default; anon/authenticated
+--     do not. A migration that adds a function and forgets its grants
+--     section now fails supabase/tests/12_function_grants_invariant.sql
+--     (and simply cannot be called by anon/authenticated at all) instead of
+--     silently inheriting EXECUTE the way `log_tenancy_context_rejected` did.
 -- ---------------------------------------------------------------------
 alter default privileges for role postgres in schema public
   revoke execute on functions from anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 2b. Deny by default, role-wide (Opus review — see the header note above).
+--     A schema-scoped default only adds to the role-wide one; it never
+--     replaces Postgres's built-in "grant EXECUTE on functions to PUBLIC".
+--     Without this, any function created in a schema that does not repeat
+--     2a's schema-scoped revoke (or a hypothetical future schema this repo
+--     adds) would still be PUBLIC-executable — anon is a member of PUBLIC —
+--     through the untouched role-wide default alone. This is what makes the
+--     policy actually deny-by-default rather than "deny-by-default in
+--     `public`, wide open everywhere else by accident."
+--
+--     Knock-on for test infrastructure only (never shipped to the real
+--     project): pgTAP's `tests.*` helper functions relied on that same
+--     implicit PUBLIC grant to be callable by `authenticated` after
+--     `SET ROLE authenticated`. `supabase/ci/bootstrap.sql` restores it,
+--     scoped to the `tests` schema alone, via its own schema-scoped default
+--     for that schema — additive on top of this role-wide revoke, the same
+--     way 2a's `public`-scoped grant to `service_role` is additive on top
+--     of it.
+-- ---------------------------------------------------------------------
+alter default privileges for role postgres
+  revoke execute on functions from public;
