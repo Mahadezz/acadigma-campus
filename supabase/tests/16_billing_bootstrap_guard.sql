@@ -31,9 +31,20 @@
 --      app.tg_workspace_billing_defaults()) still produces exactly one
 --      personal workspace with plan_id set to personal_free, unaffected by
 --      the split.
+--   4. hardening (Opus review, PR #23): workspaces_insert's WITH CHECK does
+--      not constrain plan_id/trial_ends_at at all, so a client's own INSERT
+--      could set either to anything — a caller-supplied paid plan_id and a
+--      decade-long trial_ends_at are both overwritten by
+--      app.tg_workspace_billing_defaults() regardless, not merely left
+--      alone when a lookup happens to succeed.
+--   5. a missing plan catalogue row (the bootstrap's own misconfiguration,
+--      not a client's) fails the whole INSERT loudly with 22023, instead of
+--      silently leaving plan_id null or a client-supplied value in place —
+--      proven under a savepoint, as the privileged postgres role, with the
+--      'pro' plan row's code temporarily renamed.
 -- =====================================================================
 begin;
-select plan(13);
+select plan(20);
 
 create schema if not exists tests;
 
@@ -184,6 +195,75 @@ select is(
     where w.created_by = '16000002-0000-0000-0000-000000000002' and w.type = 'personal'),
   'personal_free',
   'the personal workspace''s plan_id is set to personal_free by app.tg_workspace_billing_defaults()');
+
+-- =====================================================================
+-- 4. hardening: a caller-supplied plan_id (any non-pro, non-personal_free
+--    plan from the seed) and a decade-long trial_ends_at are both
+--    overwritten by the bootstrap, not just left alone. `starter` is
+--    is_public/active in the seed, so `authenticated` can read its id.
+-- =====================================================================
+select tests.mkuser('16000003-0000-0000-0000-000000000003', 'd59.hostile@test.local', 'D59 Hostile Plan');
+select tests.login('16000003-0000-0000-0000-000000000003');
+
+select lives_ok(
+  $$insert into public.workspaces (id, type, name, slug, owner_id, created_by, plan_id, trial_ends_at)
+    values ('16000003-0000-0000-0000-0000000000cc', 'school', 'D59 Hostile Plan School',
+            'd59-hostile-plan', '16000003-0000-0000-0000-000000000003',
+            '16000003-0000-0000-0000-000000000003',
+            (select id from public.plans where code = 'starter'),
+            now() + interval '10 years')$$,
+  'a client-supplied plan_id/trial_ends_at on the INSERT itself does not error out (workspaces_insert''s WITH CHECK does not constrain either column) — the bootstrap trigger is what has to correct it');
+
+select is(
+  (select p.code from public.workspaces w
+     join public.plans p on p.id = w.plan_id
+    where w.id = '16000003-0000-0000-0000-0000000000cc'),
+  'pro',
+  'the caller-supplied ''starter'' plan_id was overwritten with ''pro'' by app.tg_workspace_billing_defaults(), not left as the client set it');
+
+select ok(
+  (select w.trial_ends_at <= now() + make_interval(days => p.trial_days) + interval '1 minute'
+     from public.workspaces w
+     join public.plans p on p.id = w.plan_id
+    where w.id = '16000003-0000-0000-0000-0000000000cc'),
+  'trial_ends_at was overwritten to the pro plan''s own trial_days, not the client-supplied 10-year value');
+
+select ok(
+  (select w.trial_ends_at > now()
+     from public.workspaces w where w.id = '16000003-0000-0000-0000-0000000000cc'),
+  'trial_ends_at is still a real, future trial (sanity check on the overwritten value)');
+
+select tests.logout();
+
+-- =====================================================================
+-- 5. a missing plan catalogue row fails the INSERT loudly (22023), rather
+--    than silently proceeding with plan_id null or a client-supplied value.
+--    Done as the privileged postgres role, under a savepoint, so the
+--    catalogue is restored afterwards for the rest of the suite.
+-- =====================================================================
+savepoint missing_pro_plan;
+
+update public.plans set code = 'pro_disabled_for_test' where code = 'pro';
+
+select throws_ok(
+  $$insert into public.workspaces (type, name, slug, owner_id, created_by)
+    values ('school', 'Missing Plan School', 'missing-plan-school',
+            '16000001-0000-0000-0000-000000000001', '16000001-0000-0000-0000-000000000001')$$,
+  '22023',
+  'billing bootstrap misconfigured: no pro plan row',
+  'a missing pro plan row fails the whole INSERT loudly instead of creating a workspace with plan_id null or client-controlled');
+
+select is(
+  (select count(*)::int from public.workspaces where slug = 'missing-plan-school'),
+  0,
+  'the failed insert left no partial row behind — the whole statement, including app.tg_workspace_bootstrap()''s membership insert, rolled back');
+
+rollback to savepoint missing_pro_plan;
+
+select is(
+  (select code from public.plans where code = 'pro'),
+  'pro',
+  'the pro plan row is restored after the savepoint rollback, for the rest of the suite');
 
 select * from finish();
 rollback;

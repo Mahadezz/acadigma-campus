@@ -88,22 +88,43 @@ as $$
 declare
   v_plan public.plans;
 begin
+  -- Hardening (Opus review, PR #23): the workspaces_insert WITH CHECK does
+  -- not constrain plan_id/trial_ends_at at all, so a client's INSERT
+  -- statement could set either column to anything (a paid plan, a decade-
+  -- long trial). Clear both FIRST, unconditionally, before any catalogue
+  -- lookup — so if the expected plan row were ever missing, a client-chosen
+  -- value could never survive into the row, or into the AFTER trigger's
+  -- subscription (which would otherwise create a trialing subscription on
+  -- whatever plan_id the client supplied).
+  new.plan_id := null;
+  new.trial_ends_at := null;
+
   if new.type <> 'school' then
     -- A personal workspace is entitled through workspaces.plan_id alone.
     -- It gets NO subscriptions row: there is nothing to bill, and an empty
     -- "subscription" would show up in every billing report and MRR figure.
     select * into v_plan from public.plans p where p.code = 'personal_free';
-    if found then
-      new.plan_id := v_plan.id;
+    if not found then
+      -- A missing seed row is a bootstrap misconfiguration, not a client
+      -- error — it must fail loudly (abort the signup) rather than silently
+      -- leave plan_id null or, worse, let a client-supplied value through.
+      -- Same errcode/rationale as app.log_audit_event()'s uncatalogued-
+      -- action check (20260924000100_audit_substrate.sql).
+      raise exception 'billing bootstrap misconfigured: no personal_free plan row'
+        using errcode = '22023';
     end if;
+    new.plan_id := v_plan.id;
     return new;
   end if;
 
   select * into v_plan from public.plans p where p.code = 'pro';
-  if found then
-    new.plan_id := v_plan.id;
-    new.trial_ends_at := now() + make_interval(days => v_plan.trial_days);
+  if not found then
+    raise exception 'billing bootstrap misconfigured: no pro plan row'
+      using errcode = '22023';
   end if;
+
+  new.plan_id := v_plan.id;
+  new.trial_ends_at := now() + make_interval(days => v_plan.trial_days);
 
   return new;
 end;
@@ -111,10 +132,16 @@ $$;
 
 comment on function app.tg_workspace_billing_defaults() is
   'D-59: BEFORE INSERT counterpart to app.tg_workspace_billing_bootstrap() '
-  '(AFTER INSERT). Sets NEW.plan_id / NEW.trial_ends_at directly, with no '
-  'second UPDATE statement against public.workspaces, so '
-  'app.tg_workspaces_guard() (BEFORE UPDATE only) never sees this and never '
-  'has to tell a client statement apart from the platform''s own bootstrap.';
+  '(AFTER INSERT). Clears NEW.plan_id / NEW.trial_ends_at unconditionally '
+  'first (workspaces_insert''s WITH CHECK does not constrain either column, '
+  'so a client INSERT could otherwise supply its own), then sets them from '
+  'the catalogue — with no second UPDATE statement against '
+  'public.workspaces, so app.tg_workspaces_guard() (BEFORE UPDATE only) '
+  'never sees this and never has to tell a client statement apart from the '
+  'platform''s own bootstrap. Raises 22023 if the expected plan row is '
+  'missing (PR #23 review): a bootstrap misconfiguration fails loudly '
+  'instead of silently leaving plan_id null or a client-chosen value in '
+  'place.';
 
 drop trigger if exists workspace_billing_defaults on public.workspaces;
 create trigger workspace_billing_defaults
