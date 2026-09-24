@@ -850,8 +850,10 @@ $$;
 
 comment on function app.set_correlation_id(uuid) is
   'Explicit fallback for app.pre_request(): sets app.correlation_id for the '
-  'REST of the current transaction. Used by packages/db when a caller is '
-  'not reachable through the db-pre-request hook (jobs, webhooks).';
+  'REST of the current transaction. For SQL callers in ONE session or '
+  'transaction (jobs on a direct pg connection, other SQL functions); a '
+  'separate PostgREST RPC is its own transaction, so calling this over the '
+  'API cannot carry the id to a later request.';
 
 revoke all on function app.set_correlation_id(uuid) from public;
 grant execute on function app.set_correlation_id(uuid) to authenticated, service_role;

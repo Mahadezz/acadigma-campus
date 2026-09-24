@@ -179,7 +179,10 @@ export async function getAuditEvent(
   client: AcadigmaSupabaseClient,
   input: GetAuditEventInput
 ): Promise<Result<AuditEventDto, ApiError>> {
-  let query = client.from(VIEW).select("*").eq("id", input.id)
+  // `id` is a bigint carried as a decimal string end to end so it never loses
+  // precision in JS; `.filter` passes it to PostgREST verbatim, where `.eq`
+  // would demand the generated `number` type.
+  let query = client.from(VIEW).select("*").filter("id", "eq", input.id)
   query = scopeToWorkspace(query, ctx.workspaceId)
 
   const { data, error } = await query.maybeSingle()

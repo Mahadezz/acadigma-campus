@@ -45,12 +45,18 @@ const EVENT_ROW = {
  * A chainable stand-in for a supabase-js PostgrestFilterBuilder, extended from
  * `packages/db/src/repositories/plans.test.ts`'s fake with the filter methods this
  * repository actually calls: `or`, `like`, `ilike`, `gte`, `lte`, `lt`, `in`,
- * `order`, `limit`.
+ * `order`, `limit`, and `filter` (recorded, so a test can assert the exact call).
  */
 function queryResult(result: { data?: unknown; error?: unknown }) {
+  const filterCalls: unknown[][] = []
   const builder: Record<string, unknown> = {
+    filterCalls,
     select: () => builder,
     eq: () => builder,
+    filter: (...args: unknown[]) => {
+      filterCalls.push(args)
+      return builder
+    },
     or: () => builder,
     like: () => builder,
     ilike: () => builder,
@@ -168,11 +174,15 @@ describe("listAuditEvents", () => {
 
 describe("getAuditEvent", () => {
   it("returns the single event with names resolved", async () => {
+    const view = queryResult({ data: EVENT_ROW, error: null })
     const client = fakeClient({
-      audit_events_view: queryResult({ data: EVENT_ROW, error: null }),
+      audit_events_view: view,
       profiles: queryResult({ data: PROFILE_ROWS, error: null }),
     })
     const result = await getAuditEvent(CTX, client, { id: "42" })
+    // The bigint id travels as its decimal string, never coerced to a JS
+    // number, so ids beyond Number.MAX_SAFE_INTEGER stay exact.
+    expect(view.filterCalls).toContainEqual(["id", "eq", "42"])
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.data.actorName).toBe("Nusrat Jahan")

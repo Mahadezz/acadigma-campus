@@ -8,7 +8,6 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./repositories": "./src/repositories/index.ts",
-    "./audit-context": "./src/audit-context.ts",
     "./workspace-context": "./src/workspace-context.ts",
     "./types": "./src/types.generated.ts",
     "./repositories/settings": "./src/repositories/settings.ts"
