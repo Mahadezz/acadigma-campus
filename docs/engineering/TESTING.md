@@ -49,10 +49,10 @@ What we do **not** do: snapshot tests of rendered markup (they fail on every des
 
 ### 2.1 Workspace setup
 
-One Vitest workspace at the repo root, three projects so the environments do not fight:
+One Vitest config at the repo root (`vitest.config.ts`, `test.projects`) so the environments do not fight. (Vitest 4 removed the separate `vitest.workspace.ts` file — see D-49 2026-09-24 dependency bump.)
 
 ```ts
-// vitest.workspace.ts
+// vitest.config.ts — test.projects
 export default [
   {
     test: {

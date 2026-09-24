@@ -5,7 +5,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["@testing-library/jest-dom"]
+    "types": ["@testing-library/jest-dom", "node"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vitest.setup.ts"]
 }
