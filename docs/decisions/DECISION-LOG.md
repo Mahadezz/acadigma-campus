@@ -514,6 +514,7 @@ Admins see **scheduled periods only**; workload variance is teacher-private by d
 **Why:** all four schema/function calls above are the direct, narrow answers OQ-1 and DATA-MODEL.md's own sketch left open; none is speculative — each is required for the Part 1 demo ("a teacher can read their own record and their own rate, cannot read a colleague's rate by any query, and `app.staff_hourly_rate` returns the rate in force on a past date") to be true. Item 3 is a deliberate non-decision, recorded so the duplication is visible rather than silently repeated.
 
 **Consequences:** `DATA-MODEL.md` §6 is rewritten to match the shipped schema (columns, RLS, indexes, the corrected function signature) in this PR. `workspace_members.label_id/department/subjects/phone` remain live, unused by this feature, until a future Part reconciles them — a directory screen built carelessly against `workspace_members` instead of `staff_directory`/`staff_records` would show stale or duplicate data; Part 2 must read from `staff_directory`. `check-audit-catalog-parity.mjs`'s new multi-file scan is a superset of its old behaviour (unchanged result for every migration before this one) and is itself exercised by this PR passing.
+
 ## D-64 — Infrastructure and repository decisions taken with the owner on 2026-09-24 · ACCEPTED · 2026-09-24
 
 > Numbering note: D-60 to D-63 are reserved by open PRs (F-ID-05 P2, F-ID-03 P4, F-CM-06 P4, F-OP-06 P1). This entry records decisions made in conversation that no PR's own decision entry covers.
