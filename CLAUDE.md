@@ -163,6 +163,7 @@ If a spec is ambiguous enough that a Sonnet session would have to guess, that is
 - Seeded-account Playwright journeys carry the `E2E_LIVE_SUPABASE` skip guard until OQ-27 is done.
 - Never `git stash` in shared worktrees. After another session force-pushes, `git switch -C <branch> origin/<branch>` and `pnpm install --frozen-lockfile` before trusting a local typecheck. Verify rebases with `git merge-base --is-ancestor`.
 - `Object.hasOwn` on untrusted keys.
+- Every tenant write action calls `requireWritable(ctx, client)` after the policy check and returns `err(planReadOnlyApiError(w.error))`; every new `workspace_id` table adds the `require_writable` trigger (D-300). `scripts/check-require-writable.mjs` and `supabase/tests/50_require_writable.sql` enforce both.
 - Every page and layout under a workspace-scoped shell calls `requireShell(shell)` (`apps/web/lib/workspace.ts`), never `requireWorkspace()` directly — a layout does not always re-run on client-side navigation, so the shell gate must also run at the page.
 
 **Do not:** edit an already-applied migration · apply a migration to production · write audit rows from code · accept a price from the client · put a secret anywhere but `.env.local` and Vercel · filter a table in React · ship a green PR whose test report you did not actually run · claim a DoD box you cannot evidence.

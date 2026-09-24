@@ -18,6 +18,7 @@ import {
   apiError,
   apiErrorFromZod,
   err,
+  planReadOnlyApiError,
   schoolSettingsPatchSchema,
   type ApiError,
   type Result,
@@ -26,6 +27,7 @@ import {
   getSchoolSettings as getSchoolSettingsRepo,
   updateSchoolSettings as updateSchoolSettingsRepo,
 } from "@acadigma/db/repositories/settings"
+import { requireWritable } from "@acadigma/db/repositories"
 import { can } from "@acadigma/domain"
 import type { ResolvedSettings } from "@acadigma/domain/settings"
 
@@ -67,6 +69,11 @@ export async function updateSchoolSettings(
   }
 
   const supabase = await createClient()
+  // D-300: after the policy check (a teacher still gets `forbidden`), before
+  // the write. The DB trigger refuses it too; this returns the typed error.
+  const writable = await requireWritable(ctx, supabase)
+  if (!writable.ok) return err(planReadOnlyApiError(writable.error))
+
   const result = await updateSchoolSettingsRepo(supabase, ctx, parsed.data)
   if (result.ok) revalidatePath(SETTINGS_PATH)
   return result
