@@ -122,7 +122,10 @@ export default async function OnboardingChooserPage() {
               disabled
               badge={t.onboarding.chooser.comingSoon}
             />
-            <StartOverLink label={t.onboarding.chooser.startOver} />
+            <StartOverLink
+              label={t.onboarding.chooser.startOver}
+              errorLabel={t.onboarding.chooser.actionError}
+            />
           </>
         ) : (
           <>
@@ -147,7 +150,7 @@ export default async function OnboardingChooserPage() {
           <div className="pt-2 text-center sm:text-left">
             <TutoringExitLink
               label={t.onboarding.chooser.tutoringLink}
-              errorLabel={t.onboarding.chooser.tutoringExitError}
+              errorLabel={t.onboarding.chooser.actionError}
             />
           </div>
         ) : null}

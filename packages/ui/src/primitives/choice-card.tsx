@@ -15,6 +15,13 @@ import { cn } from "../lib/utils"
  * aria-disabled>` when `disabled` is set — used for a card whose
  * destination does not exist yet (Opus review, PR #24: a disabled card with
  * a "Coming soon" `badge`, not a link that 404s).
+ *
+ * Plain `<a>`, not `next/link` (Opus review, PR #24): `packages/ui` has no
+ * `next` dependency and no primitive here uses `next/link` anywhere — a
+ * deliberate, existing, framework-agnostic boundary this component follows
+ * rather than breaks. Losing client-side prefetch on this one card is a
+ * smaller cost than being the first primitive in the package to need a
+ * link-component prop for it.
  */
 export type ChoiceCardProps = {
   icon: React.ReactNode

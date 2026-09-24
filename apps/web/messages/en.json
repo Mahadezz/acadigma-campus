@@ -189,7 +189,7 @@
       "startOver": "Start over",
       "comingSoon": "Coming soon",
       "loadError": "We couldn't load your account. Try again.",
-      "tutoringExitError": "Something went wrong. Try again."
+      "actionError": "Something went wrong. Try again."
     }
   },
   "nav": {

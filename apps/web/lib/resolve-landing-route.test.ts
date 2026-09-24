@@ -23,6 +23,15 @@ vi.mock("@acadigma/db", () => ({
   resolveWorkspaceContext: mockResolveWorkspaceContext,
 }))
 
+// `requestLogger` calls Next's `headers()` internally, which throws outside a
+// real request — mocked so the fail-closed logging test below can assert a
+// warning was logged without a Next.js request context (same pattern as
+// throttle.test.ts).
+const mockWarn = vi.fn()
+vi.mock("@/lib/logger", () => ({
+  requestLogger: vi.fn(async () => ({ warn: mockWarn })),
+}))
+
 type FakeClientOptions = {
   onboardingCompletedAt?: string | null
   profileError?: boolean
@@ -214,6 +223,41 @@ describe("resolveLandingRoute", () => {
       // hasActiveSchoolMembership is OR'd true regardless of the failed
       // probe. The override never fires; the ordinary F-ID-03 table applies.
       expect(await resolveLandingRoute()).toBe("/app")
+    })
+
+    it("logs a warning when the profile fetch or membership probe errors", async () => {
+      mockWarn.mockClear()
+      nextFakeClient = fakeSupabase({
+        profileError: true,
+        membershipsError: true,
+      })
+      mockResolveWorkspaceContext.mockResolvedValueOnce({
+        ok: true,
+        data: { userId: "u1", workspaceType: "school", role: "owner" },
+      })
+      await resolveLandingRoute()
+      expect(mockWarn).toHaveBeenCalledOnce()
+    })
+
+    it("accepts a pre-fetched onboardingCompletedAt and skips the profiles select entirely (signInWithPassword already read it alongside suspended_at)", async () => {
+      let profilesQueried = false
+      nextFakeClient = fakeSupabase({
+        memberships: [{ type: "personal", status: "active" }],
+      })
+      const realFrom = nextFakeClient.from.bind(nextFakeClient)
+      nextFakeClient.from = (table: string) => {
+        profilesQueried = true
+        return realFrom(table)
+      }
+      mockResolveWorkspaceContext.mockResolvedValueOnce({
+        ok: true,
+        data: { userId: "u1", workspaceType: "personal", role: "owner" },
+      })
+
+      // Passed as null ("never completed") — must still force /onboarding,
+      // proving the override reads the PASSED value, not a stale fetched one.
+      expect(await resolveLandingRoute(undefined, null)).toBe("/onboarding")
+      expect(profilesQueried).toBe(false)
     })
   })
 })

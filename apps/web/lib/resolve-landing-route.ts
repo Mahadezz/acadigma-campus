@@ -6,6 +6,7 @@ import {
 } from "@acadigma/db"
 import { resolveLandingRoute as resolveLandingRouteForContext } from "@acadigma/domain/workspace"
 
+import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
 
 /**
@@ -47,9 +48,15 @@ import { createClient } from "@/lib/supabase/server"
  * seen the chooser: every account gets exactly one personal workspace at
  * registration (F-ID-05 §4.1), and it resolves first whenever nothing else is
  * active (F-ID-03 §4.3) — so `workspaceType === 'personal'` is true for both.
+ *
+ * `onboardingCompletedAt`: pass it when the caller already fetched
+ * `profiles.onboarding_completed_at` in the same request (`signInWithPassword`
+ * reads it alongside `suspended_at`) so this function does not issue a second,
+ * redundant `profiles` select; omitted, it fetches the column itself.
  */
 export async function resolveLandingRoute(
-  supabaseOverride?: AcadigmaSupabaseClient
+  supabaseOverride?: AcadigmaSupabaseClient,
+  onboardingCompletedAt?: string | null
 ): Promise<string> {
   const supabase = supabaseOverride ?? (await createClient())
 
@@ -63,45 +70,51 @@ export async function resolveLandingRoute(
     return "/onboarding"
   }
 
-  const [{ data: profile }, { data: membershipRows }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("onboarding_completed_at")
-      .eq("id", result.data.userId)
-      .maybeSingle(),
+  const [profileResult, rpcResult] = await Promise.all([
+    onboardingCompletedAt !== undefined
+      ? null
+      : supabase
+          .from("profiles")
+          .select("onboarding_completed_at")
+          .eq("id", result.data.userId)
+          .maybeSingle(),
     supabase.rpc("list_my_workspaces"),
   ])
+
+  if (profileResult?.error || rpcResult.error) {
+    const log = await requestLogger({ route: "resolve-landing-route" })
+    log.warn(
+      {
+        profileError: profileResult?.error?.code,
+        rpcError: rpcResult.error?.code,
+      },
+      "could not fully resolve the forced-onboarding signal; falling back to what did resolve"
+    )
+  }
 
   return resolveLandingRouteForContext({
     workspaceType: result.data.workspaceType,
     role: result.data.role,
-    onboardingCompletedAt:
-      (profile as { onboarding_completed_at?: string | null } | null)
-        ?.onboarding_completed_at ?? null,
-    // If `resolveWorkspaceContext` itself already resolved a `school`
-    // workspace, that alone proves an active school membership exists —
-    // OR'd in ahead of the RPC probe so a transient `list_my_workspaces`
-    // failure can never force an already-resolved school member back to
-    // `/onboarding` (fails closed toward "let them in", not toward
-    // "show the chooser to someone who plainly already has a school").
-    hasActiveSchoolMembership:
-      result.data.workspaceType === "school" ||
-      hasActiveSchoolMembershipRow(membershipRows),
+    onboarding: {
+      // Not `??`: `null` is itself a valid, meaningful value here ("never
+      // completed"), so only `undefined` (the caller genuinely omitted it)
+      // should fall through to the fetched column.
+      onboardingCompletedAt:
+        onboardingCompletedAt !== undefined
+          ? onboardingCompletedAt
+          : (profileResult?.data?.onboarding_completed_at ?? null),
+      // If `resolveWorkspaceContext` itself already resolved a `school`
+      // workspace, that alone proves an active school membership exists —
+      // OR'd in ahead of the RPC probe so a transient `list_my_workspaces`
+      // failure can never force an already-resolved school member back to
+      // `/onboarding` (fails closed toward "let them in", not toward
+      // "show the chooser to someone who plainly already has a school").
+      hasActiveSchoolMembership:
+        result.data.workspaceType === "school" ||
+        (rpcResult.data?.some(
+          (row) => row.type === "school" && row.status === "active"
+        ) ??
+          false),
+    },
   })
-}
-
-/**
- * Fails CLOSED to `false` (never falls back to "assume they have a school")
- * on a malformed or errored RPC response — the worst case is showing the
- * chooser again to someone who already has a school, not the reverse.
- */
-function hasActiveSchoolMembershipRow(rows: unknown): boolean {
-  if (!Array.isArray(rows)) return false
-  return rows.some(
-    (row) =>
-      typeof row === "object" &&
-      row !== null &&
-      (row as Record<string, unknown>)["type"] === "school" &&
-      (row as Record<string, unknown>)["status"] === "active"
-  )
 }

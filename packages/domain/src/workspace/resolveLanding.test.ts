@@ -77,8 +77,10 @@ describe("resolveLandingRoute", () => {
       expect(
         resolveLandingRoute({
           workspaceType: "personal",
-          onboardingCompletedAt: null,
-          hasActiveSchoolMembership: false,
+          onboarding: {
+            onboardingCompletedAt: null,
+            hasActiveSchoolMembership: false,
+          },
         })
       ).toBe(LANDING_ROUTES.onboarding)
     })
@@ -87,8 +89,10 @@ describe("resolveLandingRoute", () => {
       expect(
         resolveLandingRoute({
           workspaceType: "personal",
-          onboardingCompletedAt: "2026-09-25T12:00:00Z",
-          hasActiveSchoolMembership: false,
+          onboarding: {
+            onboardingCompletedAt: "2026-09-25T12:00:00Z",
+            hasActiveSchoolMembership: false,
+          },
         })
       ).toBe(LANDING_ROUTES.personal)
     })
@@ -98,34 +102,21 @@ describe("resolveLandingRoute", () => {
         resolveLandingRoute({
           workspaceType: "school",
           role: "owner",
-          onboardingCompletedAt: null,
-          hasActiveSchoolMembership: true,
+          onboarding: {
+            onboardingCompletedAt: null,
+            hasActiveSchoolMembership: true,
+          },
         })
       ).toBe(LANDING_ROUTES.app)
     })
 
-    it("never overrides when the caller omits both onboarding inputs (e.g. switchWorkspace) — an explicit switch is never forced back to onboarding", () => {
+    it("never overrides when the caller omits `onboarding` entirely (e.g. switchWorkspace) — an explicit switch is never forced back to onboarding", () => {
       expect(resolveLandingRoute({ workspaceType: "personal" })).toBe(
         LANDING_ROUTES.personal
       )
       expect(
         resolveLandingRoute({ workspaceType: "school", role: "owner" })
       ).toBe(LANDING_ROUTES.app)
-    })
-
-    it("does not override when only one of the two onboarding inputs is provided", () => {
-      expect(
-        resolveLandingRoute({
-          workspaceType: "personal",
-          onboardingCompletedAt: null,
-        })
-      ).toBe(LANDING_ROUTES.personal)
-      expect(
-        resolveLandingRoute({
-          workspaceType: "personal",
-          hasActiveSchoolMembership: false,
-        })
-      ).toBe(LANDING_ROUTES.personal)
     })
   })
 })

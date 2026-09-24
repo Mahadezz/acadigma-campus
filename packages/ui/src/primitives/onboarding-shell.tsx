@@ -16,6 +16,10 @@ import { cn } from "../lib/utils"
  * and each step's `<h1>` (rendered here) is where focus should land on
  * navigation — the page component is responsible for moving focus to it,
  * since only it knows when a client-side step transition just happened.
+ *
+ * The back link is a plain `<a>`, not `next/link` — see `choice-card.tsx`'s
+ * docblock for why (Opus review, PR #24): no primitive in this
+ * `next`-dependency-free package uses it.
  */
 export type OnboardingShellProps = {
   title?: React.ReactNode

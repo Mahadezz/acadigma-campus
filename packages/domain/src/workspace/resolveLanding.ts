@@ -18,25 +18,28 @@ export type LandingResolutionInput = {
   /** Required whenever `workspaceType` is non-null; ignored otherwise. */
   role?: WorkspaceRole | null
   /**
-   * F-ID-05 §8 Part 2's forced-onboarding redirect: `profiles.onboarding_completed_at`.
-   * `null` means "never completed." **Optional and paired with
-   * `hasActiveSchoolMembership` below** — both must be explicitly provided
-   * for the override to fire at all, so a caller that omits them (e.g.
-   * `switchWorkspace`, an explicit user-picked destination that must never
-   * be overridden — F-ID-05 §2: "Be forced through onboarding: never" once a
-   * membership exists) keeps its old behaviour unchanged.
+   * F-ID-05 §8 Part 2's forced-onboarding redirect signal. Omitted entirely
+   * by a caller that must never be overridden (e.g. `switchWorkspace`, an
+   * explicit user-picked destination — F-ID-05 §2: "Be forced through
+   * onboarding: never" once a membership exists). Grouped into one object,
+   * not two independent optional fields, so "both together or neither" is a
+   * type guarantee rather than a comment a future caller could ignore.
    */
-  onboardingCompletedAt?: string | null
-  /**
-   * Whether the caller has at least one ACTIVE `type='school'` membership,
-   * independent of which single workspace resolved as "active" this session.
-   * `workspaceType` alone cannot answer this: every account has exactly one
-   * personal workspace from registration (F-ID-05 §4.1) and it resolves
-   * first when nothing else is active (F-ID-03 §4.3), so `workspaceType ===
-   * 'personal'` is true for both a genuinely tutoring-only user and a
-   * brand-new user who has never seen the chooser.
-   */
-  hasActiveSchoolMembership?: boolean
+  onboarding?: {
+    /** `profiles.onboarding_completed_at`; `null` means "never completed." */
+    onboardingCompletedAt: string | null
+    /**
+     * Whether the caller has at least one ACTIVE `type='school'` membership,
+     * independent of which single workspace resolved as "active" this
+     * session. `workspaceType` alone cannot answer this: every account has
+     * exactly one personal workspace from registration (F-ID-05 §4.1) and it
+     * resolves first when nothing else is active (F-ID-03 §4.3), so
+     * `workspaceType === 'personal'` is true for both a genuinely
+     * tutoring-only user and a brand-new user who has never seen the
+     * chooser.
+     */
+    hasActiveSchoolMembership: boolean
+  }
 }
 
 export const LANDING_ROUTES = {
@@ -82,11 +85,11 @@ export function resolveLandingRoute(
 ): LandingRoute {
   // F-ID-05 §8 Part 2: a verified user who has never finished onboarding
   // AND has no school membership yet is forced to /onboarding, even though
-  // their personal workspace already resolves — see the field comments
-  // above for why both inputs must be explicitly provided.
+  // their personal workspace already resolves — see `onboarding`'s field
+  // comment above for why a caller must provide both or neither.
   if (
-    input.onboardingCompletedAt === null &&
-    input.hasActiveSchoolMembership === false
+    input.onboarding?.onboardingCompletedAt === null &&
+    !input.onboarding.hasActiveSchoolMembership
   ) {
     return LANDING_ROUTES.onboarding
   }
