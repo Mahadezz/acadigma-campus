@@ -9,6 +9,7 @@ import {
   planLimitSchema,
   planReadOnlyErrorSchema,
   planSchema,
+  runBillingTickOutput,
   setPlanLimitInput,
   setPlanModuleInput,
   subscriptionStatusSchema,
@@ -201,5 +202,25 @@ describe("setPlanLimitInput / setPlanModuleInput", () => {
       module: "fees",
     })
     expect(result.success).toBe(false)
+  })
+})
+
+describe("runBillingTickOutput", () => {
+  it("accepts a non-negative trial count", () => {
+    expect(runBillingTickOutput.safeParse({ trialsExpired: 0 }).success).toBe(
+      true
+    )
+    expect(runBillingTickOutput.safeParse({ trialsExpired: 3 }).success).toBe(
+      true
+    )
+  })
+
+  it("rejects a negative or non-integer count", () => {
+    expect(runBillingTickOutput.safeParse({ trialsExpired: -1 }).success).toBe(
+      false
+    )
+    expect(runBillingTickOutput.safeParse({ trialsExpired: 1.5 }).success).toBe(
+      false
+    )
   })
 })
