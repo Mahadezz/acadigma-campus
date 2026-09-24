@@ -1779,6 +1779,7 @@ export type Database = {
         Args: { p_attempted_workspace_id: string }
         Returns: undefined
       }
+      pre_request: { Args: never; Returns: undefined }
       switch_workspace: {
         Args: { p_workspace_id: string }
         Returns: {
