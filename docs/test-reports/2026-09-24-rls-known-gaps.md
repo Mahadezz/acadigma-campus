@@ -41,31 +41,31 @@ No migration, application code or RLS policy is touched. This is a tests + docs 
 
 ## 2. Environment
 
-|                |                                                                                               |
-| -------------- | --------------------------------------------------------------------------------------------- |
-| Commit         | see PR — head after merging `origin/main` (`53a8393`) and adding the `notifications` coverage |
-| Branch         | `test/rls-known-gaps`, merged forward from `origin/main`                                      |
-| Base           | `main`                                                                                        |
-| CI run         | see PR checks                                                                                 |
-| Preview URL    | n/a — no UI change                                                                            |
-| Supabase       | not reachable from this sandbox — no Docker, no local Postgres                                |
-| Migration head | unchanged — no migration in this PR                                                           |
-| Seed           | `supabase/seed` — unchanged                                                                   |
-| Node / pnpm    | v24.x / 10.x                                                                                  |
-| Browsers       | n/a                                                                                           |
-| Feature flags  | none                                                                                          |
+|                |                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------- |
+| Commit         | `2afcbf7` — after merging `origin/main` (`53a8393`) and adding the `notifications` coverage |
+| Branch         | `test/rls-known-gaps`, merged forward from `origin/main`                                    |
+| Base           | `main`                                                                                      |
+| CI run         | [36007175542](https://github.com/Mahadezz/acadigma-campus/actions/runs/36007175542)         |
+| Preview URL    | n/a — no UI change                                                                          |
+| Supabase       | not reachable from this sandbox — no Docker, no local Postgres                              |
+| Migration head | unchanged — no migration in this PR                                                         |
+| Seed           | `supabase/seed` — unchanged                                                                 |
+| Node / pnpm    | v24.x / 10.x                                                                                |
+| Browsers       | n/a                                                                                         |
+| Feature flags  | none                                                                                        |
 
 ---
 
 ## 3. Unit and integration (Vitest)
 
-No `apps/`/`packages/` code changed by this PR (the merge from `origin/main` brought in PR #17's own app/package changes, already tested and merged independently). `pnpm test` (`vitest run --coverage`) was run locally as part of the pre-push gate to confirm nothing regressed. See the addendum in §10 for the numbers from the post-merge run.
+No `apps/`/`packages/` code changed by this PR's own diff (the merge from `origin/main` brought in PR #17's own app/package changes, already tested and merged independently). `pnpm test` (`vitest run --coverage`) was run locally on the post-merge head as part of the pre-push gate: **53 test files, 700 tests, 700 passed, 0 failed.** CI's `unit` job also ran and passed independently (run 36007175542).
 
 ---
 
 ## 4. Database (pgTAP)
 
-**Not run locally** — no Docker, no local Postgres and no reachable Supabase project in this sandbox. CI's `db` job (fresh Postgres 17 + pgTAP, all migrations applied in order, then `supabase test db`) is the real gate for this PR.
+**Not run locally** — no Docker, no local Postgres and no reachable Supabase project in this sandbox. CI's `db` job (fresh Postgres 17 + pgTAP, all migrations applied in order, then `supabase test db`) is the real gate for this PR, and it ran green — see §10.
 
 | Table                 | Isolation assertions                                                                                               | Escalation assertions                                                                                                                                                                     | File                                   |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
@@ -78,9 +78,9 @@ No `apps/`/`packages/` code changed by this PR (the merge from `origin/main` bro
 
 64 assertions total (`plan(64)`), one file, self-contained fixtures (`tests.mkuser`/`login`/`logout` duplicated per house style), everything inside `begin`/`rollback`.
 
-**CI result (pg_prove):** _pending — pasted here after the `db` job runs on this PR's post-merge head; see the addendum in §10._
+**CI result (pg_prove):** PASS — see §10 for the real output, run [36007175542](https://github.com/Mahadezz/acadigma-campus/actions/runs/36007175542).
 
-**Specifically proven (once CI runs it):**
+**Specifically proven:**
 
 - A member of workspace A reads zero rows of every one of the six tables scoped to workspace B.
 - `anon` has no `SELECT` privilege at all on any of the six — not merely an empty result set.
@@ -106,21 +106,23 @@ Not applicable — no new query added to an application code path; these are pgT
 
 ## 7. Security checks
 
-| Check                           | Result                                                  |
-| ------------------------------- | ------------------------------------------------------- |
-| gitleaks / secret scan          | see §10 — CI `security` job                             |
-| Semgrep                         | see §10 — CI `security` job                             |
-| `pnpm audit --audit-level high` | not run in this session — no dependency changes         |
-| Supabase advisors               | not applicable — no reachable project, no schema change |
-| Authorized DAST                 | not applicable — no new endpoint or UI surface          |
+| Check                           | Result                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------- |
+| gitleaks / secret scan          | PASS — CI `security` job, run 36007175542                                       |
+| Semgrep                         | PASS — 150 rules, 489 files, 0 findings (CI `security` job, run 36007175542)    |
+| `pnpm audit --audit-level high` | PASS — `scripts/audit-with-exceptions.mjs`: "Audit clean — 0 active exceptions" |
+| Dependency review (GitHub)      | FAIL — repo setting, not code; see §10                                          |
+| Supabase advisors               | not applicable — no reachable project, no schema change                         |
+| Authorized DAST                 | not applicable — no new endpoint or UI surface                                  |
 
 ---
 
 ## 8. Known issues
 
-| #   | Issue                                                                                                                                                                                                                                                               | Severity | Ship anyway?                                                                          | Tracked |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------- | ------- |
-| 1   | `notifications`' assertions were written from the migration text and reviewed by eye — the `notifications_guard` trigger's `app.is_privileged_context()` bypass in particular was traced, not assumed, but not yet executed against a real Postgres in this sandbox | high     | yes — CI's `db` job is the required, real gate; see §10 for the addendum once it runs | —       |
+| #   | Issue                                                                                                                                                                                                                                                                                                                                                                                                        | Severity          | Ship anyway?                                                                                                                                                                                           | Tracked |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| 1   | `notifications`' assertions were written from the migration text and reviewed by eye before ever running — resolved: CI's `db` job ran them for real, all 64 assertions passed (§4, §10)                                                                                                                                                                                                                     | ~~high~~ resolved | —                                                                                                                                                                                                      | —       |
+| 2   | CI's `security` job's "Dependency review" sub-step fails: "Dependency review is not supported on this repository... ensure Dependency graph is enabled". The repo just went public and this step (gated on `!private`) is running for the first time; it needs "Dependency graph" turned on under Settings → Code security and analysis — a one-time repo setting, anticipated by the workflow's own comment | low               | yes — Semgrep, gitleaks and `pnpm audit` all pass within the same job; only the GitHub-hosted dependency-review integration is blocked by this setting, and it is not something this PR's code can fix | —       |
 
 **Deliberately not tested, and why:**
 
@@ -130,25 +132,38 @@ Not applicable — no new query added to an application code path; these are pgT
 
 ## 9. Sign-off
 
-| Definition of Done                           | Met                                                                              |
-| -------------------------------------------- | -------------------------------------------------------------------------------- |
-| Spec written and matches the build           | ☑ (ARCHITECTURE §9, D-56)                                                        |
-| Migration + pgTAP isolation and escalation   | ☑ written / ☐ executed until CI's `db` job runs on the post-merge head — see §10 |
-| Unit tests + coverage thresholds             | n/a — no application code changed by this PR's own diff                          |
-| UI built and verified at both viewports      | ☐ n/a — no UI change                                                             |
-| Playwright journey at both viewports         | ☐ n/a — no new journey                                                           |
-| a11y — zero serious/critical + manual checks | ☐ n/a — no UI change                                                             |
-| This test report, with real numbers          | ☑ (§10 addendum, filled in after the post-merge CI run)                          |
-| Docs updated in the same PR                  | ☑ (`docs/README.md`, `supabase/tests/README.md`, this report)                    |
+| Definition of Done                           | Met                                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------------------- |
+| Spec written and matches the build           | ☑ (ARCHITECTURE §9, D-56)                                                         |
+| Migration + pgTAP isolation and escalation   | ☑ written / ☑ executed — CI `db` job, PASS, 64/64 (§4, §10)                       |
+| Unit tests + coverage thresholds             | n/a — no application code changed by this PR's own diff (700/700 local, CI green) |
+| UI built and verified at both viewports      | ☐ n/a — no UI change                                                              |
+| Playwright journey at both viewports         | ☐ n/a — no new journey; CI `e2e` job unaffected and green                         |
+| a11y — zero serious/critical + manual checks | ☐ n/a — no UI change                                                              |
+| This test report, with real numbers          | ☑ (§4, §10 — real `pg_prove` output pasted)                                       |
+| Docs updated in the same PR                  | ☑ (`docs/README.md`, `supabase/tests/README.md`, this report)                     |
 
 **Signed off by:** Claude (Sonnet 5, builder session)
 **Date:** 2026-09-24
-**Commit:** see PR
+**Commit:** `2afcbf7`
 
-> This PR adds tests and docs only — no migration, no application code. `supabase/tests/14_rls_known_gaps.sql` was written from the actual policy and trigger text in `supabase/migrations/20260917010200_audit_and_files.sql` and `20260917010300_plans_and_notifications.sql`, not from assumption, and reviewed by eye against the house style in `02_tenant_isolation.sql`/`03_role_escalation.sql`/`11_tenancy_tripwire_status.sql`. The `notifications` section in particular surfaced a real difference from the other five (no owner/admin or platform-admin read branch at all) — this is a **more** restrictive policy than the pattern, confirmed by assertion, not a leak. It was **not** run against a real Postgres in this sandbox (no Docker, no local Postgres). CI's `db` job is the required, real gate; §10 below is filled in with the actual `pg_prove` numbers once that job runs on this PR's post-merge head.
+> This PR adds tests and docs only — no migration, no application code. `supabase/tests/14_rls_known_gaps.sql` was written from the actual policy and trigger text in `supabase/migrations/20260917010200_audit_and_files.sql` and `20260917010300_plans_and_notifications.sql`, not from assumption, and reviewed by eye against the house style in `02_tenant_isolation.sql`/`03_role_escalation.sql`/`11_tenancy_tripwire_status.sql` before ever running. The `notifications` section surfaced a real difference from the other five (no owner/admin or platform-admin read branch at all) — this is a **more** restrictive policy than the pattern, confirmed by assertion against a real Postgres, not a leak. CI's `db` job is the required, real gate, and it has now run: PASS, 64/64 assertions, no defect found. See §10.
 
 ---
 
-## 10. Addendum — CI results
+## 10. Addendum — CI results, 2026-09-24
 
-_Filled in once CI's `db` job runs on this PR's post-merge head commit. Do not treat §4/§9 as complete until this section carries real `pg_prove` numbers._
+**Repo went public; GitHub Actions billing/spending-limit block from the earlier run is gone.** CI on head `2afcbf7` (PR #18), run [36007175542](https://github.com/Mahadezz/acadigma-campus/actions/runs/36007175542): `build`, `changeset`, `contracts`, `db`, `docs-sync`, `lighthouse`, `lint`, `report`, `sql-lint`, `typecheck`, `unit`, `e2e` all **PASS**. The `db` job's real `pg_prove` output:
+
+```
+supabase/tests/14_rls_known_gaps.sql ............. ok
+All tests successful.
+Files=14, Tests=341,  1 wallclock secs
+Result: PASS
+```
+
+`14_rls_known_gaps.sql` reported `1..64` and `ok` — all 64 assertions passed, including the 13 new `notifications` assertions. **No RLS gap, leak or unexpected grant found anywhere, including `notifications`**: its read policy is confirmed to have no owner/admin or platform-admin branch at all (a workspace owner and a platform admin both read zero rows of another user's notification), its write grants are confirmed scoped to the caller's own row by RLS, and its guard trigger is confirmed to block even the recipient from changing anything but `read_at`/`archived_at` — while the legitimate self-service path (marking read) is confirmed to still work. This is a stricter table than the pattern, not a weaker one; nothing here needed a STOP.
+
+`node scripts/check-coverage-test-files.mjs` (run locally against this head): `Coverage OK — 16 workspace_id tables; 16 named in a supabase/tests/*.sql file, 0 tracked in KNOWN_GAPS.` — the allowlist is empty, as designed.
+
+**One check fails, unrelated to this PR's code:** `security`'s "Dependency review" sub-step errors with _"Dependency review is not supported on this repository. Please ensure that Dependency graph is enabled along with GitHub Advanced Security on private repositories."_ The workflow's own comment anticipated exactly this (`.github/workflows/ci.yml` line ~388: "Needs Dependency graph + Advanced Security, unavailable on private repos without GHAS... this re-enables itself if the repo goes public") — the step is gated on `github.event.repository.private == false` and only started running now that the repo is public; it still needs "Dependency graph" turned on by hand under Settings → Code security and analysis. Semgrep (0 findings), gitleaks and the dependency audit (`pnpm audit` via `scripts/audit-with-exceptions.mjs`, clean) all pass within the same job — only the GitHub-hosted dependency-review integration itself is blocked by that repo setting. This is a one-time repository configuration step, not a code change, and not something this PR introduced.
