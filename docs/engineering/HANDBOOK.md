@@ -247,7 +247,7 @@ pnpm db:seed                                   # reset dev data to supabase/seed
 Hard rules:
 
 - `db:push` targets the dev branch. Production is CI-only (ARCHITECTURE §4, D-14). The npm script refuses to run if `SUPABASE_DB_URL` resolves to the production ref.
-- `types.generated.ts` is **committed**. CI fails if it is stale (`CI / contracts`). Regenerate and commit in the same PR as the migration.
+- `types.generated.ts` is **committed**. CI fails if it does not match the PR's migrations (`CI / db`, D-55). The failing run uploads the correct file as the `types-generated` artifact: `gh run download <run-id> -n types-generated -D packages/db/src`, then commit it in the same PR as the migration.
 - Migrations are forward-only. There is no `down`. To undo, write a new migration (see the rollback playbook in `RELEASES.md`).
 
 ### 7.4 Commands
