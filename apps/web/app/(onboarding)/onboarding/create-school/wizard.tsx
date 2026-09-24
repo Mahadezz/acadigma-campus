@@ -4,13 +4,20 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import type { RefObject } from "react"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CheckIcon, ChevronsUpDownIcon, Loader2Icon } from "lucide-react"
+import {
+  CheckIcon,
+  ChevronsUpDownIcon,
+  Loader2Icon,
+  PlusIcon,
+  XIcon,
+} from "lucide-react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import {
   createSchoolStep1Schema,
   createSchoolStep2Schema,
+  createSchoolWorkspaceInputSchema,
   eiinSchema,
   schoolBoardSchema,
   schoolMediumSchema,
@@ -20,11 +27,23 @@ import {
 } from "@acadigma/contracts"
 import {
   DEFAULT_WORKING_DAYS,
+  GRADE_LEVEL_PRESETS,
+  GRADE_LEVEL_RANGES,
   SAT_FIRST_ORDER,
+  buildGradeLevels,
+  splitGradeLevels,
   validateAcademicYearRange,
+  type GradeLevelRange,
 } from "@acadigma/domain/academic"
 import { DEFAULT_TIMEZONE } from "@acadigma/domain/time"
 import { Button } from "@acadigma/ui/components/button"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@acadigma/ui/components/card"
 import {
   Command,
   CommandEmpty,
@@ -54,6 +73,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@acadigma/ui/components/select"
+import { Toggle } from "@acadigma/ui/components/toggle"
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -62,11 +82,25 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { OnboardingShell } from "@acadigma/ui/primitives/onboarding-shell"
 
 import type { Messages } from "@/lib/i18n"
+import type { Locale } from "@/lib/locale"
 
-import { checkEiinAvailability, saveOnboardingDraft } from "../../actions"
+import {
+  checkEiinAvailability,
+  createSchoolWorkspace,
+  saveOnboardingDraft,
+} from "../../actions"
 
 type WizardMessages = Messages["onboarding"]["wizard"]
-type Stage = 1 | 2 | "done"
+export type Stage = 1 | 2 | 3 | 4
+/** Four steps, not the spec's five: the logo step waits for file uploads
+ * (D-100). */
+const TOTAL_STEPS = 4
+
+function stepLabel(t: WizardMessages, current: Stage): string {
+  return t.stepOf
+    .replace("{current}", String(current))
+    .replace("{total}", String(TOTAL_STEPS))
+}
 
 /** What a step's submit handler reports back: either it advanced, or it
  * did not and says why — a top-level message, a specific field, or both. */
@@ -114,7 +148,7 @@ type Step1FormValues = z.infer<typeof step1FormSchema>
 
 /** REACT HIGH (PR #34 review): each step's `<h1>` (`OnboardingShell`'s own
  * contract, see its docblock lines 15-24) is where focus should land on a
- * client-side step transition. Step1/Step2/DoneScreen are each their own
+ * client-side step transition. Each step (Step1..Step4) is its own
  * function component, so this fires exactly once per mount — which is
  * exactly once per step transition, since switching `stage` swaps which of
  * them is on screen.
@@ -142,21 +176,26 @@ function useFocusHeadingOnMount(shouldFocusRef: RefObject<boolean>) {
 }
 
 /**
- * F-ID-05 Part 3 §4.3 — steps 1-2 of the create-school wizard. Steps are one
- * component's local state, not separate routes (§4.3: draft saves on
- * advance, not a URL change per step) — Part 4 owns steps 3-5, so the only
- * things past step 2 are "save and stop here for now" (§8 Part 3 scope:
- * "do not create the workspace yet").
+ * F-ID-05 §4.3 — the create-school wizard: identity, where and when
+ * (Part 3), classes and review-and-create (Part 4). Steps are one
+ * component's local state, not separate routes; every advance saves the
+ * draft (including the idempotency key minted by `page.tsx`), so a closed
+ * tab resumes where it left off.
  */
 export function CreateSchoolWizard({
   t,
   initialStage,
   initialDraft,
   backLabel,
+  locale,
+  trialDays,
 }: {
   t: WizardMessages
   initialStage: Stage
   initialDraft: CreateSchoolDraft
+  locale: Locale
+  /** `plans.trial_days` for Pro — the review step's trial line. */
+  trialDays: number
   /** OPUS 1 (PR #34 review): none of this wizard's `OnboardingShell`
    * screens passed `backLabel`, so every locale saw the component's
    * hardcoded English default ("Back") regardless of `bn`. The caller
@@ -176,7 +215,7 @@ export function CreateSchoolWizard({
   }, [])
 
   async function saveAndAdvance(
-    nextStep: 2 | 3,
+    nextStep: Stage,
     patch: Partial<CreateSchoolDraft>
   ): Promise<StepOutcome> {
     const merged = { ...draft, ...patch }
@@ -187,7 +226,7 @@ export function CreateSchoolWizard({
     })
     if (!saved.ok) return { ok: false, message: t.saveError }
     setDraft(merged)
-    setStage(nextStep === 2 ? 2 : "done")
+    setStage(nextStep)
     return { ok: true }
   }
 
@@ -220,18 +259,6 @@ export function CreateSchoolWizard({
     return saveAndAdvance(3, values)
   }
 
-  if (stage === "done") {
-    return (
-      <DoneScreen
-        t={t}
-        draft={draft}
-        backLabel={backLabel}
-        onBack={() => setStage(2)}
-        shouldFocusRef={hasRenderedOnceRef}
-      />
-    )
-  }
-
   if (stage === 1) {
     return (
       <Step1
@@ -245,51 +272,44 @@ export function CreateSchoolWizard({
     )
   }
 
+  if (stage === 2) {
+    return (
+      <Step2
+        t={t}
+        draft={draft}
+        onBack={() => setStage(1)}
+        onSubmit={handleStep2}
+        backLabel={backLabel}
+        shouldFocusRef={hasRenderedOnceRef}
+      />
+    )
+  }
+
+  if (stage === 3) {
+    return (
+      <Step3
+        t={t}
+        draft={draft}
+        locale={locale}
+        onBack={() => setStage(2)}
+        onSubmit={(grade_levels) => saveAndAdvance(4, { grade_levels })}
+        backLabel={backLabel}
+        shouldFocusRef={hasRenderedOnceRef}
+      />
+    )
+  }
+
   return (
-    <Step2
+    <Step4
       t={t}
       draft={draft}
-      onBack={() => setStage(1)}
-      onSubmit={handleStep2}
+      locale={locale}
+      trialDays={trialDays}
+      onBack={() => setStage(3)}
+      onEdit={setStage}
       backLabel={backLabel}
       shouldFocusRef={hasRenderedOnceRef}
     />
-  )
-}
-
-// ---------------------------------------------------------------------------
-// "More on the way" — the Part 3 stopping screen (§8: Part 4 owns steps 3-5)
-// ---------------------------------------------------------------------------
-function DoneScreen({
-  t,
-  draft,
-  backLabel,
-  onBack,
-  shouldFocusRef,
-}: {
-  t: WizardMessages
-  draft: CreateSchoolDraft
-  backLabel: string
-  onBack: () => void
-  shouldFocusRef: RefObject<boolean>
-}) {
-  const headingRef = useFocusHeadingOnMount(shouldFocusRef)
-  return (
-    <OnboardingShell
-      ref={headingRef}
-      title={t.moreComingTitle}
-      onBack={onBack}
-      backLabel={backLabel}
-    >
-      <div className="space-y-6">
-        <p className="text-muted-foreground text-sm">
-          {t.moreComingBody.replace("{name}", draft.name ?? "")}
-        </p>
-        <Button asChild className="h-12 w-full">
-          <a href="/onboarding">{t.backToChooser}</a>
-        </Button>
-      </div>
-    </OnboardingShell>
   )
 }
 
@@ -343,7 +363,8 @@ function Step1({
     <OnboardingShell
       ref={headingRef}
       title={t.step1Title}
-      progress={{ current: 1, total: 5 }}
+      progress={{ current: 1, total: TOTAL_STEPS }}
+      progressLabel={stepLabel(t, 1)}
       backHref="/onboarding"
       backLabel={backLabel}
     >
@@ -610,7 +631,8 @@ function Step2({
     <OnboardingShell
       ref={headingRef}
       title={t.step2Title}
-      progress={{ current: 2, total: 5 }}
+      progress={{ current: 2, total: TOTAL_STEPS }}
+      progressLabel={stepLabel(t, 2)}
       onBack={onBack}
       backLabel={backLabel}
     >
@@ -827,6 +849,440 @@ function Step2({
           </Button>
         </form>
       </Form>
+    </OnboardingShell>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step 3 — Classes (§4.3)
+// ---------------------------------------------------------------------------
+const RANGE_LABEL_KEYS = {
+  primary: "presetPrimary",
+  secondary: "presetSecondary",
+  hsc: "presetHsc",
+} as const satisfies Record<GradeLevelRange, keyof WizardMessages>
+
+type GradeLevels = NonNullable<CreateSchoolDraft["grade_levels"]>
+
+function Step3({
+  t,
+  draft,
+  locale,
+  onBack,
+  onSubmit,
+  backLabel,
+  shouldFocusRef,
+}: {
+  t: WizardMessages
+  draft: CreateSchoolDraft
+  locale: Locale
+  onBack: () => void
+  onSubmit: (gradeLevels: GradeLevels) => Promise<StepOutcome>
+  backLabel: string
+  shouldFocusRef: RefObject<boolean>
+}) {
+  const headingRef = useFocusHeadingOnMount(shouldFocusRef)
+  const [initial] = useState(() => splitGradeLevels(draft.grade_levels ?? []))
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(
+    initial.selectedKeys
+  )
+  const [customNames, setCustomNames] = useState<string[]>(initial.customNames)
+  const [customInput, setCustomInput] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const levels = buildGradeLevels(selectedKeys, customNames)
+  const count = levels.length
+
+  function toggleRange(range: GradeLevelRange, pressed: boolean) {
+    const keys: readonly string[] = GRADE_LEVEL_RANGES[range]
+    setSelectedKeys((current) =>
+      pressed
+        ? [...new Set([...current, ...keys])]
+        : current.filter((key) => !keys.includes(key))
+    )
+    setError(null)
+  }
+
+  function addCustom() {
+    const name = customInput.trim()
+    if (!name) return
+    // buildGradeLevels drops a duplicate; keep the name only if it survives.
+    if (buildGradeLevels(selectedKeys, [...customNames, name]).length > count) {
+      setCustomNames((current) => [...current, name])
+    }
+    setCustomInput("")
+    setError(null)
+  }
+
+  async function handleContinue() {
+    if (count === 0) {
+      setError(t.classesRequired)
+      return
+    }
+    setSubmitting(true)
+    const outcome = await onSubmit(levels)
+    setSubmitting(false)
+    if (!outcome.ok) setError(outcome.message ?? t.saveError)
+  }
+
+  return (
+    <OnboardingShell
+      ref={headingRef}
+      title={t.step3Title}
+      progress={{ current: 3, total: TOTAL_STEPS }}
+      progressLabel={stepLabel(t, 3)}
+      onBack={onBack}
+      backLabel={backLabel}
+    >
+      <div className="space-y-6">
+        {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+
+        <fieldset className="min-w-0 border-0 p-0">
+          <legend className="text-foreground mb-2 p-0 text-sm font-medium">
+            {t.classesPresetsLabel}
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(GRADE_LEVEL_RANGES) as GradeLevelRange[]).map(
+              (range) => (
+                <Toggle
+                  key={range}
+                  variant="outline"
+                  pressed={GRADE_LEVEL_RANGES[range].every((key) =>
+                    selectedKeys.includes(key)
+                  )}
+                  onPressedChange={(next) => toggleRange(range, next)}
+                  className="group min-h-11 px-3"
+                >
+                  <CheckIcon
+                    aria-hidden="true"
+                    className="hidden group-data-[state=on]:inline"
+                  />
+                  {t[RANGE_LABEL_KEYS[range]]}
+                </Toggle>
+              )
+            )}
+          </div>
+        </fieldset>
+
+        <fieldset className="min-w-0 border-0 p-0">
+          <legend className="text-foreground mb-2 p-0 text-sm font-medium">
+            {t.classesIndividualLabel}
+          </legend>
+          <ToggleGroup
+            type="multiple"
+            variant="outline"
+            value={selectedKeys}
+            onValueChange={(value) => {
+              setSelectedKeys(value)
+              setError(null)
+            }}
+            aria-label={t.classesIndividualLabel}
+            className="flex-wrap justify-start gap-2"
+          >
+            {GRADE_LEVEL_PRESETS.map((preset) => (
+              <ToggleGroupItem
+                key={preset.key}
+                value={preset.key}
+                className="group min-h-11 min-w-11 flex-none px-3"
+              >
+                <CheckIcon
+                  aria-hidden="true"
+                  className="hidden group-data-[state=on]:inline"
+                />
+                {locale === "bn" ? preset.name_bn : preset.name}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </fieldset>
+
+        <div className="space-y-2">
+          <label
+            htmlFor="custom-grade-level"
+            className="text-foreground block text-sm font-medium"
+          >
+            {t.customLabel}
+          </label>
+          <div className="flex gap-2">
+            <Input
+              id="custom-grade-level"
+              value={customInput}
+              maxLength={60}
+              placeholder={t.customPlaceholder}
+              onChange={(event) => setCustomInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault()
+                  addCustom()
+                }
+              }}
+              className="h-11"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11"
+              onClick={addCustom}
+            >
+              <PlusIcon aria-hidden="true" />
+              {t.customAdd}
+            </Button>
+          </div>
+          {customNames.length > 0 ? (
+            <ul className="flex flex-wrap gap-2 pt-1">
+              {customNames.map((name) => (
+                <li
+                  key={name}
+                  className="border-input flex min-h-11 items-center gap-1 rounded-md border pl-3 text-sm"
+                >
+                  {name}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCustomNames((current) =>
+                        current.filter((n) => n !== name)
+                      )
+                    }
+                    aria-label={t.customRemove.replace("{name}", name)}
+                    className="text-muted-foreground hover:text-foreground inline-flex size-11 items-center justify-center"
+                  >
+                    <XIcon className="size-4" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+
+        <p className="text-muted-foreground text-sm" aria-live="polite">
+          {count === 1
+            ? t.classesCountOne
+            : t.classesCountOther.replace("{count}", String(count))}
+        </p>
+
+        <Button
+          type="button"
+          className="h-12 w-full"
+          disabled={submitting}
+          onClick={handleContinue}
+        >
+          {submitting ? (
+            <>
+              <Loader2Icon className="animate-spin" aria-hidden="true" />
+              {t.continuingButton}
+            </>
+          ) : (
+            t.continueButton
+          )}
+        </Button>
+      </div>
+    </OnboardingShell>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step 4 — Review and create (spec §4.3 step 5; the logo step is deferred,
+// D-100)
+// ---------------------------------------------------------------------------
+type ReviewError = { message: string; editStage?: Stage }
+
+function Step4({
+  t,
+  draft,
+  locale,
+  trialDays,
+  onBack,
+  onEdit,
+  backLabel,
+  shouldFocusRef,
+}: {
+  t: WizardMessages
+  draft: CreateSchoolDraft
+  locale: Locale
+  trialDays: number
+  onBack: () => void
+  onEdit: (stage: Stage) => void
+  backLabel: string
+  shouldFocusRef: RefObject<boolean>
+}) {
+  const headingRef = useFocusHeadingOnMount(shouldFocusRef)
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState<ReviewError | null>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
+
+  // Move focus to a failure so a screen-reader user hears it (§6: "a single
+  // InlineAlert naming the failed step").
+  useEffect(() => {
+    if (error) errorRef.current?.focus()
+  }, [error])
+
+  const workingDays = SAT_FIRST_ORDER.filter((day) =>
+    (draft.working_days ?? []).includes(day)
+  )
+    .map((day) => t.daysFull[String(day) as keyof WizardMessages["daysFull"]])
+    .join(", ")
+  const levels = draft.grade_levels ?? []
+  const year = draft.academic_year
+
+  async function handleCreate() {
+    setError(null)
+    const input = createSchoolWorkspaceInputSchema.safeParse(draft)
+    if (!input.success) {
+      setError({ message: t.createIncomplete, editStage: 1 })
+      return
+    }
+    setCreating(true)
+    const result = await createSchoolWorkspace(input.data)
+    if (result.ok) {
+      // A full navigation, so /app renders against the new workspace cookie.
+      window.location.assign(result.data.landingRoute)
+      return
+    }
+    setCreating(false)
+    if (result.error.fieldErrors?.["eiin"]) {
+      setError({ message: t.eiinTaken, editStage: 1 })
+    } else if (result.error.code === "rate_limited") {
+      setError({ message: t.createRateLimited })
+    } else {
+      setError({ message: t.createError })
+    }
+  }
+
+  const sections: { stage: Stage; title: string; rows: [string, string][] }[] =
+    [
+      {
+        stage: 1,
+        title: t.reviewIdentity,
+        rows: [
+          [t.reviewName, draft.name ?? ""],
+          [t.reviewEiin, draft.eiin ?? t.reviewEiinNone],
+          [t.reviewMedium, draft.medium ? t.mediums[draft.medium] : ""],
+          [t.reviewBoard, draft.board ? t.boards[draft.board] : ""],
+        ],
+      },
+      {
+        stage: 2,
+        title: t.reviewWhereWhen,
+        rows: [
+          [t.reviewTimezone, draft.timezone ?? ""],
+          [t.reviewWorkingDays, workingDays],
+          [
+            t.reviewAcademicYear,
+            `${year?.name ?? ""} (${year?.starts_on ?? ""} – ${year?.ends_on ?? ""})`,
+          ],
+        ],
+      },
+    ]
+
+  function editButton(stage: Stage, title: string) {
+    return (
+      <CardAction>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-11"
+          onClick={() => onEdit(stage)}
+          aria-label={t.reviewEditLabel.replace("{section}", title)}
+        >
+          {t.reviewEdit}
+        </Button>
+      </CardAction>
+    )
+  }
+
+  return (
+    <OnboardingShell
+      ref={headingRef}
+      title={t.step4Title}
+      progress={{ current: 4, total: TOTAL_STEPS }}
+      progressLabel={stepLabel(t, 4)}
+      onBack={onBack}
+      backLabel={backLabel}
+    >
+      <div className="space-y-4">
+        {error ? (
+          <div ref={errorRef} tabIndex={-1} className="space-y-2 outline-none">
+            <InlineAlert tone="error">{error.message}</InlineAlert>
+            {error.editStage ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11"
+                onClick={() => onEdit(error.editStage ?? 1)}
+              >
+                {t.reviewEditLabel.replace("{section}", t.reviewIdentity)}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {sections.map((section) => (
+          <Card key={section.stage} className="gap-3 py-4">
+            <CardHeader className="px-4">
+              <CardTitle>
+                <h2 className="text-base">{section.title}</h2>
+              </CardTitle>
+              {editButton(section.stage, section.title)}
+            </CardHeader>
+            <CardContent className="px-4">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                {section.rows.map(([label, value]) => (
+                  <div key={label} className="contents">
+                    <dt className="text-muted-foreground">{label}</dt>
+                    <dd className="min-w-0 break-words">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </CardContent>
+          </Card>
+        ))}
+
+        <Card className="gap-3 py-4">
+          <CardHeader className="px-4">
+            <CardTitle>
+              <h2 className="text-base">{t.reviewClasses}</h2>
+            </CardTitle>
+            {editButton(3, t.reviewClasses)}
+          </CardHeader>
+          <CardContent className="px-4">
+            <p className="text-muted-foreground mb-2 text-sm">
+              {levels.length === 1
+                ? t.classesCountOne
+                : t.classesCountOther.replace("{count}", String(levels.length))}
+            </p>
+            <ul className="flex flex-wrap gap-1.5 text-sm">
+              {levels.map((level) => (
+                <li
+                  key={level.level_number}
+                  className="bg-muted rounded-md px-2 py-1"
+                >
+                  {locale === "bn" ? level.name_bn : level.name}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        <p className="text-sm font-medium">
+          {t.trialLine.replace("{days}", String(trialDays))}
+        </p>
+
+        <Button
+          type="button"
+          className="h-12 w-full"
+          disabled={creating}
+          onClick={handleCreate}
+        >
+          {creating ? (
+            <>
+              <Loader2Icon className="animate-spin" aria-hidden="true" />
+              {t.creatingButton}
+            </>
+          ) : (
+            t.createButton
+          )}
+        </Button>
+      </div>
     </OnboardingShell>
   )
 }

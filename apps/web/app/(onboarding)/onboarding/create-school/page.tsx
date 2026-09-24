@@ -1,5 +1,8 @@
+import { randomUUID } from "node:crypto"
+
 import { redirect } from "next/navigation"
 
+import { listPublicPlans } from "@acadigma/db"
 import { resolveOnboardingAccess } from "@acadigma/domain/onboarding"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { OnboardingShell } from "@acadigma/ui/primitives/onboarding-shell"
@@ -9,7 +12,7 @@ import { createClient } from "@/lib/supabase/server"
 
 import { getOnboardingState } from "../../actions"
 
-import { CreateSchoolWizard } from "./wizard"
+import { CreateSchoolWizard, type Stage } from "./wizard"
 
 import type { Metadata } from "next"
 
@@ -18,18 +21,15 @@ export const metadata: Metadata = {
 }
 
 /**
- * F-ID-05 Part 3 §4.3 "Create a school — the wizard", steps 1-2 only
- * (§8 Part 3). Same access gate as the chooser (`resolveOnboardingAccess`,
- * `/onboarding/page.tsx`) — this route is reachable from the same account
- * states.
+ * F-ID-05 §4.3 "Create a school — the wizard" (Parts 3-4). Same access gate
+ * as the chooser (`resolveOnboardingAccess`).
  *
- * `getOnboardingState()` supplies the resume shape: a caller reopening this
- * route after closing the tab mid-step-2 gets `step` back at 3 (Part 3
- * saves the NEXT step number on advance, matching `onboarding_progress`'s
- * documented shape) with `draft` already containing everything they typed.
- * Clamped to what this Part actually built: step 1 or 2, or the "more on
- * the way" stopping screen once step 2 is already done (steps 3-5 are
- * Part 4).
+ * Resume: `onboarding_progress.step` is the step to reopen on (each advance
+ * saves the NEXT step). A draft that is finished (`completedAt`) or belongs
+ * to the join path starts fresh at step 1. The idempotency key (§5) is
+ * minted here the first time the wizard opens and rides in the draft from
+ * then on, so a retried or double-submitted "Create school" can only ever
+ * produce one school.
  */
 export default async function CreateSchoolWizardPage() {
   const supabase = await createClient()
@@ -43,7 +43,7 @@ export default async function CreateSchoolWizardPage() {
   })
   if (!access.allow) redirect(access.redirectTo)
 
-  const { t } = await getMessages()
+  const { locale, t } = await getMessages()
   const stateResult = await getOnboardingState()
 
   if (!stateResult.ok) {
@@ -55,14 +55,30 @@ export default async function CreateSchoolWizardPage() {
   }
 
   const state = stateResult.data
-  const initialStage = state.step >= 3 ? "done" : state.step === 2 ? 2 : 1
+  const fresh = state.completedAt !== null || state.path !== "create_school"
+  const draft = fresh ? {} : state.draft
+  const initialStage: Stage = fresh
+    ? 1
+    : (Math.min(Math.max(state.step, 1), 4) as Stage)
+
+  // The review step's trial line reads the catalogue, never a hardcoded
+  // number (PRODUCT-DECISIONS §5.2 moved it from 14 to 30 days once already).
+  const plans = await listPublicPlans(supabase)
+  const trialDays = plans.ok
+    ? (plans.data.find((plan) => plan.code === "pro")?.trialDays ?? 0)
+    : 0
 
   return (
     <CreateSchoolWizard
       t={t.onboarding.wizard}
       initialStage={initialStage}
-      initialDraft={state.draft}
+      initialDraft={{
+        ...draft,
+        idempotency_key: draft.idempotency_key ?? randomUUID(),
+      }}
       backLabel={t.common.actions.back}
+      locale={locale}
+      trialDays={trialDays}
     />
   )
 }

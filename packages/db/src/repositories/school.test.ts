@@ -55,9 +55,18 @@ describe("createSchoolWorkspace", () => {
     medium: "bangla" as const,
     timezone: "Asia/Dhaka",
     working_days: [6, 7, 1, 2, 3, 4],
-    academic_year: { name: "2026", starts_on: "2026-01-01", ends_on: "2026-12-31" },
+    academic_year: {
+      name: "2026",
+      starts_on: "2026-01-01",
+      ends_on: "2026-12-31",
+    },
     grade_levels: [
-      { name: "Class 6", name_bn: "ষষ্ঠ শ্রেণি", level_number: 6, stage: "secondary" as const },
+      {
+        name: "Class 6",
+        name_bn: "ষষ্ঠ শ্রেণি",
+        level_number: 6,
+        stage: "secondary" as const,
+      },
     ],
     idempotency_key: "0b6f4a8e-3c1d-4e2a-9f7b-5d8c6e4a2b10",
   }

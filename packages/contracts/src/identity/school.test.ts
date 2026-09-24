@@ -196,7 +196,12 @@ describe("createSchoolDraftSchema", () => {
   it("keeps Part 4's grade levels and idempotency key", () => {
     const draft = {
       grade_levels: [
-        { name: "Class 6", name_bn: "ষষ্ঠ শ্রেণি", level_number: 6, stage: "secondary" },
+        {
+          name: "Class 6",
+          name_bn: "ষষ্ঠ শ্রেণি",
+          level_number: 6,
+          stage: "secondary",
+        },
       ],
       idempotency_key: "0b6f4a8e-3c1d-4e2a-9f7b-5d8c6e4a2b10",
     }
@@ -211,9 +216,18 @@ describe("createSchoolWorkspaceInputSchema", () => {
     medium: "bangla",
     timezone: "Asia/Dhaka",
     working_days: [6, 7, 1, 2, 3, 4],
-    academic_year: { name: "2026", starts_on: "2026-01-01", ends_on: "2026-12-31" },
+    academic_year: {
+      name: "2026",
+      starts_on: "2026-01-01",
+      ends_on: "2026-12-31",
+    },
     grade_levels: [
-      { name: "Class 6", name_bn: "ষষ্ঠ শ্রেণি", level_number: 6, stage: "secondary" },
+      {
+        name: "Class 6",
+        name_bn: "ষষ্ঠ শ্রেণি",
+        level_number: 6,
+        stage: "secondary",
+      },
       { name: "Hifz", name_bn: "Hifz", level_number: 100, stage: null },
     ],
     idempotency_key: "0b6f4a8e-3c1d-4e2a-9f7b-5d8c6e4a2b10",
@@ -245,11 +259,14 @@ describe("createSchoolWorkspaceInputSchema", () => {
   it("rejects the same class twice (by name, case-insensitive, or position)", () => {
     const [first] = valid.grade_levels
     expect(
-      gradeLevelsSchema.safeParse([first, { ...first, name: "class 6", level_number: 7 }])
-        .success
+      gradeLevelsSchema.safeParse([
+        first,
+        { ...first, name: "class 6", level_number: 7 },
+      ]).success
     ).toBe(false)
     expect(
-      gradeLevelsSchema.safeParse([first, { ...first, name: "Class 7" }]).success
+      gradeLevelsSchema.safeParse([first, { ...first, name: "Class 7" }])
+        .success
     ).toBe(false)
   })
 })

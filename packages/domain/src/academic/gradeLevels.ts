@@ -38,8 +38,20 @@ function classStage(n: number): GradeStage {
 }
 
 export const GRADE_LEVEL_PRESETS: readonly GradeLevelPreset[] = [
-  { key: "play", name: "Play", name_bn: "প্লে", level_number: -2, stage: "early" },
-  { key: "nursery", name: "Nursery", name_bn: "নার্সারি", level_number: -1, stage: "early" },
+  {
+    key: "play",
+    name: "Play",
+    name_bn: "প্লে",
+    level_number: -2,
+    stage: "early",
+  },
+  {
+    key: "nursery",
+    name: "Nursery",
+    name_bn: "নার্সারি",
+    level_number: -1,
+    stage: "early",
+  },
   { key: "kg", name: "KG", name_bn: "কেজি", level_number: 0, stage: "early" },
   ...CLASS_BN.map((bn, i) => ({
     key: `class_${i + 1}`,
@@ -48,8 +60,20 @@ export const GRADE_LEVEL_PRESETS: readonly GradeLevelPreset[] = [
     level_number: i + 1,
     stage: classStage(i + 1),
   })),
-  { key: "o_level", name: "O-Level", name_bn: "ও-লেভেল", level_number: 13, stage: "secondary" },
-  { key: "a_level", name: "A-Level", name_bn: "এ-লেভেল", level_number: 14, stage: "higher" },
+  {
+    key: "o_level",
+    name: "O-Level",
+    name_bn: "ও-লেভেল",
+    level_number: 13,
+    stage: "secondary",
+  },
+  {
+    key: "a_level",
+    name: "A-Level",
+    name_bn: "এ-লেভেল",
+    level_number: 14,
+    stage: "higher",
+  },
 ]
 
 /** §4.3: the three range shortcuts. */
@@ -98,7 +122,9 @@ export function buildGradeLevels(
     })
   }
 
-  return [...presets, ...customs].sort((a, b) => a.level_number - b.level_number)
+  return [...presets, ...customs].sort(
+    (a, b) => a.level_number - b.level_number
+  )
 }
 
 /** The reverse of `buildGradeLevels`, for resuming a saved draft. */

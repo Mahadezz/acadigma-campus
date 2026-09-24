@@ -75,14 +75,27 @@ describe("buildGradeLevels", () => {
   it("appends custom levels after every preset, same string in both names, no stage", () => {
     const levels = buildGradeLevels(["a_level"], ["  Hifz  ", "Special Needs"])
     expect(levels).toEqual([
-      { name: "A-Level", name_bn: "এ-লেভেল", level_number: 14, stage: "higher" },
+      {
+        name: "A-Level",
+        name_bn: "এ-লেভেল",
+        level_number: 14,
+        stage: "higher",
+      },
       { name: "Hifz", name_bn: "Hifz", level_number: 100, stage: null },
-      { name: "Special Needs", name_bn: "Special Needs", level_number: 101, stage: null },
+      {
+        name: "Special Needs",
+        name_bn: "Special Needs",
+        level_number: 101,
+        stage: null,
+      },
     ])
   })
 
   it("drops blank customs and customs that duplicate a preset or each other", () => {
-    const levels = buildGradeLevels(["class_6"], ["class 6", "", "Hifz", "HIFZ"])
+    const levels = buildGradeLevels(
+      ["class_6"],
+      ["class 6", "", "Hifz", "HIFZ"]
+    )
     expect(levels.map((l) => l.name)).toEqual(["Class 6", "Hifz"])
   })
 

@@ -130,7 +130,12 @@ export type CreateSchoolStep2 = z.infer<typeof createSchoolStep2Schema>
 // ---------------------------------------------------------------------------
 
 /** `public.grade_stage` (DATA-MODEL.md §2 grade_levels "group", D-100). */
-export const gradeStageSchema = z.enum(["early", "primary", "secondary", "higher"])
+export const gradeStageSchema = z.enum([
+  "early",
+  "primary",
+  "secondary",
+  "higher",
+])
 export type GradeStage = z.infer<typeof gradeStageSchema>
 
 export const gradeLevelInputSchema = z.object({

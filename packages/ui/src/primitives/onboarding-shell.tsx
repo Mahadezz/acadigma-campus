@@ -38,6 +38,8 @@ export type OnboardingShellProps = {
   title?: React.ReactNode
   /** Omitted on the chooser, which has no step to show. */
   progress?: { current: number; total: number }
+  /** Localised accessible name for the progress bar (defaults to English). */
+  progressLabel?: string
   backHref?: string
   onBack?: () => void
   backLabel?: string
@@ -54,6 +56,7 @@ export const OnboardingShell = React.forwardRef<
   {
     title,
     progress,
+    progressLabel,
     backHref,
     onBack,
     backLabel = "Back",
@@ -102,7 +105,9 @@ export const OnboardingShell = React.forwardRef<
           aria-valuenow={progress.current}
           aria-valuemin={1}
           aria-valuemax={progress.total}
-          aria-label={`Step ${progress.current} of ${progress.total}`}
+          aria-label={
+            progressLabel ?? `Step ${progress.current} of ${progress.total}`
+          }
           className="bg-muted mb-6 h-1.5 w-full overflow-hidden rounded-full"
         >
           <div

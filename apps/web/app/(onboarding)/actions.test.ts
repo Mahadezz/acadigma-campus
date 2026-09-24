@@ -42,9 +42,8 @@ vi.mock("@/lib/throttle", () => ({
   throttleRecordFailure: mockThrottleRecordFailure,
 }))
 
-const { checkEiinAvailability, createSchoolWorkspace } = await import(
-  "./actions"
-)
+const { checkEiinAvailability, createSchoolWorkspace } =
+  await import("./actions")
 
 const FAKE_USER = { id: "11111111-1111-1111-1111-111111111111" }
 
@@ -122,9 +121,18 @@ describe("createSchoolWorkspace", () => {
     medium: "bangla",
     timezone: "Asia/Dhaka",
     working_days: [6, 7, 1, 2, 3, 4],
-    academic_year: { name: "2026", starts_on: "2026-01-01", ends_on: "2026-12-31" },
+    academic_year: {
+      name: "2026",
+      starts_on: "2026-01-01",
+      ends_on: "2026-12-31",
+    },
     grade_levels: [
-      { name: "Class 6", name_bn: "ষষ্ঠ শ্রেণি", level_number: 6, stage: "secondary" },
+      {
+        name: "Class 6",
+        name_bn: "ষষ্ঠ শ্রেণি",
+        level_number: 6,
+        stage: "secondary",
+      },
     ],
     idempotency_key: "0b6f4a8e-3c1d-4e2a-9f7b-5d8c6e4a2b10",
   }
@@ -140,8 +148,13 @@ describe("createSchoolWorkspace", () => {
 
     const result = await createSchoolWorkspace(input)
 
-    expect(result).toEqual({ ok: true, data: { workspaceId, landingRoute: "/app" } })
-    expect(mockRpc).toHaveBeenCalledWith("create_school_workspace", { p_input: input })
+    expect(result).toEqual({
+      ok: true,
+      data: { workspaceId, landingRoute: "/app" },
+    })
+    expect(mockRpc).toHaveBeenCalledWith("create_school_workspace", {
+      p_input: input,
+    })
     expect(mockCookieSet).toHaveBeenCalledWith(
       "acadigma_workspace",
       workspaceId,
@@ -153,7 +166,11 @@ describe("createSchoolWorkspace", () => {
     mockRpc.mockClear()
     const result = await createSchoolWorkspace({
       ...input,
-      academic_year: { name: "2026", starts_on: "2026-12-31", ends_on: "2026-01-01" },
+      academic_year: {
+        name: "2026",
+        starts_on: "2026-12-31",
+        ends_on: "2026-01-01",
+      },
     })
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe("validation_failed")
