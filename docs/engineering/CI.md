@@ -68,7 +68,7 @@ Outputs consumed by later jobs: the store cache key, and a `changed` matrix (`ap
 
 ### 2.2 `typecheck` → **`CI / typecheck`**
 
-`tsc --noEmit` for every package plus `apps/web`, using project references so it is incremental. Runs against the **committed** `types.generated.ts`; freshness is `contracts`' job, so a stale-types failure reports as the right thing.
+`tsc --noEmit` for every package plus `apps/web`, using project references so it is incremental. Runs against the **committed** `types.generated.ts`; freshness is the `db` job's (D-55), so a stale-types failure reports as the right thing.
 
 ### 2.3 `db` → **`CI / db`**
 
@@ -97,7 +97,7 @@ Fails on: an edited historical migration, or any pgTAP assertion failure. Covera
 Cheap drift detection, separated so the failure message is unambiguous:
 
 - Postgres enums ↔ Zod enums: identical names and labels, exhaustively both ways.
-- `pnpm db:types` regenerated and byte-compared with the committed `packages/db/src/types.generated.ts`. Stale → fail with the diff.
+- Generated-type freshness moved to the `db` job (D-55): see that job's "Generated types match this PR's migrations" step.
 - Every permission key used in code exists in the domain matrix, and vice versa.
 - Every feature flag key referenced in code exists in the `feature_flags` seed.
 
@@ -266,3 +266,15 @@ Not merge gates. They fail loudly and open or update an issue labelled `weekly` 
 - `continue-on-error` is never used on a required job. If a check is not worth blocking on, it does not belong in §3.
 - Target total PR wall-clock: **under 12 minutes** for a ready PR, under 5 for a draft. Parallelism and caching are how; skipping tests is not.
 - Fork PRs: `e2e`, `lighthouse` and `report` skip with an explicit "skipped: no secrets on fork PRs" annotation. A maintainer re-runs them from a branch in the repository before merge.
+
+## Generated types (D-55)
+
+`packages/db/src/types.generated.ts` is checked in the `db` job, after the PR's own migrations are applied to the CI Postgres: `supabase gen types typescript --db-url <ci postgres> --schema public`, formatted with Prettier, byte-compared with the committed file. It is **not** generated from the live project, because the live project only receives a PR's migrations after the PR merges, so a schema-changing PR could never pass a live-based check.
+
+On a mismatch the job fails and uploads the fresh file as the `types-generated` artifact. To fix, from the repo root:
+
+```
+gh run download <run-id> -n types-generated -D packages/db/src
+```
+
+then commit. No local Docker is needed.

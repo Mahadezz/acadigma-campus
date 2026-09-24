@@ -337,3 +337,13 @@ Admins see **scheduled periods only**; workload variance is teacher-private by d
 **Decision:** Campus uses project **`Acadigma Campus`**, ref **`kekfmibwjejdhxjkmezo`**, region ap-south-1 (same as before), URL `https://kekfmibwjejdhxjkmezo.supabase.co`, publishable key `sb_publishable_VbUqiEvQiuObUZMf5IGYOA_P_EiiyGy` (safe for browser). The service-role/secret key is never written to disk outside `apps/web/.env.local`, Vercel and GitHub secrets. D-20 (one project for dev and prod until launch) still applies, to this project. The marketing website **stays** on the old project for its waitlist; the two apps no longer share a database.
 
 **Consequences:** Vercel and Claude Code keep the owner's existing accounts; only Supabase changed. Every dashboard-only Supabase setting must be (re)applied to the new project — `supabase/config.toml` auth settings via `supabase config push`, plus the dashboard items in OWNER-QUESTIONS (OQ-25 recovery email template, breached-password protection, SMTP, redirect URLs). Historical test reports keep the old ref because that is what they ran against.
+
+## D-55 — Generated types come from the PR's migrations in CI, not from the live project · ACCEPTED · 2026-09-24
+
+> Numbering note: D-51 (PR #6) and D-52 (PR #12) are on open PRs; D-54 is reserved by the in-progress default-grants security PR. This entry takes D-55.
+
+**Context:** `CI / contracts` regenerated `types.generated.ts` from the live Supabase project and byte-compared it with the committed file. The check was skipped until the Supabase secrets existed (OQ-26); once they did, it exposed that the design cannot work: the live project only receives a PR's migrations after merge (D-20), so any PR that changes the `public` schema (PR #6 adds `set_correlation_id` and audit columns) generates types without its own changes and fails, while committing types that include them also fails.
+
+**Decision:** the freshness check moves to `CI / db`, after the PR's migrations are applied to the CI Postgres: `supabase gen types typescript --db-url <ci postgres> --schema public`, Prettier-formatted, byte-compared. The live-based check is removed from `contracts`. On a mismatch the job uploads the correct file as the `types-generated` artifact, so a developer (or agent) with no local Docker fixes it with `gh run download`.
+
+**Consequences:** the committed file is in `--db-url` output format. Drift between the live project and `main` is a deployment concern (the `push` job applies `main`'s migrations), not a per-PR type check.
