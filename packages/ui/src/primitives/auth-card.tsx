@@ -35,9 +35,7 @@ export function AuthCard({
       )}
     >
       <div className="space-y-1.5">
-        <h1 className="text-2xl font-medium tracking-tight">
-          {title}
-        </h1>
+        <h1 className="text-2xl font-medium tracking-tight">{title}</h1>
         {subtitle ? (
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         ) : null}

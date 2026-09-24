@@ -104,12 +104,25 @@ blurred orbs that ignored every token it defined).
 
 **Acadigma** is the parent. **Acadigma Campus** is this product. In the UI:
 
-- The wordmark reads `Acadigma` in Inter 700 at `-0.02em`, with `Campus` in
-  Inter 500 at the same size in `--muted-foreground`. Never a logo lockup with
-  a gradient; never the prototype's remote JPEG.
-- The mark is a single glyph: a filled ink square (amended per D-57; was
-  indigo) at `--radius-md` holding a paper `A` cut on the baseline, 28px in
-  the TopBar, 32px in the sidebar. One SVG, two theme variants.
+- **Logo (D-68).** `<Logo product="campus" />` from
+  `@acadigma/ui/primitives/logo`: the Campus grid mark at 22px, then
+  `Acadigma` in Inter 500 at 17px / `-0.02em`, with `Campus` in
+  `--muted-foreground` — the acadigma.com lockup. It is on the sign-in pages
+  (linked home), the onboarding chooser header and the school shell's top
+  bar. Never a gradient, never a raster copy, never the prototype's JPEG.
+- **Marks (D-68).** Every Acadigma product has a mark on the same 3×3 grid
+  (152u cells, 32u gaps, 24u radius): `acadigma`, `campus`, `ledger`,
+  `students`, `parents`. `<GridMark mark="…" />` is a static port of
+  acadigma-website's `brand/marks.ts` geometry — never redraw one. Marks
+  draw in `currentColor` with the grey cell at 35%, so they follow the text
+  colour and invert with dark mode. Anything that lists Acadigma products (a
+  future product switcher, suite links) shows each product's mark with
+  `PRODUCT_NAMES`. `/design` shows all five.
+- **App icons (D-68)** are copied or resized from
+  `acadigma-brand/exports/products/campus/`, never drawn here:
+  `app/icon.svg` (mark, light/dark via `prefers-color-scheme`),
+  `app/favicon.ico`, `app/apple-icon.png`, `public/icons/*` (PWA) and
+  `app/opengraph-image.png`.
 - Marketplace, Hiring and Selling are **modules inside Campus**, not
   sub-brands. The prototype's de-facto violet seller identity is removed —
   `/sell` uses the same tokens with a different nav, nothing more.
@@ -156,8 +169,16 @@ than Hind Siliguri at the same size.
 **Rules.**
 
 - Bengali gets `line-height: 1.75` (matras sit above and below the body) and
-  **never** gets letter-spacing. Latin ≥ 22px gets `-0.02em`; Latin ≤ 12px gets
-  `+0.01em`.
+  **never** gets letter-spacing (enforced by an unlayered `:lang(bn)` rule
+  that beats `tracking-*` utilities). Latin headings get `tracking-tight`
+  (`-0.03em`, D-68); Latin ≤ 12px gets `+0.01em`.
+- **Headings are light (D-68):** weight 500 (`font-medium`), tightly tracked
+  — page titles, card titles, sheet/dialog titles, the TopBar title. Bold
+  (600/700) is for emphasis inside body text, not for headings.
+- **Eyebrow (D-68):** a small label above a section title, `className="eyebrow"`
+  — JetBrains Mono 12px, uppercase, `0.08em` tracking, `--muted-foreground`.
+  One per section at most, never a sentence. Prefer digits or copy that needs
+  no translation (the wizard shows its step as `01 / 05`).
 - Bengali has no italic and no small caps. Emphasis is weight only.
 - A mixed-script line uses `--font-bn` for the Bengali run with Inter still in
   the stack after it, so Latin words and digits inside a Bengali sentence keep
@@ -170,25 +191,25 @@ than Hind Siliguri at the same size.
 - Inputs are 16px (`--text-md`) minimum. Anything smaller makes iOS Safari zoom
   the page and the user loses their place.
 
-Type scale (`tokens.css` §2): 11 · 12 · 13 · 15 · 16 · 18 · 22 · 28 · 36 px.
-`--text-base` is **15px**, not 16 — at 360px a 15px body buys roughly four more
-characters per line in a student-name column, and Inter holds at 15 where most
-faces do not. Inputs stay at 16.
+Type scale (`tokens.css` §2): 11 · 12 · 13 · 16 · 16 · 18 · 22 · 28 · 36 px.
+`--text-base` is **16px** (D-68, the owner's "Blend" decision; it was 15px,
+which bought about four more characters per line in a student-name column).
+Dense tables still set `--text-sm` explicitly. Inputs are 16 as before.
 
 **Addendum — Bengali needs its own base size (amended per SYNTHESIS).** The
-15px value above is derived from Latin-script reasoning only (character count,
+Latin base size above is derived from Latin-script reasoning only (character count,
 Inter's hinting at small sizes) and must not be assumed to transfer to Bengali.
 Bengali script — with its matras, conjuncts (যুক্তাক্ষর) and generally taller
 x-height-equivalent shapes — typically needs to run **larger than Latin at the
 same perceived size** to stay legible and to avoid the conjunct-crowding that
 Bengali reviewers call out by name (§4.9 of `VOICE-OF-CUSTOMER.md`: a 4★ review
 line-by-line-correcting glyph and spelling errors). This does not necessarily
-change the 15px Latin value in `--text-base`; it means Bengali runs need their
+change the Latin value in `--text-base`; it means Bengali runs need their
 own reviewed size (and, per the mixed-script rule above, Hind Siliguri already
 gets its own `line-height: 1.75`) rather than inheriting the Latin scale
 unexamined. Set and verify a Bengali-specific base size before shipping any
 Bengali-heavy screen (report cards, parent-facing PDFs) rather than assuming
-15px reads the same in both scripts.
+the Latin base reads the same in both scripts.
 
 ### 1.7 Light and dark
 
@@ -214,7 +235,7 @@ explains the decisions; the file holds the values.
 | -------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Primary  | `hsl(234 62% 46%)` = `oklch(0.436 0.202 270)`           | `oklch(0.472 0.190 269)`                                                                  | The old value sits on the sRGB gamut edge at that lightness, so chroma clipped unevenly across cheap Android panels and it skewed violet. +0.036 L, −0.012 C reads as the same indigo, holds **7.15:1** with white (AAA), and leaves an actually-darker hover step at `oklch(0.404 0.162 269)`. |
 | Accent   | `hsl(38 92% 55%)` used as both fill and text            | `--accent` `oklch(0.762 0.160 74)` (fill) + `--accent-ink` `oklch(0.578 0.128 74)` (text) | The prototype used one amber for both. As text on white it measured 2.2:1 — a failure that shipped. Split into a fill you put ink on (7.96:1) and an ink you put on white (4.42:1).                                                                                                             |
-| Radius   | `0.75rem`                                               | `0.75rem`, unchanged                                                                      | It is right, and the whole component set is drawn to it.                                                                                                                                                                                                                                        |
+| Radius   | `0.75rem`                                               | `0.75rem` (D-68 later moved it to `0.375rem`, §2.6)                                       | It is right, and the whole component set is drawn to it.                                                                                                                                                                                                                                        |
 | Neutrals | mixed `225°`/`230°` hues                                | one ramp at `272°`                                                                        | Three neutral hues in one product is how a design system stops looking like one.                                                                                                                                                                                                                |
 | Sidebar  | dark navy in light mode                                 | kept, `oklch(0.255 0.062 275)`                                                            | It is the most distinctive thing the prototype had. Foreground measures 12.95:1 on it.                                                                                                                                                                                                          |
 | Palettes | 6, each recolouring `--sidebar-primary` away from amber | 6, brand-only                                                                             | The old behaviour made the sidebar accent mean nothing. Palettes now override `--primary`, `--primary-hover`, `--primary-ink`, `--ring`, `--chart-1` and nothing else.                                                                                                                          |
@@ -247,7 +268,7 @@ fixing §1.1 changes what a chart actually looks like even though no chart
 hex in tokens.css moved — see the test report's before/after evidence.
 `--success`/`--warning`/`--info` in §2.3 are also unchanged in value — out of
 this Part's scope. Radius gets the
-website's multipliers on the same `0.75rem` base (§2.6); a new
+website's multipliers on the same `0.75rem` base (§2.6; D-68 later made the base `0.375rem`); a new
 `--ease-out-expo` `cubic-bezier(.16,1,.3,1)` (§2.7) is available for
 entrances; JetBrains Mono is now `--font-mono` (§1.6). Full reasoning:
 `DECISION-LOG.md` D-57.
@@ -355,23 +376,25 @@ different scale gets the ramp interpolated across its band count, in order.
 Page gutter is **16px at 360**, 24px from `sm`. Nothing else is permitted —
 ESLint blocks arbitrary Tailwind spacing values.
 
-**Radius** `--radius: 0.75rem` (12px). D-57 switched the multipliers to
-acadigma-website's (`0.6 / 0.8 / 1 / 1.4 / 1.8`, plus `2.2`/`2.6` reserved for
-parity), applied to the same 0.75rem base this product already used: ~7px
-(chips, badges, in-grid inputs) · ~10px (inputs, buttons) · 12px (cards,
-sheets, popovers) · ~17px (sheet top corners) · ~22px (avatar on a stat tile).
+**Radius** `--radius: 0.375rem` (6px, D-68; was 12px). The multipliers are
+acadigma-website's (D-57: `0.6 / 0.8 / 1 / 1.4 / 1.8`, plus `2.2`/`2.6`
+reserved for parity): ~4px (chips, badges, in-grid inputs) · ~5px (inputs,
+buttons) · 6px (cards, popovers, menus, dialogs — `rounded-lg`) · ~8px
+(sheet top corners) · ~11px (avatar on a stat tile).
 **One scale, applied by role, documented here** — a pill button next to a
 12px card is broken, not playful.
 
-**Elevation — three levels, and that is all.**
+**Elevation — hairline rings, not drop shadows (D-68).** A card or popover
+is separated from the page by a 1px ring, never by a blurred shadow and never
+by `border` plus a ring (one edge, not two).
 
-| Token              | Use                                                                         |
-| ------------------ | --------------------------------------------------------------------------- |
-| `--shadow-flat`    | a 1px hairline ring. The default. Lists, rules, table borders.              |
-| `--shadow-raised`  | cards that are genuinely elevated: a pending approval, a stat that changed. |
-| `--shadow-overlay` | popovers, dropdowns, toasts.                                                |
-| `--shadow-sheet`   | the upward shadow on a bottom sheet only.                                   |
-| `--shadow-nav`     | a rule above the bottom nav, not a shadow.                                  |
+| Token              | Value                         | Use                                                                         |
+| ------------------ | ----------------------------- | --------------------------------------------------------------------------- |
+| `--shadow-flat`    | 1px ink-tinted ring           | the default. Cards, auth card, choice cards, lists.                         |
+| `--shadow-raised`  | 1px ring in `--border-strong` | cards that are genuinely elevated: a pending approval, a stat that changed. |
+| `--shadow-overlay` | 1px ring in `--border-strong` | popovers, dropdowns, select menus, toasts.                                  |
+| `--shadow-sheet`   | upward shadow                 | the bottom sheet only — it slides over the page from the bottom edge.       |
+| `--shadow-nav`     | 1px rule                      | above the bottom nav, not a shadow.                                         |
 
 Shadows are ink-tinted (D-57: `rgb(11 11 11 / …)` in light, matching
 acadigma-website's `shadow-input`; was the hue-272 neutral tint), never pure
