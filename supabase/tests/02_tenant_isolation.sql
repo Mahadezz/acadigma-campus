@@ -59,7 +59,7 @@ insert into public.workspace_members (workspace_id, user_id, role, status, joine
 values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000002', 'teacher', 'active', now());
 
 -- 'Head of Maths', not one of F-OP-06's nine seeded default names
--- (app.tg_workspace_bootstrap(), 20260925000600_staff_schema.sql) — a
+-- (app.tg_workspace_bootstrap(), 20260925000900_staff_schema.sql) — a
 -- school workspace now gets those seeded automatically on insert, and
 -- 'Senior Teacher' collided with custom_labels_workspace_name_key here.
 insert into public.custom_labels (id, workspace_id, base_role, name, created_by)
@@ -102,9 +102,13 @@ select is(
   (select count(*)::int from public.custom_labels where workspace_id = '22222222-2222-2222-2222-222222222222'),
   0, 'custom_labels: A cannot read B''s labels');
 
+-- Asserted by fixture row name, not a count: F-OP-06's
+-- app.tg_workspace_bootstrap() now seeds nine default custom_labels per
+-- school workspace alongside this fixture's own manually-inserted row, so
+-- a bare count of workspace A's labels is no longer 1.
 select is(
-  (select count(*)::int from public.custom_labels where workspace_id = '11111111-1111-1111-1111-111111111111'),
-  1, 'custom_labels: A can read its own labels');
+  (select name from public.custom_labels where id = 'cccc1111-0000-0000-0000-000000000001'),
+  'Head of Maths', 'custom_labels: A can read its own fixture label');
 
 select is(
   (select count(*)::int from public.files where workspace_id = '22222222-2222-2222-2222-222222222222'),

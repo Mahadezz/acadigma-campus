@@ -1,6 +1,6 @@
 /**
  * F-OP-06 Part 1 — read access to `staff_records`, `staff_compensation` and
- * `staff_documents` (`supabase/migrations/20260925000600_staff_schema.sql`).
+ * `staff_documents` (`supabase/migrations/20260925000900_staff_schema.sql`).
  *
  * Deliberately read-only: no server action exists yet to call a write here
  * (createStaffRecord/setStaffCompensation/uploadStaffDocument are Parts 3-4),

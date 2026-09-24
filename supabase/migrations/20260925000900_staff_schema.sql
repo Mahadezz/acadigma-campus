@@ -81,7 +81,15 @@ create table if not exists public.staff_records (
   constraint staff_records_employment_history_is_array
     check (jsonb_typeof(employment_history) = 'array'),
   constraint staff_records_left_on_requires_status
-    check (left_on is null or employment_status = 'left')
+    check (left_on is null or employment_status = 'left'),
+  -- Redundant with the `id` primary key alone (already globally unique) but
+  -- required as an explicit constraint object so staff_compensation and
+  -- staff_documents can each carry a COMPOSITE (workspace_id, staff_record_id)
+  -- foreign key against it — the only way to make "this compensation/document
+  -- row's workspace_id actually matches its staff_record_id's real workspace"
+  -- a database guarantee rather than something RLS alone has to get right on
+  -- every policy, forever (lead review, PR #32).
+  constraint staff_records_workspace_id_key unique (workspace_id, id)
 );
 
 comment on table public.staff_records is
@@ -114,6 +122,11 @@ create index if not exists staff_records_workspace_label_idx
   on public.staff_records (workspace_id, designation_label_id);
 create index if not exists staff_records_membership_idx
   on public.staff_records (membership_id) where membership_id is not null;
+-- "which of my staff records, in which school" — a person staffed at more
+-- than one workspace (PRODUCT-DECISIONS §7), read in the opposite column
+-- order from staff_records_workspace_user_key above (lead review, PR #32).
+create index if not exists staff_records_user_workspace_idx
+  on public.staff_records (user_id, workspace_id);
 
 alter table public.staff_records enable row level security;
 
@@ -123,7 +136,7 @@ create policy staff_records_select on public.staff_records
   for select to authenticated
   using (
     app.has_role(workspace_id, array['owner', 'admin'])
-    or user_id = app.current_user_id()
+    or user_id = (select app.current_user_id())
   );
 
 -- INSERT — owner/admin only. Self-service record creation does not exist
@@ -145,8 +158,8 @@ create policy staff_records_update_admin on public.staff_records
 
 create policy staff_records_update_self on public.staff_records
   for update to authenticated
-  using (user_id = app.current_user_id())
-  with check (user_id = app.current_user_id());
+  using (user_id = (select app.current_user_id()))
+  with check (user_id = (select app.current_user_id()));
 
 -- No DELETE policy and no grant: rows are never deleted (PRODUCT-DECISIONS 1.14).
 
@@ -163,6 +176,16 @@ grant select, insert, update on public.staff_records to authenticated;
 -- provenance columns, which are never end-user-editable at all. Mirrors
 -- app.tg_workspace_members_guard()'s pattern: SECURITY INVOKER, exempting
 -- server-owned paths via app.is_privileged_context().
+--
+-- ALLOW-list, not a deny-list (lead review, PR #32): the first draft
+-- enumerated admin-only columns and let anything ELSE through, which fails
+-- OPEN for any column this migration forgets to list, and for any column a
+-- future migration adds to staff_records without also touching this
+-- function. Enumerating the personal columns a self-update MAY touch and
+-- rejecting everything else (except the system columns below, which are
+-- either immutable or managed by other triggers) fails CLOSED by
+-- construction — a new column defaults to admin-only until someone
+-- deliberately widens the allow-list.
 --
 -- One narrow additional exception (D-52's pg_trigger_depth() pattern,
 -- 20260924010000_tenancy_freeze_cascade_exception.sql): the membership<->
@@ -184,14 +207,22 @@ language plpgsql
 set search_path = ''
 as $$
 declare
-  v_admin_only_cols text[] := array[
-    'staff_code', 'full_name', 'designation_label_id', 'department',
-    'employment_type', 'employment_status', 'joined_on', 'left_on',
-    'work_email', 'work_phone', 'subject_ids', 'notes',
-    'membership_id', 'user_id', 'application_id', 'employment_history',
-    'created_by', 'workspace_id'
+  -- Everything a member may change on their own record, and nothing else.
+  v_self_editable_cols text[] := array[
+    'personal_phone', 'emergency_contact', 'blood_group', 'date_of_birth',
+    'gender', 'nid_number', 'address', 'qualifications'
   ];
-  v_col text;
+  -- Never checked either way: identifiers are handled by other guards
+  -- (freeze trigger for workspace_id; the PK never changes), and
+  -- created_at/created_by/updated_at are system-managed — updated_at in
+  -- particular is legitimately touched by app.tg_set_updated_at() on EVERY
+  -- update, including a member's own, so it must never be treated as an
+  -- admin-only column here.
+  v_system_cols text[] := array[
+    'id', 'workspace_id', 'created_at', 'created_by', 'updated_at'
+  ];
+  v_all_keys text[];
+  v_col      text;
 begin
   if app.is_privileged_context() or app.has_role(new.workspace_id, array['owner', 'admin']) then
     return new;                                   -- server-owned path or admin/owner
@@ -204,8 +235,15 @@ begin
     return new;    -- the membership<->record link trigger's own nested UPDATE
   end if;
 
-  foreach v_col in array v_admin_only_cols loop
-    if to_jsonb(old) -> v_col is distinct from to_jsonb(new) -> v_col then
+  select array_agg(k) into v_all_keys from jsonb_object_keys(to_jsonb(new)) as k;
+
+  foreach v_col in array v_all_keys loop
+    if v_col = any (v_system_cols) then
+      continue;
+    end if;
+    if to_jsonb(old) -> v_col is distinct from to_jsonb(new) -> v_col
+       and not (v_col = any (v_self_editable_cols))
+    then
       raise exception 'column % is admin-only, even on your own staff record', v_col
         using errcode = '42501';
     end if;
@@ -218,10 +256,11 @@ $$;
 comment on function app.tg_staff_records_self_update_guard() is
   'A self-update may only touch contact/emergency/personal fields '
   '(personal_phone, emergency_contact, blood_group, date_of_birth, gender, '
-  'nid_number, address, qualifications) — everything else is admin-only, '
-  'even on your own record (F-OP-06 §2 footnote 1), except the exact '
-  'pending_join -> active transition the membership-link trigger produces '
-  '(pg_trigger_depth() > 1, D-52''s pattern).';
+  'nid_number, address, qualifications) — an ALLOW-list, so a new column '
+  'this function does not yet know about defaults to admin-only. Everything '
+  'else is admin-only, even on your own record (F-OP-06 §2 footnote 1), '
+  'except the exact pending_join -> active transition the membership-link '
+  'trigger produces (pg_trigger_depth() > 1, D-52''s pattern).';
 
 drop trigger if exists staff_records_self_update_guard on public.staff_records;
 create trigger staff_records_self_update_guard
@@ -244,7 +283,7 @@ select app.attach_audit('public.staff_records',
 create table if not exists public.staff_compensation (
   id                    uuid primary key default gen_random_uuid(),
   workspace_id          uuid not null references public.workspaces (id) on delete cascade,
-  staff_record_id       uuid not null references public.staff_records (id) on delete cascade,
+  staff_record_id       uuid not null,
   hourly_rate_paisa     bigint check (hourly_rate_paisa is null or hourly_rate_paisa >= 0),
   monthly_salary_paisa  bigint check (monthly_salary_paisa is null or monthly_salary_paisa >= 0),
   currency              char(3) not null default 'BDT',
@@ -261,15 +300,27 @@ create table if not exists public.staff_compensation (
     exclude using gist (
       staff_record_id with =,
       daterange(effective_from, effective_to, '[]') with &&
-    )
+    ),
+  -- COMPOSITE fk, not a plain `references staff_records (id)`: a plain
+  -- single-column FK only proves the row exists SOMEWHERE, not that it
+  -- belongs to THIS row's own workspace_id — an owner/admin of workspace B
+  -- could otherwise insert workspace_id=B pointing staff_record_id at a
+  -- record that actually lives in workspace A, and both RLS policies above
+  -- would allow it (each checks only its OWN table's workspace_id). Matched
+  -- against staff_records_workspace_id_key. Lead review, PR #32.
+  constraint staff_compensation_staff_record_fk
+    foreign key (workspace_id, staff_record_id)
+    references public.staff_records (workspace_id, id) on delete cascade
 );
 
 comment on table public.staff_compensation is
   'F-OP-06 §3.2: period-versioned pay. One row per change; effective_to is '
   'closed by app.tg_close_prior_compensation_period() when a newer row is '
-  'inserted. The exclusion constraint (btree_gist) makes "no gaps, no '
-  'overlaps" a database guarantee, not an application promise. Read only '
-  'through app.staff_hourly_rate() outside owner/admin.';
+  'inserted. The exclusion constraint (btree_gist) makes "no overlaps" a '
+  'database guarantee, not an application promise — it does not prevent a '
+  'GAP (a period with no rate set at all); app.staff_hourly_rate() returns '
+  'null for a date inside one. Read only through app.staff_hourly_rate() '
+  'outside owner/admin.';
 comment on constraint staff_compensation_no_overlap on public.staff_compensation is
   'One rate in effect per staff record at a time. effective_to is INCLUSIVE '
   '(the last day the rate applied), so a period ending 30 Sep and the next '
@@ -277,6 +328,8 @@ comment on constraint staff_compensation_no_overlap on public.staff_compensation
 
 create index if not exists staff_compensation_record_from_idx
   on public.staff_compensation (staff_record_id, effective_from desc);
+create index if not exists staff_compensation_workspace_idx
+  on public.staff_compensation (workspace_id);
 
 alter table public.staff_compensation enable row level security;
 
@@ -287,7 +340,7 @@ create policy staff_compensation_select on public.staff_compensation
     or exists (
       select 1 from public.staff_records sr
       where sr.id = staff_compensation.staff_record_id
-        and sr.user_id = app.current_user_id()
+        and sr.user_id = (select app.current_user_id())
     )
   );
 
@@ -340,9 +393,18 @@ select app.attach_audit('public.staff_compensation');
 -- not their own (F-OP-06 §3.2, §5.8). SECURITY DEFINER + search_path
 -- pinned so it reads staff_compensation on the caller's behalf without
 -- granting the caller table access; STABLE so the planner can call it
--- once per row in a loop (F-OP-02's cover engine). Self-check inside the
--- function, not trusted RLS on a join, because the caller here is never
--- the row's own workspace context — just two scalars.
+-- once per row in a loop (F-OP-02's cover engine).
+--
+-- Three arguments, p_workspace_id included: a person can hold a staff_records
+-- row in more than one school (PRODUCT-DECISIONS §7 accepts this — two
+-- memberships, two records). A 2-argument (user_id, on_date) version this
+-- migration originally shipped resolved "the" workspace implicitly by
+-- joining sr.user_id alone and picking whichever compensation row sorted
+-- first by effective_from — for a person staffed at two schools with
+-- overlapping-date rates, that can silently return the WRONG school's
+-- number. p_workspace_id makes the caller say which school they mean, and
+-- the function filters and authorizes against exactly that one (lead
+-- review, PR #32; AC-30 pgTAP).
 --
 -- owner/admin only for the "not self" branch — NOT teacher/staff. A first
 -- draft allowed any active member (any role) of the row's workspace,
@@ -352,7 +414,7 @@ select app.attach_audit('public.staff_compensation');
 -- all, so this function must not open a side door to the same data. Caught
 -- by 20_staff_schema.sql's own "never returns a colleague's rate to a
 -- teacher" assertion failing against a live Postgres (D-63 item 7).
-create or replace function app.staff_hourly_rate(p_user_id uuid, p_on_date date)
+create or replace function app.staff_hourly_rate(p_workspace_id uuid, p_user_id uuid, p_on_date date)
 returns bigint
 language sql
 stable
@@ -361,29 +423,33 @@ set search_path = ''
 as $$
   select c.hourly_rate_paisa
   from public.staff_compensation c
-  join public.staff_records sr on sr.id = c.staff_record_id
-  where sr.user_id = p_user_id
+  join public.staff_records sr
+    on sr.id = c.staff_record_id and sr.workspace_id = c.workspace_id
+  where sr.workspace_id = p_workspace_id
+    and sr.user_id = p_user_id
     and c.effective_from <= p_on_date
     and (c.effective_to is null or c.effective_to >= p_on_date)
     and (
       p_user_id = app.current_user_id()
-      or app.has_role(sr.workspace_id, array['owner', 'admin'])
+      or app.has_role(p_workspace_id, array['owner', 'admin'])
     )
   order by c.effective_from desc
   limit 1
 $$;
 
-comment on function app.staff_hourly_rate(uuid, date) is
-  'The rate in force for p_user_id on p_on_date, or null when unset '
-  '(F-OP-06 §3.2, §5.8) — never today''s rate applied retroactively. Only '
-  'returns a value when the caller is that same user, or owner/admin of '
-  'the staff record''s own workspace — never a teacher or staff colleague '
-  '(matches staff_compensation_select exactly). A caller from another '
-  'workspace, or with no membership at all, gets null exactly as if the '
-  'rate did not exist — never an error that would leak workspace shape.';
+comment on function app.staff_hourly_rate(uuid, uuid, date) is
+  'The rate in force for p_user_id on p_on_date within p_workspace_id, or '
+  'null when unset (F-OP-06 §3.2, §5.8) — never today''s rate applied '
+  'retroactively, and never a DIFFERENT workspace''s rate for a person '
+  'staffed at more than one school (AC-30). Only returns a value when the '
+  'caller is that same user, or owner/admin of p_workspace_id — never a '
+  'teacher or staff colleague (matches staff_compensation_select exactly). '
+  'A caller from another workspace, or with no membership at all, gets '
+  'null exactly as if the rate did not exist — never an error that would '
+  'leak workspace shape.';
 
-revoke all on function app.staff_hourly_rate(uuid, date) from public, anon;
-grant execute on function app.staff_hourly_rate(uuid, date) to authenticated, service_role;
+revoke all on function app.staff_hourly_rate(uuid, uuid, date) from public, anon;
+grant execute on function app.staff_hourly_rate(uuid, uuid, date) to authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- 4. staff_documents (F-OP-06 §3.3)
@@ -391,7 +457,7 @@ grant execute on function app.staff_hourly_rate(uuid, date) to authenticated, se
 create table if not exists public.staff_documents (
   id              uuid primary key default gen_random_uuid(),
   workspace_id    uuid not null references public.workspaces (id) on delete cascade,
-  staff_record_id uuid not null references public.staff_records (id) on delete cascade,
+  staff_record_id uuid not null,
   kind            public.staff_document_kind not null,
   file_id         uuid not null references public.files (id) on delete cascade,
   label           text,
@@ -403,7 +469,12 @@ create table if not exists public.staff_documents (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
   constraint staff_documents_verified_pair
-    check ((verified_by is null) = (verified_at is null))
+    check ((verified_by is null) = (verified_at is null)),
+  -- COMPOSITE fk — same reasoning as staff_compensation_staff_record_fk
+  -- above (lead review, PR #32).
+  constraint staff_documents_staff_record_fk
+    foreign key (workspace_id, staff_record_id)
+    references public.staff_records (workspace_id, id) on delete cascade
 );
 
 comment on table public.staff_documents is
@@ -413,6 +484,8 @@ comment on table public.staff_documents is
 
 create index if not exists staff_documents_record_idx
   on public.staff_documents (staff_record_id);
+create index if not exists staff_documents_workspace_idx
+  on public.staff_documents (workspace_id);
 create index if not exists staff_documents_expiring_idx
   on public.staff_documents (workspace_id, expires_on) where expires_on is not null;
 create unique index if not exists staff_documents_file_key
@@ -429,18 +502,29 @@ create policy staff_documents_select on public.staff_documents
     or exists (
       select 1 from public.staff_records sr
       where sr.id = staff_documents.staff_record_id
-        and sr.user_id = app.current_user_id()
+        and sr.user_id = (select app.current_user_id())
     )
   );
 
+-- Self-insert branch additionally requires verified_by/verified_at both
+-- null and uploaded_by = the caller — otherwise a self-inserting teacher
+-- could fake admin verification on their own document (verified_by set to
+-- anyone, including themselves) or attribute the upload to someone else
+-- entirely. Owner/admin are not bound by this — they ARE the verifier.
+-- (Security review, PR #32.)
 create policy staff_documents_insert on public.staff_documents
   for insert to authenticated
   with check (
     app.has_role(workspace_id, array['owner', 'admin'])
-    or exists (
-      select 1 from public.staff_records sr
-      where sr.id = staff_documents.staff_record_id
-        and sr.user_id = app.current_user_id()
+    or (
+      exists (
+        select 1 from public.staff_records sr
+        where sr.id = staff_documents.staff_record_id
+          and sr.user_id = (select app.current_user_id())
+      )
+      and verified_by is null
+      and verified_at is null
+      and uploaded_by = (select app.current_user_id())
     )
   );
 
@@ -578,7 +662,7 @@ create trigger staff_records_link_on_membership_active
 -- 7. custom_labels seeding for new school workspaces (F-OP-06 §3.4).
 --    Extends app.tg_workspace_bootstrap() (20260917010100_identity.sql)
 --    rather than adding a second AFTER INSERT trigger on workspaces, so
---    the owner membership, school_profiles row and these ten labels all
+--    the owner membership, school_profiles row and these nine labels all
 --    land in the same transaction as the workspace itself.
 -- ---------------------------------------------------------------------
 create or replace function app.tg_workspace_bootstrap()

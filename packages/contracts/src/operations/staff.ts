@@ -10,7 +10,7 @@ import {
 /**
  * F-OP-06 Part 1 — schema, RLS and the compensation split.
  * Row shapes for `staff_records`, `staff_compensation`, `staff_documents`
- * (`supabase/migrations/20260925000600_staff_schema.sql`), mirrored here so
+ * (`supabase/migrations/20260925000900_staff_schema.sql`), mirrored here so
  * the repository layer (Part 1) and every later Part's server actions share
  * one definition. Endpoint input/output schemas (`createStaffRecord`,
  * `setStaffCompensation`, ...) are NOT modelled yet — those are Parts 2-5,

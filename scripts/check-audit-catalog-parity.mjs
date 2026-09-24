@@ -14,7 +14,7 @@
 // introduced the catalogue); generalised to scan every migration so a LATER
 // migration can seed more curated actions or generic-audit tables for a new
 // tenant table without ever editing an already-applied one (F-OP-06 Part 1,
-// D-63 — supabase/migrations/20260925000600_staff_schema.sql is the first
+// D-63 — supabase/migrations/20260925000900_staff_schema.sql is the first
 // migration to use this).
 import { readFile, readdir } from "node:fs/promises"
 import { fileURLToPath } from "node:url"

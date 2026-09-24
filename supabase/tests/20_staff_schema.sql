@@ -12,7 +12,7 @@
 -- in force on a PAST date, not today's.
 -- =====================================================================
 begin;
-select plan(55);
+select plan(64);
 
 create schema if not exists tests;
 
@@ -138,7 +138,13 @@ values
    'application/pdf', 1024, 'aaaaaaaa-0000-0000-0000-000000000003'),
   ('aa11ee04-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111',
    'aaaaaaaa-0000-0000-0000-000000000004', 'private', 'staff/teacher-a2-nid.pdf', 'nid.pdf',
-   'application/pdf', 1024, 'aaaaaaaa-0000-0000-0000-000000000004');
+   'application/pdf', 1024, 'aaaaaaaa-0000-0000-0000-000000000004'),
+  ('aa11ee05-0000-0000-0000-000000000005', '11111111-1111-1111-1111-111111111111',
+   'aaaaaaaa-0000-0000-0000-000000000003', 'private', 'staff/teacher-a-forged-verify.pdf', 'x.pdf',
+   'application/pdf', 1024, 'aaaaaaaa-0000-0000-0000-000000000003'),
+  ('aa11ee06-0000-0000-0000-000000000006', '11111111-1111-1111-1111-111111111111',
+   'aaaaaaaa-0000-0000-0000-000000000003', 'private', 'staff/teacher-a-forged-upload.pdf', 'x.pdf',
+   'application/pdf', 1024, 'aaaaaaaa-0000-0000-0000-000000000003');
 
 insert into public.staff_documents (id, workspace_id, staff_record_id, kind, file_id, uploaded_by)
 values
@@ -208,12 +214,14 @@ select is(
 
 -- app.staff_hourly_rate: own rate is visible via the RPC too.
 select is(
-  app.staff_hourly_rate('aaaaaaaa-0000-0000-0000-000000000003', '2025-06-01'),
+  app.staff_hourly_rate('11111111-1111-1111-1111-111111111111',
+                         'aaaaaaaa-0000-0000-0000-000000000003', '2025-06-01'),
   35000::bigint, 'app.staff_hourly_rate returns the caller''s own rate');
 
 -- a colleague's rate is never returned, even through the RPC.
 select is(
-  app.staff_hourly_rate('aaaaaaaa-0000-0000-0000-000000000004', '2025-06-01'),
+  app.staff_hourly_rate('11111111-1111-1111-1111-111111111111',
+                         'aaaaaaaa-0000-0000-0000-000000000004', '2025-06-01'),
   null, 'app.staff_hourly_rate never returns a colleague''s rate to a teacher');
 
 -- a teacher cannot set compensation (write escalation, AC 11 in spirit —
@@ -223,6 +231,15 @@ select throws_ok(
     values ('11111111-1111-1111-1111-111111111111', 'ee000003-0000-0000-0000-000000000003', 99999, '2026-01-01')$$,
   '42501', null,
   'a teacher cannot insert a staff_compensation row');
+
+-- AC 11 also holds for a 'staff' role, not only 'teacher' (lead review, PR #32).
+select tests.login('aaaaaaaa-0000-0000-0000-000000000008');
+select throws_ok(
+  $$insert into public.staff_compensation (workspace_id, staff_record_id, hourly_rate_paisa, effective_from)
+    values ('11111111-1111-1111-1111-111111111111', 'ee000008-0000-0000-0000-000000000008', 99999, '2026-01-01')$$,
+  '42501', null,
+  'a staff member cannot insert a staff_compensation row either');
+select tests.login('aaaaaaaa-0000-0000-0000-000000000003');
 
 -- a teacher CAN edit their own contact/emergency fields (AC 3).
 select lives_ok(
@@ -250,6 +267,23 @@ select throws_ok(
   '42501', null,
   'a teacher cannot rewrite their own staff_code');
 
+-- The allow-list guard denies every admin-only column individually, not
+-- just the three above (lead review, PR #32).
+-- The guard trigger (BEFORE UPDATE) fires before the FK constraint check,
+-- so a well-formed but nonexistent uuid is enough to prove the column-level
+-- rejection specifically — this must raise 42501, not a later 23503.
+select throws_ok(
+  $$update public.staff_records set designation_label_id = 'aaaa9999-0000-0000-0000-000000000099'
+     where id = 'ee000003-0000-0000-0000-000000000003'$$,
+  '42501', null,
+  'a teacher cannot self-edit designation_label_id');
+
+select throws_ok(
+  $$update public.staff_records set joined_on = '2020-01-01'
+     where id = 'ee000003-0000-0000-0000-000000000003'$$,
+  '42501', null,
+  'a teacher cannot self-edit joined_on');
+
 -- a teacher cannot touch a colleague's record at all (RLS filters to zero rows).
 with attempted as (
   update public.staff_records set personal_phone = '+8801799999999'
@@ -266,6 +300,24 @@ select lives_ok(
     values ('11111111-1111-1111-1111-111111111111', 'ee000003-0000-0000-0000-000000000003',
             'nid', 'aa11ee03-0000-0000-0000-000000000003', 'aaaaaaaa-0000-0000-0000-000000000003')$$,
   'a teacher can upload their own staff document');
+
+-- Security review, PR #32: a self-inserting teacher cannot fake admin
+-- verification on their own upload.
+select throws_ok(
+  $$insert into public.staff_documents (workspace_id, staff_record_id, kind, file_id, uploaded_by, verified_by, verified_at)
+    values ('11111111-1111-1111-1111-111111111111', 'ee000003-0000-0000-0000-000000000003',
+            'nid', 'aa11ee05-0000-0000-0000-000000000005', 'aaaaaaaa-0000-0000-0000-000000000003',
+            'aaaaaaaa-0000-0000-0000-000000000003', now())$$,
+  '42501', null,
+  'a teacher cannot self-verify their own uploaded document');
+
+-- ...nor attribute the upload to someone else (uploaded_by must be self).
+select throws_ok(
+  $$insert into public.staff_documents (workspace_id, staff_record_id, kind, file_id, uploaded_by)
+    values ('11111111-1111-1111-1111-111111111111', 'ee000003-0000-0000-0000-000000000003',
+            'nid', 'aa11ee06-0000-0000-0000-000000000006', 'aaaaaaaa-0000-0000-0000-000000000002')$$,
+  '42501', null,
+  'a teacher cannot attribute their own upload to someone else (uploaded_by spoofing)');
 
 select throws_ok(
   $$insert into public.staff_documents (workspace_id, staff_record_id, kind, file_id, uploaded_by)
@@ -354,26 +406,99 @@ select is(
   'inserting a new period closes the prior one the day before it starts');
 
 select is(
-  app.staff_hourly_rate('aaaaaaaa-0000-0000-0000-000000000003', '2025-09-15'),
+  app.staff_hourly_rate('11111111-1111-1111-1111-111111111111',
+                         'aaaaaaaa-0000-0000-0000-000000000003', '2025-09-15'),
   35000::bigint, 'a cover on 15 Sep 2025 prices at the OLD rate (AC 9)');
 
 select is(
-  app.staff_hourly_rate('aaaaaaaa-0000-0000-0000-000000000003', '2025-10-15'),
+  app.staff_hourly_rate('11111111-1111-1111-1111-111111111111',
+                         'aaaaaaaa-0000-0000-0000-000000000003', '2025-10-15'),
   40000::bigint, 'a cover on 15 Oct 2025 prices at the NEW rate');
 
 select is(
-  app.staff_hourly_rate('aaaaaaaa-0000-0000-0000-000000000003', '2024-01-01'),
+  app.staff_hourly_rate('11111111-1111-1111-1111-111111111111',
+                         'aaaaaaaa-0000-0000-0000-000000000003', '2024-01-01'),
   null, 'a date before any compensation row exists returns null, not zero (AC 12)');
 
 select is(
-  app.staff_hourly_rate('aaaaaaaa-0000-0000-0000-000000000008', '2025-06-01'),
+  app.staff_hourly_rate('11111111-1111-1111-1111-111111111111',
+                         'aaaaaaaa-0000-0000-0000-000000000008', '2025-06-01'),
   null, 'a staff member with no compensation row at all returns null, not zero (AC 12)');
 
 -- Cross-workspace: an admin of School A gets null for a School B user's
 -- rate — app.staff_hourly_rate never leaks across the tenant boundary.
 select is(
-  app.staff_hourly_rate('bbbbbbbb-0000-0000-0000-000000000001', '2025-06-01'),
+  app.staff_hourly_rate('11111111-1111-1111-1111-111111111111',
+                         'bbbbbbbb-0000-0000-0000-000000000001', '2025-06-01'),
   null, 'app.staff_hourly_rate refuses a caller from a different workspace than the row it would read');
+
+select tests.logout();
+
+-- =====================================================================
+-- 5a. AC-30 — a person staffed at two schools has two independent rates,
+--     and p_workspace_id keeps app.staff_hourly_rate from ever mixing them
+--     (lead review, PR #32: the 2-argument first draft picked "whichever
+--     compensation row sorted first" across ALL of a person's workspaces).
+--     Owner B (bbbbbbbb...001) already has a staff_records row in School B
+--     (ee000009, no compensation yet); give them a second one in School A
+--     too, with a DIFFERENT overlapping-date rate.
+-- =====================================================================
+insert into public.staff_records (id, workspace_id, user_id, staff_code, full_name, employment_status)
+values ('ee00000a-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111',
+        'bbbbbbbb-0000-0000-0000-000000000001', 'TCH-2026-000A', 'Owner B (also staff at A)', 'active');
+
+insert into public.staff_compensation (workspace_id, staff_record_id, hourly_rate_paisa, effective_from)
+values ('22222222-2222-2222-2222-222222222222', 'ee000009-0000-0000-0000-000000000009', 20000, '2025-01-01'),
+       ('11111111-1111-1111-1111-111111111111', 'ee00000a-0000-0000-0000-00000000000a', 90000, '2025-01-01');
+
+-- Logged in as Owner B themselves — self-checking, so both calls satisfy
+-- app.staff_hourly_rate's authorization branch regardless of which
+-- workspace's admin/owner they are for that specific call.
+select tests.login('bbbbbbbb-0000-0000-0000-000000000001');
+
+select is(
+  app.staff_hourly_rate('22222222-2222-2222-2222-222222222222',
+                         'bbbbbbbb-0000-0000-0000-000000000001', '2025-06-01'),
+  20000::bigint, 'AC-30: School B''s rate for a person staffed at both schools');
+
+select is(
+  app.staff_hourly_rate('11111111-1111-1111-1111-111111111111',
+                         'bbbbbbbb-0000-0000-0000-000000000001', '2025-06-01'),
+  90000::bigint, 'AC-30: the SAME call with School A''s workspace_id returns School A''s own rate, not School B''s');
+
+select tests.logout();
+
+-- =====================================================================
+-- 5b. Cross-school row forgery (BLOCKING, lead review PR #32): an
+--     owner/admin of School B cannot insert a staff_compensation or
+--     staff_documents row that claims workspace_id=B while pointing
+--     staff_record_id at a record that actually belongs to School A — the
+--     composite (workspace_id, staff_record_id) FK refuses it outright,
+--     regardless of what RLS alone would have allowed (RLS only checked
+--     each table's OWN workspace_id column, never that it agreed with the
+--     referenced record's real workspace).
+-- =====================================================================
+insert into public.files
+  (id, workspace_id, owner_id, bucket, path, original_name, mime_type, size_bytes, created_by)
+values
+  ('ff22ee03-0000-0000-0000-000000000003', '22222222-2222-2222-2222-222222222222',
+   'bbbbbbbb-0000-0000-0000-000000000001', 'private', 'b/forged.pdf', 'forged.pdf',
+   'application/pdf', 1024, 'bbbbbbbb-0000-0000-0000-000000000001');
+
+select tests.login('bbbbbbbb-0000-0000-0000-000000000001');   -- owner of B
+
+select throws_ok(
+  $$insert into public.staff_compensation (workspace_id, staff_record_id, hourly_rate_paisa, effective_from)
+    values ('22222222-2222-2222-2222-222222222222', 'ee000003-0000-0000-0000-000000000003', 1, '2030-01-01')$$,
+  '23503', null,
+  'School B''s owner cannot insert compensation claiming workspace_id=B against a School A staff_record');
+
+select throws_ok(
+  $$insert into public.staff_documents (workspace_id, staff_record_id, kind, file_id, uploaded_by)
+    values ('22222222-2222-2222-2222-222222222222', 'ee000003-0000-0000-0000-000000000003',
+            'other', 'ff22ee03-0000-0000-0000-000000000003', 'bbbbbbbb-0000-0000-0000-000000000001')$$,
+  '23503', null,
+  'School B''s owner cannot insert a document claiming workspace_id=B against a School A staff_record');
 
 select tests.logout();
 
@@ -494,10 +619,10 @@ select ok(
   'anon has no privileges on staff_compensation at all');
 
 select ok(
-  not has_function_privilege('anon', 'app.staff_hourly_rate(uuid, date)', 'execute'),
+  not has_function_privilege('anon', 'app.staff_hourly_rate(uuid, uuid, date)', 'execute'),
   'anon cannot execute app.staff_hourly_rate');
 select ok(
-  has_function_privilege('authenticated', 'app.staff_hourly_rate(uuid, date)', 'execute'),
+  has_function_privilege('authenticated', 'app.staff_hourly_rate(uuid, uuid, date)', 'execute'),
   'authenticated can execute app.staff_hourly_rate');
 select ok(
   not has_function_privilege('anon', 'app.can_open_staff_document(uuid)', 'execute'),

@@ -9,7 +9,7 @@ import {
   staffStatusSchema,
 } from "./staff"
 
-describe("staff enums — parity with the Postgres enums (20260925000600_staff_schema.sql)", () => {
+describe("staff enums — parity with the Postgres enums (20260925000900_staff_schema.sql)", () => {
   it("staffEmploymentTypeSchema accepts exactly the five staff_employment_type labels", () => {
     for (const value of [
       "full_time",
