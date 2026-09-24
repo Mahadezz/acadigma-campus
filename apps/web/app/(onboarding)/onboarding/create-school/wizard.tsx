@@ -385,7 +385,11 @@ function Step1({
               <FormItem>
                 <FormLabel>{t.nameLabel}</FormLabel>
                 <FormControl>
-                  <Input autoComplete="organization" {...field} />
+                  <Input
+                    autoComplete="organization"
+                    className="h-11"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -400,6 +404,7 @@ function Step1({
                 <FormLabel>{t.eiinLabel}</FormLabel>
                 <FormControl>
                   <Input
+                    className="h-11"
                     inputMode="numeric"
                     maxLength={6}
                     {...field}
@@ -484,7 +489,7 @@ function Step1({
                 <FormLabel>{t.boardLabel}</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full data-[size=default]:h-11">
                       <SelectValue placeholder={t.boardPlaceholder} />
                     </SelectTrigger>
                   </FormControl>
@@ -665,7 +670,7 @@ function Step2({
                         variant="outline"
                         role="combobox"
                         aria-expanded={timezoneOpen}
-                        className="w-full justify-between font-normal"
+                        className="h-11 w-full justify-between font-normal"
                       >
                         {field.value}
                         <ChevronsUpDownIcon
@@ -776,7 +781,7 @@ function Step2({
                 <FormItem>
                   <FormLabel>{t.academicYearNameLabel}</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input className="h-11" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -797,6 +802,7 @@ function Step2({
                     <FormLabel>{t.academicYearStartLabel}</FormLabel>
                     <FormControl>
                       <Input
+                        className="h-11"
                         type="date"
                         {...field}
                         onChange={(event) => {
@@ -817,6 +823,7 @@ function Step2({
                     <FormLabel>{t.academicYearEndLabel}</FormLabel>
                     <FormControl>
                       <Input
+                        className="h-11"
                         type="date"
                         min={startsOn}
                         {...field}
