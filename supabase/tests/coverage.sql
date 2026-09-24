@@ -8,21 +8,21 @@
 -- raised exception into a nonzero psql exit code.
 --
 -- Checks exactly one thing here — every `public` table with a `workspace_id`
--- column has row level security enabled — because it can be proven directly
--- against the live catalog in this same session, with no filesystem access
--- to the repository the Postgres service container does not have. The
--- companion half of this gate — "is that table named in at least one
--- `supabase/tests/*.sql` file" — genuinely needs the checked-out repo on
--- disk, which only the GitHub Actions RUNNER has (the `db` job's Postgres is
--- a separate service container psql connects to over TCP; `pg_read_file`
--- inside it, even as the superuser `PGUSER=postgres` this job connects as,
--- cannot see files that were never copied into that container). That half is
--- `scripts/check-coverage-test-files.mjs`, run in the `contracts` job, which
--- statically derives the same "table has workspace_id" fact from
--- `supabase/migrations/*.sql` the way `check-audit-catalog-parity.mjs`
--- already does, and checks `supabase/tests/*.sql` for a mention. See D-56 for
--- why the split is here rather than one script doing both over a `psql`
--- connection with `--set` variables.
+-- column has row level security enabled — because it needs the live catalog
+-- after this PR's migrations have applied, which only exists inside the `db`
+-- job's Postgres. The companion half of this gate — "is that table named in
+-- at least one `supabase/tests/*.sql` file" — is pure static analysis on the
+-- checked-out repo, so it runs as its own step in `CI / contracts` instead
+-- (`scripts/check-coverage-test-files.mjs`, deriving "table has workspace_id"
+-- from `supabase/migrations/*.sql` the way `check-audit-catalog-parity.mjs`
+-- already does). The split is a job-boundary choice, not a hard technical
+-- requirement: `psql` itself is an ordinary client process on the GitHub
+-- Actions RUNNER (which already has the full checkout) and could read these
+-- files directly — only `pg_read_file()`, a SERVER-SIDE Postgres function
+-- that runs inside the `db` job's separate Postgres SERVICE CONTAINER, has
+-- no path back to them, even as the superuser `PGUSER=postgres` connects as.
+-- Keeping the file-presence check as plain Node means it needs no database
+-- connection at all and can run before migrations even apply. See D-56.
 -- =====================================================================
 do $$
 declare

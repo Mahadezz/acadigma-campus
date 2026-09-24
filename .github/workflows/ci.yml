@@ -190,11 +190,13 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      # D-56: fails when a workspace_id table has RLS off. The other half of
-      # this gate — every workspace_id table named in a supabase/tests/*.sql
-      # file — is `contracts`'s "workspace_id table coverage" step below: it
-      # needs the repo checkout on disk, which this job's Postgres SERVICE
-      # CONTAINER does not have (see coverage.sql's own header comment).
+      # D-56: fails when a workspace_id table has RLS off, checked against
+      # the live catalog after this PR's migrations applied. The other half
+      # of this gate — every workspace_id table named in a
+      # supabase/tests/*.sql file — is `contracts`'s "workspace_id table
+      # coverage" step below: pure static analysis on the checkout, so it
+      # needs no database at all (see coverage.sql's own header comment for
+      # why the split is a job-boundary choice, not a hard requirement).
       - name: RLS coverage
         run: |
           set -euo pipefail
@@ -280,9 +282,9 @@ jobs:
 
       # D-56 (M0 wrap-up), the other half of `db`'s "RLS coverage" step: every
       # public table with a workspace_id column must be named in at least one
-      # supabase/tests/*.sql file (ARCHITECTURE §9). Static, on the runner's own
-      # checkout — the `db` job's Postgres service container has no path back
-      # to these files (see coverage.sql's header comment).
+      # supabase/tests/*.sql file (ARCHITECTURE §9). Pure static analysis on
+      # this job's own checkout, needing no database connection at all (see
+      # coverage.sql's header comment for why this lives in a different job).
       - name: workspace_id table coverage (named in a supabase/tests/*.sql file)
         run: node scripts/check-coverage-test-files.mjs
 

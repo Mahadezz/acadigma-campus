@@ -4,22 +4,26 @@
 // at minimum, an isolation case in 02_tenant_isolation.sql and an escalation
 // case in 03_role_escalation.sql before it ships").
 //
-// This is a static check, not a database query, on purpose: `coverage.sql`
-// runs as `psql` against the CI Postgres SERVICE CONTAINER
-// (`.github/workflows/ci.yml`'s `db` job), which is a separate machine from
-// the GitHub Actions runner that checked out this repository — there is no
-// path from that container back to `supabase/tests/*.sql` on disk for
-// `pg_read_file` to read, even though `PGUSER=postgres` is a superuser there.
-// The runner itself always has the checkout, so this script does the
-// file-presence half here, and `coverage.sql` stays pure catalog SQL
-// (RLS-enabled) run in the `db` job. Recorded as D-56.
+// This is a static check, not a database query — NOT because `psql` itself
+// couldn't do it (PR #17 Opus review, correcting D-56's first draft: `psql`
+// is an ordinary client process on the GitHub Actions RUNNER, which already
+// has the full checkout via `actions/checkout`, so it could read these files
+// directly; only `pg_read_file()`, a SERVER-SIDE function that runs inside
+// the Postgres SERVICE CONTAINER, has no path back to them). The split is
+// kept anyway because the two checks have genuinely different dependencies —
+// this one is pure static analysis, needs no live database connection at
+// all, and can run in `CI / contracts` before `CI / db` even starts
+// migrations; `coverage.sql`'s RLS-enabled check inherently needs the live
+// catalog after migrations apply, so it stays a `db`-job step. Recorded as
+// D-56.
 //
 // Which tables have `workspace_id` is itself derived statically, the same way
 // `check-audit-catalog-parity.mjs` reads migrations rather than querying a
-// live database: parse every `create table public.<name> (...)` block across
-// `supabase/migrations/*.sql` and check whether its column list declares
-// `workspace_id`. No migration in this repo adds `workspace_id` via a later
-// `alter table`, so this single pass is complete.
+// live database: parse every `create table public.<name> (...)` block AND
+// every `alter table public.<name> add column ... workspace_id ...` across
+// `supabase/migrations/*.sql`, with SQL comments stripped first so a mention
+// in a `--`/`/* */` comment can never be mistaken for a real column or for
+// real test coverage.
 import { readFile, readdir } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 
@@ -47,14 +51,31 @@ async function readSqlFiles(dirRelativePath) {
 }
 
 /**
- * Every `create table [if not exists] public.<name> ( ... )` block, with its
- * column-list text — paren-depth tracked rather than a single non-greedy
+ * Strips `--` line comments and `/* ... *\/` block comments, replacing each
+ * with a space (not deleting it outright) so token boundaries and line
+ * numbers in whatever is left are undisturbed. This repo's SQL has no
+ * dollar-quoted string containing a literal `--` or `/*` that would need a
+ * real parser to tell apart (PL/pgSQL bodies use `$$`/`$tag$`, not comment
+ * syntax, for their own text) — good enough for a lint-style check, not
+ * something a client would ever `EXECUTE`.
+ */
+function stripSqlComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--.*$/gm, "")
+}
+
+/**
+ * Every `create table [if not exists] [public.]<name> ( ... )` block, with
+ * its column-list text — paren-depth tracked rather than a single non-greedy
  * regex, since column definitions themselves contain parens (`numeric(10,2)`,
- * `references public.workspaces (id)`).
+ * `references public.workspaces (id)`). The `public.` prefix is optional so
+ * a table created relying on `search_path` still matches; a table qualified
+ * with a DIFFERENT schema (`app.foo`, `auth.foo`) still does not, because
+ * `(\w+)` can only capture up to the next `.`, never past it, so the
+ * required `\s*\(` right after fails to match for those.
  */
 function findCreateTableBlocks(source) {
   const blocks = []
-  const opener = /create table\s+(?:if not exists\s+)?public\.(\w+)\s*\(/gi
+  const opener = /create table\s+(?:if not exists\s+)?(?:public\.)?(\w+)\s*\(/gi
   let match
   while ((match = opener.exec(source))) {
     const tableName = match[1]
@@ -76,10 +97,22 @@ function findCreateTableBlocks(source) {
   return blocks
 }
 
+/**
+ * Every `alter table [if exists] [public.]<name> add column ... workspace_id`
+ * — no migration adds `workspace_id` this way today, but a future one might,
+ * and this check must not silently miss it if one ever does.
+ */
+function findAlterTableAddWorkspaceId(source) {
+  const pattern =
+    /alter table\s+(?:if exists\s+)?(?:public\.)?(\w+)\s+add column\s+(?:if not exists\s+)?workspace_id\b/gi
+  return [...source.matchAll(pattern)].map((match) => match[1])
+}
+
 /** A column declaration line starts with the bare name (this repo's style
  * throughout `supabase/migrations` — see e.g. `workspace_id uuid not null
- * references ...`), so this only matches a real column, not a comment or a
- * value that happens to contain the substring "workspace_id". */
+ * references ...`), so this only matches a real column, never a comment
+ * (already stripped) or a value that happens to contain the substring
+ * "workspace_id". */
 function declaresWorkspaceId(columnsSource) {
   return /(^|,)\s*workspace_id\s+\S/m.test(columnsSource)
 }
@@ -100,16 +133,27 @@ const KNOWN_GAPS = new Map([
     "subscription_events",
     "F-CM-06 Part 4+ — subscription lifecycle events have no RLS test yet",
   ],
+  [
+    "notifications",
+    "F-ID-07 notifications — only mentioned in a 09_tenancy.sql COMMENT " +
+      "(re: the tenant-freeze trigger's own history), never in a real " +
+      "isolation/escalation assertion; this script's original --/comment-" +
+      "matching bug (PR #17 Opus review) previously hid this as 'covered'",
+  ],
 ])
 
 const migrations = await readSqlFiles(MIGRATIONS_DIR)
 
 const tenantTables = new Set()
-for (const { source } of migrations) {
+for (const { source: rawSource } of migrations) {
+  const source = stripSqlComments(rawSource)
   for (const block of findCreateTableBlocks(source)) {
     if (declaresWorkspaceId(block.columnsSource)) {
       tenantTables.add(block.tableName)
     }
+  }
+  for (const tableName of findAlterTableAddWorkspaceId(source)) {
+    tenantTables.add(tableName)
   }
 }
 
@@ -123,7 +167,13 @@ if (tenantTables.size === 0) {
 const testFiles = (await readSqlFiles(TESTS_DIR)).filter(
   ({ name }) => !EXCLUDED_TEST_FILES.has(name)
 )
-const testCorpus = testFiles.map(({ source }) => source).join("\n")
+// Comments stripped before matching: a table name merely mentioned in a
+// `--`/`/* */` comment (prose, a cross-reference to another file, a TODO)
+// must never be mistaken for that table actually being under test
+// (PR #17 Opus review).
+const testCorpus = testFiles
+  .map(({ source }) => stripSqlComments(source))
+  .join("\n")
 
 const uncovered = [...tenantTables]
   .filter((table) => !new RegExp(`\\b${table}\\b`).test(testCorpus))
