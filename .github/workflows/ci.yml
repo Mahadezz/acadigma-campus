@@ -287,12 +287,7 @@ jobs:
       # coverage.sql's header comment for why this lives in a different job).
       - name: workspace_id table coverage (named in a supabase/tests/*.sql file)
         run: node scripts/check-coverage-test-files.mjs
-
-      # D-300: every tenant write server action / route handler calls
-      # requireWritable (the database trigger is the second line; its own
-      # invariant is supabase/tests/50_require_writable.sql).
-      - name: Tenant write paths call requireWritable
-        run: node scripts/check-require-writable.mjs
+      - run: node scripts/check-require-writable.mjs # D-300: tenant write paths call requireWritable
 
       # Generated-type freshness moved to the `db` job (DECISION-LOG D-55): types
       # are generated from THIS PR's migrations applied to the CI Postgres, not

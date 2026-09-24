@@ -69,8 +69,6 @@ export async function updateSchoolSettings(
   }
 
   const supabase = await createClient()
-  // D-300: after the policy check (a teacher still gets `forbidden`), before
-  // the write. The DB trigger refuses it too; this returns the typed error.
   const writable = await requireWritable(ctx, supabase)
   if (!writable.ok) return err(planReadOnlyApiError(writable.error))
 
