@@ -90,6 +90,23 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: supabase db push --linked
 
+      # D-65: an anonymous PostgREST call must still work after a deploy. The
+      # pre-request hook once broke every anon request (so nobody could sign in)
+      # and nothing in CI could see it: CI's Postgres has no PostgREST.
+      - name: Smoke-test an anonymous API call against production
+        env:
+          SUPABASE_URL: https://kekfmibwjejdhxjkmezo.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_VbUqiEvQiuObUZMf5IGYOA_P_EiiyGy
+        run: |
+          set -euo pipefail
+          sleep 5  # let PostgREST reload its config after `notify pgrst`
+          status=$(curl -s -o /tmp/smoke.json -w '%{http_code}' -X POST             "$SUPABASE_URL/rest/v1/rpc/throttle_status"             -H "apikey: $SUPABASE_PUBLISHABLE_KEY"             -H "Authorization: Bearer $SUPABASE_PUBLISHABLE_KEY"             -H 'Content-Type: application/json'             -d '{"p_key":"ci-smoke:post-deploy"}')
+          cat /tmp/smoke.json; echo
+          if [ "$status" != "200" ]; then
+            echo "::error::anonymous API call failed with HTTP $status after the deploy — sign-in is likely broken"
+            exit 1
+          fi
+
       # The migration is already applied by this point, so what follows is an alert,
       # not a gate (RELEASES §6.2).
       - name: Record the migration head after the push
