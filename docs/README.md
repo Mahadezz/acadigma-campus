@@ -186,14 +186,14 @@ End-to-end journeys crossing several features. Read the workflow before building
 
 ## plan/ — the order of work
 
-| File                                                  | One line                                                                                                                                       |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`ROADMAP.md`](plan/ROADMAP.md)                       | The build order: milestones merged from the five feature-area READMEs, what must be true before each counts as done, and what Release 1 means. |
+| File                                                  | One line                                                                                                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`ROADMAP.md`](plan/ROADMAP.md)                       | The build order: milestones merged from the five feature-area READMEs, what must be true before each counts as done, and what Release 1 means.                                        |
 | [`LANES.md`](plan/LANES.md)                           | **D-69.** The four parallel lanes running now (identity, operations, billing, design) plus the lead: ownership, queue order, decision/migration/pgTAP number ranges, and merge rules. |
-| [`BUILDER-BRIEF.md`](plan/BUILDER-BRIEF.md)           | The brief every lane builder reads before starting a Part: hard rules, lane ranges, frontend component rules, Definition of Done, the pre-push gate. |
-| [`BUILD-LOG.md`](plan/BUILD-LOG.md)                   | Dated, newest-first log of every merged PR: what shipped, decisions, migrations applied to production, deploy/smoke-test result, review findings and incidents. |
-| [`HANDOFF-2026-09-24.md`](plan/HANDOFF-2026-09-24.md) | Current state: M0 foundation merged and deployed, infrastructure, rules learned, owner actions, next steps. Read first.                        |
-| [`HANDOFF-2026-09-18.md`](plan/HANDOFF-2026-09-18.md) | Superseded by the 2026-09-24 handoff; kept for history.                                                                                        |
+| [`BUILDER-BRIEF.md`](plan/BUILDER-BRIEF.md)           | The brief every lane builder reads before starting a Part: hard rules, lane ranges, frontend component rules, Definition of Done, the pre-push gate.                                  |
+| [`BUILD-LOG.md`](plan/BUILD-LOG.md)                   | Dated, newest-first log of every merged PR: what shipped, decisions, migrations applied to production, deploy/smoke-test result, review findings and incidents.                       |
+| [`HANDOFF-2026-09-24.md`](plan/HANDOFF-2026-09-24.md) | Current state: M0 foundation merged and deployed, infrastructure, rules learned, owner actions, next steps. Read first.                                                               |
+| [`HANDOFF-2026-09-18.md`](plan/HANDOFF-2026-09-18.md) | Superseded by the 2026-09-24 handoff; kept for history.                                                                                                                               |
 
 ## reference/ — inherited and external material, read-only
 

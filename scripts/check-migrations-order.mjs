@@ -34,7 +34,9 @@ function main() {
   try {
     mergeBase = git("merge-base", baseRef, "HEAD")
   } catch {
-    console.log(`Cannot resolve ${baseRef}; skipping the migration-order check.`)
+    console.log(
+      `Cannot resolve ${baseRef}; skipping the migration-order check.`
+    )
     return
   }
 
@@ -73,7 +75,9 @@ function main() {
     .at(-1)
 
   if (!newestMainTs) {
-    console.log(`No migrations on ${baseRef} yet; skipping the migration-order check.`)
+    console.log(
+      `No migrations on ${baseRef} yet; skipping the migration-order check.`
+    )
     return
   }
 
@@ -92,7 +96,9 @@ function main() {
   }
 
   if (failed) process.exit(1)
-  console.log(`All new migrations sort after ${baseRef}'s newest (${newestMainTs}).`)
+  console.log(
+    `All new migrations sort after ${baseRef}'s newest (${newestMainTs}).`
+  )
 }
 
 function selfCheck() {
