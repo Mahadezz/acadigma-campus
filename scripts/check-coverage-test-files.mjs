@@ -124,23 +124,12 @@ function declaresWorkspaceId(columnsSource) {
 // allowlist is a baseline, not a target: it must only ever shrink. Adding a
 // NEW table here instead of writing its test is exactly the drift this
 // script exists to prevent, and is a blocking review comment.
-const KNOWN_GAPS = new Map([
-  ["consent_records", "F-ID-05/PDPA consent capture — not yet built"],
-  ["legal_acceptances", "F-ID-05/PDPA DPA acceptance — not yet built"],
-  ["email_log", "F-ID-07 notifications — delivery log has no RLS test yet"],
-  ["file_access_log", "F-ID-09/F-TE-05 file access log — no RLS test yet"],
-  [
-    "subscription_events",
-    "F-CM-06 Part 4+ — subscription lifecycle events have no RLS test yet",
-  ],
-  [
-    "notifications",
-    "F-ID-07 notifications — only mentioned in a 09_tenancy.sql COMMENT " +
-      "(re: the tenant-freeze trigger's own history), never in a real " +
-      "isolation/escalation assertion; this script's original --/comment-" +
-      "matching bug (PR #17 Opus review) previously hid this as 'covered'",
-  ],
-])
+//
+// All six original entries (consent_records, legal_acceptances, email_log,
+// file_access_log, subscription_events, notifications) now have a real
+// isolation + escalation case in `supabase/tests/14_rls_known_gaps.sql` —
+// the allowlist is empty, which is the target state, not a special case.
+const KNOWN_GAPS = new Map([])
 
 const migrations = await readSqlFiles(MIGRATIONS_DIR)
 
