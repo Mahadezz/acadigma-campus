@@ -66,4 +66,57 @@ describe("resolveLandingRoute", () => {
     )
     expect(appRoles).toEqual(["owner", "admin", "teacher", "staff"])
   })
+
+  // F-ID-05 §8 Part 2: the forced-onboarding redirect. A fresh account's
+  // personal workspace (created at registration, F-ID-05 §4.1) always
+  // resolves before onboarding has ever been touched, so `workspaceType`
+  // alone is not enough to tell a genuine tutoring-only user apart from a
+  // brand-new one who has never seen the chooser.
+  describe("the forced-onboarding override (F-ID-05 §8 Part 2)", () => {
+    it("sends a fresh user (never completed, no school membership) to /onboarding even though their personal workspace resolves", () => {
+      expect(
+        resolveLandingRoute({
+          workspaceType: "personal",
+          onboarding: {
+            onboardingCompletedAt: null,
+            hasActiveSchoolMembership: false,
+          },
+        })
+      ).toBe(LANDING_ROUTES.onboarding)
+    })
+
+    it("sends a user who completed onboarding with only a personal workspace to /personal, unchanged", () => {
+      expect(
+        resolveLandingRoute({
+          workspaceType: "personal",
+          onboarding: {
+            onboardingCompletedAt: "2026-09-25T12:00:00Z",
+            hasActiveSchoolMembership: false,
+          },
+        })
+      ).toBe(LANDING_ROUTES.personal)
+    })
+
+    it("sends a user with a school membership to /app regardless of onboarding_completed_at", () => {
+      expect(
+        resolveLandingRoute({
+          workspaceType: "school",
+          role: "owner",
+          onboarding: {
+            onboardingCompletedAt: null,
+            hasActiveSchoolMembership: true,
+          },
+        })
+      ).toBe(LANDING_ROUTES.app)
+    })
+
+    it("never overrides when the caller omits `onboarding` entirely (e.g. switchWorkspace) — an explicit switch is never forced back to onboarding", () => {
+      expect(resolveLandingRoute({ workspaceType: "personal" })).toBe(
+        LANDING_ROUTES.personal
+      )
+      expect(
+        resolveLandingRoute({ workspaceType: "school", role: "owner" })
+      ).toBe(LANDING_ROUTES.app)
+    })
+  })
 })
