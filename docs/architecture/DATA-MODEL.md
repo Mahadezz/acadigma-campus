@@ -73,7 +73,7 @@ The rule in §0 is "every tenant-scoped table has `workspace_id`". Three groups 
 
 | Group                                                                                                                                                | Scope                       | Why                                                                                                                                                                                                                                                                                                       |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `profiles`, `user_preferences`, `device_registrations`                                                                                               | **user**                    | A person, their theme and their phones exist independently of any workspace. Preferences that reset when you switch schools would be a bug.                                                                                                                                                               |
+| `profiles`, `user_preferences`, `device_registrations`, `onboarding_progress`                                                                        | **user**                    | A person, their theme, their phones and their in-progress onboarding exist independently of any workspace. Preferences that reset when you switch schools would be a bug, and onboarding runs before a workspace_id is even resolvable.                                                                   |
 | `seller_profiles`, `seller_kyc_submissions`, `seller_payout_methods`, `listings`, `listing_files`, `seller_earnings`, `payouts`, `seller_statements` | **user** (`seller_user_id`) | Selling is a per-user capability, not a workspace feature (PRODUCT-DECISIONS 1.8). There is no seller workspace, and a teacher who leaves a school keeps their storefront. Policies key on `seller_user_id = (select auth.uid())` plus a platform-admin branch; published listings are globally readable. |
 | `plans`, `plan_limits`, `plan_modules`, `plan_prices`, `ai_actions`, `credit_packs`, `platform_settings`                                             | **global**                  | A catalogue: one row set read by every tenant, written only by platform staff.                                                                                                                                                                                                                            |
 
@@ -117,13 +117,14 @@ erDiagram
 
 ## 1. Identity
 
-Twelve tables. Eight ship in `0002_identity.sql`; `seller_profiles`, `seller_payout_methods`, `teacher_profiles` and `identity_verifications` land with commerce and hiring.
+Thirteen tables. Eight ship in `0002_identity.sql`; `onboarding_progress` lands with F-ID-05 Part 2; `seller_profiles`, `seller_payout_methods`, `teacher_profiles` and `identity_verifications` land with commerce and hiring.
 
 ```mermaid
 erDiagram
     auth_users ||--|| profiles : "1:1"
     profiles ||--o{ workspaces : "owns"
     profiles ||--|| user_preferences : "1:1"
+    profiles ||--o| onboarding_progress : "1:0..1"
     profiles ||--o{ device_registrations : "signs in from"
     profiles ||--o| seller_profiles : "1:0..1"
     profiles ||--o| teacher_profiles : "1:0..1"
@@ -297,6 +298,18 @@ Two properties make them safe. First, the helper joins back to `workspace_member
 Deliberately has **no** `workspace_id`: preferences follow the person across school PC and phone (PRODUCT-DECISIONS 1.10). `localStorage` is a cache only.
 
 **Indexes** — PK only. **RLS** — class **U1**. **Triggers** — `updated_at`. **Soft delete** — no.
+
+### 1.7a `onboarding_progress` _(F-ID-05 Part 2, `20260925000300_onboarding_progress.sql`)_
+
+`user_id` **PK** → `profiles`, `path` (`onboarding_path` enum: `undecided`|`create_school`|`join_school`), `step smallint` (1–5), `draft jsonb` (nullable — see below), `started_at`, `updated_at`, `completed_at`.
+
+One row per user so a wizard abandoned mid-session is resumable later (F-ID-05 §4.7). User-scoped like `user_preferences` immediately above, for the same reason: onboarding runs before the caller has any `workspace_id` to key a row on.
+
+**Indexes** — PK only. **RLS** — class **U1**, with two deviations: **no DELETE at all** (neither policy nor grant — the row is cleared by setting `completed_at` and nulling `draft`, never removed), and **SELECT additionally allows platform staff** (`app.is_platform_admin()`), for support. **Triggers** — `updated_at` only; no `app.attach_audit()` (see below). **Soft delete** — `completed_at` + `draft = null` is the tombstone, same idea as `device_registrations`' `revoked_at`.
+
+`draft` is nullable, unlike every other `jsonb` column in this section — F-ID-05 §4.7's "cleared ... by setting completed_at and nulling draft" is a literal `NULL`, not `'{}'`, so the column has to be able to hold one.
+
+No `app.attach_audit()` trigger: the generic trigger's `row_id` is read off an `id` column (§10) this table, like `user_preferences` and `device_registrations`, deliberately does not have — its PK is `user_id`. `draft` is documented as never containing secrets, but it is still a user's in-progress form data, not a business event worth a redacted copy in a platform-staff-browsable audit trail. `app.create_school_workspace()` (Part 4) is what actually needs audit rows (`workspace.created` etc.), per D-58.
 
 ### 1.8 `device_registrations`
 
@@ -754,6 +767,8 @@ The cover-teacher payroll calculation needs the rate but must not be able to _se
 No application role holds `INSERT` on `audit_events` — not `authenticated`, not `service_role`. A server action cannot write an audit row except through `app.log_audit_event()`, which means it cannot write a _false_ one either, because the function stamps `auth.uid()` itself.
 
 **`tenancy.context_rejected` tripwire** — written only through `public.log_tenancy_context_rejected(uuid)` (F-ID-03 §4.3, D-52), `authenticated`-only EXECUTE (D-54). It refuses a caller with no `auth.uid()` (`42501`, `20260924040000_tripwire_requires_auth.sql`), so the row always has an actor, and it records the caller's own `membership_status` (`none`/`pending`/`removed`) and `severity` (`forgery`/`inactive`) in `after`, looked up server-side.
+
+**Pre-request hook wiring (D-65)** — PostgREST calls `public.pre_request()`, a SECURITY DEFINER wrapper around `app.pre_request()`, because the hook runs as the request role and `anon` has no USAGE on `app`.
 
 **Correlation-id threading** — `app.pre_request()` is a PostgREST `db-pre-request` hook (wired via `alter role authenticator set pgrst.db_pre_request`, guarded like the 0001 `pg_cron` block) that copies the `x-correlation-id` request header into the `app.correlation_id` transaction setting for every statement of one request, before RLS runs — so the generic trigger sees it automatically for a browser-driven server action. `app.set_correlation_id(uuid)` is the explicit fallback for a caller not reachable through that hook (a job, a webhook handler issuing one RPC).
 

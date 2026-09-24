@@ -289,7 +289,7 @@ export async function signInWithPassword(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("suspended_at")
+    .select("suspended_at, onboarding_completed_at")
     .eq("id", data.user.id)
     .maybeSingle()
 
@@ -304,7 +304,13 @@ export async function signInWithPassword(
     context: ctx,
   })
 
-  const fallback = await resolveLandingRoute(supabase)
+  // Read alongside suspended_at above, not a second `profiles` select —
+  // resolveLandingRoute's forced-onboarding check needs it too (F-ID-05 §8
+  // Part 2, Opus review, PR #24).
+  const fallback = await resolveLandingRoute(
+    supabase,
+    profile?.onboarding_completed_at ?? null
+  )
   const destination = safeReturnTo(next, fallback)
   if (destination.rejected) {
     const log = await requestLogger({ route: "auth.login" })

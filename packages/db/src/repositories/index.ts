@@ -1,4 +1,5 @@
 export * from "./audit"
+export * from "./onboarding"
 export * from "./plans"
 export * from "./subscriptions"
 export * from "./usage"

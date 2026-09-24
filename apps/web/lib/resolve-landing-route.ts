@@ -6,6 +6,7 @@ import {
 } from "@acadigma/db"
 import { resolveLandingRoute as resolveLandingRouteForContext } from "@acadigma/domain/workspace"
 
+import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
 
 /**
@@ -34,12 +35,28 @@ import { createClient } from "@/lib/supabase/server"
  * (`profiles.last_active_workspace_id` → first active membership).
  *
  * Pure routing decision lives in `packages/domain/workspace/resolveLanding.ts`;
- * this file's only job is the one DB round trip that feeds it. `supabaseOverride`
+ * this file's only job is the DB round trip(s) that feed it. `supabaseOverride`
  * exists so a caller that already has a client for this request (e.g. the login
  * action, mid sign-in) does not pay for a second one.
+ *
+ * F-ID-05 §8 Part 2 addendum (Opus review, PR #24): on a successful workspace
+ * resolution this also reads `profiles.onboarding_completed_at` and probes for
+ * any ACTIVE `type='school'` membership (via the `list_my_workspaces` RPC —
+ * already `getOnboardingState`'s source of truth), feeding both into the pure
+ * domain function's forced-onboarding override. `workspaceType` alone cannot
+ * distinguish a genuine tutoring-only user from a brand-new one who has never
+ * seen the chooser: every account gets exactly one personal workspace at
+ * registration (F-ID-05 §4.1), and it resolves first whenever nothing else is
+ * active (F-ID-03 §4.3) — so `workspaceType === 'personal'` is true for both.
+ *
+ * `onboardingCompletedAt`: pass it when the caller already fetched
+ * `profiles.onboarding_completed_at` in the same request (`signInWithPassword`
+ * reads it alongside `suspended_at`) so this function does not issue a second,
+ * redundant `profiles` select; omitted, it fetches the column itself.
  */
 export async function resolveLandingRoute(
-  supabaseOverride?: AcadigmaSupabaseClient
+  supabaseOverride?: AcadigmaSupabaseClient,
+  onboardingCompletedAt?: string | null
 ): Promise<string> {
   const supabase = supabaseOverride ?? (await createClient())
 
@@ -53,8 +70,51 @@ export async function resolveLandingRoute(
     return "/onboarding"
   }
 
+  const [profileResult, rpcResult] = await Promise.all([
+    onboardingCompletedAt !== undefined
+      ? null
+      : supabase
+          .from("profiles")
+          .select("onboarding_completed_at")
+          .eq("id", result.data.userId)
+          .maybeSingle(),
+    supabase.rpc("list_my_workspaces"),
+  ])
+
+  if (profileResult?.error || rpcResult.error) {
+    const log = await requestLogger({ route: "resolve-landing-route" })
+    log.warn(
+      {
+        profileError: profileResult?.error?.code,
+        rpcError: rpcResult.error?.code,
+      },
+      "could not fully resolve the forced-onboarding signal; falling back to what did resolve"
+    )
+  }
+
   return resolveLandingRouteForContext({
     workspaceType: result.data.workspaceType,
     role: result.data.role,
+    onboarding: {
+      // Not `??`: `null` is itself a valid, meaningful value here ("never
+      // completed"), so only `undefined` (the caller genuinely omitted it)
+      // should fall through to the fetched column.
+      onboardingCompletedAt:
+        onboardingCompletedAt !== undefined
+          ? onboardingCompletedAt
+          : (profileResult?.data?.onboarding_completed_at ?? null),
+      // If `resolveWorkspaceContext` itself already resolved a `school`
+      // workspace, that alone proves an active school membership exists —
+      // OR'd in ahead of the RPC probe so a transient `list_my_workspaces`
+      // failure can never force an already-resolved school member back to
+      // `/onboarding` (fails closed toward "let them in", not toward
+      // "show the chooser to someone who plainly already has a school").
+      hasActiveSchoolMembership:
+        result.data.workspaceType === "school" ||
+        (rpcResult.data?.some(
+          (row) => row.type === "school" && row.status === "active"
+        ) ??
+          false),
+    },
   })
 }
