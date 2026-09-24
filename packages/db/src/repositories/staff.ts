@@ -29,20 +29,6 @@ const UNAVAILABLE: ApiError = apiError(
   "Could not reach the database. Please try again."
 )
 
-/**
- * TODO(types): `staff_records`/`staff_compensation`/`staff_documents` are not
- * in `types.generated.ts` yet — it regenerates from CI once this PR's
- * migration (20260925000600_staff_schema.sql) applies (D-55); the download
- * step in the PR workflow replaces this file, and this helper (and the
- * `any` cast it carries) should come out in the same follow-up commit.
- * Isolating the cast to one call site, rather than sprinkling it at every
- * `.from()` below, keeps the escape hatch visible and removable in one place.
- */
-function fromTable(supabase: AcadigmaSupabaseClient, table: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (supabase as any).from(table)
-}
-
 const NOT_FOUND: ApiError = apiError(
   "not_found",
   "This staff record does not exist, or is not visible to you."
@@ -137,7 +123,8 @@ export async function getStaffRecordById(
   ctx: WorkspaceContext,
   staffRecordId: string
 ): Promise<Result<StaffRecord, ApiError>> {
-  const { data, error } = await fromTable(supabase, "staff_records")
+  const { data, error } = await supabase
+    .from("staff_records")
     .select(STAFF_RECORD_COLUMNS)
     .eq("workspace_id", ctx.workspaceId)
     .eq("id", staffRecordId)
@@ -154,7 +141,8 @@ export async function getMyStaffRecord(
   supabase: AcadigmaSupabaseClient,
   ctx: WorkspaceContext
 ): Promise<Result<StaffRecord | null, ApiError>> {
-  const { data, error } = await fromTable(supabase, "staff_records")
+  const { data, error } = await supabase
+    .from("staff_records")
     .select(STAFF_RECORD_COLUMNS)
     .eq("workspace_id", ctx.workspaceId)
     .eq("user_id", ctx.userId)
@@ -175,7 +163,8 @@ export async function listStaffCompensationHistory(
   ctx: WorkspaceContext,
   staffRecordId: string
 ): Promise<Result<StaffCompensation[], ApiError>> {
-  const { data, error } = await fromTable(supabase, "staff_compensation")
+  const { data, error } = await supabase
+    .from("staff_compensation")
     .select(STAFF_COMPENSATION_COLUMNS)
     .eq("workspace_id", ctx.workspaceId)
     .eq("staff_record_id", staffRecordId)
@@ -192,7 +181,8 @@ export async function listStaffDocuments(
   ctx: WorkspaceContext,
   staffRecordId: string
 ): Promise<Result<StaffDocument[], ApiError>> {
-  const { data, error } = await fromTable(supabase, "staff_documents")
+  const { data, error } = await supabase
+    .from("staff_documents")
     .select(STAFF_DOCUMENT_COLUMNS)
     .eq("workspace_id", ctx.workspaceId)
     .eq("staff_record_id", staffRecordId)
