@@ -1,10 +1,15 @@
-import { Hind_Siliguri, Inter } from "next/font/google"
+import { Hind_Siliguri, Inter, JetBrains_Mono } from "next/font/google"
 
 /**
  * DESIGN-SYSTEM §1.6 / packages/ui/tokens/README.md "Fonts": Inter carries all
  * Latin text and every digit; Hind Siliguri carries Bengali. Both are self-hosted
  * through next/font so no third-party connection sits on the critical path, and
  * tokens.css binds `--font-sans` / `--font-bn` to the variables declared here.
+ *
+ * JetBrains Mono (D-57) carries every monospace surface — the correlation id
+ * on a route error boundary, marks-grid keyboard hints, code-shaped values —
+ * bound to `--font-mono`. Self-hosted the same way, Latin-only: no monospace
+ * surface in this product ever needs a Bengali glyph.
  */
 export const inter = Inter({
   subsets: ["latin"],
@@ -26,4 +31,18 @@ export const hindSiliguri = Hind_Siliguri({
   preload: false,
   // See the metric note in tokens/README.md.
   adjustFontFallback: false,
+})
+
+export const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-jetbrains-mono",
+  // No component renders `font-mono` yet (the route error boundary that will
+  // use it — §3.9 — doesn't exist in this Part), so preloading it on every
+  // page would be pure waste, same reasoning as Hind Siliguri above: the
+  // token stays available (bound in tokens.css), the file downloads only
+  // once a page actually paints something in it.
+  preload: false,
+  adjustFontFallback: true,
 })

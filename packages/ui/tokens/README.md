@@ -42,14 +42,16 @@ app's own CSS (or keep in `tokens.css` if `packages/ui` is the only consumer):
 
 ## Fonts
 
-Two families. **Inter** carries all Latin text and every digit; **Hind Siliguri**
-carries Bengali. Both are on Google Fonts and were checked against the live
+Three families. **Inter** carries all Latin text and every digit; **Hind
+Siliguri** carries Bengali; **JetBrains Mono** (D-57) carries every monospace
+surface. All three are on Google Fonts and were checked against the live
 `css2` endpoint.
 
-| Family                 | Script                  | Weights shipped | Transferred    |
-| ---------------------- | ----------------------- | --------------- | -------------- |
-| Inter (variable)       | Latin, Latin-ext        | 400–700 axis    | 48 KB          |
-| Hind Siliguri (static) | Bengali, Latin fallback | 400, 600        | 69 KB / weight |
+| Family                 | Script                  | Weights shipped | Transferred                                                                                                                      |
+| ---------------------- | ----------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Inter (variable)       | Latin, Latin-ext        | 400–700 axis    | 48 KB                                                                                                                            |
+| Hind Siliguri (static) | Bengali, Latin fallback | 400, 600        | 69 KB / weight                                                                                                                   |
+| JetBrains Mono         | Latin only              | 400, 500        | not budgeted separately — loads only on the routes that render a monospace value (a route error boundary's correlation id, §3.9) |
 
 Google's stylesheet is split by `unicode-range`, so **the Bengali subset is
 downloaded only when a Bengali codepoint is actually painted**. An
@@ -61,7 +63,7 @@ the critical path:
 
 ```ts
 // apps/web/app/fonts.ts
-import { Inter, Hind_Siliguri } from "next/font/google"
+import { Hind_Siliguri, Inter, JetBrains_Mono } from "next/font/google"
 
 export const inter = Inter({
   subsets: ["latin"],
@@ -79,14 +81,23 @@ export const hindSiliguri = Hind_Siliguri({
   preload: false, // the Bengali subset is fetched only when painted, never preloaded
   adjustFontFallback: false, // see the metric note below
 })
+
+export const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-jetbrains-mono",
+  adjustFontFallback: true,
+})
 ```
 
-Then on `<html>`: `className={`${inter.variable} ${hindSiliguri.variable}`}`.
+Then on `<html>`:
+`className={`${inter.variable} ${hindSiliguri.variable} ${jetbrainsMono.variable}`}`.
 
-`tokens.css` binds `--font-sans` / `--font-bn` to those generated variables,
-with the CSS family names as fallbacks, so `next/font` (the default: `fonts.ts`
-plus the `<html>` class in `apps/web/app/layout.tsx`) and a plain `<link>` both
-work:
+`tokens.css` binds `--font-sans` / `--font-bn` / `--font-mono` to those
+generated variables, with the CSS family names as fallbacks, so `next/font`
+(the default: `fonts.ts` plus the `<html>` class in
+`apps/web/app/layout.tsx`) and a plain `<link>` both work:
 
 ```css
 :root {
@@ -95,6 +106,9 @@ work:
   --font-bn:
     var(--font-hind-siliguri, "Hind Siliguri"), "Hind Siliguri Fallback",
     "Noto Sans Bengali", var(--font-inter, "Inter"), sans-serif;
+  --font-mono:
+    var(--font-jetbrains-mono, "JetBrains Mono"), ui-monospace, "SF Mono",
+    "Cascadia Mono", Menlo, monospace;
 }
 ```
 
@@ -158,11 +172,16 @@ Reproduce them:
 # categorical chart palettes, six checks (dataviz skill)
 node scripts/validate_palette.js "#4461e0,#b3276e,#c78100,#009490,#7241a0,#4ea253" --mode light
 node scripts/validate_palette.js "#6383f2,#d44d8c,#c78100,#25a4a1,#8b55c1,#419547" --mode dark
+
+# D-57: every ink/paper text and UI-boundary pair, both themes
+node scripts/check-contrast-tokens.mjs
 ```
 
-Both return **ALL CHECKS PASS**. Attendance separation was verified with a
-Viénot LMS simulation; worst adjacent deuteran/protan ΔE is **13.9** (light) and
-**12.9** (dark) against a target of ≥ 8.
+Both chart checks return **ALL CHECKS PASS**. Attendance separation was
+verified with a Viénot LMS simulation; worst adjacent deuteran/protan ΔE is
+**13.9** (light) and **12.9** (dark) against a target of ≥ 8. The D-57 token
+script also returns **ALL CHECKS PASS** — see
+`docs/test-reports/2026-09-24-visual-language.md` for the full table.
 
 CI runs `@axe-core/playwright` at 360×800 and 1280×800 in both themes. A token
 change that drops any measured pair below its threshold fails the build.
