@@ -12,7 +12,7 @@
 -- in force on a PAST date, not today's.
 -- =====================================================================
 begin;
-select plan(64);
+select plan(66);
 
 create schema if not exists tests;
 
@@ -283,6 +283,22 @@ select throws_ok(
      where id = 'ee000003-0000-0000-0000-000000000003'$$,
   '42501', null,
   'a teacher cannot self-edit joined_on');
+
+-- Security re-check, PR #32: created_by/created_at were previously skipped
+-- by the guard's own system-column list, so a self-update touching them
+-- (alongside a legitimate field) would have silently rewritten a record's
+-- provenance. Pinned message (4-arg throws_ok), not just the errcode.
+select throws_ok(
+  $$update public.staff_records set created_by = 'aaaaaaaa-0000-0000-0000-000000000003'
+     where id = 'ee000003-0000-0000-0000-000000000003'$$,
+  '42501', 'column created_by is admin-only, even on your own staff record',
+  'a teacher cannot self-edit created_by');
+
+select throws_ok(
+  $$update public.staff_records set created_at = '2000-01-01T00:00:00Z'
+     where id = 'ee000003-0000-0000-0000-000000000003'$$,
+  '42501', 'column created_at is admin-only, even on your own staff record',
+  'a teacher cannot self-edit created_at');
 
 -- a teacher cannot touch a colleague's record at all (RLS filters to zero rows).
 with attempted as (

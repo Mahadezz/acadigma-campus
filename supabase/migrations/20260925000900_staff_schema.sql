@@ -212,14 +212,21 @@ declare
     'personal_phone', 'emergency_contact', 'blood_group', 'date_of_birth',
     'gender', 'nid_number', 'address', 'qualifications'
   ];
-  -- Never checked either way: identifiers are handled by other guards
-  -- (freeze trigger for workspace_id; the PK never changes), and
-  -- created_at/created_by/updated_at are system-managed — updated_at in
-  -- particular is legitimately touched by app.tg_set_updated_at() on EVERY
-  -- update, including a member's own, so it must never be treated as an
-  -- admin-only column here.
+  -- Never checked either way: `id` never changes, and `workspace_id` is
+  -- separately handled by the freeze trigger. `updated_at` ALONE among the
+  -- system columns is skipped here too — it is legitimately touched by
+  -- app.tg_set_updated_at() on EVERY update, including a member's own, so
+  -- it must never be treated as an admin-only column. `created_by` and
+  -- `created_at` are DELIBERATELY NOT in this list (security re-check,
+  -- PR #32): a self-update guard whose skip-list also skips both of a
+  -- row's own provenance columns lets a self-updating member silently
+  -- rewrite who created their record and when, in the same UPDATE that
+  -- legitimately touches their phone number — those two columns fall
+  -- through to the allow-list check below like any other column, and
+  -- since neither is in v_self_editable_cols, any change to either by a
+  -- non-admin is rejected exactly like designation_label_id or joined_on.
   v_system_cols text[] := array[
-    'id', 'workspace_id', 'created_at', 'created_by', 'updated_at'
+    'id', 'workspace_id', 'updated_at'
   ];
   v_all_keys text[];
   v_col      text;
