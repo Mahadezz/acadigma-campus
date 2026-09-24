@@ -26,7 +26,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Changesets compares against history to work out what changed.
           fetch-depth: 0
@@ -39,7 +39,7 @@ jobs:
 
       - name: Open the version PR, or tag the release when one is merged
         id: changesets
-        uses: changesets/action@e0145edc7d9d8679003495b11f87bd8ef63c0cba # v1.5.3
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           version: pnpm changeset version
           publish: pnpm release
