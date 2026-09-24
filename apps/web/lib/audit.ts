@@ -1,6 +1,10 @@
 import "server-only"
 
-import { withServiceRole, type AcadigmaSupabaseClient } from "@acadigma/db"
+import {
+  withServiceRole,
+  type AcadigmaSupabaseClient,
+  type Json,
+} from "@acadigma/db"
 
 import { getRequestContext } from "./request-context"
 
@@ -40,6 +44,15 @@ type LogAuthEventInput = {
   context?: RequestContext
 }
 
+// Audit metadata is always built from plain JSON-safe values by the callers in
+// this file, so narrowing to the generated `Json` type is sound. `undefined`
+// (not `null`) lets PostgREST fall back to the SQL default for the argument.
+function toJson(
+  value: Record<string, unknown> | null | undefined
+): Json | undefined {
+  return value ? (value as Json) : undefined
+}
+
 function warnAuditLogFailed(action: string, message: string): void {
   // Never let an audit-logging failure take down the auth flow it is
   // describing — surface it to the structured logs instead. Matches the
@@ -55,7 +68,8 @@ export async function logAuthEvent(
   input: LogAuthEventInput
 ): Promise<void> {
   if (input.action === "account.registered") {
-    if (!input.rowId) {
+    const rowId = input.rowId
+    if (!rowId) {
       warnAuditLogFailed(input.action, "missing rowId for account.registered")
       return
     }
@@ -66,10 +80,10 @@ export async function logAuthEvent(
       async (db) => {
         const { error } = await db.rpc("log_auth_event_service", {
           p_action: input.action,
-          p_row_id: input.rowId,
-          p_after: input.after ?? null,
-          p_ip: ctx.ip,
-          p_user_agent: ctx.userAgent,
+          p_row_id: rowId,
+          p_after: toJson(input.after),
+          p_ip: ctx.ip ?? undefined,
+          p_user_agent: ctx.userAgent ?? undefined,
         })
         if (error) warnAuditLogFailed(input.action, error.message)
       }
@@ -79,7 +93,7 @@ export async function logAuthEvent(
 
   const { error } = await supabase.rpc("log_auth_event", {
     p_action: input.action,
-    p_after: input.after ?? null,
+    p_after: toJson(input.after),
   })
   if (error) warnAuditLogFailed(input.action, error.message)
 }

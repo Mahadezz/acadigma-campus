@@ -200,7 +200,7 @@ Repository secrets (Settings → Secrets and variables → Actions). Nothing her
 | Secret                                                              | Used by                        | Purpose                                                               |
 | ------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------- |
 | `SUPABASE_ACCESS_TOKEN`                                             | `db`, `release`                | CLI auth: branches, migrations, type generation                       |
-| `SUPABASE_PROJECT_REF`                                              | `db`, `release`                | `bvqzhrvcrxebawjusrxk` (a variable, not a secret, but kept alongside) |
+| `SUPABASE_PROJECT_REF`                                              | `db`, `release`                | `kekfmibwjejdhxjkmezo` (a variable, not a secret, but kept alongside) |
 | `SUPABASE_DB_PASSWORD`                                              | `release`                      | Production migration promotion                                        |
 | `SUPABASE_DEV_DB_URL`                                               | `db`, `unit`                   | Direct Postgres URL for pgTAP and integration tests                   |
 | `SUPABASE_SERVICE_ROLE_KEY_DEV`                                     | `unit`, `e2e`                  | Seeding and test fixtures **on the dev branch only**                  |
@@ -233,7 +233,7 @@ Never cache anything derived from a secret or from database content. Caches rest
 
 ## 6. Previews and the Supabase project
 
-- There is no Supabase dev branch yet: branching needs the Pro plan, and until Release 1 launches `acadigma-suite` is deliberately both dev and prod (D-20). The dev machine also has no Docker, so there is no per-PR local database either.
+- There is no Supabase dev branch yet: branching needs the Pro plan, and until Release 1 launches the Campus project `kekfmibwjejdhxjkmezo` is deliberately both dev and prod (D-20, D-53). The dev machine also has no Docker, so there is no per-PR local database either.
 - Vercel builds a preview per PR commit. Where a preview needs data, it points at the same production Supabase project **read-only** — previews never seed, migrate, or otherwise write against it.
 - `CI / db` never touches that project: a PR's migrations are applied and pgTAP-tested against a disposable Postgres 17 service container (§2.3), not the shared project. Only the `push` job in `db.yml`, triggered by a `push` to `main`, applies migrations to production; previews see the new schema once that lands.
 - Seed data on the shared project is marked demo and is wiped before launch.

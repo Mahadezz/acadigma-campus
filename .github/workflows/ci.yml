@@ -19,9 +19,9 @@ permissions:
   contents: read
 
 env:
-  # Public by design (D-19). Present so `next build` needs no repository secret.
-  NEXT_PUBLIC_SUPABASE_URL: https://bvqzhrvcrxebawjusrxk.supabase.co
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_6POCbYjBAcrSiT1AlCPSVQ_SG3ohfsL
+  # Public by design (D-53, superseding D-19). Present so `next build` needs no repository secret.
+  NEXT_PUBLIC_SUPABASE_URL: https://kekfmibwjejdhxjkmezo.supabase.co
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_VbUqiEvQiuObUZMf5IGYOA_P_EiiyGy
   APP_URL: http://127.0.0.1:3000
   TURBO_TELEMETRY_DISABLED: "1"
   NEXT_TELEMETRY_DISABLED: "1"

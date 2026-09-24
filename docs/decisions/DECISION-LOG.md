@@ -114,7 +114,7 @@ Earnings state machine: `pending` (sale) → `available` (after 7 days, unless r
 
 Plans live in a `plans` table (limits + prices), editable from the platform console without deploy. Placeholder matrix is in `docs/product/PRODUCT-DECISIONS.md` §Billing.
 
-## D-19 — Supabase project · ACCEPTED · 2026-09-17
+## D-19 — Supabase project · SUPERSEDED by D-53 (2026-09-24) · 2026-09-17
 
 `acadigma-suite`, ref `bvqzhrvcrxebawjusrxk`, region ap-south-1, URL `https://bvqzhrvcrxebawjusrxk.supabase.co`. Publishable key `sb_publishable_6POCbYjBAcrSiT1AlCPSVQ_SG3ohfsL` (safe for browser). Service-role key is never written to disk outside `.env.local`.
 
@@ -334,3 +334,13 @@ Admins see **scheduled periods only**; workload variance is teacher-private by d
 **Decision:** (1) Seed **both** sets into `app.audit_action_catalog`: the curated business actions from §5.1 (for explicit `app.log_audit_event()` calls business logic makes going forward) and a generated `<table>.insert|update|delete` row for every table the trigger is attached to (`GENERIC_AUDIT_TABLES` in `packages/domain/src/audit/catalog.ts`, mirrored in the migration's `v_tables` array and diffed by `scripts/check-audit-catalog-parity.mjs`). `app.log_audit_event()` raises on an uncatalogued action; `app.tg_audit()` defaults a missing lookup to `info` rather than blocking a tenant write. (2) `app.pre_request()`, wired as PostgREST's `db-pre-request` function (`alter role authenticator set pgrst.db_pre_request = 'app.pre_request'`, guarded exactly like the 0001 `pg_cron` block), copies `x-correlation-id` into `app.correlation_id` inside the request's own transaction before RLS runs. `app.set_correlation_id(uuid)` is the explicit fallback for callers outside that path (jobs, webhooks).
 **Why:** rejecting every non-catalogued action outright (matching the trigger's real output to the letter) would mean re-deriving ~50 business-meaning actions from raw CRUD before Part 1 could ship at all; separating "what the trigger writes today" from "what business logic will name tomorrow" ships the append-only guarantee now without inventing fake specificity. The pre-request hook is the standard, Supabase-documented mechanism for exactly this per-request-GUC problem — the alternative (thread correlation id as an explicit parameter through every future repository write) would touch every area's migrations, not just this one.
 **Consequences:** a future migration that calls `app.attach_audit()` on a new table must also seed that table's three generic rows (`packages/domain/src/audit/catalog.ts` + the migration's `v_tables`) or the CI parity check fails; this is the intended forcing function. CI's disposable Postgres has no `authenticator`-role restrictions matching a locked-down hosted project, so the pre-request wiring is exercised in CI but its _hosted_ behaviour is verified only once against the Supabase dev branch — tracked as a Part 2 follow-up, not blocking Part 1.
+
+## D-53 — Campus moves to its own Supabase project on a separate account · ACCEPTED · 2026-09-24
+
+> Numbering note: D-51 (PR #6, audit) and D-52 (PR #12, tenancy follow-ups) are on open PRs at the time of writing. This entry takes the next number after both.
+
+**Context:** the owner created a separate Supabase account (organisation `Acadigma Suite`) for the Campus app. The old project `acadigma-suite` (`bvqzhrvcrxebawjusrxk`) never had the Campus migrations applied (OQ-26 secrets were never set), so it holds only the marketing site's `public.waitlist` table.
+
+**Decision:** Campus uses project **`Acadigma Campus`**, ref **`kekfmibwjejdhxjkmezo`**, region ap-south-1 (same as before), URL `https://kekfmibwjejdhxjkmezo.supabase.co`, publishable key `sb_publishable_VbUqiEvQiuObUZMf5IGYOA_P_EiiyGy` (safe for browser). The service-role/secret key is never written to disk outside `apps/web/.env.local`, Vercel and GitHub secrets. D-20 (one project for dev and prod until launch) still applies, to this project. The marketing website **stays** on the old project for its waitlist; the two apps no longer share a database.
+
+**Consequences:** Vercel and Claude Code keep the owner's existing accounts; only Supabase changed. Every dashboard-only Supabase setting must be (re)applied to the new project — `supabase/config.toml` auth settings via `supabase config push`, plus the dashboard items in OWNER-QUESTIONS (OQ-25 recovery email template, breached-password protection, SMTP, redirect URLs). Historical test reports keep the old ref because that is what they ran against.
