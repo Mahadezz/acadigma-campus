@@ -7,7 +7,7 @@ import {
 } from "@acadigma/ui/components/card"
 import { StatusChip } from "@acadigma/ui/primitives/status-chip"
 
-import { requireWorkspace } from "@/lib/workspace"
+import { requireShell } from "@/lib/workspace"
 
 import type { Metadata } from "next"
 
@@ -18,12 +18,14 @@ export const metadata: Metadata = {
 /**
  * Landing screen for a school workspace.
  *
- * It resolves the workspace again rather than reading it from the layout: React
- * de-duplicates the underlying request within a render pass, and a page that states
- * its own requirement cannot be moved out from under its guard by accident.
+ * It resolves the workspace (and re-runs the shell gate) again rather than
+ * reading it from the layout: React de-duplicates the underlying request
+ * within a render pass, and a page that states its own requirement cannot be
+ * moved out from under its guard by accident, including by a client-side
+ * navigation that skips the layout's own re-render (PR #30 review).
  */
 export default async function DashboardPage() {
-  const { role, plan, workspaceId } = await requireWorkspace()
+  const { role, plan, workspaceId } = await requireShell("school")
   // "Today" is the workspace's day, not the server's (ARCHITECTURE §4).
   const today = todayIn()
 

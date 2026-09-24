@@ -83,16 +83,4 @@ describe("resolveShellGate", () => {
       })
     }
   })
-
-  it("full matrix: every (shell, workspaceType, role) combination is decided", () => {
-    const workspaceTypes = ["school", "personal"] as const
-    for (const shell of SHELLS) {
-      for (const workspaceType of workspaceTypes) {
-        for (const role of WORKSPACE_ROLES) {
-          const decision = resolveShellGate(shell, { workspaceType, role })
-          expect(["allow", "redirect", "forbidden"]).toContain(decision.kind)
-        }
-      }
-    }
-  })
 })

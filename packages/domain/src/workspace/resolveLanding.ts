@@ -97,7 +97,15 @@ export function resolveLandingRoute(
   if (!input.workspaceType) return LANDING_ROUTES.onboarding
   if (input.workspaceType === "personal") return LANDING_ROUTES.personal
 
-  // workspaceType === "school"
+  // Defense in depth (PR #30 review): the type system already narrows
+  // `workspaceType` to `"school"` here, but this function's only real
+  // boundary is the type declaration — a caller that got its input from an
+  // unvalidated source (a raw DB row, a bad cast) could still hand this an
+  // unrecognized value. Fail closed to onboarding rather than falling
+  // through into the school-only logic below on an assumption the types
+  // cannot actually enforce at runtime.
+  if (input.workspaceType !== "school") return LANDING_ROUTES.onboarding
+
   if (input.role === "parent") return LANDING_ROUTES.family
   if (input.role && SCHOOL_SHELL_ROLES.includes(input.role)) {
     return LANDING_ROUTES.app

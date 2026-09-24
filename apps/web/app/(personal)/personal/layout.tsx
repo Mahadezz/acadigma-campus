@@ -1,12 +1,5 @@
-import { forbidden, redirect } from "next/navigation"
-
-import { resolveShellGate } from "@acadigma/domain/workspace"
-import { AppShell } from "@acadigma/ui/primitives/app-shell"
-import { TopBar } from "@acadigma/ui/primitives/top-bar"
-
-import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
-import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
-import { requireWorkspace } from "@/lib/workspace"
+import { GatedShell } from "@/app/(shared)/workspace/gated-shell"
+import { getMessages } from "@/lib/i18n"
 
 /**
  * Personal workspace shell (F-ID-03 §8 Part 4 / ROADMAP M1 1.1).
@@ -20,36 +13,17 @@ import { requireWorkspace } from "@/lib/workspace"
  * nav/sidebar is wired here yet — deliberately, so nothing here links to a
  * route that doesn't exist (the exact bug this Part's gate closes for the
  * school shell).
+ *
+ * `GatedShell` (shared with `(family)`) owns the gate and the top bar.
  */
 export default async function PersonalLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const ctx = await requireWorkspace()
-
-  const gate = resolveShellGate("personal", {
-    workspaceType: ctx.workspaceType,
-    role: ctx.role,
-  })
-  if (gate.kind === "redirect") redirect(gate.to)
-  if (gate.kind === "forbidden") forbidden()
-
-  const workspacesResult = await listMyWorkspaces()
+  const { t } = await getMessages()
 
   return (
-    <AppShell
-      topBar={
-        <TopBar
-          leading={
-            <WorkspaceSwitcher
-              workspaces={workspacesResult.ok ? workspacesResult.data : []}
-              currentWorkspaceId={ctx.workspaceId}
-            />
-          }
-          title="Personal workspace"
-        />
-      }
-    >
+    <GatedShell shell="personal" title={t.workspace.personal.shellTitle}>
       {children}
-    </AppShell>
+    </GatedShell>
   )
 }

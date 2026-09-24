@@ -22,6 +22,8 @@ import { Button } from "@acadigma/ui/components/button"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import type { Messages } from "@/lib/i18n"
+
 import { switchWorkspace } from "./actions"
 
 /**
@@ -42,6 +44,7 @@ import { switchWorkspace } from "./actions"
 export type WorkspaceSwitcherProps = {
   workspaces: MembershipSummary[]
   currentWorkspaceId: string
+  t: Messages["workspace"]["switcher"]
 }
 
 function initialOf(name: string): string {
@@ -51,6 +54,7 @@ function initialOf(name: string): string {
 export function WorkspaceSwitcher({
   workspaces,
   currentWorkspaceId,
+  t,
 }: WorkspaceSwitcherProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -103,7 +107,7 @@ export function WorkspaceSwitcher({
         setOpen(false)
         router.push(result.data.landingRoute)
       } catch {
-        setError("Could not switch workspaces. Check your connection.")
+        setError(t.switchError)
         setSwitchingId(null)
       }
     })
@@ -117,7 +121,7 @@ export function WorkspaceSwitcher({
           <AvatarFallback>{initialOf(current?.name ?? "?")}</AvatarFallback>
         </Avatar>
         <span className="max-w-[9rem] truncate text-sm font-medium">
-          {current?.name ?? "Workspace"}
+          {current?.name ?? t.fallbackName}
         </span>
       </div>
     )
@@ -130,13 +134,18 @@ export function WorkspaceSwitcher({
         variant="ghost"
         className="min-w-0 gap-2 px-1"
         onClick={() => setOpen(true)}
-        aria-label={`Switch workspace, currently ${current?.name ?? "unknown"}`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={t.ariaLabel.replace(
+          "{name}",
+          current?.name ?? t.unknownWorkspace
+        )}
       >
         <Avatar size="sm">
           <AvatarFallback>{initialOf(current?.name ?? "?")}</AvatarFallback>
         </Avatar>
         <span className="max-w-[9rem] truncate text-sm font-medium">
-          {current?.name ?? "Workspace"}
+          {current?.name ?? t.fallbackName}
         </span>
         <ChevronsUpDownIcon
           className="text-muted-foreground size-4 shrink-0"
@@ -149,13 +158,13 @@ export function WorkspaceSwitcher({
         onOpenChange={(next) => {
           if (!isPending) setOpen(next)
         }}
-        title="Switch workspace"
-        description="Choose which workspace you want to work in."
+        title={t.title}
+        description={t.description}
       >
         <div className="space-y-3">
           {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
 
-          <ul className="space-y-1" aria-label="Your workspaces">
+          <ul className="space-y-1" aria-label={t.yourWorkspaces}>
             {selectable.map((workspace) => {
               const isCurrent = workspace.workspaceId === currentWorkspaceId
               const isPendingRow = workspace.status === "pending"
@@ -165,7 +174,7 @@ export function WorkspaceSwitcher({
                 <li key={workspace.workspaceId}>
                   <button
                     type="button"
-                    disabled={isPending && !isSwitchingThis}
+                    disabled={isPending}
                     onClick={() => handleSelect(workspace)}
                     aria-current={isCurrent ? "true" : undefined}
                     className="hover:bg-accent focus-visible:ring-ring flex min-h-14 w-full items-center gap-3 rounded-md px-3 py-2 text-left disabled:opacity-50 disabled:pointer-events-none focus-visible:ring-2 focus-visible:outline-none"
@@ -201,8 +210,7 @@ export function WorkspaceSwitcher({
                           role="status"
                           className="text-muted-foreground mt-1 text-xs"
                         >
-                          Your request to join is waiting for an owner or admin
-                          to approve it.
+                          {t.pendingDescription}
                         </span>
                       ) : null}
                     </span>
@@ -212,7 +220,7 @@ export function WorkspaceSwitcher({
                         aria-hidden="true"
                       />
                     ) : isPendingRow ? (
-                      <Badge variant="secondary">Pending approval</Badge>
+                      <Badge variant="secondary">{t.pendingApproval}</Badge>
                     ) : isCurrent ? (
                       <CheckIcon
                         className="text-primary size-4 shrink-0"
@@ -228,7 +236,7 @@ export function WorkspaceSwitcher({
           <Button asChild variant="outline" className="w-full">
             <Link href="/onboarding" onClick={() => setOpen(false)}>
               <PlusIcon aria-hidden="true" />
-              Create or join a workspace
+              {t.createOrJoin}
             </Link>
           </Button>
         </div>
