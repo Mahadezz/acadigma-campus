@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 
 import { useForm, type FieldPath } from "react-hook-form"
 
-import { updateBrandingInputSchema } from "@acadigma/contracts"
+import { updateBrandingInputSchema } from "@acadigma/contracts/settings"
 import type { SchoolProfile } from "@acadigma/db/repositories/settings"
 import {
   renderHeaderLine,

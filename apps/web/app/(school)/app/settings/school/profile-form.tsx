@@ -9,10 +9,12 @@ import { useForm, type FieldPath } from "react-hook-form"
 import {
   schoolBoardSchema,
   schoolMediumSchema,
+} from "@acadigma/contracts/identity/school"
+import {
   schoolProfileFieldsSchema,
   schoolTypeSchema,
   type SchoolProfileFields,
-} from "@acadigma/contracts"
+} from "@acadigma/contracts/settings"
 import type { SchoolProfile } from "@acadigma/db/repositories/settings"
 import {
   Form,
@@ -25,12 +27,9 @@ import {
 } from "@acadigma/ui/components/form"
 import { Input } from "@acadigma/ui/components/input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@acadigma/ui/components/select"
+  NativeSelect,
+  NativeSelectOption,
+} from "@acadigma/ui/components/native-select"
 
 import type { Messages } from "@/lib/i18n"
 
@@ -182,20 +181,20 @@ export function ProfileForm({
           <FormItem>
             <FormLabel>{p.fields[key]}</FormLabel>
             {selectOptions ? (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
-                    <SelectValue placeholder={placeholder} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
+              // Native select (shadcn native-select): the phone's own picker,
+              // and ~30 kB lighter than Radix Select on this route's budget.
+              <FormControl>
+                <NativeSelect {...field} className="min-h-11">
+                  <NativeSelectOption value="" disabled>
+                    {placeholder}
+                  </NativeSelectOption>
                   {selectOptions.map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
+                    <NativeSelectOption key={value} value={value}>
                       {label}
-                    </SelectItem>
+                    </NativeSelectOption>
                   ))}
-                </SelectContent>
-              </Select>
+                </NativeSelect>
+              </FormControl>
             ) : (
               <FormControl>
                 <Input
