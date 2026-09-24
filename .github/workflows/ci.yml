@@ -204,10 +204,13 @@ jobs:
             echo "::warning::supabase/tests/coverage.sql is missing — RLS coverage was not verified."
           fi
 
+      # coverage.sql is plain SQL (a DO/RAISE EXCEPTION block, run separately
+      # above), not a pgTAP file — it has no `select plan(N)`, so pg_prove
+      # fails it with "No plan found in TAP output" if the glob includes it.
       - name: pgTAP
         run: |
           set -euo pipefail
-          pg_prove --verbose --ext .sql supabase/tests/*.sql | tee pgtap.tap
+          pg_prove --verbose --ext .sql $(ls supabase/tests/*.sql | grep -v '/coverage\.sql$') | tee pgtap.tap
 
       - name: Summary
         if: always()
