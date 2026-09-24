@@ -56,6 +56,17 @@ describe("resolveLandingRoute", () => {
     )
   })
 
+  it("fails closed on a workspace type that is neither school nor personal (defense in depth, PR #30 review)", () => {
+    // The type declares `workspaceType` as `"school" | "personal" | null`,
+    // but that boundary only holds if every caller's input is validated —
+    // this asserts the runtime guard rather than trusting the type alone.
+    const input = {
+      workspaceType: "not-a-real-type",
+    } as unknown as Parameters<typeof resolveLandingRoute>[0]
+
+    expect(resolveLandingRoute(input)).toBe(LANDING_ROUTES.onboarding)
+  })
+
   it("only ever reaches /app through the four school-shell roles", () => {
     // Guards the allowlist itself: if a new WorkspaceRole is added and nobody
     // decides which shell it lands in, it must not silently inherit /app.

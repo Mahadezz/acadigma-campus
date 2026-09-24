@@ -8,6 +8,7 @@ import {
   resolveWorkspaceContext,
   type WorkspaceContext,
 } from "@acadigma/db"
+import { resolveShellGate, type ShellName } from "@acadigma/domain/workspace"
 
 import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
@@ -40,4 +41,32 @@ export async function requireWorkspace(): Promise<WorkspaceContext> {
   const log = await requestLogger({ route: "workspace.resolve" })
   log.warn({ code: result.error.code }, "workspace access denied")
   forbidden()
+}
+
+/**
+ * `requireWorkspace()` plus the shell gate (`resolveShellGate`, F-ID-03 §8
+ * Part 4), in one call.
+ *
+ * Convention: every PAGE and LAYOUT under a workspace-scoped shell —
+ * `(school)/app`, `(personal)/personal`, `(family)/family` — calls this, never
+ * `requireWorkspace()` directly. A layout only re-renders on a full navigation;
+ * Next's client-side router can reach a page under it (via a cached
+ * Router-State-Tree or a crafted request) without the layout re-running, so the
+ * gate must also run at the page itself or a mismatched `workspaceType`/`role`
+ * could render a shell it does not belong to (PR #30 review). `requireWorkspace()`
+ * is still the right call outside a shell (server actions, `(account)`, `/sell`).
+ */
+export async function requireShell(
+  shell: ShellName
+): Promise<WorkspaceContext> {
+  const ctx = await requireWorkspace()
+
+  const gate = resolveShellGate(shell, {
+    workspaceType: ctx.workspaceType,
+    role: ctx.role,
+  })
+  if (gate.kind === "redirect") redirect(gate.to)
+  if (gate.kind === "forbidden") forbidden()
+
+  return ctx
 }

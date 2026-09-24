@@ -5,9 +5,12 @@ import { Button } from "@acadigma/ui/components/button"
 import { AppShell } from "@acadigma/ui/primitives/app-shell"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
 
+import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
+import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
+import { getMessages } from "@/lib/i18n"
 import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
 import { createClient } from "@/lib/supabase/server"
-import { requireWorkspace } from "@/lib/workspace"
+import { requireShell } from "@/lib/workspace"
 
 import { SchoolBottomNav, SchoolSidebar } from "./nav"
 
@@ -22,15 +25,29 @@ import { SchoolBottomNav, SchoolSidebar } from "./nav"
  * to read neither that engine nor `packages/ui`'s curated trees, it hand-rolled
  * its own four-item list.
  *
+ * `requireShell("school")` (F-ID-03 §8 Part 4) additionally checks that the
+ * resolved membership actually belongs to THIS shell: a `parent` role or a
+ * `personal` workspace is redirected to `/family`/`/personal` rather than
+ * rendering the `family:parent`/`personal:owner` nav trees here, whose
+ * `/family/*`/`/personal/*` hrefs this shell cannot serve (PR #17 review
+ * follow-up). Every page under `/app` also calls `requireShell("school")`
+ * itself — a layout does not re-run on every client-side navigation, so the
+ * gate must not live only here (PR #30 review).
+ *
  * The shell owns the single `<h1>`; pages below start their headings at `<h2>`.
  */
 export default async function SchoolLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const ctx = await requireWorkspace()
+  const ctx = await requireShell("school")
+  const { t } = await getMessages()
+
   const client = await createClient()
 
-  const entitledModules = await resolveEntitledNavModules(ctx, client)
+  const [entitledModules, workspacesResult] = await Promise.all([
+    resolveEntitledNavModules(ctx, client),
+    listMyWorkspaces(),
+  ])
   const config: NavConfig = getNavConfig(ctx.workspaceType, ctx.role) ?? {
     bottom: [],
     more: [],
@@ -54,6 +71,13 @@ export default async function SchoolLayout({
       }
       topBar={
         <TopBar
+          leading={
+            <WorkspaceSwitcher
+              workspaces={workspacesResult.ok ? workspacesResult.data : []}
+              currentWorkspaceId={ctx.workspaceId}
+              t={t.workspace.switcher}
+            />
+          }
           title="Acadigma Campus"
           subtitle={`Signed in as ${ctx.role}`}
           actions={

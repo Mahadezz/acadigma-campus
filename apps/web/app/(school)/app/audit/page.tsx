@@ -2,7 +2,7 @@ import { forbidden } from "next/navigation"
 
 import { can } from "@acadigma/domain/permissions"
 
-import { requireWorkspace } from "@/lib/workspace"
+import { requireShell } from "@/lib/workspace"
 
 import { getReaderLanguage } from "./actions"
 import { AuditViewer } from "./audit-viewer"
@@ -18,13 +18,14 @@ export const metadata: Metadata = {
  *
  * A member can resolve a workspace context and still not be allowed to read the
  * trail — an admin, by default (§11 OQ-2: "the log has to be able to record what
- * an admin did without that admin curating it"). `requireWorkspace()` proves
- * membership; the explicit `can()` check here is the SEPARATE permission gate, and
- * both `actions.ts` and the RLS policy on `audit_events` re-check it independently
- * (ARCHITECTURE §3 rule 1 — UI guards are experience only).
+ * an admin did without that admin curating it"). `requireShell("school")` proves
+ * membership AND that it belongs to this shell; the explicit `can()` check here is
+ * the SEPARATE permission gate, and both `actions.ts` and the RLS policy on
+ * `audit_events` re-check it independently (ARCHITECTURE §3 rule 1 — UI guards
+ * are experience only).
  */
 export default async function AuditPage() {
-  const ctx = await requireWorkspace()
+  const ctx = await requireShell("school")
   if (!can(ctx.role, "audit.read")) forbidden()
 
   const language = await getReaderLanguage()

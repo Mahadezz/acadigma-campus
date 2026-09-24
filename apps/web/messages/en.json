@@ -192,6 +192,30 @@
       "actionError": "Something went wrong. Try again."
     }
   },
+  "workspace": {
+    "switcher": {
+      "ariaLabel": "Switch workspace, currently {name}",
+      "unknownWorkspace": "unknown",
+      "fallbackName": "Workspace",
+      "title": "Switch workspace",
+      "description": "Choose which workspace you want to work in.",
+      "yourWorkspaces": "Your workspaces",
+      "pendingApproval": "Pending approval",
+      "pendingDescription": "Your request to join is waiting for an owner or admin to approve it.",
+      "createOrJoin": "Create or join a workspace",
+      "switchError": "Could not switch workspaces. Check your connection."
+    },
+    "personal": {
+      "shellTitle": "Personal workspace",
+      "emptyTitle": "Your personal workspace",
+      "emptyDescription": "Signed in as {role}. Tutoring students, attendance, diary and files land here in a later part (F-ID-06)."
+    },
+    "family": {
+      "shellTitle": "Family",
+      "emptyTitle": "Your child's school, from here",
+      "emptyDescription": "Signed in as {role}. Attendance, results, messages and fees land here in a later part (F-AC-10)."
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
     "attendance": "Attendance",
