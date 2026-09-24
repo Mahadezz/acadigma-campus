@@ -117,10 +117,21 @@ export default async function OnboardingChooserPage() {
                   : t.onboarding.chooser.resumeFallbackTitle
               }
               description={t.onboarding.chooser.resumeDescription}
-              // Parts 3-5 ship the wizard/join routes this links to; until
-              // then it is disabled rather than a link that 404s.
-              disabled
-              badge={t.onboarding.chooser.comingSoon}
+              // F-ID-05 Part 3: the create-school wizard now exists at
+              // /onboarding/create-school, which resumes a saved draft on
+              // its own (reads getOnboardingState()). /onboarding/join
+              // (join_school path) is still Part 5 — kept disabled below.
+              href={
+                view.path === "create_school"
+                  ? "/onboarding/create-school"
+                  : undefined
+              }
+              disabled={view.path !== "create_school"}
+              badge={
+                view.path === "create_school"
+                  ? undefined
+                  : t.onboarding.chooser.comingSoon
+              }
             />
             <StartOverLink
               label={t.onboarding.chooser.startOver}
@@ -133,13 +144,13 @@ export default async function OnboardingChooserPage() {
               icon={<GraduationCapIcon aria-hidden="true" />}
               title={t.onboarding.chooser.createSchoolTitle}
               description={t.onboarding.chooser.createSchoolDescription}
-              disabled
-              badge={t.onboarding.chooser.comingSoon}
+              href="/onboarding/create-school"
             />
             <ChoiceCard
               icon={<KeyRoundIcon aria-hidden="true" />}
               title={t.onboarding.chooser.joinSchoolTitle}
               description={t.onboarding.chooser.joinSchoolDescription}
+              // Part 5 ships /onboarding/join.
               disabled
               badge={t.onboarding.chooser.comingSoon}
             />

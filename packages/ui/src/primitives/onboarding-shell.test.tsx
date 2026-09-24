@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { OnboardingShell } from "./onboarding-shell"
 
@@ -42,6 +42,29 @@ describe("OnboardingShell", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Create a school" })
     ).toBeInTheDocument()
+  })
+
+  it("renders a back button (not a link) and calls onBack when clicked (F-ID-05 Part 3: in-page wizard step back)", () => {
+    const onBack = vi.fn()
+    render(
+      <OnboardingShell onBack={onBack} backLabel="Back">
+        <p>step 2</p>
+      </OnboardingShell>
+    )
+    const button = screen.getByRole("button", { name: /back/i })
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+    button.click()
+    expect(onBack).toHaveBeenCalledOnce()
+  })
+
+  it("prefers onBack over backHref when both are given", () => {
+    render(
+      <OnboardingShell onBack={vi.fn()} backHref="/onboarding" backLabel="Back">
+        <p>step 2</p>
+      </OnboardingShell>
+    )
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument()
   })
 
   it("renders actions top-right alongside the header", () => {

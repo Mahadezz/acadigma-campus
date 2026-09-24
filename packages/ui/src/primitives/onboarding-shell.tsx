@@ -20,12 +20,20 @@ import { cn } from "../lib/utils"
  * The back link is a plain `<a>`, not `next/link` — see `choice-card.tsx`'s
  * docblock for why (Opus review, PR #24): no primitive in this
  * `next`-dependency-free package uses it.
+ *
+ * `onBack` (F-ID-05 Part 3): the create-school wizard's steps are one
+ * client component's local state, not separate routes (§4.3: draft saves
+ * on advance, not a URL change per step) — "Back" from step 2 to step 1
+ * has nothing to navigate to, so it takes a click handler instead of an
+ * href. Wins over `backHref` when both are given (a step screen that also
+ * happens to be step 1 passes `backHref` alone, back to the chooser).
  */
 export type OnboardingShellProps = {
   title?: React.ReactNode
   /** Omitted on the chooser, which has no step to show. */
   progress?: { current: number; total: number }
   backHref?: string
+  onBack?: () => void
   backLabel?: string
   /** Rendered top-right — e.g. the account menu (§6, chooser row). */
   actions?: React.ReactNode
@@ -37,6 +45,7 @@ export function OnboardingShell({
   title,
   progress,
   backHref,
+  onBack,
   backLabel = "Back",
   actions,
   children,
@@ -50,7 +59,16 @@ export function OnboardingShell({
       )}
     >
       <header className="flex items-center justify-between gap-3 pb-4">
-        {backHref ? (
+        {onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-1 text-sm font-medium"
+          >
+            <ChevronLeftIcon className="size-4" aria-hidden="true" />
+            {backLabel}
+          </button>
+        ) : backHref ? (
           <a
             href={backHref}
             className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-1 text-sm font-medium"
