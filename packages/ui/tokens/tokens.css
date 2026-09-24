@@ -4,12 +4,19 @@
    only implementation of it). Do not add colours, spacing or radii anywhere
    else in the monorepo — add them here and document them there.
 
-   Format: shadcn/ui v4 (`new-york-v4`). Colours are OKLCH. The `@theme inline`
-   block maps every token onto a Tailwind v4 utility so feature code writes
-   `bg-card`, `text-att-present-ink`, `shadow-raised` and never a raw value.
+   Format: shadcn/ui v4 (`new-york-v4`). The `@theme inline` block maps every
+   token onto a Tailwind v4 utility so feature code writes `bg-card`,
+   `text-att-present-ink`, `shadow-raised` and never a raw value.
+
+   Colours: chrome (surfaces, ink, brand, sidebar) is literal hex since D-57 —
+   it is copied verbatim from acadigma-website's globals.css, achromatic, and
+   there is no gamut/hue reasoning left to express in OKLCH. Semantic colour
+   that D-57 did not touch (attendance, grade bands, charts, success/warning/
+   info) stays OKLCH, unchanged from its original derivation.
 
    Colour-blind and contrast figures quoted in comments were computed, not
-   estimated (Viénot LMS simulation + WCAG 2.1 relative luminance). Numbers are
+   estimated (Viénot LMS simulation + WCAG 2.1 relative luminance, the latter
+   reproducible via `node scripts/check-contrast-tokens.mjs`). Numbers are
    reproducible from the table in DESIGN-SYSTEM.md §2.
    ============================================================================ */
 
@@ -34,14 +41,25 @@
   --font-bn: var(--font-bn);
   --font-mono: var(--font-mono);
 
-  /* radius — shadcn v4 derives the rest from --radius */
+  /* radius — shadcn v4 derives the rest from --radius. Multipliers match
+     acadigma-website's globals.css (D-57), applied to the same 0.75rem base
+     this product already used, so both products round to the same documented
+     pixel steps (DESIGN-SYSTEM §2.6): ~7 / ~10 / 12 / ~17 / ~22 / ~26 / ~31px. */
   --radius-sm: calc(
-    var(--radius) * 0.5
-  ); /* 6px  — chips, badges, inputs-in-grid */
-  --radius-md: calc(var(--radius) * 0.75); /* 9px  — inputs, buttons */
-  --radius-lg: var(--radius); /* 12px — cards, sheets, popovers */
-  --radius-xl: calc(var(--radius) * 1.33); /* 16px — sheet top corners */
-  --radius-2xl: calc(var(--radius) * 1.83); /* 22px — avatars on stat tiles */
+    var(--radius) * 0.6
+  ); /* ~7px  — chips, badges, in-grid inputs */
+  --radius-md: calc(var(--radius) * 0.8); /* ~10px — inputs, buttons          */
+  --radius-lg: var(--radius); /* 12px  — cards, sheets, popovers  */
+  --radius-xl: calc(var(--radius) * 1.4); /* ~17px — sheet top corners        */
+  --radius-2xl: calc(
+    var(--radius) * 1.8
+  ); /* ~22px — avatars on stat tiles    */
+  --radius-3xl: calc(
+    var(--radius) * 2.2
+  ); /* ~26px — reserved, website parity */
+  --radius-4xl: calc(
+    var(--radius) * 2.6
+  ); /* ~31px — reserved, website parity */
 
   /* surfaces + ink */
   --color-background: var(--background);
@@ -150,6 +168,9 @@
   --shadow-overlay: var(--shadow-overlay);
   --shadow-sheet: var(--shadow-sheet);
   --shadow-nav: var(--shadow-nav);
+
+  /* motion — generates the `ease-out-expo` transition-timing utility (D-57) */
+  --ease-out-expo: var(--ease-out-expo);
 }
 
 /* ---------------------------------------------------------------------------
@@ -173,7 +194,12 @@
   --font-bn:
     var(--font-hind-siliguri, "Hind Siliguri"), "Hind Siliguri Fallback",
     "Noto Sans Bengali", var(--font-inter, "Inter"), sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  /* D-57: JetBrains Mono via next/font, same binding pattern as --font-sans.
+     Used sparingly — the correlation id on a route error boundary (§3.9),
+     the marks-grid keyboard hints, any other code-shaped value. */
+  --font-mono:
+    var(--font-jetbrains-mono, "JetBrains Mono"), ui-monospace, "SF Mono",
+    "Cascadia Mono", Menlo, monospace;
 
   /* type scale — 1.125 minor third at phone, 1.200 from lg up (fluid, capped) */
   --text-2xs: 0.6875rem; /* 11px — only for the attendance legend + table units */
@@ -200,10 +226,13 @@
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  /* numeric behaviour — the whole product is numbers in columns */
+  /* numeric behaviour — the whole product is numbers in columns. cv11
+     (single-storey a) + ss01 (open forms) are D-57's website-matched text
+     features, folded into both stacks so they survive either being the
+     active `font-feature-settings` value (the property does not merge). */
   --fs-tabular:
-    "tnum" 1, "cv05" 1, "ss03" 1; /* tabular figures + slashed zero */
-  --fs-prose: "tnum" 0, "kern" 1, "liga" 1;
+    "tnum" 1, "cv05" 1, "ss03" 1, "cv11" 1, "ss01" 1; /* tabular figures + slashed zero */
+  --fs-prose: "tnum" 0, "kern" 1, "liga" 1, "cv11" 1, "ss01" 1;
 
   /* -------------------------------------------------------------------------
      3. Spacing — 4px base. The only spacing values allowed in feature code.
@@ -272,6 +301,14 @@
     0.64,
     1
   ); /* sheet snap only         */
+  --ease-out-expo: cubic-bezier(
+    0.16,
+    1,
+    0.3,
+    1
+  ); /* D-57: entrances only,
+    matches acadigma-website. Not a replacement for --ease-entrance in
+    existing components — see §2.7's motion rules on what may animate. */
 
   /* -------------------------------------------------------------------------
      6. Z-index — the complete list. No other z-index may be written.
@@ -291,81 +328,67 @@
 }
 
 /* ---------------------------------------------------------------------------
-   7. LIGHT theme
-   Neutral ramp is hue 272 (cool ink-indigo grey) so greys sit in the same
-   family as the brand and never read as a different design system.
+   7. LIGHT theme — ink/paper monochrome chrome (D-57).
+   Every surface, ink and brand token below is achromatic — no hue — carried
+   over verbatim from acadigma-website's globals.css, so Campus's chrome reads
+   as the same product as the marketing site the owner is building against.
+   Colour is reserved for what DESIGN-SYSTEM §2 makes semantic: attendance
+   (§2.4), grade bands (§2.5), the danger/destructive red, and the chart
+   palette (§6.1) — nothing else carries a hue. The old hue-272 neutral ramp
+   and the indigo/amber brand ramps are retired; see DECISION-LOG D-57.
    --------------------------------------------------------------------------- */
 
 :root {
-  /* neutral ramp (reference; components use the semantic names below) */
+  /* Legacy hue-272 neutral ramp — kept ONLY because §2.4/§2.5/§6.1's measured
+     attendance, grade-band and chart-grid figures were computed against
+     --neutral-900/--neutral-0/--neutral-200 specifically and this Part does
+     not re-measure those (out of scope for D-57; see the PR body). No longer
+     bound to any surface, brand or sidebar token below — those are literal
+     ink/paper hex now. Do not add new references to this ramp. */
   --neutral-0: oklch(1 0 272); /* #ffffff */
-  --neutral-25: oklch(0.985 0.003 272); /* #f9fafc */
-  --neutral-50: oklch(0.975 0.004 272); /* #f6f7f9 — page bg, = prototype   */
-  --neutral-100: oklch(0.95 0.006 272); /* #edeef3 */
-  --neutral-200: oklch(0.91 0.008 272); /* #dfe1e7 — border, = prototype    */
-  --neutral-300: oklch(0.855 0.01 272); /* #cdcfd6 */
-  --neutral-400: oklch(0.72 0.014 272); /* #a1a4ae */
-  --neutral-500: oklch(0.6 0.018 272); /* #7c808b */
-  --neutral-600: oklch(0.5 0.02 272); /* #5f636f — muted text 6.01:1      */
-  --neutral-700: oklch(0.405 0.022 272); /* #454955 */
-  --neutral-800: oklch(0.3 0.022 272); /* #2a2d39 */
-  --neutral-900: oklch(0.222 0.02 272); /* #181b25 — body ink 17.25:1       */
-  --neutral-950: oklch(0.181 0.018 272); /* #0f111a — dark page bg           */
-  --neutral-1000: oklch(0.145 0.016 272); /* #080a11 */
+  --neutral-200: oklch(0.91 0.008 272); /* #dfe1e7 */
+  --neutral-900: oklch(0.222 0.02 272); /* #181b25 */
 
-  /* indigo ramp — the brand. 600 is `--primary`. */
-  --indigo-50: oklch(0.972 0.014 269);
-  --indigo-100: oklch(0.938 0.032 269);
-  --indigo-200: oklch(0.886 0.064 269);
-  --indigo-300: oklch(0.802 0.112 269);
-  --indigo-400: oklch(0.652 0.168 269);
-  --indigo-500: oklch(0.545 0.196 269); /* #4461e0 */
-  --indigo-600: oklch(0.472 0.19 269); /* #334bc4 — white on it: 7.15:1      */
-  --indigo-700: oklch(0.404 0.162 269); /* #273b9e — hover/pressed            */
-  --indigo-800: oklch(0.34 0.13 269);
-  --indigo-900: oklch(0.282 0.098 269);
-  --indigo-950: oklch(0.212 0.062 269);
+  /* — surfaces and ink — literal, matching acadigma-website exactly */
+  --background: #f4f4f2; /* "paper" */
+  --foreground: #0b0b0b; /* "ink" — 17.87:1 on background */
+  --card: #fbfbfa; /* "chalk" */
+  --card-foreground: #0b0b0b; /* 19.01:1 on card                     */
+  --popover: #fbfbfa;
+  --popover-foreground: #0b0b0b;
+  --muted: #e9e9e6;
+  --muted-foreground: #6f6f6f; /* 4.56:1 on background — never below 13px,
+    never use the lighter #a3a3a3 "mid" primitive for text (fails 4.5:1) */
+  --border: #e2e2df; /* decorative hairline (rows, rules); not a
+    1.4.11 UI-component boundary — see scripts/check-contrast-tokens.mjs */
+  --border-strong: #d0d0cb; /* grid lines that must read, still decorative */
+  --rule: #e2e2df; /* the hairline between rows */
+  --input: #8a8a86; /* deliberately darker than acadigma-website's #d6d6d2
+    (1.32:1) — an unfocused Field has no other way to show its boundary, so
+    this clears WCAG 1.4.11's 3:1 non-text minimum (3.15:1, script-verified);
+    the website is a marketing page and does not carry this bar. */
+  --ring: #0b0b0b;
 
-  /* amber ramp — the accent. Fill and ink are different steps on purpose. */
-  --amber-50: oklch(0.978 0.018 74);
-  --amber-100: oklch(0.95 0.045 74);
-  --amber-200: oklch(0.908 0.085 74);
-  --amber-300: oklch(0.86 0.125 74);
-  --amber-400: oklch(0.812 0.15 74);
-  --amber-500: oklch(0.762 0.16 74); /* #eda009 — the mark; ink on it 7.96:1 */
-  --amber-600: oklch(0.686 0.15 74);
-  --amber-700: oklch(0.578 0.128 74); /* #a66c00 — amber as TEXT, 4.42:1      */
-  --amber-800: oklch(0.47 0.102 74);
-  --amber-900: oklch(0.39 0.082 74);
-  --amber-950: oklch(0.262 0.055 74);
-
-  /* — surfaces and ink — */
-  --background: var(--neutral-50);
-  --foreground: var(--neutral-900);
-  --card: var(--neutral-0);
-  --card-foreground: var(--neutral-900);
-  --popover: var(--neutral-0);
-  --popover-foreground: var(--neutral-900);
-  --muted: var(--neutral-100);
-  --muted-foreground: var(--neutral-600); /* 6.01:1 on white            */
-  --border: var(--neutral-200);
-  --border-strong: var(--neutral-300); /* grid lines that must read  */
-  --rule: var(--neutral-200); /* the hairline between rows  */
-  --input: var(--neutral-300); /* 3.0:1 — visible unfocused  */
-  --ring: var(--indigo-600);
-
-  /* — brand — */
-  --primary: var(--indigo-600);
-  --primary-hover: var(--indigo-700);
-  --primary-foreground: var(--neutral-0); /* 7.15:1                     */
-  --primary-soft: var(--indigo-50);
-  --primary-ink: var(--indigo-700); /* primary as text: 9.48:1    */
-  --secondary: var(--neutral-100);
-  --secondary-foreground: var(--neutral-800);
-  --accent: var(--amber-500); /* the highlighter. Ration it.*/
-  --accent-foreground: var(--neutral-900); /* 7.96:1                     */
-  --accent-soft: var(--amber-100);
-  --accent-ink: var(--amber-700); /* amber as text: 4.42:1      */
+  /* — brand — ink, not indigo. This is the D-57 override: --primary and the
+     focus ring are the same ink as body text, everywhere, in every palette
+     variant below (palettes no longer recolour --primary — see §9). */
+  --primary: #0b0b0b;
+  --primary-hover: #232323; /* one step off ink, for non-opacity hover treatments;
+    Button itself still uses `hover:bg-primary/90` */
+  --primary-foreground: #f4f4f2; /* 17.87:1 — paper text on the ink fill */
+  --primary-soft: #e9e9e6; /* a neutral tint; ink has no hue to soften into */
+  --primary-ink: #0b0b0b;
+  --secondary: #e9e9e6;
+  --secondary-foreground: #0b0b0b;
+  /* --accent retired from "the amber highlighter, one per screen" (previous
+     DESIGN-SYSTEM §1.2/§1.5) to a plain neutral surface, matching
+     acadigma-website's own --accent (identical to --secondary there). Amber
+     survives only where §2 already makes it semantic: --warning and
+     --att-late. See DECISION-LOG D-57 for the reasoning. */
+  --accent: #e9e9e6;
+  --accent-foreground: #0b0b0b;
+  --accent-soft: #f4f4f2;
+  --accent-ink: #0b0b0b;
 
   /* — semantic — */
   --success: oklch(0.545 0.14 152); /* #0c8644 white on it 4.64:1 */
@@ -376,10 +399,14 @@
   --warning-foreground: var(--neutral-900); /* use ink, not white         */
   --warning-soft: oklch(0.955 0.035 74);
   --warning-ink: oklch(0.43 0.14 74); /* on -soft: 7.23:1           */
-  --danger: oklch(0.52 0.2 25); /* #c21725 white on it 6.12:1 */
-  --danger-foreground: var(--neutral-0);
-  --danger-soft: oklch(0.955 0.035 25);
-  --danger-ink: oklch(0.43 0.14 25); /* on -soft: 7.42:1           */
+  /* D-57: recoloured to acadigma-website's literal --destructive so the one
+     "something is wrong" red matches across both products. Script-verified
+     (scripts/check-contrast-tokens.mjs): white on danger 6.57:1, danger-ink
+     on danger-soft 8.06:1, danger (fill) on card 6.35:1. */
+  --danger: #b42318;
+  --danger-foreground: #ffffff;
+  --danger-soft: #fbeae8;
+  --danger-ink: #8a1a12;
   --info: oklch(0.54 0.15 250); /* #0871c1 white on it 5.07:1 */
   --info-foreground: var(--neutral-0);
   --info-soft: oklch(0.955 0.035 250);
@@ -438,64 +465,77 @@
   --chart-grid: var(--neutral-200);
   --chart-surface: var(--card);
 
-  /* — sidebar (desktop ≥1024 only). Dark navy in light mode, on purpose: it is
-     the one inverted surface and it reads as the crest bar on a school gate. — */
-  --sidebar: oklch(0.255 0.062 275); /* #1b1f40 */
-  --sidebar-foreground: oklch(0.93 0.01 275); /* 12.95:1 on sidebar */
-  --sidebar-muted: oklch(0.74 0.02 275); /* 6.89:1  */
-  --sidebar-primary: var(
-    --amber-500
-  ); /* 7.29:1 — stays amber
-                                                        regardless of palette  */
-  --sidebar-primary-foreground: oklch(0.196 0.038 275);
-  --sidebar-accent: oklch(0.32 0.068 275); /* active row background  */
-  --sidebar-accent-foreground: oklch(0.985 0.003 275);
-  --sidebar-border: oklch(0.352 0.062 275);
-  --sidebar-ring: var(--amber-500);
+  /* — sidebar (desktop ≥1024 only). D-57 OVERRIDE: paper/chalk with ink text,
+     not the navy inversion the previous design kept from the prototype — the
+     owner's brief is "nothing like the website"'s opposite: everything reads
+     as the SAME product as acadigma.com, and acadigma.com has no inverted
+     navy surface. `--sidebar-primary` (the active-item fill) is ink, the same
+     as `--primary`, not amber — the "amber survives only where §2 is already
+     semantic" rule from the brand block above applies here too. Nav-specific
+     component styling (the actual sidebar-from-config render) is out of scope
+     for this Part — see the PR body re: #17. */
+  --sidebar: #fbfbfa; /* chalk, distinct from the paper page background */
+  --sidebar-foreground: #0b0b0b;
+  --sidebar-muted: #6f6f6f;
+  --sidebar-primary: #0b0b0b;
+  --sidebar-primary-foreground: #fbfbfa;
+  --sidebar-accent: #e9e9e6; /* hover / active row background */
+  --sidebar-accent-foreground: #0b0b0b;
+  --sidebar-border: #e2e2df; /* decorative — see --border above */
+  --sidebar-ring: #0b0b0b;
 
-  /* — elevation. Tinted to the neutral hue; never pure black. Three levels only. — */
-  --shadow-flat: 0 0 0 1px oklch(0.3 0.022 272 / 0.06);
+  /* — elevation. Ink-tinted flat shadows (D-57): rgb(11 11 11 / a), matching
+     acadigma-website's `shadow-input` utility, replacing the old hue-272
+     tint. Structurally unchanged — three levels, hairline-plus-lift. */
+  --shadow-flat: 0 0 0 1px rgb(11 11 11 / 0.08);
   --shadow-raised:
-    0 1px 2px oklch(0.222 0.02 272 / 0.06),
-    0 2px 6px -2px oklch(0.222 0.02 272 / 0.08);
+    0 1px 2px rgb(11 11 11 / 0.06), 0 2px 6px -2px rgb(11 11 11 / 0.08);
   --shadow-overlay:
-    0 8px 24px -6px oklch(0.222 0.02 272 / 0.14),
-    0 2px 6px -2px oklch(0.222 0.02 272 / 0.08);
-  --shadow-sheet: 0 -8px 28px -8px oklch(0.181 0.018 272 / 0.18);
+    0 8px 24px -6px rgb(11 11 11 / 0.14), 0 2px 6px -2px rgb(11 11 11 / 0.08);
+  --shadow-sheet: 0 -8px 28px -8px rgb(11 11 11 / 0.18);
   --shadow-nav: 0 -1px 0 0 var(--border); /* a rule, not a shadow */
 }
 
 /* ---------------------------------------------------------------------------
-   8. DARK theme — selected, not inverted. Every step was chosen and measured
-   against the dark surfaces, per dataviz check 6.
+   8. DARK theme — selected, not inverted (D-57: ink/paper monochrome chrome,
+   same override as the light theme above). Semantic colour (success/warning/
+   info kept as previously measured; attendance/grade/chart unchanged below)
+   was chosen and measured against these dark surfaces, per dataviz check 6.
    --------------------------------------------------------------------------- */
 
 .dark {
-  --background: var(--neutral-950); /* #0f111a */
-  --foreground: oklch(0.945 0.006 272);
-  --card: oklch(0.223 0.02 272); /* #181b25 */
-  --card-foreground: oklch(0.945 0.006 272);
-  --popover: oklch(0.25 0.02 272);
-  --popover-foreground: oklch(0.945 0.006 272);
-  --muted: oklch(0.27 0.02 272);
-  --muted-foreground: oklch(0.72 0.014 272); /* 7.57:1 on page bg          */
-  --border: oklch(0.32 0.02 272);
-  --border-strong: oklch(0.4 0.022 272);
-  --rule: oklch(0.3 0.02 272);
-  --input: oklch(0.4 0.022 272);
-  --ring: var(--indigo-400);
+  --background: #0b0b0b;
+  --foreground: #f4f4f2;
+  --card: #121212;
+  --card-foreground: #f4f4f2;
+  --popover: #121212;
+  --popover-foreground: #f4f4f2;
+  --muted: #1c1c1c;
+  --muted-foreground: #8e8e8e; /* 6.01:1 on background, 5.72:1 on card */
+  --border: #232323; /* decorative hairline — see the light theme's note */
+  --border-strong: #333333;
+  --rule: #232323;
+  --input: #6b6b6b; /* deviates from acadigma-website's translucent-white
+    ~#323232 (1.54:1) to clear WCAG 1.4.11's 3:1 non-text minimum for an
+    unfocused Field's own boundary (3.69:1, script-verified) */
+  --ring: #f4f4f2;
 
-  --primary: oklch(0.66 0.175 269); /* #6789fc — 5.86:1 on bg     */
-  --primary-hover: oklch(0.72 0.155 269);
-  --primary-foreground: oklch(0.181 0.018 272); /* ink on the fill, 5.86:1    */
-  --primary-soft: oklch(0.3 0.075 269);
-  --primary-ink: oklch(0.8 0.115 269); /* primary as text on bg      */
-  --secondary: oklch(0.28 0.02 272);
-  --secondary-foreground: oklch(0.91 0.008 272);
-  --accent: oklch(0.82 0.15 74); /* amber lifts in dark        */
-  --accent-foreground: oklch(0.181 0.018 272);
-  --accent-soft: oklch(0.32 0.065 74);
-  --accent-ink: oklch(0.86 0.11 74);
+  /* — brand — paper, not the old light-indigo. Mirrors the light theme's
+     ink-for-primary override: in dark mode the fill is paper with ink text,
+     same shape as acadigma-website's dark --primary. */
+  --primary: #f4f4f2;
+  --primary-hover: #d8d8d6;
+  --primary-foreground: #0b0b0b; /* 17.87:1 */
+  --primary-soft: #1c1c1c;
+  --primary-ink: #f4f4f2;
+  --secondary: #1c1c1c;
+  --secondary-foreground: #f4f4f2;
+  /* --accent retired to a neutral surface, same reasoning as light — see the
+     light theme's comment above --accent. */
+  --accent: #1c1c1c;
+  --accent-foreground: #f4f4f2;
+  --accent-soft: #121212;
+  --accent-ink: #f4f4f2;
 
   --success: oklch(0.72 0.13 152);
   --success-foreground: oklch(0.181 0.018 272); /* 7.99:1 */
@@ -505,10 +545,13 @@
   --warning-foreground: oklch(0.181 0.018 272); /* 10.54:1 */
   --warning-soft: oklch(0.3 0.06 74);
   --warning-ink: oklch(0.86 0.09 74); /* on -soft: 8.90:1 */
-  --danger: oklch(0.66 0.185 25);
-  --danger-foreground: oklch(0.181 0.018 272); /* 5.54:1 */
-  --danger-soft: oklch(0.3 0.06 25);
-  --danger-ink: oklch(0.86 0.09 25); /* on -soft: 8.62:1 */
+  /* D-57: recoloured to acadigma-website's literal dark --destructive.
+     Script-verified: ink on danger 7.06:1, danger-ink on danger-soft 9.72:1,
+     danger (fill) on card 6.72:1. */
+  --danger: #f97066;
+  --danger-foreground: #0b0b0b;
+  --danger-soft: #3a1210;
+  --danger-ink: #ffb4ad;
   --info: oklch(0.7 0.145 250);
   --info-foreground: oklch(0.181 0.018 272); /* 7.06:1 */
   --info-soft: oklch(0.3 0.06 250);
@@ -556,33 +599,41 @@
   --chart-grid: oklch(0.32 0.02 272);
   --chart-surface: var(--card);
 
-  --sidebar: oklch(0.196 0.038 275); /* deeper than the page       */
-  --sidebar-foreground: oklch(0.93 0.01 275);
-  --sidebar-muted: oklch(0.7 0.02 275);
-  --sidebar-primary: oklch(0.82 0.15 74);
-  --sidebar-primary-foreground: oklch(0.181 0.018 272);
-  --sidebar-accent: oklch(0.28 0.045 275);
-  --sidebar-accent-foreground: oklch(0.985 0.003 275);
-  --sidebar-border: oklch(0.32 0.04 275);
-  --sidebar-ring: oklch(0.82 0.15 74);
+  /* — sidebar. D-57: paper-family surface, not amber — same override as the
+     light theme. "graphite" (#161616) sits one step lighter than --card so
+     the sidebar still reads as its own surface against the page. */
+  --sidebar: #161616;
+  --sidebar-foreground: #f4f4f2;
+  --sidebar-muted: #8e8e8e;
+  --sidebar-primary: #f4f4f2;
+  --sidebar-primary-foreground: #0b0b0b;
+  --sidebar-accent: #242424;
+  --sidebar-accent-foreground: #f4f4f2;
+  --sidebar-border: #232323;
+  --sidebar-ring: #f4f4f2;
 
-  --shadow-flat: 0 0 0 1px oklch(0.985 0.003 272 / 0.06);
-  --shadow-raised:
-    0 1px 2px oklch(0 0 0 / 0.4), 0 2px 6px -2px oklch(0 0 0 / 0.36);
+  /* Ink-tinted flat shadows (D-57) — already achromatic in dark mode before
+     this change (pure black has no hue to retint), kept structurally as-is. */
+  --shadow-flat: 0 0 0 1px rgb(244 244 242 / 0.06);
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 6px -2px rgb(0 0 0 / 0.36);
   --shadow-overlay:
-    0 8px 24px -6px oklch(0 0 0 / 0.52), 0 2px 6px -2px oklch(0 0 0 / 0.4);
-  --shadow-sheet: 0 -8px 28px -8px oklch(0 0 0 / 0.55);
+    0 8px 24px -6px rgb(0 0 0 / 0.52), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --shadow-sheet: 0 -8px 28px -8px rgb(0 0 0 / 0.55);
   --shadow-nav: 0 -1px 0 0 var(--border);
 }
 
 /* ---------------------------------------------------------------------------
    9. Palette overrides (user_preferences.palette)
    Applied as a class on <html> alongside `.dark`. These override the BRAND ONLY
-   — `--primary`, `--primary-hover`, `--primary-ink`, `--ring`, `--chart-1`.
-   They deliberately do NOT touch `--accent` or `--sidebar-primary`: amber means
-   "act on this" everywhere, in every palette. (The prototype recoloured
-   --sidebar-primary per palette, which made the sidebar accent meaningless.)
-   Every 600 step below carries white text at ≥ 6:1.
+   — `--primary`, `--primary-hover`, `--primary-ink`, `--ring`, `--chart-1` —
+   and are unaffected by D-57: the base theme's ink `--primary` is what a user
+   sees until they opt into a palette, at which point that one user's chrome
+   goes back to carrying a hue, same as before. They deliberately do NOT touch
+   `--accent` or `--sidebar-primary`, which D-57 retired to neutral surfaces —
+   a palette recolouring them would resurrect the old "amber means act on
+   this" reading in exactly the one case (a non-default palette) where it
+   would be inconsistent with every other screen. Every 600 step below
+   carries white text at ≥ 6:1.
    --------------------------------------------------------------------------- */
 
 .palette-emerald {
@@ -692,6 +743,14 @@
     -webkit-tap-highlight-color: transparent;
     /* the address bar must never reveal a different colour behind the app */
     background-color: var(--background);
+    /* D-57: cv11 (single-storey a) + ss01 (open forms) match
+       acadigma-website's html-level font-feature-settings. body/.tabular
+       redeclare their own font-feature-settings (below), which does not
+       merge with this one — --fs-prose / --fs-tabular repeat cv11/ss01 so
+       nested text keeps them regardless of which rule ends up winning. */
+    font-feature-settings:
+      "cv11" 1,
+      "ss01" 1;
   }
 
   body {

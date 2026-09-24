@@ -30,7 +30,7 @@ export function AuthCard({
   return (
     <div
       className={cn(
-        "w-full space-y-6 sm:rounded-xl sm:border sm:bg-card sm:p-8 sm:shadow-sm",
+        "w-full space-y-6 sm:rounded-xl sm:border sm:bg-card sm:p-8 sm:shadow-flat",
         className
       )}
     >
