@@ -1032,7 +1032,7 @@ $$;
 -- owner/admin only for the "not self" branch (D-63 item 7 — teacher/staff
 -- was a real leak, caught by pgTAP against a live Postgres, not by the
 -- design read alone).
-create or replace function app.staff_hourly_rate(p_workspace_id uuid, p_user_id uuid, p_on_date date)
+create or replace function app.staff_hourly_rate(p_workspace_id uuid, p_user_id uuid, p_on date)
 returns bigint language sql stable security definer set search_path = ''
 as $$
   select c.hourly_rate_paisa
@@ -1041,8 +1041,8 @@ as $$
     on sr.id = c.staff_record_id and sr.workspace_id = c.workspace_id
   where sr.workspace_id = p_workspace_id
     and sr.user_id = p_user_id
-    and c.effective_from <= p_on_date
-    and (c.effective_to is null or c.effective_to >= p_on_date)
+    and c.effective_from <= p_on
+    and (c.effective_to is null or c.effective_to >= p_on)
     and (
       p_user_id = app.current_user_id()
       or app.has_role(p_workspace_id, array['owner', 'admin'])

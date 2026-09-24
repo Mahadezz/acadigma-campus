@@ -421,7 +421,20 @@ select app.attach_audit('public.staff_compensation');
 -- all, so this function must not open a side door to the same data. Caught
 -- by 20_staff_schema.sql's own "never returns a colleague's rate to a
 -- teacher" assertion failing against a live Postgres (D-63 item 7).
-create or replace function app.staff_hourly_rate(p_workspace_id uuid, p_user_id uuid, p_on_date date)
+--
+-- The parameter name `p_on` (not `p_on_date`) is NOT a style choice: an M0
+-- stub of this exact function already exists (20260917010000_extensions_
+-- and_app_schema.sql §6, applied to main long before this migration), with
+-- a body written against a staff_compensation shape (`user_id`/`valid_from`/
+-- `valid_to`) that never shipped — this CREATE OR REPLACE is what gives it
+-- its real body, against the actual staff_compensation this migration
+-- creates. Postgres refuses a CREATE OR REPLACE that renames an existing
+-- parameter (`cannot change name of input parameter`), and DROP + CREATE
+-- would discard whatever grants and dependents already exist on the stub —
+-- so the parameter names (`p_workspace_id`, `p_user_id`, `p_on`) must match
+-- the stub exactly, even though `p_on_date` would read slightly better on
+-- its own (CI caught this: run 36061148429).
+create or replace function app.staff_hourly_rate(p_workspace_id uuid, p_user_id uuid, p_on date)
 returns bigint
 language sql
 stable
@@ -434,8 +447,8 @@ as $$
     on sr.id = c.staff_record_id and sr.workspace_id = c.workspace_id
   where sr.workspace_id = p_workspace_id
     and sr.user_id = p_user_id
-    and c.effective_from <= p_on_date
-    and (c.effective_to is null or c.effective_to >= p_on_date)
+    and c.effective_from <= p_on
+    and (c.effective_to is null or c.effective_to >= p_on)
     and (
       p_user_id = app.current_user_id()
       or app.has_role(p_workspace_id, array['owner', 'admin'])
@@ -445,7 +458,7 @@ as $$
 $$;
 
 comment on function app.staff_hourly_rate(uuid, uuid, date) is
-  'The rate in force for p_user_id on p_on_date within p_workspace_id, or '
+  'The rate in force for p_user_id on p_on within p_workspace_id, or '
   'null when unset (F-OP-06 §3.2, §5.8) — never today''s rate applied '
   'retroactively, and never a DIFFERENT workspace''s rate for a person '
   'staffed at more than one school (AC-30). Only returns a value when the '
