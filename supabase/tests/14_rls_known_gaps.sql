@@ -1,13 +1,20 @@
 -- =====================================================================
--- pgTAP · isolation + escalation for the five KNOWN_GAPS tables
--- (scripts/check-coverage-test-files.mjs, D-56, PR #17): consent_records,
--- legal_acceptances, email_log, file_access_log, subscription_events. Each
--- has RLS on, SELECT-only grants to `authenticated` (no grant to `anon` at
--- all) and no write policy anywhere. This file is the missing isolation +
--- escalation case ARCHITECTURE §9 requires before a tenant table ships, so
--- that once PR #17 merges these five names can come out of KNOWN_GAPS.
+-- pgTAP · isolation + escalation for the KNOWN_GAPS tables
+-- (scripts/check-coverage-test-files.mjs, D-56): consent_records,
+-- legal_acceptances, email_log, file_access_log, subscription_events,
+-- notifications. This file's job is to shrink KNOWN_GAPS to empty.
 --
--- Per table this proves:
+-- The first five have RLS on, SELECT-only grants to `authenticated` (no
+-- grant to `anon` at all) and no write policy anywhere — sections 1-5.
+--
+-- `notifications` (section 6) is shaped differently and gets its own
+-- comment there: it is scoped to `recipient_id = auth.uid()` alone, with
+-- NO owner/admin or platform-admin branch at all (stricter than the other
+-- five, not weaker), and it DOES carry real UPDATE/DELETE grants to
+-- `authenticated`, guarded by RLS (own row only) plus a BEFORE UPDATE
+-- trigger that permits only `read_at`/`archived_at` to change.
+--
+-- Per table (sections 1-5) this proves:
 --   (a) isolation — a member of workspace A sees zero rows of workspace B;
 --       anon has no SELECT privilege at all; a teacher/staff member (not
 --       owner/admin) sees only what the policy actually allows — which, for
@@ -23,7 +30,7 @@
 --       "verb the role holds no GRANT for at all" case from the README.
 -- =====================================================================
 begin;
-select plan(51);
+select plan(64);
 
 create schema if not exists tests;
 
@@ -422,6 +429,105 @@ select throws_ok(
   '42501', null,
   'subscription_events: authenticated has no DELETE grant at all');
 select tests.logout();
+
+-- =====================================================================
+-- 6. notifications — select: recipient_id = auth.uid() ONLY. No
+--    has_role(owner, admin) branch and no platform-admin branch at all —
+--    stricter than sections 1-5, not weaker. UPDATE/DELETE ARE granted to
+--    authenticated, but RLS scopes both to the recipient's own rows, and a
+--    BEFORE UPDATE trigger (app.tg_notifications_guard) additionally
+--    refuses to let even the recipient change anything but read_at/
+--    archived_at. INSERT has no grant at all — rows come from app.notify()
+--    (SECURITY DEFINER) only.
+-- =====================================================================
+insert into public.notifications
+  (id, workspace_id, recipient_id, event_type, title, action_url)
+overriding system value
+values
+  (900001, '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000001',
+   'attendance.low', 'Attendance below threshold', '/app/attendance'),   -- owner.a's own notification
+  (900002, '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000003',
+   'attendance.low', 'Attendance below threshold', '/app/attendance'),  -- teacher.a's own notification
+  (900003, '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-0000-0000-0000-000000000001',
+   'attendance.low', 'Attendance below threshold', '/app/attendance');  -- workspace B
+
+select tests.login('aaaaaaaa-0000-0000-0000-000000000003');   -- teacher.a
+select is(
+  (select count(*)::int from public.notifications where id = 900002),
+  1, 'notifications: teacher.a sees their OWN notification');
+select is(
+  (select count(*)::int from public.notifications where id = 900001),
+  0, 'notifications: teacher.a does NOT see owner.a''s notification — same workspace, no has_role branch here');
+select is(
+  (select count(*)::int from public.notifications where workspace_id = '22222222-2222-2222-2222-222222222222'),
+  0, 'notifications: a member of A sees zero rows of workspace B');
+select tests.logout();
+
+select tests.login('aaaaaaaa-0000-0000-0000-000000000002');   -- admin.a
+select is(
+  (select count(*)::int from public.notifications where id in (900001, 900002)),
+  0, 'notifications: admin.a sees NEITHER — unlike sections 1-5, there is no owner/admin bypass on this table');
+select tests.logout();
+
+select tests.login('cccccccc-0000-0000-0000-000000000001');   -- platform admin
+select is(
+  (select count(*)::int from public.notifications where id = 900001),
+  0, 'notifications: platform admin does NOT see it either — no platform-admin bypass on this table at all');
+select tests.logout();
+
+select ok(
+  not has_table_privilege('anon', 'public.notifications', 'select'),
+  'notifications: anon has no SELECT privilege at all');
+
+select tests.login('aaaaaaaa-0000-0000-0000-000000000001');   -- owner.a
+select throws_ok(
+  $$insert into public.notifications (workspace_id, recipient_id, event_type, title, action_url)
+    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000001',
+            'attendance.low', 'Injected', '/app')$$,
+  '42501', null,
+  'notifications: authenticated has no INSERT grant at all, even for an owner');
+
+-- owner.a holds a general UPDATE grant, but RLS scopes it to their own rows:
+-- an update aimed at teacher.a's notification (900002) is filtered to zero
+-- rows, not an error (README rule 1 — a USING-filtered UPDATE affects
+-- nothing rather than raising).
+with attempted as (
+  update public.notifications set read_at = now()
+   where id = 900002
+  returning 1)
+select is((select count(*)::int from attempted), 0,
+          'notifications: owner.a updating teacher.a''s notification affects ZERO rows...');
+select tests.logout();
+
+select is(
+  (select read_at from public.notifications where id = 900002),
+  null, '...and it is still unread — untouched by the attempt');
+
+-- teacher.a holds UPDATE on their OWN row (900002), but the guard trigger
+-- refuses any column beyond read_at/archived_at, even for the recipient.
+select tests.login('aaaaaaaa-0000-0000-0000-000000000003');   -- teacher.a
+select throws_ok(
+  $$update public.notifications set title = 'Hijacked title' where id = 900002$$,
+  '42501', null,
+  'notifications: even the recipient cannot rewrite title/body/event_type/workspace_id on their own row');
+
+select lives_ok(
+  $$update public.notifications set read_at = now() where id = 900002$$,
+  'notifications: the recipient CAN mark their own notification read — the legitimate self-service path still works');
+
+-- teacher.a also holds a general DELETE grant, scoped by RLS the same way:
+-- deleting owner.a's notification (900001) is filtered to zero rows.
+with attempted as (
+  delete from public.notifications
+   where id = 900001
+  returning 1)
+select is((select count(*)::int from attempted), 0,
+          'notifications: teacher.a deleting owner.a''s notification affects ZERO rows...');
+select tests.logout();
+
+select is(
+  (select count(*)::int from public.notifications where id = 900001),
+  1, '...and owner.a''s notification still exists, untouched');
 
 select * from finish();
 rollback;
