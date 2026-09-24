@@ -291,11 +291,12 @@ describe("resolveWorkspaceContext", () => {
     expect(!result.ok && result.error.reason).toBe("not_a_member")
   })
 
-  // F-ID-03 review follow-up: a removed or pending member replaying a stale
-  // header is not a forger. AC6 still refuses the request (403); the
-  // difference is which reason comes back and whether the tripwire fires.
+  // F-ID-03 review follow-up (D-52 as amended by the PR #12 review): a removed
+  // or pending member is refused (AC6, 403) with a distinct reason, and the
+  // tripwire STILL fires. A pending row is one invite code away, so skipping
+  // it would allow silent probing; the RPC classifies severity server-side.
   describe("removed/pending member vs. a genuine forger (F-ID-03 review)", () => {
-    it("fails membership_inactive, WITHOUT the tripwire, for a REMOVED member", async () => {
+    it("fails membership_inactive for a REMOVED member, and still fires the tripwire once", async () => {
       const rpc = vi.fn(async () => ({ data: null, error: null }))
       const result = await resolveWorkspaceContext(
         fakeClient({
@@ -307,10 +308,10 @@ describe("resolveWorkspaceContext", () => {
       )
       expect(!result.ok && result.error.code).toBe("forbidden")
       expect(!result.ok && result.error.reason).toBe("membership_inactive")
-      expect(rpc).not.toHaveBeenCalled()
+      expect(rpc).toHaveBeenCalledTimes(1)
     })
 
-    it("fails membership_inactive, WITHOUT the tripwire, for a PENDING member", async () => {
+    it("fails membership_inactive for a PENDING member, and still fires the tripwire once", async () => {
       const rpc = vi.fn(async () => ({ data: null, error: null }))
       const result = await resolveWorkspaceContext(
         fakeClient({
@@ -321,7 +322,7 @@ describe("resolveWorkspaceContext", () => {
         headers(WORKSPACE_ID)
       )
       expect(!result.ok && result.error.reason).toBe("membership_inactive")
-      expect(rpc).not.toHaveBeenCalled()
+      expect(rpc).toHaveBeenCalledTimes(1)
     })
 
     it("still fails not_a_member and fires the tripwire exactly once for someone who never joined", async () => {

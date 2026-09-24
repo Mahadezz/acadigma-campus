@@ -313,13 +313,16 @@ export async function resolveWorkspaceContext(
           )
         )
       }
-      if (anyRow) {
-        // A removed or pending member replaying a stale header — not a
-        // forger. AC6 still refuses the request; the tripwire does not fire.
-        return fail("membership_inactive", FORBIDDEN)
-      }
+      // The tripwire ALWAYS fires (D-52, as amended by the PR #12 review): a
+      // pending row is one invite code away for anyone, so skipping the row
+      // for pending/removed callers would let them probe a school silently.
+      // The RPC records the caller's membership status server-side, so the
+      // row itself says "inactive" vs "forgery"; the distinct reason here only
+      // feeds logs. AC6 holds either way: the request is refused with a 403.
       await logContextRejected(supabase, workspaceId)
-      return fail("not_a_member", FORBIDDEN)
+      return anyRow
+        ? fail("membership_inactive", FORBIDDEN)
+        : fail("not_a_member", FORBIDDEN)
     }
     return toContext(workspaceId, userId, data)
   }
