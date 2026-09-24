@@ -19,6 +19,7 @@ const CTX: WorkspaceContext = {
   userId: ACTOR_ID,
   role: "owner",
   plan: "pro",
+  workspaceType: "school",
 }
 
 const EVENT_ROW = {
