@@ -5,7 +5,7 @@
 | Feature | Cross-cutting bug fix (not a numbered feature) — `app.tg_workspace_billing_bootstrap()` vs. `app.tg_workspaces_guard()` |
 | Part    | Single Part: split the bootstrap trigger + pgTAP proof                                                                  |
 | Spec    | `docs/decisions/DECISION-LOG.md` D-59; closes Known issue #3 of `docs/test-reports/2026-09-24-F-ID-05-p1.md`            |
-| PR      | opened from `fix/billing-bootstrap-vs-workspace-guard` against `main` (see PR description)                              |
+| PR      | [#23](https://github.com/Mahadezz/acadigma-campus/pull/23)                                                              |
 | Status  | **PASS WITH KNOWN ISSUES**                                                                                              |
 | Date    | 2026-09-24                                                                                                              |
 | Run by  | Claude (Sonnet 5, builder session)                                                                                      |
@@ -33,18 +33,18 @@
 
 ## 2. Environment
 
-|                |                                                                                                                                         |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Commit         | see PR's head commit                                                                                                                    |
-| Branch         | `fix/billing-bootstrap-vs-workspace-guard`                                                                                              |
-| PR             | see PR description                                                                                                                      |
-| CI run         | see the CI run linked from the PR                                                                                                       |
-| Preview URL    | not applicable (no app code changed)                                                                                                    |
-| Supabase       | project `kekfmibwjejdhxjkmezo`, branch `dev` — not mutated from this session; CI runs against a disposable Postgres container           |
-| Migration head | `20260925000200_billing_bootstrap_vs_workspace_guard.sql`                                                                               |
-| Seed           | `supabase/seed` (unchanged by this PR)                                                                                                  |
-| Node / pnpm    | v24.x / 10.x                                                                                                                            |
-| Docker         | **unavailable in this session** — pgTAP was authored and reasoned through carefully, but only executed in CI, per this task's hard rule |
+|                |                                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commit         | `449e215` (`fix/billing-bootstrap-vs-workspace-guard`)                                                                                                        |
+| Branch         | `fix/billing-bootstrap-vs-workspace-guard`                                                                                                                    |
+| PR             | [#23](https://github.com/Mahadezz/acadigma-campus/pull/23)                                                                                                    |
+| CI run         | [Actions run 36017127881](https://github.com/Mahadezz/acadigma-campus/actions/runs/36017127881) (`ci.yml`)                                                    |
+| Preview URL    | not applicable (no app code changed)                                                                                                                          |
+| Supabase       | project `kekfmibwjejdhxjkmezo`, branch `dev` — not mutated from this session; CI runs against a disposable Postgres container                                 |
+| Migration head | `20260925000200_billing_bootstrap_vs_workspace_guard.sql`                                                                                                     |
+| Seed           | `supabase/seed` (unchanged by this PR)                                                                                                                        |
+| Node / pnpm    | v24.x / 10.x                                                                                                                                                  |
+| Docker         | **unavailable in this session** — pgTAP was authored and reasoned through carefully, but only executed in CI (job `db`, run above), per this task's hard rule |
 
 ---
 
@@ -62,21 +62,26 @@ Coverage unchanged from `main` (no source touched by this PR): Statements 92.45 
 
 ## 4. Database (pgTAP)
 
-**Docker is unavailable locally, so every pgTAP number below is reasoned through, not locally executed — CI is the only place any of it has run** (task hard rule: "pgTAP runs in CI").
+**Docker is unavailable locally; every pgTAP number below is copied from the real CI `db` job run for this PR** ([run 36017127881](https://github.com/Mahadezz/acadigma-campus/actions/runs/36017127881), job `db`), not fabricated.
 
-| File                                     | What it proves                                                                                                                         | Result  |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `16_billing_bootstrap_guard.sql` (new)   | 13 assertions across 3 sections — see §1's acceptance-criteria table                                                                   | CI-only |
-| `15_personal_workspace_registration.sql` | Section 7 changed `throws_ok('42501', …)` → `lives_ok(…)` (the school-type insert now succeeds end to end); plan count unchanged at 18 | CI-only |
-| Every other file (`01`–`14`)             | Untouched by this PR's migration — reasoned to stay green (see §4a for the one file whose fixture path this migration touches)         | CI-only |
+| File                                     | What it proves                                                                                                                         | Result                                                                                                                                                                                                                 |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `16_billing_bootstrap_guard.sql` (new)   | 13 assertions across 3 sections — see §1's acceptance-criteria table                                                                   | **PASS** — `ok 1`–`ok 13`, all green                                                                                                                                                                                   |
+| `15_personal_workspace_registration.sql` | Section 7 changed `throws_ok('42501', …)` → `lives_ok(…)` (the school-type insert now succeeds end to end); plan count unchanged at 18 | **PASS** — `ok 18 - a school-type insert PASSES the workspaces_insert RLS policy and now succeeds end to end (D-59 fixed the pre-existing app.tg_workspace_billing_bootstrap()/app.tg_workspaces_guard() interaction)` |
+| Every other file (`01`–`14`)             | Untouched by this PR's migration; not regressed (see §4a for the one file whose fixture path this migration touches)                   | **PASS**                                                                                                                                                                                                               |
 
 ### 4a. Why `07_plans_limits.sql` was checked, and stays green
 
-`07_plans_limits.sql` inserts a school workspace directly as the `postgres` role (no `tests.login()` call before it), which fires `app.tg_workspace_billing_bootstrap()` as before. Since `is_privileged_context()` was already `true` for a plain `postgres`-role session before this PR (unaffected by the `role`-GUC read either way), that insert never tripped the guard, and this PR's split produces the identical end state (same `plan_id`, `trial_ends_at`, `subscriptions` row) through the BEFORE/AFTER INSERT trigger pair instead of a single AFTER INSERT trigger with a nested UPDATE — the test only asserts the end state, not the trigger internals, so it is unaffected.
+`07_plans_limits.sql` inserts a school workspace directly as the `postgres` role (no `tests.login()` call before it), which fires `app.tg_workspace_billing_bootstrap()` as before. Since `is_privileged_context()` was already `true` for a plain `postgres`-role session before this PR (unaffected by the `role`-GUC read either way), that insert never tripped the guard, and this PR's split produces the identical end state (same `plan_id`, `trial_ends_at`, `subscriptions` row) through the BEFORE/AFTER INSERT trigger pair instead of a single AFTER INSERT trigger with a nested UPDATE — the test only asserts the end state, not the trigger internals, so it is unaffected. Confirmed by CI: no assertion in `07_plans_limits.sql` regressed.
 
-### 4b. Full suite — expected CI result
+### 4b. Full suite — actual CI result
 
-`pg_prove --verbose --ext .sql supabase/tests/*.sql` expected: `Files=13` (12 existing feature files + `16_billing_bootstrap_guard.sql`; `coverage.sql` runs as a separate `psql` step, not through `pg_prove`), all green. Actual numbers to be filled in from the real CI run once available — not fabricated here.
+```
+Files=16, Tests=373,  2 wallclock secs ( 0.06 usr  0.05 sys +  0.44 cusr  0.15 csys =  0.70 CPU)
+Result: PASS
+```
+
+All 16 test files (`01`–`16`), 373 assertions, zero failures — CI run [36017127881](https://github.com/Mahadezz/acadigma-campus/actions/runs/36017127881), job `db`. `16_billing_bootstrap_guard.sql`'s own 13 assertions (`ok 1`–`ok 13`) are individually confirmed green in the raw log, not just inferred from the aggregate count.
 
 ---
 
@@ -96,7 +101,7 @@ Not applicable — trigger logic only, no new query pattern added to a hot path.
 
 | Check                                                                 | Result                                                                                                                                                                                                                                            |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| gitleaks / Semgrep (ERROR severity) / `pnpm audit --audit-level high` | run as part of CI `security` job — see PR checks                                                                                                                                                                                                  |
+| gitleaks / Semgrep (ERROR severity) / `pnpm audit --audit-level high` | CI `security` job **PASS** (run [36017127881](https://github.com/Mahadezz/acadigma-campus/actions/runs/36017127881)); `Semgrep OSS` check **PASS** separately                                                                                     |
 | Supabase advisors — new security advisories                           | not run — no Supabase project mutation from this session; every change narrows nothing a client could already do (the guard itself is untouched) and widens nothing — see D-59's "Why not option a/c"                                             |
 | Authorized DAST against preview                                       | not applicable — no UI/route changed                                                                                                                                                                                                              |
 | Does this loosen `app.tg_workspaces_guard()` for a client?            | **No.** The guard function's body is not modified by this PR at all. `16_billing_bootstrap_guard.sql` test 2 proves a client's direct UPDATE of `plan_id`/`trial_ends_at`/`access_mode` still raises `42501` with the exact pre-existing message. |
@@ -107,10 +112,30 @@ Not applicable — trigger logic only, no new query pattern added to a hot path.
 
 ## 8. Known issues
 
-| #   | Issue                                                                                                                                                                                                                                                                                                                                                                          | Severity                | Ship anyway?                                                                                                                                                                                                                    | Tracked                                            |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| 1   | **Same class of bug found by this PR's investigation, not fixed here:** `app.transfer_ownership()` (`20260917010100_identity.sql:785-819`) does a nested `UPDATE public.workspaces SET owner_id = ...` inside a `SECURITY DEFINER` function callable by a plain `owner` — the identical `role`-GUC shape D-59 fixes for billing, on the `owner_id` immutability check instead. | medium                  | yes — no `public` wrapper exists for it yet (D-50) and no test exercises it as `authenticated`, so this is latent, not confirmed-broken-in-production; recorded in D-59's consequences for whoever wires up ownership transfer. | `docs/decisions/DECISION-LOG.md` D-59 consequences |
-| 2   | pgTAP was authored and reasoned through carefully but never ran on this laptop (no Docker) — CI is the only place any of it has executed.                                                                                                                                                                                                                                      | medium → resolved by CI | yes, gated on `gh pr checks` going fully green before this PR is treated as ready                                                                                                                                               | this report                                        |
+| #   | Issue                                                                                                                                                                                                                                                                                                                                                                          | Severity                    | Ship anyway?                                                                                                                                                                                                                    | Tracked                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| 1   | **Same class of bug found by this PR's investigation, not fixed here:** `app.transfer_ownership()` (`20260917010100_identity.sql:785-819`) does a nested `UPDATE public.workspaces SET owner_id = ...` inside a `SECURITY DEFINER` function callable by a plain `owner` — the identical `role`-GUC shape D-59 fixes for billing, on the `owner_id` immutability check instead. | medium                      | yes — no `public` wrapper exists for it yet (D-50) and no test exercises it as `authenticated`, so this is latent, not confirmed-broken-in-production; recorded in D-59's consequences for whoever wires up ownership transfer. | `docs/decisions/DECISION-LOG.md` D-59 consequences |
+| 2   | pgTAP was authored and reasoned through carefully but never ran on this laptop (no Docker) — CI is the only place any of it has executed.                                                                                                                                                                                                                                      | medium → **resolved by CI** | yes — resolved: `gh pr checks 23` is fully green, `db` job `Files=16, Tests=373, Result: PASS` (see §4b)                                                                                                                        | this report                                        |
+
+**CI job results (this PR, run [36017127881](https://github.com/Mahadezz/acadigma-campus/actions/runs/36017127881)):**
+
+| Job (required unless noted)                    | Result | Notes                                               |
+| ---------------------------------------------- | ------ | --------------------------------------------------- |
+| `lint`                                         | PASS   |                                                     |
+| `typecheck`                                    | PASS   |                                                     |
+| `db`                                           | PASS   | `Files=16, Tests=373, Result: PASS` — see §4        |
+| `unit`                                         | PASS   | 700/700 Vitest tests                                |
+| `contracts`                                    | PASS   |                                                     |
+| `build`                                        | PASS   |                                                     |
+| `security`                                     | PASS   |                                                     |
+| `e2e`                                          | PASS   |                                                     |
+| `lighthouse`                                   | PASS   |                                                     |
+| `changeset`                                    | PASS   | no changeset needed — no `apps/`/`packages/` change |
+| `docs-sync`                                    | PASS   |                                                     |
+| `sql-lint` (not required, `continue-on-error`) | PASS   |                                                     |
+| `Semgrep OSS`                                  | PASS   |                                                     |
+
+**Every check is green** (`gh pr checks 23` exit 0, no pending/failing checks remaining).
 
 **Deliberately not tested, and why:**
 
@@ -135,6 +160,6 @@ Not applicable — trigger logic only, no new query pattern added to a hot path.
 
 **Signed off by:** Claude (Sonnet 5), builder session
 **Date:** 2026-09-24
-**Commit:** see PR's head commit
+**Commit:** `449e215` (PR [#23](https://github.com/Mahadezz/acadigma-campus/pull/23))
 
-> I wrote and reasoned through every assertion in `16_billing_bootstrap_guard.sql` and the change to `15_personal_workspace_registration.sql` test 7 myself; I did not fabricate a pass. This laptop has no Docker, so pgTAP has not executed anywhere but CI. `pnpm install --frozen-lockfile`, `pnpm format:check`, `pnpm typecheck`, `pnpm lint`, `pnpm test` (700/700) and every `node scripts/check-*.mjs` were run locally and are genuinely green, not assumed.
+> I wrote and reasoned through every assertion in `16_billing_bootstrap_guard.sql` and the change to `15_personal_workspace_registration.sql` test 7 myself; I did not fabricate a pass. This laptop has no Docker, so pgTAP has not executed anywhere but CI — the §4 numbers are copied from the real CI `db` job run for this PR (run 36017127881), not invented. `pnpm install --frozen-lockfile`, `pnpm format:check`, `pnpm typecheck`, `pnpm lint`, `pnpm test` (700/700) and every `node scripts/check-*.mjs` were run locally and are genuinely green, not assumed. Every CI check on the PR is green.
