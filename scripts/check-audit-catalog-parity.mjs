@@ -1,5 +1,5 @@
 // The SQL action catalogue (public.audit_action_catalog, seeded in
-// supabase/migrations/20260917020200_audit_substrate.sql) and its TypeScript
+// supabase/migrations/20260924000100_audit_substrate.sql) and its TypeScript
 // mirror (packages/domain/src/audit/catalog.ts) must name the exact same actions.
 // A drift here is exactly the Base44 prototype's "garbage action string" failure
 // mode reappearing one layer up — F-ID-09 §5.1, acceptance criterion 17.
@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url"
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url))
 
-const MIGRATION_PATH = "supabase/migrations/20260917020200_audit_substrate.sql"
+const MIGRATION_PATH = "supabase/migrations/20260924000100_audit_substrate.sql"
 const CATALOG_PATH = "packages/domain/src/audit/catalog.ts"
 
 const migrationSource = await readFile(

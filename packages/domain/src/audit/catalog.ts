@@ -5,7 +5,7 @@ import type {
 
 /**
  * The TypeScript mirror of `public.audit_action_catalog`
- * (`supabase/migrations/20260917020200_audit_substrate.sql` §4). Every action here
+ * (`supabase/migrations/20260924000100_audit_substrate.sql` §4). Every action here
  * must exist there, byte for byte, and vice versa —
  * `scripts/check-audit-catalog-parity.mjs` fails CI when they diverge
  * (F-ID-09 §5.1, acceptance criterion 17).

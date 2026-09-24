@@ -2,7 +2,7 @@
 -- pgTAP · F-ID-09 Part 1 — the audit substrate built on top of 0003's
 -- audit_events / app.tg_audit() / app.log_audit_event() (04_audit_append_only.sql
 -- already proves append-only + owner/admin/teacher read scoping; this file
--- proves what 20260917020200_audit_substrate.sql ADDS: the action catalogue,
+-- proves what 20260924000100_audit_substrate.sql ADDS: the action catalogue,
 -- severity/actor_kind/changed_fields/subject_user_id, the universal secret
 -- deny-list, the free-text-nulling list, the widened subject-of-the-event
 -- read branch, platform-admin cross-workspace read, correlation-id

@@ -4,7 +4,7 @@ import type { AcadigmaSupabaseClient } from "./client"
  * Correlation-id threading (F-ID-09 §5.2, OBSERVABILITY §1.4).
  *
  * The primary mechanism is `app.pre_request()`, a PostgREST `db-pre-request` hook
- * wired by `supabase/migrations/20260917020200_audit_substrate.sql` §9: it copies
+ * wired by `supabase/migrations/20260924000100_audit_substrate.sql` §9: it copies
  * the `x-correlation-id` request header into the `app.correlation_id`
  * transaction-local setting for every statement of ONE PostgREST request, before
  * RLS runs — which is what lets `app.tg_audit()` see it automatically for a
