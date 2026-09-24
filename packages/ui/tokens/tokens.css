@@ -357,16 +357,26 @@
   --popover: #fbfbfa;
   --popover-foreground: #0b0b0b;
   --muted: #e9e9e6;
-  --muted-foreground: #6f6f6f; /* 4.56:1 on background — never below 13px,
-    never use the lighter #a3a3a3 "mid" primitive for text (fails 4.5:1) */
+  /* Opus review (PR #20): the website's literal #6f6f6f is 4.56:1 on
+     --background but only 4.13:1 on --muted/--secondary (#e9e9e6) — below
+     4.5:1, and real 13px semibold text sits on that surface (AttendanceToggle
+     unselected letters, avatar initials, EmptyState's icon label). Darkened
+     to #636363: 5.46:1 on background, 4.94:1 on muted/secondary — script-
+     verified, scripts/check-contrast-tokens.mjs. Never use the lighter
+     #a3a3a3 "mid" primitive for text (fails both). */
+  --muted-foreground: #636363;
   --border: #e2e2df; /* decorative hairline (rows, rules); not a
     1.4.11 UI-component boundary — see scripts/check-contrast-tokens.mjs */
   --border-strong: #d0d0cb; /* grid lines that must read, still decorative */
   --rule: #e2e2df; /* the hairline between rows */
-  --input: #8a8a86; /* deliberately darker than acadigma-website's #d6d6d2
-    (1.32:1) — an unfocused Field has no other way to show its boundary, so
-    this clears WCAG 1.4.11's 3:1 non-text minimum (3.15:1, script-verified);
-    the website is a marketing page and does not carry this bar. */
+  /* Opus review (PR #20): #8a8a86 cleared 3:1 against --background (3.15:1)
+     but not against --muted (2.85:1) — a Field rendered on a muted surface
+     (a sheet, a filter panel) lost its boundary. #808080 clears 3:1 against
+     both --background (3.59:1) and --muted (3.25:1), still deliberately
+     darker than acadigma-website's literal #d6d6d2 (1.32:1/2.85:1 on
+     background/muted) for the same WCAG 1.4.11 reason as before — the
+     website is a marketing page and does not carry this bar. */
+  --input: #808080;
   --ring: #0b0b0b;
 
   /* — brand — ink, not indigo. This is the D-57 override: --primary and the
@@ -476,7 +486,8 @@
      for this Part — see the PR body re: #17. */
   --sidebar: #fbfbfa; /* chalk, distinct from the paper page background */
   --sidebar-foreground: #0b0b0b;
-  --sidebar-muted: #6f6f6f;
+  --sidebar-muted: #636363; /* same fix as --muted-foreground above — also
+    has to clear 4.5:1 on --sidebar-accent (#e9e9e6), not just --sidebar */
   --sidebar-primary: #0b0b0b;
   --sidebar-primary-foreground: #fbfbfa;
   --sidebar-accent: #e9e9e6; /* hover / active row background */

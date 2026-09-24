@@ -38,5 +38,11 @@ export const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
   display: "swap",
   variable: "--font-jetbrains-mono",
+  // No component renders `font-mono` yet (the route error boundary that will
+  // use it — §3.9 — doesn't exist in this Part), so preloading it on every
+  // page would be pure waste, same reasoning as Hind Siliguri above: the
+  // token stays available (bound in tokens.css), the file downloads only
+  // once a page actually paints something in it.
+  preload: false,
   adjustFontFallback: true,
 })

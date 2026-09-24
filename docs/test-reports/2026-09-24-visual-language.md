@@ -14,7 +14,7 @@
 
 ## 1. Scope
 
-**What this Part is.** `packages/ui/tokens/tokens.css` and `packages/ui/globals.css` move from an indigo-primary / amber-accent / dark-navy-sidebar identity to a fully achromatic ink (`#0b0b0b`) / paper (`#f4f4f2`) chrome copied from `acadigma-website`'s `globals.css`, per the owner's instruction that Campus "looks bad, nothing like the website that you built." Attendance status colours, grade-band colours and the chart palette are untouched; `--danger`/`--destructive` is recoloured to the website's literal red. JetBrains Mono is added as `--font-mono` via `next/font`. `button`, `card`, `input` and `auth-card` move to the ink-tinted `shadow-flat` token.
+**What this Part is.** `packages/ui/tokens/tokens.css` and `packages/ui/globals.css` move from an indigo-primary / amber-accent / dark-navy-sidebar identity to a fully achromatic ink (`#0b0b0b`) / paper (`#f4f4f2`) chrome copied from `acadigma-website`'s `globals.css`, per the owner's instruction that Campus "looks bad, nothing like the website that you built." Attendance status colours and grade-band colours are unchanged, in both token value and render — the old fallback never shadowed them (see §1.1). **The chart palette's token values are unchanged, but what renders is not** — the §1.1 cascade fix is what makes tokens.css's real 6-series indigo/rose/amber/teal/violet/green chart palette apply at all, in place of the fallback's stock 5-series shadcn orange/teal/blue; see the correction after §1.1. `--danger`/`--destructive` is recoloured to the website's literal red. `--muted-foreground`/`--sidebar-muted`/`--input` were tightened twice — see §1.1's sibling note and §3's contrast section for the review-driven second pass. JetBrains Mono is added as `--font-mono` via `next/font` (not preloaded — nothing renders it yet). `button`, `card`, `input` and `auth-card` move to the ink-tinted `shadow-flat` token.
 
 **A significant, unplanned finding surfaced and was fixed in this PR** — see §1.1.
 
@@ -41,6 +41,8 @@ While capturing "before" screenshots from a clean build of `main` (commit `cd32c
 **Fix (this PR):** the fallback `:root`/`.dark` block in `packages/ui/globals.css` now lives inside `@layer base`. CSS Cascade Layers give any unlayered rule priority over any layered rule regardless of source order, so tokens.css's real values now always win once the import resolves — which is every real build. Verified by rebuilding and re-probing: `--primary` now measures the token's actual value (`#0b0b0b` in this PR's ink/paper set) rather than the fallback.
 
 **Why this matters beyond D-57:** this bug predates this PR and is independent of the ink/paper decision — it affected the indigo/amber/navy identity exactly the same way. It is a plausible _structural_ contributor to the owner's "looks bad" read: the shipped app was very likely rendering the generic shadcn black-on-white fallback for `--primary`/`--background`/`--sidebar-primary` etc., not the refined indigo/amber/navy system DESIGN-SYSTEM.md describes, this whole time. This PR fixes the mechanism; it does not attempt to verify what every other page looked like before the fix (out of scope — the fix makes that question moot going forward).
+
+**Correction (Opus review, PR #20): the chart palette is not actually "untouched."** §1 above originally claimed the chart palette was unaffected by this PR, matching attendance and grade bands. That conflated two different things: `tokens.css`'s `--chart-1`…`--chart-6` hex/oklch _values_ genuinely were not edited — but the review pointed out that this PR's own §1.1 fix is what makes them render at all. Before the fix, `packages/ui/globals.css`'s old fallback declared its own `--chart-1`…`--chart-5` (stock shadcn orange `oklch(0.646 0.222 41.116)`, teal, blue, yellow, orange-pink — 5 series only) and, per §1.1's cascade bug, those silently won over tokens.css's real, validated 6-series palette (indigo/rose/amber/teal/violet/green) for every series but the sixth. So a chart rendered before this PR would have shown the wrong hues for series 1–5 and would have had no sixth series colour reserved at all. After this PR, the same `--chart-1`…`--chart-6` values in tokens.css finally reach the page. "Token value unchanged" was true; "renders the same as before this PR" was false, and the original wording did not draw that distinction. Attendance (`--att-*`) and grade bands (`--grade-*`) are genuinely unaffected either way — the old fallback never declared those variable names, so the cascade bug never had anything to shadow there.
 
 ---
 
@@ -116,61 +118,88 @@ Repo-wide (unchanged by this PR — no new source lines that need coverage; `pac
 
 ### Contrast verification (`node scripts/check-contrast-tokens.mjs`)
 
-Every text/background and UI-boundary pair the new tokens create, computed via WCAG 2.1 relative luminance (not estimated). Full output (21 checks, both themes, all pass):
+**Rewritten after Opus review (PR #20).** The script now parses `#hex`/`oklch()` values directly out of `packages/ui/tokens/tokens.css` (brace-counted block extraction, plus an OKLab→linear-sRGB conversion for `oklch()`) instead of a hand-copied table, so it cannot silently drift from the file it checks — the exact class of bug that let the first cut ship two real failures (below). It also checks more surfaces: `muted-foreground` against `--muted`/`--secondary`/`--sidebar-accent` (not just `--background`/`--card`), `input` against `--muted`, and every `palette-*` override's `--primary` against the `--primary-foreground` it is actually painted under.
+
+**Two real failures the first cut missed, both fixed:**
+
+- `--muted-foreground`/`--sidebar-muted` (`#6f6f6f`) cleared 4.5:1 against `--background` (4.56:1) but only reached **4.13:1 against `--muted`/`--secondary`/`--sidebar-accent`** (`#e9e9e6`) — below threshold, and real 13px-semibold text sits on exactly that surface (`AttendanceToggle`'s unselected letters, avatar initials, `EmptyState`'s icon label). Darkened to `#636363`.
+- `--input` (`#8a8a86`) cleared 3:1 against `--background` (3.15:1) but only reached **2.85:1 against `--muted`** — below the 3:1 UI-boundary minimum, so a `Field` rendered inside a sheet or filter panel lost its edge. Darkened to `#808080`.
+
+Full output (28 checks × 2 themes + 10 palette checks, all pass):
 
 **Light**
 
-| Pair                                          | Ratio   | Threshold | Result                                                |
-| --------------------------------------------- | ------- | --------- | ----------------------------------------------------- |
-| foreground / background                       | 17.87:1 | 4.5:1     | PASS                                                  |
-| card-foreground / card                        | 19.01:1 | 4.5:1     | PASS                                                  |
-| popover-foreground / popover                  | 19.01:1 | 4.5:1     | PASS                                                  |
-| muted-foreground / background                 | 4.56:1  | 4.5:1     | PASS                                                  |
-| muted-foreground / card                       | 4.85:1  | 4.5:1     | PASS                                                  |
-| primary-foreground / primary (button text)    | 17.87:1 | 4.5:1     | PASS                                                  |
-| primary-ink / background                      | 17.87:1 | 4.5:1     | PASS                                                  |
-| secondary-foreground / secondary              | 16.18:1 | 4.5:1     | PASS                                                  |
-| accent-foreground / accent                    | 16.18:1 | 4.5:1     | PASS                                                  |
-| danger-foreground / danger                    | 6.57:1  | 4.5:1     | PASS                                                  |
-| danger-ink / danger-soft                      | 8.06:1  | 4.5:1     | PASS                                                  |
-| sidebar-foreground / sidebar                  | 19.01:1 | 4.5:1     | PASS                                                  |
-| sidebar-muted / sidebar                       | 4.85:1  | 4.5:1     | PASS                                                  |
-| sidebar-primary-foreground / sidebar-primary  | 19.01:1 | 4.5:1     | PASS                                                  |
-| sidebar-accent-foreground / sidebar-accent    | 16.18:1 | 4.5:1     | PASS                                                  |
-| input / background (3:1 boundary)             | 3.15:1  | 3:1       | PASS                                                  |
-| input / card (3:1 boundary)                   | 3.35:1  | 3:1       | PASS                                                  |
-| ring / background (focus ring)                | 17.87:1 | 3:1       | PASS                                                  |
-| ring / card (focus ring)                      | 19.01:1 | 3:1       | PASS                                                  |
-| danger (fill) / card (icon/border use)        | 6.35:1  | 3:1       | PASS                                                  |
-| border / background (hairline, informational) | 1.18:1  | —         | informational only, see §2.6 note in DESIGN-SYSTEM.md |
+| Pair                                                      | Ratio   | Threshold | Result                                                |
+| --------------------------------------------------------- | ------- | --------- | ----------------------------------------------------- |
+| foreground / background                                   | 17.87:1 | 4.5:1     | PASS                                                  |
+| card-foreground / card                                    | 19.01:1 | 4.5:1     | PASS                                                  |
+| popover-foreground / popover                              | 19.01:1 | 4.5:1     | PASS                                                  |
+| muted-foreground / background                             | 5.46:1  | 4.5:1     | PASS                                                  |
+| muted-foreground / card                                   | 5.80:1  | 4.5:1     | PASS                                                  |
+| muted-foreground / muted                                  | 4.94:1  | 4.5:1     | PASS                                                  |
+| muted-foreground / secondary                              | 4.94:1  | 4.5:1     | PASS                                                  |
+| muted-foreground / sidebar-accent                         | 4.94:1  | 4.5:1     | PASS                                                  |
+| primary-foreground / primary (button text)                | 17.87:1 | 4.5:1     | PASS                                                  |
+| primary-ink / background                                  | 17.87:1 | 4.5:1     | PASS                                                  |
+| secondary-foreground / secondary                          | 16.18:1 | 4.5:1     | PASS                                                  |
+| accent-foreground / accent                                | 16.18:1 | 4.5:1     | PASS                                                  |
+| danger-foreground / danger                                | 6.57:1  | 4.5:1     | PASS                                                  |
+| danger-ink / danger-soft                                  | 8.06:1  | 4.5:1     | PASS                                                  |
+| sidebar-foreground / sidebar                              | 19.01:1 | 4.5:1     | PASS                                                  |
+| sidebar-muted / sidebar                                   | 5.80:1  | 4.5:1     | PASS                                                  |
+| sidebar-muted / sidebar-accent                            | 4.94:1  | 4.5:1     | PASS                                                  |
+| sidebar-primary-foreground / sidebar-primary              | 19.01:1 | 4.5:1     | PASS                                                  |
+| sidebar-accent-foreground / sidebar-accent                | 16.18:1 | 4.5:1     | PASS                                                  |
+| input / background (3:1 boundary)                         | 3.59:1  | 3:1       | PASS                                                  |
+| input / card (3:1 boundary)                               | 3.81:1  | 3:1       | PASS                                                  |
+| input / muted (3:1 boundary, e.g. a Field inside a sheet) | 3.25:1  | 3:1       | PASS                                                  |
+| ring / background (focus ring)                            | 17.87:1 | 3:1       | PASS                                                  |
+| ring / card (focus ring)                                  | 19.01:1 | 3:1       | PASS                                                  |
+| danger (fill) / card (icon/border use)                    | 6.35:1  | 3:1       | PASS                                                  |
+| border / background (hairline, informational)             | 1.18:1  | —         | informational only, see §2.6 note in DESIGN-SYSTEM.md |
+| primary-foreground / palette-emerald primary              | 5.57:1  | 4.5:1     | PASS                                                  |
+| primary-foreground / palette-violet primary               | 6.73:1  | 4.5:1     | PASS                                                  |
+| primary-foreground / palette-rose primary                 | 6.75:1  | 4.5:1     | PASS                                                  |
+| primary-foreground / palette-bronze primary               | 6.35:1  | 4.5:1     | PASS                                                  |
+| primary-foreground / palette-cyan primary                 | 5.50:1  | 4.5:1     | PASS                                                  |
 
 **Dark**
 
-| Pair                                          | Ratio   | Threshold | Result             |
-| --------------------------------------------- | ------- | --------- | ------------------ |
-| foreground / background                       | 17.87:1 | 4.5:1     | PASS               |
-| card-foreground / card                        | 17.01:1 | 4.5:1     | PASS               |
-| popover-foreground / popover                  | 17.01:1 | 4.5:1     | PASS               |
-| muted-foreground / background                 | 6.01:1  | 4.5:1     | PASS               |
-| muted-foreground / card                       | 5.72:1  | 4.5:1     | PASS               |
-| primary-foreground / primary (button text)    | 17.87:1 | 4.5:1     | PASS               |
-| primary-ink / background                      | 17.87:1 | 4.5:1     | PASS               |
-| secondary-foreground / secondary              | 15.48:1 | 4.5:1     | PASS               |
-| accent-foreground / accent                    | 15.48:1 | 4.5:1     | PASS               |
-| danger-foreground / danger                    | 7.06:1  | 4.5:1     | PASS               |
-| danger-ink / danger-soft                      | 9.72:1  | 4.5:1     | PASS               |
-| sidebar-foreground / sidebar                  | 16.43:1 | 4.5:1     | PASS               |
-| sidebar-muted / sidebar                       | 5.52:1  | 4.5:1     | PASS               |
-| sidebar-primary-foreground / sidebar-primary  | 17.87:1 | 4.5:1     | PASS               |
-| sidebar-accent-foreground / sidebar-accent    | 14.10:1 | 4.5:1     | PASS               |
-| input / background (3:1 boundary)             | 3.69:1  | 3:1       | PASS               |
-| input / card (3:1 boundary)                   | 3.52:1  | 3:1       | PASS               |
-| ring / background (focus ring)                | 17.87:1 | 3:1       | PASS               |
-| ring / card (focus ring)                      | 17.01:1 | 3:1       | PASS               |
-| danger (fill) / card (icon/border use)        | 6.72:1  | 3:1       | PASS               |
-| border / background (hairline, informational) | 1.25:1  | —         | informational only |
+| Pair                                                      | Ratio   | Threshold | Result             |
+| --------------------------------------------------------- | ------- | --------- | ------------------ |
+| foreground / background                                   | 17.87:1 | 4.5:1     | PASS               |
+| card-foreground / card                                    | 17.01:1 | 4.5:1     | PASS               |
+| popover-foreground / popover                              | 17.01:1 | 4.5:1     | PASS               |
+| muted-foreground / background                             | 6.01:1  | 4.5:1     | PASS               |
+| muted-foreground / card                                   | 5.72:1  | 4.5:1     | PASS               |
+| muted-foreground / muted                                  | 5.20:1  | 4.5:1     | PASS               |
+| muted-foreground / secondary                              | 5.20:1  | 4.5:1     | PASS               |
+| muted-foreground / sidebar-accent                         | 4.74:1  | 4.5:1     | PASS               |
+| primary-foreground / primary (button text)                | 17.87:1 | 4.5:1     | PASS               |
+| primary-ink / background                                  | 17.87:1 | 4.5:1     | PASS               |
+| secondary-foreground / secondary                          | 15.48:1 | 4.5:1     | PASS               |
+| accent-foreground / accent                                | 15.48:1 | 4.5:1     | PASS               |
+| danger-foreground / danger                                | 7.06:1  | 4.5:1     | PASS               |
+| danger-ink / danger-soft                                  | 9.72:1  | 4.5:1     | PASS               |
+| sidebar-foreground / sidebar                              | 16.43:1 | 4.5:1     | PASS               |
+| sidebar-muted / sidebar                                   | 5.52:1  | 4.5:1     | PASS               |
+| sidebar-muted / sidebar-accent                            | 4.74:1  | 4.5:1     | PASS               |
+| sidebar-primary-foreground / sidebar-primary              | 17.87:1 | 4.5:1     | PASS               |
+| sidebar-accent-foreground / sidebar-accent                | 14.10:1 | 4.5:1     | PASS               |
+| input / background (3:1 boundary)                         | 3.69:1  | 3:1       | PASS               |
+| input / card (3:1 boundary)                               | 3.52:1  | 3:1       | PASS               |
+| input / muted (3:1 boundary, e.g. a Field inside a sheet) | 3.20:1  | 3:1       | PASS               |
+| ring / background (focus ring)                            | 17.87:1 | 3:1       | PASS               |
+| ring / card (focus ring)                                  | 17.01:1 | 3:1       | PASS               |
+| danger (fill) / card (icon/border use)                    | 6.72:1  | 3:1       | PASS               |
+| border / background (hairline, informational)             | 1.25:1  | —         | informational only |
+| primary-foreground / palette-emerald primary              | 6.69:1  | 4.5:1     | PASS               |
+| primary-foreground / palette-violet primary               | 5.92:1  | 4.5:1     | PASS               |
+| primary-foreground / palette-rose primary                 | 5.86:1  | 4.5:1     | PASS               |
+| primary-foreground / palette-bronze primary               | 6.16:1  | 4.5:1     | PASS               |
+| primary-foreground / palette-cyan primary                 | 6.62:1  | 4.5:1     | PASS               |
 
-`--input` deliberately deviates from acadigma-website's literal `#d6d6d2` (which measures 1.32:1/1.54:1 — below 3:1) to clear WCAG 1.4.11 for an unfocused form field's own boundary; see DECISION-LOG D-57 and the tokens.css comment at `--input`.
+`--input` deliberately deviates from acadigma-website's literal `#d6d6d2` (which measures 1.32:1/2.85:1/1.54:1 against background/muted/dark-background — all below 3:1) to clear WCAG 1.4.11 for an unfocused form field's own boundary against every surface it can sit on; see DECISION-LOG D-57 and the tokens.css comment at `--input`.
 
 ### Screenshots
 
@@ -184,6 +213,8 @@ Before = a clean build of `main` @ `cd32ca8` (the commit this branch forked from
 | `/login` after   | `assets/2026-09-24-visual-language/after-login-360x800.png`   | `assets/2026-09-24-visual-language/after-login-1280x800.png`   |
 
 **Reading the before/after pair honestly:** because of the §1.1 cascade bug, the "before" screenshots already show a near-black/white look, not the indigo/amber/navy DESIGN-SYSTEM.md describes — the bug was masking that identity before this PR too. The real, visible difference this PR makes is smaller than "indigo → ink" in the screenshots (both are already achromatic), but is genuine: the _intended_ token values now match what's rendered (provable — see the `getComputedStyle` probe in §1.1), `--input`'s boundary is now deliberately visible and WCAG-compliant, shadows are ink-tinted, radius steps moved, and `--danger` now matches acadigma-website's literal red rather than an independently-derived one. The `/login` and `/design` pages were already close to ink/paper by accident; a page that used `--sidebar-primary` (amber before this PR, in the token source though never rendered) or `--accent` for actual amber decoration would have shown the retirement of that pattern more visibly, but no such page exists in this repo yet outside `apps/web/app/(school)/`, which is out of scope.
+
+**"after" screenshots retaken (Opus review, PR #20).** The `--muted-foreground`/`--input` fixes above change what these two pages actually paint — `/login`'s input borders are now visibly darker (`#808080` vs the retired `#8a8a86`), and both pages' muted text (helper copy, the language toggle) is a step darker (`#636363` vs `#6f6f6f`). All four `after-*` files were regenerated from a fresh build against the fixed tokens; `before-*` is untouched (still `main` @ `cd32ca8`, from before D-57 existed at all).
 
 <!-- Synthetic /design placeholder data only. No real student, guardian or staff data. -->
 

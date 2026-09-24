@@ -55,12 +55,17 @@
     --secondary: #e9e9e6;
     --secondary-foreground: #0b0b0b;
     --muted: #e9e9e6;
-    --muted-foreground: #6f6f6f;
+    --muted-foreground: #636363;
     --accent: #e9e9e6;
     --accent-foreground: #0b0b0b;
     --destructive: #b42318;
+    /* `--color-destructive` (below) reads `--danger`, matching tokens.css's
+       own alias, so this fallback also needs a `--danger` (identical value
+       to `--destructive` above) for the momentary window before the real
+       tokens.css lands, where only this @layer base block exists. */
+    --danger: #b42318;
     --border: #e2e2df;
-    --input: #8a8a86;
+    --input: #808080;
     --ring: #0b0b0b;
 
     /* Chart fallback stays the shadcn default categorical hues — tokens.css's
@@ -97,6 +102,7 @@
     --accent: #1c1c1c;
     --accent-foreground: #f4f4f2;
     --destructive: #f97066;
+    --danger: #f97066;
     --border: #232323;
     --input: #6b6b6b;
     --ring: #f4f4f2;
@@ -134,7 +140,13 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
+  /* Reads --danger, not the fallback-only --destructive (Opus review, PR #20):
+     tokens.css's own @theme inline block already maps `--color-destructive:
+     var(--danger)` ("shadcn alias"), so this file's `@theme inline` block —
+     which is textually later and therefore wins for any custom property both
+     declare — must point at the same source, or --color-destructive silently
+     stops tracking tokens.css the moment their hex values ever diverge. */
+  --color-destructive: var(--danger);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

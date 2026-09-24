@@ -228,12 +228,25 @@ every `--sidebar-*` token are now literal, achromatic hex copied from
 acadigma-website's `globals.css` — `--primary`/`--foreground` ink `#0b0b0b` on
 `--background`/paper `#f4f4f2`, `--card`/chalk `#fbfbfa`, `--sidebar` chalk
 with ink text (not navy). `--danger` is recoloured to the website's literal
-`#b42318` / dark `#f97066`. `--muted-foreground` `#6f6f6f` measures 4.56:1 on
-`--background` — never use the website's lighter `#a3a3a3` primitive for
-text, and never below 13px. `--input` deliberately does **not** match the
-website's literal `#d6d6d2` — see §2.6. Attendance (§2.4), grade bands (§2.5)
-and the chart palette (§6.1) are unchanged; `--success`/`--warning`/`--info`
-in §2.3 are also unchanged — out of this Part's scope. Radius gets the
+`#b42318` / dark `#f97066`. `--muted-foreground` `#636363` measures 5.46:1 on
+`--background` (Opus review, PR #20: the website's literal `#6f6f6f` cleared
+4.5:1 on `--background` but not on `--muted`/`--secondary`, where real 13px
+semibold text sits — `AttendanceToggle`'s unselected letters, avatar
+initials) — never use the website's lighter `#a3a3a3` primitive for text,
+and never below 13px. `--input` deliberately does **not** match the
+website's literal `#d6d6d2` — see §2.6. Attendance (§2.4) and grade bands
+(§2.5) keep their token _values_ unchanged by D-57 — the old
+`packages/ui/globals.css` fallback never declared `--att-*`/`--grade-*` at
+all, so the §1.1 cascade-layer bug never shadowed them and they always
+rendered correctly. **The chart palette (§6.1) is the one place
+value-unchanged is not the same as render-unchanged**: the fallback's own
+`--chart-1`…`--chart-5` (stock shadcn orange/teal/blue, 5 series) were
+winning over tokens.css's real `--chart-1`…`--chart-6`
+(indigo/rose/amber/teal/violet/green) for every series but the sixth, so
+fixing §1.1 changes what a chart actually looks like even though no chart
+hex in tokens.css moved — see the test report's before/after evidence.
+`--success`/`--warning`/`--info` in §2.3 are also unchanged in value — out of
+this Part's scope. Radius gets the
 website's multipliers on the same `0.75rem` base (§2.6); a new
 `--ease-out-expo` `cubic-bezier(.16,1,.3,1)` (§2.7) is available for
 entrances; JetBrains Mono is now `--font-mono` (§1.6). Full reasoning:
@@ -370,13 +383,17 @@ express is a split design.
 website's `#d6d6d2` measures 1.32:1 against its own `#f4f4f2` background —
 fine for a marketing page, where an input's shape and label carry the
 boundary. An unfocused `Field` here has no other way to show its edge, so
-`--input` is darkened to `#8a8a86` light / `#6b6b6b` dark, clearing WCAG
-1.4.11's 3:1 non-text minimum (3.15:1 / 3.69:1 against `--background`,
-script-verified — see `scripts/check-contrast-tokens.mjs`). `--border` and
-`--border-strong` (hairline row/table dividers, not a form control's own
-edge) keep the website's literal, sub-3:1 values, consistent with how this
-token set has always treated a divider as decorative rather than a
-1.4.11-scoped UI-component boundary.
+`--input` is darkened to `#808080` light / `#6b6b6b` dark, clearing WCAG
+1.4.11's 3:1 non-text minimum against every real surface a `Field` can sit
+on — `--background` (3.59:1 / 3.69:1), `--card` (3.81:1 / 3.52:1) **and**
+`--muted` (3.25:1 / 3.20:1, e.g. a form inside a sheet or filter panel) —
+script-verified, see `scripts/check-contrast-tokens.mjs`. (Opus review, PR
+#20: the first cut, `#8a8a86`, cleared `--background` at 3.15:1 but fell to
+2.85:1 against `--muted` — checking only one surface missed the second.)
+`--border` and `--border-strong` (hairline row/table dividers, not a form
+control's own edge) keep the website's literal, sub-3:1 values, consistent
+with how this token set has always treated a divider as decorative rather
+than a 1.4.11-scoped UI-component boundary.
 
 ### 2.7 Motion
 
