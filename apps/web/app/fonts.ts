@@ -17,7 +17,7 @@ export const inter = Inter({
 
 export const hindSiliguri = Hind_Siliguri({
   subsets: ["bengali", "latin"],
-  weight: ["400", "600"],
+  weight: ["400", "500", "600"],
   display: "swap",
   variable: "--font-hind-siliguri",
   // The Bengali subset must download only when a Bengali codepoint is painted
