@@ -30,7 +30,7 @@
 --       "verb the role holds no GRANT for at all" case from the README.
 -- =====================================================================
 begin;
-select plan(64);
+select plan(65);
 
 create schema if not exists tests;
 
@@ -499,17 +499,18 @@ select is((select count(*)::int from attempted), 0,
           'notifications: owner.a updating teacher.a''s notification affects ZERO rows...');
 select tests.logout();
 
+-- Counted, not read: a missing row must fail this too, not look "unread".
 select is(
-  (select read_at from public.notifications where id = 900002),
-  null, '...and it is still unread — untouched by the attempt');
+  (select count(*)::int from public.notifications where id = 900002 and read_at is null),
+  1, '...and it still exists, still unread — untouched by the attempt');
 
 -- teacher.a holds UPDATE on their OWN row (900002), but the guard trigger
 -- refuses any column beyond read_at/archived_at, even for the recipient.
 select tests.login('aaaaaaaa-0000-0000-0000-000000000003');   -- teacher.a
 select throws_ok(
   $$update public.notifications set title = 'Hijacked title' where id = 900002$$,
-  '42501', null,
-  'notifications: even the recipient cannot rewrite title/body/event_type/workspace_id on their own row');
+  '42501', 'only read_at and archived_at may be updated on a notification',
+  'notifications: even the recipient cannot rewrite title/body/event_type/workspace_id on their own row (the guard trigger, not some other 42501)');
 
 select lives_ok(
   $$update public.notifications set read_at = now() where id = 900002$$,
@@ -528,6 +529,12 @@ select tests.logout();
 select is(
   (select count(*)::int from public.notifications where id = 900001),
   1, '...and owner.a''s notification still exists, untouched');
+
+-- lives_ok above would also pass if RLS silently matched zero rows; prove the
+-- recipient's mark-as-read really persisted (read as postgres).
+select is(
+  (select read_at is not null from public.notifications where id = 900002),
+  true, 'notifications: the recipient''s mark-as-read actually persisted');
 
 select * from finish();
 rollback;
