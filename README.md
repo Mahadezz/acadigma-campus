@@ -46,7 +46,7 @@ git clone https://github.com/Mahadezz/acadigma-campus.git
 cd acadigma-campus
 pnpm install
 
-Copy-Item .env.example .env.local   # then fill in the blanks
+Copy-Item .env.example apps\web\.env.local   # then fill in the blanks
 pnpm dev                            # http://localhost:3000
 ```
 
