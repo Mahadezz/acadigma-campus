@@ -239,7 +239,7 @@ select throws_ok(
   $$insert into public.workspaces (type, name, slug, owner_id, created_by)
     values ('personal', 'Sneaky Personal', 'sneaky-personal-f1050001',
             'f1050001-0000-0000-0000-000000000001', 'f1050001-0000-0000-0000-000000000001')$$,
-  '42501', null,
+  '42501', 'new row violates row-level security policy for table "workspaces"',
   'an authenticated client cannot insert a personal workspace directly — RLS requires type=''school''');
 
 -- =====================================================================
