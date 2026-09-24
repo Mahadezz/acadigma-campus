@@ -199,6 +199,7 @@ select throws_ok(
        set draft = jsonb_build_object('blob', repeat('x', 40000))
      where user_id = 'f1050101-0000-0000-0000-000000000001'$$,
   '23514',
+  'new row for relation "onboarding_progress" violates check constraint "onboarding_progress_draft_check"',
   'an oversized draft is rejected by the CHECK constraint (23514), as the row''s own authenticated owner');
 
 select tests.logout();
