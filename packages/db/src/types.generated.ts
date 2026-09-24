@@ -668,6 +668,44 @@ export type Database = {
           },
         ]
       }
+      onboarding_progress: {
+        Row: {
+          completed_at: string | null
+          draft: Json | null
+          path: Database["public"]["Enums"]["onboarding_path"]
+          started_at: string
+          step: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          draft?: Json | null
+          path?: Database["public"]["Enums"]["onboarding_path"]
+          started_at?: string
+          step?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          draft?: Json | null
+          path?: Database["public"]["Enums"]["onboarding_path"]
+          started_at?: string
+          step?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_data_map: {
         Row: {
           category: string
@@ -1834,6 +1872,7 @@ export type Database = {
         | "revoked"
       member_role: "owner" | "admin" | "teacher" | "staff" | "parent"
       member_status: "pending" | "active" | "removed"
+      onboarding_path: "undecided" | "create_school" | "join_school"
       subscription_status:
         | "trialing"
         | "active"
@@ -2001,6 +2040,7 @@ export const Constants = {
       ],
       member_role: ["owner", "admin", "teacher", "staff", "parent"],
       member_status: ["pending", "active", "removed"],
+      onboarding_path: ["undecided", "create_school", "join_school"],
       subscription_status: [
         "trialing",
         "active",

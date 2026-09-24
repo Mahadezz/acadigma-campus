@@ -93,6 +93,7 @@ export default defineConfig({
           root: "./apps/web",
           environment: "jsdom",
           include: ["{app,lib,components}/**/*.test.{ts,tsx}"],
+          setupFiles: ["./test/rtl-cleanup.ts"],
         },
         resolve: {
           alias: [
@@ -100,6 +101,14 @@ export default defineConfig({
             { find: /^@\//, replacement: webRoot },
           ],
         },
+        // apps/web's own tsconfig sets `"jsx": "preserve"` (Next compiles
+        // JSX itself, untouched by this file); vitest/esbuild would
+        // otherwise fall back to the classic transform for this project's
+        // .tsx files, which needs `React` in scope in every component —
+        // unlike the "ui" project below, whose tsconfig already says
+        // `"jsx": "react-jsx"`. Scoped to this one project only; Next's real
+        // build never reads this config.
+        esbuild: { jsx: "automatic" },
       },
       {
         test: {
