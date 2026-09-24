@@ -8,7 +8,7 @@
  * this repo at all — Next.js resolves the literal string via its own
  * webpack/Turbopack alias at build time, which vitest does not go through.
  *
- * `vitest.workspace.ts` aliases `"server-only"` to this file for the `web`
- * project only; it never touches the real Next.js build.
+ * `vitest.config.ts` (`test.projects`) aliases `"server-only"` to this file
+ * for the `web` project only; it never touches the real Next.js build.
  */
 export {}
