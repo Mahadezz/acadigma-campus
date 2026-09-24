@@ -114,7 +114,7 @@ Earnings state machine: `pending` (sale) → `available` (after 7 days, unless r
 
 Plans live in a `plans` table (limits + prices), editable from the platform console without deploy. Placeholder matrix is in `docs/product/PRODUCT-DECISIONS.md` §Billing.
 
-## D-19 — Supabase project · ACCEPTED · 2026-09-17
+## D-19 — Supabase project · SUPERSEDED by D-53 (2026-09-24) · 2026-09-17
 
 `acadigma-suite`, ref `bvqzhrvcrxebawjusrxk`, region ap-south-1, URL `https://bvqzhrvcrxebawjusrxk.supabase.co`. Publishable key `sb_publishable_6POCbYjBAcrSiT1AlCPSVQ_SG3ohfsL` (safe for browser). Service-role key is never written to disk outside `.env.local`.
 
@@ -327,3 +327,13 @@ Admins see **scheduled periods only**; workload variance is teacher-private by d
 **Context (F-ID-01 build):** Supabase exposes only the `public` schema (and schemas explicitly added to PostgREST) as RPC. Functions in `app.*` — designed as the SECURITY DEFINER helper layer — cannot be called from the browser or from `supabase-js`, so `app.redeem_invitation`, `app.request_join_with_code` and the auth throttle helpers were unreachable as written.
 **Decision:** every function a client must call gets a thin `public.<name>()` wrapper that validates arguments and delegates to the `app.*` implementation; `public` wrappers are the only functions granted `EXECUTE` to `authenticated`/`anon`. `app.*` keeps the logic, is granted to no client role, and is the only layer tests target for behaviour. RLS helpers used inside policies remain in `app`. Each feature spec that names an RPC (F-ID-03, F-ID-04, F-CM-08 …) must list its `public` wrapper.
 **Why:** keeps the security-definer surface auditable and the PostgREST surface minimal; the alternative (exposing `app` to PostgREST) would publish every helper.
+
+## D-53 — Campus moves to its own Supabase project on a separate account · ACCEPTED · 2026-09-24
+
+> Numbering note: D-51 (PR #6, audit) and D-52 (PR #12, tenancy follow-ups) are on open PRs at the time of writing. This entry takes the next number after both.
+
+**Context:** the owner created a separate Supabase account (organisation `Acadigma Suite`) for the Campus app. The old project `acadigma-suite` (`bvqzhrvcrxebawjusrxk`) never had the Campus migrations applied (OQ-26 secrets were never set), so it holds only the marketing site's `public.waitlist` table.
+
+**Decision:** Campus uses project **`Acadigma Campus`**, ref **`kekfmibwjejdhxjkmezo`**, region ap-south-1 (same as before), URL `https://kekfmibwjejdhxjkmezo.supabase.co`, publishable key `sb_publishable_VbUqiEvQiuObUZMf5IGYOA_P_EiiyGy` (safe for browser). The service-role/secret key is never written to disk outside `apps/web/.env.local`, Vercel and GitHub secrets. D-20 (one project for dev and prod until launch) still applies, to this project. The marketing website **stays** on the old project for its waitlist; the two apps no longer share a database.
+
+**Consequences:** Vercel and Claude Code keep the owner's existing accounts; only Supabase changed. Every dashboard-only Supabase setting must be (re)applied to the new project — `supabase/config.toml` auth settings via `supabase config push`, plus the dashboard items in OWNER-QUESTIONS (OQ-25 recovery email template, breached-password protection, SMTP, redirect URLs). Historical test reports keep the old ref because that is what they ran against.

@@ -230,7 +230,7 @@ The CLI is a dev dependency, never a global install. Always `pnpm supabase` (it 
 
 ```powershell
 pnpm supabase login                       # once; stores SUPABASE_ACCESS_TOKEN in the CLI profile
-pnpm supabase link --project-ref bvqzhrvcrxebawjusrxk
+pnpm supabase link --project-ref kekfmibwjejdhxjkmezo
 pnpm supabase branches list               # the dev branch you point local dev at
 ```
 
@@ -279,11 +279,11 @@ First Playwright run needs browsers: `pnpm exec playwright install --with-deps c
 | Variable                                               | Where it is set            | Exposed to browser | Purpose                                                                |
 | ------------------------------------------------------ | -------------------------- | ------------------ | ---------------------------------------------------------------------- |
 | `NEXT_PUBLIC_APP_URL`                                  | local, Vercel, CI          | yes                | Absolute base URL for links, emails, OAuth returns                     |
-| `NEXT_PUBLIC_SUPABASE_URL`                             | local, Vercel, CI          | yes                | `https://bvqzhrvcrxebawjusrxk.supabase.co` (dev branch URL locally)    |
+| `NEXT_PUBLIC_SUPABASE_URL`                             | local, Vercel, CI          | yes                | `https://kekfmibwjejdhxjkmezo.supabase.co` (dev branch URL locally)    |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`                 | local, Vercel, CI          | yes                | Anon/publishable key; RLS-protected reads + Realtime only              |
 | `SUPABASE_SERVICE_ROLE_KEY`                            | local, Vercel (server), CI | **never**          | Webhooks, cron, reviewed admin ops; only via `withServiceRole(reason)` |
 | `SUPABASE_DB_URL`                                      | local, CI                  | no                 | Direct Postgres connection for `db:test` / pgTAP                       |
-| `SUPABASE_PROJECT_REF`                                 | local, CI                  | no                 | `bvqzhrvcrxebawjusrxk`                                                 |
+| `SUPABASE_PROJECT_REF`                                 | local, CI                  | no                 | `kekfmibwjejdhxjkmezo`                                                 |
 | `SUPABASE_ACCESS_TOKEN`                                | CLI profile, GH secret     | no                 | CLI auth for branch + migration operations                             |
 | `SUPABASE_DB_PASSWORD`                                 | GH secret                  | no                 | Migration promotion on merge to `main`                                 |
 | `ANTHROPIC_API_KEY`                                    | local, Vercel (server)     | **never**          | `adapters/ai`; server only, after credit reservation                   |
