@@ -19,7 +19,14 @@ Concurrency: `group: ${{ github.workflow }}-${{ github.ref }}`, `cancel-in-progr
 
 Draft PRs run every job except `e2e` and `lighthouse` — the expensive ones start when the PR is marked ready. That keeps the "push on the first commit" habit (HANDBOOK §2) cheap.
 
-Default permissions are `contents: read`. Jobs that need more declare it locally (`pull-requests: write` for the report comment, `id-token: write` where OIDC is used). No workflow gets blanket write.
+**Job skipping (D-70).** A first job, `changes`, diffs the PR against its base with a plain `git diff --name-only <base>...HEAD` (no third-party action) and outputs two booleans: `db` (`supabase/**` or `.github/workflows/**` changed) and `app` (`apps/**`, `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig*`, `.github/workflows/**` or `scripts/**` changed). Neither true means the PR is docs-only. `push` to `main` and `merge_group` always set both true — those runs are never partial. Everything downstream reads these outputs instead of recomputing the diff:
+
+- `lint`, `typecheck`, `unit`, `contracts`, `build`, `security` run when `app` or `db` is true; skipped for a docs-only PR.
+- `db` runs only when `db` is true.
+- `e2e`, `lighthouse` run only on `pull_request` (never `push` to `main` — they already ran on the PR that merged), never on a draft, and only when `app` or `db` is true. Their `needs` include `build` (and `db` for `e2e`); because a **skipped** upstream job would otherwise auto-skip anything that needs it, their `if` checks `needs.build.result == 'success'` (and, for `e2e`, `needs.db.result` is `'success'` **or** `'skipped'`) explicitly, so a docs-untouched `db` job doesn't take `e2e` down with it.
+- `changeset`, `docs-sync`, `report` and `guard` are unaffected — they either run unconditionally on every PR/push or already do their own contextual pass/fail (`changeset`/`docs-sync` pass automatically for a docs-only diff; see §2.10-2.11).
+
+A **skipped** job reports as a passing check to GitHub, so the required-checks list (§3) stays green without any branch-protection change. `report`'s `needs.<job>.result` already renders `skipped` with its own icon (⏭️), so a run with several skipped jobs still produces a correct summary comment.
 
 ---
 
@@ -72,16 +79,17 @@ Outputs consumed by later jobs: the store cache key, and a `changed` matrix (`ap
 
 ### 2.3 `db` → **`CI / db`**
 
-The authorization gate. Runs against a disposable **Postgres 17 service container**, not the Supabase dev branch — branching needs the Supabase Pro plan, which is deferred until launch (D-20).
+The authorization gate. Runs only when the `changes` job's `db` output is true (§1). Runs against a disposable **Postgres 17 service container**, not the Supabase dev branch — branching needs the Supabase Pro plan, which is deferred until launch (D-20).
 
 1. **Migration append-only check** (PRs only): `scripts/check-migrations-append-only.mjs` verifies every file in `supabase/migrations` is new-only relative to `origin/<base-ref>` (no edits to already-applied migrations — forward-only is checked mechanically, not trusted). Fails with the offending filename.
-2. pgTAP is installed **inside the service container** (`apt-get install postgresql-17-pgtap` against the official `postgres:17` image); `psql` and `pg_prove` (`libtap-parser-sourcehandler-pgtap-perl`) are installed on the runner.
-3. `supabase/ci/bootstrap.sql` creates the Supabase-shaped roles and schemas the migrations expect — **including Supabase's default function-EXECUTE grant** (D-54): `alter default privileges for role postgres in schema public grant execute on functions to anon, authenticated, service_role`, matching what the Supabase platform runs once when a project is created. A plain `postgres:17` container has no such default, so without this line a migration that grants a function to the wrong role — or forgets a `revoke`/grant entirely — passes CI's pgTAP grant assertions and is only wrong on the real project. `supabase/tests/12_function_grants_invariant.sql` is the standing assertion that this parity holds and that new functions are deny-by-default; a migration that grants EXECUTE too broadly turns it (and the narrower per-function assertions in `06_auth.sql`/`09_tenancy.sql`) red here, in CI, instead of on production.
-4. Every file in `supabase/migrations/*.sql` is applied in sorted order with `psql`.
-5. **RLS coverage:** if `supabase/tests/coverage.sql` exists it runs and fails the job on any gap. **It does not exist yet** — the job emits a `::warning::` instead of failing until the database agent lands it.
-6. `pg_prove --verbose --ext .sql supabase/tests/*.sql`; the TAP output is tee'd to `pgtap.tap`, tailed into `$GITHUB_STEP_SUMMARY`, and uploaded as the `pgtap` artifact (14 days).
+2. **Migration order check** (PRs only, D-69/D-70): `scripts/check-migrations-order.mjs` compares every migration **added** in the PR (vs. the merge-base with `origin/<base-ref>`, same diff shape as the append-only check) against the newest migration timestamp already on the base ref. Any added migration whose timestamp sorts at or before that newest timestamp fails with a `::error` naming the file and a suggested new filename — `main`'s newest timestamp plus one sequence step, keeping the offending file's own lane digit (`docs/plan/LANES.md`) where that still sorts later. **Re-dating:** `git mv supabase/migrations/<old>.sql supabase/migrations/<suggested>.sql`, update any reference to the old filename, re-run the gate. The migration has never been applied, so the rename is safe — this is exactly the situation LANES.md's "Migration order at merge time" describes: lanes merge in whatever order they finish, so a PR written against one `main` can fall behind another lane's PR that merged first.
+3. pgTAP is installed **inside the service container** (`apt-get install postgresql-17-pgtap` against the official `postgres:17` image); `psql` and `pg_prove` (`libtap-parser-sourcehandler-pgtap-perl`) are installed on the runner.
+4. `supabase/ci/bootstrap.sql` creates the Supabase-shaped roles and schemas the migrations expect — **including Supabase's default function-EXECUTE grant** (D-54): `alter default privileges for role postgres in schema public grant execute on functions to anon, authenticated, service_role`, matching what the Supabase platform runs once when a project is created. A plain `postgres:17` container has no such default, so without this line a migration that grants a function to the wrong role — or forgets a `revoke`/grant entirely — passes CI's pgTAP grant assertions and is only wrong on the real project. `supabase/tests/12_function_grants_invariant.sql` is the standing assertion that this parity holds and that new functions are deny-by-default; a migration that grants EXECUTE too broadly turns it (and the narrower per-function assertions in `06_auth.sql`/`09_tenancy.sql`) red here, in CI, instead of on production.
+5. Every file in `supabase/migrations/*.sql` is applied in sorted order with `psql`.
+6. **RLS coverage:** if `supabase/tests/coverage.sql` exists it runs and fails the job on any gap. **It does not exist yet** — the job emits a `::warning::` instead of failing until the database agent lands it.
+7. `pg_prove --verbose --ext .sql supabase/tests/*.sql`; the TAP output is tee'd to `pgtap.tap`, tailed into `$GITHUB_STEP_SUMMARY`, and uploaded as the `pgtap` artifact (14 days).
 
-Fails on: an edited historical migration, or any pgTAP assertion failure. Coverage gaps only warn until `supabase/tests/coverage.sql` exists. No shared-resource concurrency lock is needed — every run gets its own throwaway container.
+Fails on: an edited historical migration, a migration that sorts before `main`'s newest, or any pgTAP assertion failure. Coverage gaps only warn until `supabase/tests/coverage.sql` exists. No shared-resource concurrency lock is needed — every run gets its own throwaway container.
 
 ### 2.4 `unit` → **`CI / unit`**
 
@@ -274,7 +282,7 @@ Not merge gates. They fail loudly and open or update an issue labelled `weekly` 
 On a mismatch the job fails and uploads the fresh file as the `types-generated` artifact. To fix, from the repo root:
 
 ```
-gh run download <run-id> -n types-generated -D packages/db/src
+rm packages/db/src/types.generated.ts && gh run download <run-id> -n types-generated -D packages/db/src
 ```
 
-then commit. No local Docker is needed.
+then commit. The `rm` matters: `gh run download` refuses to overwrite a file that already exists at the destination and prints nothing when it skips one, so without it the download silently does nothing and the file is left stale. No local Docker is needed.
