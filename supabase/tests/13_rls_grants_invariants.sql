@@ -36,7 +36,7 @@ select plan(2);
 --    the policies of.
 -- ---------------------------------------------------------------------
 select is(
-  (select coalesce(array_agg(tablename order by tablename), array[]::text[])
+  (select coalesce(array_agg(tablename::text order by tablename), array[]::text[])
      from pg_tables
     where schemaname = 'public'
       and rowsecurity is not true),
