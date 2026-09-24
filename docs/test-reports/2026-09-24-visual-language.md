@@ -18,11 +18,13 @@
 
 **A significant, unplanned finding surfaced and was fixed in this PR** — see §1.1.
 
-**Out of scope for this Part, by the main session's explicit instruction:**
+**Out of scope for this Part:**
 
-- `packages/ui/src/primitives/bottom-nav.tsx`, `nav-config.ts`, a not-yet-existing `sidebar-from-config.tsx`, and everything under `apps/web/app/(school)/` — PR #17 (`feat/m0-wrapup`) is rewriting them concurrently. The sidebar restyle here is tokens-only; nav-specific component styling follows once #17 merges.
 - `--success` / `--warning` / `--info` — left at their previously-measured hues; not mentioned in the session's colour-retention list and still needed by UI (the offline banner, toasts) this Part does not touch.
-- Any CI verification — GitHub Actions is account-wide blocked as of ~13:09 today (billing issue on the owner's account); every job fails in 2–3s regardless of code. All verification below is local.
+
+**Update after PR #17/D-56 merged into this branch:** `bottom-nav.tsx`, `sidebar-from-config.tsx` and `apps/web/app/(school)/app/{layout,nav}.tsx` were out of scope while #17 was open (they did not exist yet, or were being rewritten concurrently). Once merged, they were checked and needed **no source changes**: all are purely token-driven (`bg-sidebar`, `bg-sidebar-accent`, `bg-primary`, `bg-destructive` — no hard-coded colour), so D-57's token change alone restyles the sidebar, active-item bar and "More" sheet. Two stale "navy `Sidebar`" doc comments (`DESIGN-SYSTEM.md` §3.1, `sidebar-from-config.tsx`'s docblock) were corrected in the follow-up commit.
+
+**Update on CI:** GitHub Actions was account-wide blocked (billing) for most of this session; per instruction, work continued on the full local gate instead of polling. Billing was fixed and the repo made public mid-session — CI ran for real once pushed; see §2 and §7 for the actual results.
 
 **Risk areas** — where the testing effort went:
 
@@ -44,18 +46,18 @@ While capturing "before" screenshots from a clean build of `main` (commit `cd32c
 
 ## 2. Environment
 
-|                |                                                                                |
-| -------------- | ------------------------------------------------------------------------------ |
-| Commit         | HEAD of `feat/visual-language` at PR open time (see PR for the exact sha)      |
-| Branch         | `feat/visual-language`                                                         |
-| CI run         | **Not run** — GitHub Actions account-wide blocked (billing) as of ~13:09 today |
-| Preview URL    | none (CI blocked, no Vercel preview)                                           |
-| Supabase       | not used — no server/DB code touched                                           |
-| Migration head | unchanged — no migration in this PR                                            |
-| Seed           | not used                                                                       |
-| Node / pnpm    | v24.19.0 / pnpm 10.34.5                                                        |
-| Browsers       | Chromium (Playwright 1.63.0)                                                   |
-| Feature flags  | none                                                                           |
+|                |                                                                                                                |
+| -------------- | -------------------------------------------------------------------------------------------------------------- |
+| Commit         | HEAD of `feat/visual-language` at PR open time (see PR for the exact sha)                                      |
+| Branch         | `feat/visual-language`                                                                                         |
+| CI run         | https://github.com/Mahadezz/acadigma-campus/actions/runs/36007171108 — 9/10 required checks pass (see §7)      |
+| Preview URL    | https://vercel.com/mahadezzs-projects/acadigma-campus-web/8XvCvQikYs1mX17rus8Z6hXDZJf5 — deployed successfully |
+| Supabase       | not used — no server/DB code touched                                                                           |
+| Migration head | unchanged — no migration in this PR                                                                            |
+| Seed           | not used                                                                                                       |
+| Node / pnpm    | v24.19.0 / pnpm 10.34.5                                                                                        |
+| Browsers       | Chromium (Playwright 1.63.0)                                                                                   |
+| Feature flags  | none                                                                                                           |
 
 ---
 
@@ -95,7 +97,7 @@ Repo-wide (unchanged by this PR — no new source lines that need coverage; `pac
 | `e2e/design-smoke.spec.ts` — every `packages/ui` primitive on `/design` | PASS      | PASS       | 2.3–2.8s each | Ran twice: once before the §1.1 cascade fix (also passed — the fallback block happened to already carry ink/paper values, since it was restyled in this same PR), and once after, both green. |
 
 **Flaky (passed on retry):** none.
-**Report artifact:** not uploaded (no CI run — see §2); ran locally via `pnpm exec playwright test e2e/design-smoke.spec.ts` from `apps/web`, with `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` set to the same browser-safe publishable values already committed in `.env.example` (no secret used) so `next start`'s middleware does not refuse to boot — `apps/web/.env.local` in the main checkout was not read or copied, per instruction.
+**Report artifact:** run both locally (twice — before and after the §1.1 cascade fix, and again after merging #17) and in CI (`e2e` job, PASS, 54s — https://github.com/Mahadezz/acadigma-campus/actions/runs/36007171108/job/107658730613). Local runs used `pnpm exec playwright test e2e/design-smoke.spec.ts` from `apps/web`, with `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` set to the same browser-safe publishable values already committed in `.env.example` (no secret used) so `next start`'s middleware does not refuse to boot — `apps/web/.env.local` in the main checkout was not read or copied, per instruction.
 
 ### Accessibility (axe, WCAG 2.1 AA)
 
@@ -196,32 +198,33 @@ Before = a clean build of `main` @ `cd32ca8` (the commit this branch forked from
 | First-load JS, `/(school)/app/audit`     | ≤ 200 KB gz | 221 KB                       | pre-existing, unrelated to this PR (`node scripts/check-bundle-budget.mjs` does not fail the build on it; not investigated here) |
 | `pnpm --filter @acadigma/web build`      | succeeds    | succeeds, 18/18 static pages | PASS                                                                                                                             |
 
-Lighthouse was not run (no CI, no `next dev`/`next start` warm profiling session set up for it locally in the time available) — **not run**.
+Lighthouse: **PASS in CI** — `lighthouse` job, 1m47s (https://github.com/Mahadezz/acadigma-campus/actions/runs/36007171108/job/107658730546). Not re-run locally.
 
 ---
 
 ## 7. Security checks
 
-| Check                           | Result                                                                          |
-| ------------------------------- | ------------------------------------------------------------------------------- |
-| gitleaks                        | **not run** — not installed locally, and CI (which runs it) is blocked          |
-| Semgrep (ERROR severity)        | **not run** — same reason                                                       |
-| `pnpm audit --audit-level high` | **not run** — this PR added no dependency; deferred to CI once billing is fixed |
-| Supabase advisors               | not applicable — no schema change                                               |
-| Authorized DAST                 | not applicable — no auth/money/file code changed                                |
+Ran in CI once GitHub Actions was unblocked (see §8 issue 3 for the timeline).
 
-This PR touches only CSS custom properties, className strings, a font-loading file and documentation. No new attack surface.
+| Check                           | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Semgrep OSS                     | **PASS** — 150 rules × 491 files, 0 findings (https://github.com/Mahadezz/acadigma-campus/actions/runs/36007171108/job/107658216927)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `pnpm audit` (dependency audit) | **PASS** — "Audit clean — 0 active exception(s), none expired"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Dependency review               | **FAILED — not a code issue.** `actions/dependency-review-action` errored: "Dependency review is not supported on this repository. Please ensure that Dependency graph is enabled along with GitHub Advanced Security on private repositories." The repo was made public mid-session; its Dependency graph / Advanced Security setting has not yet been (re-)enabled to match. This is the sole reason the `security` required check shows red — every actual scan it ran (Semgrep, audit) passed. **Owner action needed:** enable Dependency graph under repo Settings → Security, then re-run the job — no code push required. |
+| Supabase advisors               | not applicable — no schema change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Authorized DAST                 | not applicable — no auth/money/file code changed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+
+This PR touches only CSS custom properties, className strings, a font-loading file and documentation — no new attack surface, consistent with Semgrep's 0 findings.
 
 ---
 
 ## 8. Known issues
 
-| #   | Issue                                                                                                                                                                                                                                                                                                                                                      | Severity                 | Ship anyway?                                                                                                                          | Tracked                           |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| 1   | Nav-specific component styling (bottom nav, sidebar-from-config, `(school)` routes) still carries whatever they carried before — only their _tokens_ changed. A screen that renders the sidebar will look inconsistent with the rest of the app's ink/paper chrome until #17 merges and a follow-up Part restyles those components.                        | medium                   | yes — explicit, instructed scope boundary for this PR                                                                                 | follow-up Part after #17          |
-| 2   | `--success`/`--warning`/`--info` were left at their previously-measured hues, not moved toward monochrome. If the owner wants those retired too (matching `--accent`'s treatment), that is a new decision, not assumed here.                                                                                                                               | low                      | yes — deliberate, documented in DECISION-LOG D-57                                                                                     | none yet — raise if wanted        |
-| 3   | CI could not run at all (GitHub Actions account-wide blocked by a billing issue, independent of this PR). Every gate below was run locally instead: `pnpm install --frozen-lockfile`, `pnpm format:check`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, every `node scripts/check-*.mjs`, `pnpm --filter @acadigma/web build` — all green, see this report. | high (process, not code) | yes — the owner was told not to keep polling CI; this PR should be reviewed on the local evidence and CI re-run once billing is fixed | owner action: fix Actions billing |
-| 4   | Lighthouse and gitleaks/Semgrep were not run locally (tooling/time).                                                                                                                                                                                                                                                                                       | low                      | yes — no code change in this PR plausibly triggers either                                                                             | CI, once unblocked                |
+| #   | Issue                                                                                                                                                                                                                                                                                                                                                                                                                               | Severity                 | Ship anyway?                                                                                                            | Tracked                                                              |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 1   | `--success`/`--warning`/`--info` were left at their previously-measured hues, not moved toward monochrome. If the owner wants those retired too (matching `--accent`'s treatment), that is a new decision, not assumed here.                                                                                                                                                                                                        | low                      | yes — deliberate, documented in DECISION-LOG D-57                                                                       | none yet — raise if wanted                                           |
+| 2   | The `security` required check is red on the PR, but not because of this PR's code: Semgrep (0 findings) and `pnpm audit` (clean) both pass; the `actions/dependency-review-action` step fails because the repo's Dependency graph / GitHub Advanced Security setting was not enabled when the repo was made public mid-session. See §7.                                                                                             | high (process, not code) | yes, once acknowledged — the fix is a repo-settings toggle, not a code change; nothing in this PR should be held for it | owner action: enable Dependency graph under repo Settings → Security |
+| 3   | GitHub Actions was account-wide blocked (billing) for the first ~4 hours of this session; the full local gate (`pnpm install --frozen-lockfile`, `format:check`, `typecheck`, `lint`, `test`, every `check-*.mjs`, `build`) was run and passed before CI came back. CI then ran for real after billing was fixed mid-session — see §2 for the run link and §3–§7 for its actual per-job results, all incorporated into this report. | informational            | n/a — resolved; CI evidence in this report is real, not a substitute                                                    | none — historical note                                               |
 
 **Deliberately not tested, and why:**
 
@@ -247,4 +250,4 @@ This PR touches only CSS custom properties, className strings, a font-loading fi
 **Date:** 2026-09-24
 **Commit:** HEAD of `feat/visual-language` at PR open time
 
-> I ran these tests and read their output myself; the numbers above are copied from real local runs. CI did not run — GitHub Actions is account-wide blocked by a billing issue unrelated to this PR, confirmed by the coordinating session, not assumed. §1.1's cascade-layer bug is real and independently reproduced (before: `oklch(20.5% 0 0)`; after the fix: the intended token value) — it is not a guess.
+> I ran these tests and read their output myself; the numbers above are copied from real local and CI runs (https://github.com/Mahadezz/acadigma-campus/actions/runs/36007171108). 9 of 10 required checks pass; the one that does not (`security`) fails on a repo-settings step (Dependency graph not enabled for the newly-public repo), not on this PR's code — Semgrep and the dependency audit, the two scans that actually inspect this PR, both pass. §1.1's cascade-layer bug is real and independently reproduced (before: `oklch(20.5% 0 0)`; after the fix: the intended token value) — it is not a guess.
