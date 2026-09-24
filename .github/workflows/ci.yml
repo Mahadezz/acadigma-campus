@@ -190,8 +190,11 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      # Fails when a workspace_id table has RLS off, has no test file, or has no
-      # audit trigger. Owned by the database agent; absent until it lands.
+      # D-56: fails when a workspace_id table has RLS off. The other half of
+      # this gate — every workspace_id table named in a supabase/tests/*.sql
+      # file — is `contracts`'s "workspace_id table coverage" step below: it
+      # needs the repo checkout on disk, which this job's Postgres SERVICE
+      # CONTAINER does not have (see coverage.sql's own header comment).
       - name: RLS coverage
         run: |
           set -euo pipefail
@@ -271,6 +274,14 @@ jobs:
       # runtime guard and the viewer's filter UI silently drift apart.
       - name: Audit action catalogue parity (SQL <-> TypeScript)
         run: node scripts/check-audit-catalog-parity.mjs
+
+      # D-56 (M0 wrap-up), the other half of `db`'s "RLS coverage" step: every
+      # public table with a workspace_id column must be named in at least one
+      # supabase/tests/*.sql file (ARCHITECTURE §9). Static, on the runner's own
+      # checkout — the `db` job's Postgres service container has no path back
+      # to these files (see coverage.sql's header comment).
+      - name: workspace_id table coverage (named in a supabase/tests/*.sql file)
+        run: node scripts/check-coverage-test-files.mjs
 
       # Generated-type freshness moved to the `db` job (DECISION-LOG D-55): types
       # are generated from THIS PR's migrations applied to the CI Postgres, not
