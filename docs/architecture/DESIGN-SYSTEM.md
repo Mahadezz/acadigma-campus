@@ -116,6 +116,13 @@ Bengali. Two families, three weights each. Both verified live on Google Fonts.
 subset downloads **only when a Bengali codepoint is painted**. English-only
 session: 48 KB. Bengali session: 48 + 138 KB.
 
+**Wiring.** `apps/web/app/fonts.ts` loads both families through
+`next/font/google` (self-hosted, `font-display: swap`; Hind Siliguri with
+`preload: false`, so the Bengali subset is fetched only when it is painted), the
+root layout puts the generated variables on `<html>`, and
+`packages/ui/tokens/tokens.css` binds `--font-sans` / `--font-bn` to them with the
+CSS family names as fallbacks.
+
 **Rejected, with reasons.** _Plus Jakarta Sans_ (the prototype's display face):
 a second Latin family that only differed at heading sizes, for 40 KB and no
 Bengali — removed. Hierarchy now comes from weight, size and rules. _Anek
