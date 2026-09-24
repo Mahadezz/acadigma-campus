@@ -48,12 +48,21 @@ Three consequences, and they are the whole design:
    a pending approval, a number that changed, an action you must take. The
    prototype put everything in a rounded card with a soft shadow; that is the
    default shadcn look and it flattens hierarchy until nothing is important.
-2. **Indigo is institutional ink.** The colour of a school crest and a
-   headmaster's fountain pen, not a startup gradient. It appears on primary
-   actions, the active nav state and series 1 of every chart. Nowhere else.
-3. **Amber is the highlighter.** It means _a human must act_. One amber element
-   per screen, maximum. It is never a brand wash, never a gradient, never
-   decoration.
+2. **Ink and paper is the chrome (amended per D-57).** The owner's read of the
+   original indigo/navy identity was that it looked nothing like
+   [acadigma.com](https://acadigma.com), the site this product is a sibling
+   of. `--primary`, the focus ring and the sidebar surface are now the same
+   achromatic ink (`#0b0b0b`) and paper (`#f4f4f2`) as the marketing site —
+   copied token-for-token from its `globals.css`. Colour is reserved for what
+   §2 makes genuinely semantic: attendance status (§2.4), grade bands (§2.5),
+   the danger/destructive red, and the chart palette (§6.1). Nothing else in
+   the product carries a hue by default; a user's chosen `palette-*` class
+   (§2 "Palette overrides") is the one opt-in exception.
+3. **Amber survives only where it is semantic.** The old "amber is the
+   highlighter, one element per screen" rule (superseded by D-57) is retired
+   as a decorative device — `--accent` is now a plain neutral surface, same as
+   acadigma-website's own `--accent`. Amber remains exactly where §2 already
+   measured it as a status colour: `--warning` and attendance's `late`.
 
 ### 1.3 Three references
 
@@ -78,11 +87,16 @@ blurred orbs that ignored every token it defined).
 - **`AttendanceToggle` is a segmented letter control**, not five coloured dots —
   it reads at a glance, works for colour-blind users, and is the fastest input
   on the phone.
-- **Amber is rationed** by rule, and enforced in review.
+- **Amber is rationed to semantic use** (§2, amended per D-57) and enforced in
+  review — it no longer decorates a "must act" card anywhere in the product.
 - **No gradients, no glass, no mesh, no hero blobs, no orbs.** Elevation is a
-  1px border plus one tinted shadow. The navy sidebar is the only inverted
-  surface in light mode, kept from the prototype because it reads as the crest
-  bar over a school gate.
+  1px border plus one ink-tinted shadow (D-57: retinted from hue-272 to plain
+  ink, `rgb(11 11 11 / …)`, matching acadigma-website's `shadow-input`). The
+  sidebar (amended per D-57) is a paper/chalk surface with ink text, not the
+  inverted navy the prototype used — the previous entry's reasoning ("reads as
+  the crest bar over a school gate") is superseded by the owner's instruction
+  that Campus read as the same product as acadigma.com, which has no inverted
+  surface. Nav-specific component styling follows once #17 merges.
 - **Tabular figures everywhere.** The product is numbers in columns; digits are
   never allowed to jitter between renders.
 
@@ -93,9 +107,9 @@ blurred orbs that ignored every token it defined).
 - The wordmark reads `Acadigma` in Inter 700 at `-0.02em`, with `Campus` in
   Inter 500 at the same size in `--muted-foreground`. Never a logo lockup with
   a gradient; never the prototype's remote JPEG.
-- The mark is a single glyph: a filled indigo square at `--radius-md` holding a
-  white `A` cut on the baseline, 28px in the TopBar, 32px in the sidebar. One
-  SVG, two theme variants.
+- The mark is a single glyph: a filled ink square (amended per D-57; was
+  indigo) at `--radius-md` holding a paper `A` cut on the baseline, 28px in
+  the TopBar, 32px in the sidebar. One SVG, two theme variants.
 - Marketplace, Hiring and Selling are **modules inside Campus**, not
   sub-brands. The prototype's de-facto violet seller identity is removed —
   `/sell` uses the same tokens with a different nav, nothing more.
@@ -111,6 +125,13 @@ Bengali. Two families, three weights each. Both verified live on Google Fonts.
 | ------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Latin + all digits | **Inter** 400/500/600/700 (variable axis) | Best-in-class tabular figures and a slashed zero (`cv05`), which the marks grid, money and student IDs depend on; legible at 13px on a low-DPI 360px screen; metrically close to Roboto, so the fallback stack does not reflow while the webfont loads on a slow connection.                             |
 | Bengali            | **Hind Siliguri** 400/500/600             | Indian Type Foundry's UI-optimised Bengali face: correct, compact conjuncts (যুক্তাক্ষর) at small sizes, static weights (no variable-font rasterising cost on an Android 9 WebView), and the smallest Bengali subset on Google Fonts — 69 KB vs 105 KB for Noto Sans Bengali and 152 KB for Anek Bangla. |
+| Monospace          | **JetBrains Mono** 400/500 (D-57)         | Matches acadigma-website's `--font-mono`. Bound to `--font-mono` for the one monospace surface DESIGN-SYSTEM already names — the correlation id on a route error boundary (§3.9) — plus any future code-shaped value. Latin-only subset; no monospace surface needs a Bengali glyph.                     |
+
+**cv11/ss01 (D-57).** `html` carries `font-feature-settings: "cv11" 1, "ss01" 1`
+(single-storey `a`, open forms), matching acadigma-website. `--fs-prose` and
+`--fs-tabular` repeat the same two features so text under `body`'s or a
+tabular element's own `font-feature-settings` (which does not merge with
+`html`'s) keeps them.
 
 **Budget.** Google's stylesheet is split by `unicode-range`, so the Bengali
 subset downloads **only when a Bengali codepoint is painted**. English-only
@@ -199,6 +220,38 @@ explains the decisions; the file holds the values.
 | Palettes | 6, each recolouring `--sidebar-primary` away from amber | 6, brand-only                                                                             | The old behaviour made the sidebar accent mean nothing. Palettes now override `--primary`, `--primary-hover`, `--primary-ink`, `--ring`, `--chart-1` and nothing else.                                                                                                                          |
 | Charts   | 5 ad-hoc tokens                                         | 6, fixed order, validated                                                                 | See §6.                                                                                                                                                                                                                                                                                         |
 
+**D-57 — ink/paper chrome (supersedes the Primary/Sidebar rows above for
+everything except attendance, grades, charts and danger).** The owner's read
+of the indigo/navy identity this table describes was "looks bad, nothing like
+[acadigma.com](https://acadigma.com)". `--primary`, `--ring`, `--accent` and
+every `--sidebar-*` token are now literal, achromatic hex copied from
+acadigma-website's `globals.css` — `--primary`/`--foreground` ink `#0b0b0b` on
+`--background`/paper `#f4f4f2`, `--card`/chalk `#fbfbfa`, `--sidebar` chalk
+with ink text (not navy). `--danger` is recoloured to the website's literal
+`#b42318` / dark `#f97066`. `--muted-foreground` `#636363` measures 5.46:1 on
+`--background` (Opus review, PR #20: the website's literal `#6f6f6f` cleared
+4.5:1 on `--background` but not on `--muted`/`--secondary`, where real 13px
+semibold text sits — `AttendanceToggle`'s unselected letters, avatar
+initials) — never use the website's lighter `#a3a3a3` primitive for text,
+and never below 13px. `--input` deliberately does **not** match the
+website's literal `#d6d6d2` — see §2.6. Attendance (§2.4) and grade bands
+(§2.5) keep their token _values_ unchanged by D-57 — the old
+`packages/ui/globals.css` fallback never declared `--att-*`/`--grade-*` at
+all, so the §1.1 cascade-layer bug never shadowed them and they always
+rendered correctly. **The chart palette (§6.1) is the one place
+value-unchanged is not the same as render-unchanged**: the fallback's own
+`--chart-1`…`--chart-5` (stock shadcn orange/teal/blue, 5 series) were
+winning over tokens.css's real `--chart-1`…`--chart-6`
+(indigo/rose/amber/teal/violet/green) for every series but the sixth, so
+fixing §1.1 changes what a chart actually looks like even though no chart
+hex in tokens.css moved — see the test report's before/after evidence.
+`--success`/`--warning`/`--info` in §2.3 are also unchanged in value — out of
+this Part's scope. Radius gets the
+website's multipliers on the same `0.75rem` base (§2.6); a new
+`--ease-out-expo` `cubic-bezier(.16,1,.3,1)` (§2.7) is available for
+entrances; JetBrains Mono is now `--font-mono` (§1.6). Full reasoning:
+`DECISION-LOG.md` D-57.
+
 ### 2.2 Colour structure
 
 Every family has the same four slots. This is the contract that makes contrast
@@ -216,12 +269,18 @@ provable instead of argued about:
 
 ### 2.3 Semantic colours (measured)
 
-| Token       | Light                    | White on it                                          | Dark                     | Ink on it |
-| ----------- | ------------------------ | ---------------------------------------------------- | ------------------------ | --------- |
-| `--success` | `oklch(0.545 0.140 152)` | 4.64:1                                               | `oklch(0.720 0.130 152)` | 7.99:1    |
-| `--warning` | `oklch(0.655 0.150 74)`  | 3.25:1 → **use `--warning-foreground` (ink), 7.4:1** | `oklch(0.820 0.150 74)`  | 10.54:1   |
-| `--danger`  | `oklch(0.520 0.200 25)`  | 6.12:1                                               | `oklch(0.660 0.185 25)`  | 5.54:1    |
-| `--info`    | `oklch(0.540 0.150 250)` | 5.07:1                                               | `oklch(0.700 0.145 250)` | 7.06:1    |
+| Token       | Light                                         | White on it                                          | Dark                                          | Ink on it    |
+| ----------- | --------------------------------------------- | ---------------------------------------------------- | --------------------------------------------- | ------------ |
+| `--success` | `oklch(0.545 0.140 152)`                      | 4.64:1                                               | `oklch(0.720 0.130 152)`                      | 7.99:1       |
+| `--warning` | `oklch(0.655 0.150 74)`                       | 3.25:1 → **use `--warning-foreground` (ink), 7.4:1** | `oklch(0.820 0.150 74)`                       | 10.54:1      |
+| `--danger`  | `#b42318` (D-57, was `oklch(0.520 0.200 25)`) | 6.57:1 (white)                                       | `#f97066` (D-57, was `oklch(0.660 0.185 25)`) | 7.06:1 (ink) |
+| `--info`    | `oklch(0.540 0.150 250)`                      | 5.07:1                                               | `oklch(0.700 0.145 250)`                      | 7.06:1       |
+
+`--danger` (D-57) is now acadigma-website's literal destructive red rather
+than an independently-derived hue, so the "something is wrong" colour matches
+across both products. `--danger-soft`/`--danger-ink` moved with it: light
+`#fbeae8` / `#8a1a12` (8.06:1), dark `#3a1210` / `#ffb4ad` (9.72:1) — all four
+numbers are computed by `scripts/check-contrast-tokens.mjs`, not estimated.
 
 Every `-ink` on `-soft` pair measures between **6.5:1 and 9.0:1** in both themes.
 
@@ -296,9 +355,11 @@ different scale gets the ramp interpolated across its band count, in order.
 Page gutter is **16px at 360**, 24px from `sm`. Nothing else is permitted —
 ESLint blocks arbitrary Tailwind spacing values.
 
-**Radius** `--radius: 0.75rem` (12px), with the shadcn v4 derivation:
-6px (chips, badges, in-grid inputs) · 9px (inputs, buttons) · 12px (cards,
-sheets, popovers) · 16px (sheet top corners) · 22px (avatar on a stat tile).
+**Radius** `--radius: 0.75rem` (12px). D-57 switched the multipliers to
+acadigma-website's (`0.6 / 0.8 / 1 / 1.4 / 1.8`, plus `2.2`/`2.6` reserved for
+parity), applied to the same 0.75rem base this product already used: ~7px
+(chips, badges, in-grid inputs) · ~10px (inputs, buttons) · 12px (cards,
+sheets, popovers) · ~17px (sheet top corners) · ~22px (avatar on a stat tile).
 **One scale, applied by role, documented here** — a pill button next to a
 12px card is broken, not playful.
 
@@ -312,9 +373,27 @@ sheets, popovers) · 16px (sheet top corners) · 22px (avatar on a stat tile).
 | `--shadow-sheet`   | the upward shadow on a bottom sheet only.                                   |
 | `--shadow-nav`     | a rule above the bottom nav, not a shadow.                                  |
 
-Shadows are tinted to the neutral hue (`oklch(… 272)`), never pure black. Cards
-do **not** lift on hover — hover does not exist on the primary device, and a
-hover lift on desktop that the phone cannot express is a split design.
+Shadows are ink-tinted (D-57: `rgb(11 11 11 / …)` in light, matching
+acadigma-website's `shadow-input`; was the hue-272 neutral tint), never pure
+black and never a hue. Cards do **not** lift on hover — hover does not exist
+on the primary device, and a hover lift on desktop that the phone cannot
+express is a split design.
+
+**`--input` deviates from the literal acadigma-website value (D-57).** The
+website's `#d6d6d2` measures 1.32:1 against its own `#f4f4f2` background —
+fine for a marketing page, where an input's shape and label carry the
+boundary. An unfocused `Field` here has no other way to show its edge, so
+`--input` is darkened to `#808080` light / `#6b6b6b` dark, clearing WCAG
+1.4.11's 3:1 non-text minimum against every real surface a `Field` can sit
+on — `--background` (3.59:1 / 3.69:1), `--card` (3.81:1 / 3.52:1) **and**
+`--muted` (3.25:1 / 3.20:1, e.g. a form inside a sheet or filter panel) —
+script-verified, see `scripts/check-contrast-tokens.mjs`. (Opus review, PR
+#20: the first cut, `#8a8a86`, cleared `--background` at 3.15:1 but fell to
+2.85:1 against `--muted` — checking only one surface missed the second.)
+`--border` and `--border-strong` (hairline row/table dividers, not a form
+control's own edge) keep the website's literal, sub-3:1 values, consistent
+with how this token set has always treated a divider as decorative rather
+than a 1.4.11-scoped UI-component boundary.
 
 ### 2.7 Motion
 
@@ -328,7 +407,11 @@ hover lift on desktop that the phone cannot express is a split design.
 
 Easings: `--ease-standard` `cubic-bezier(.2,0,0,1)` default ·
 `--ease-entrance` for things arriving · `--ease-exit` (faster) for things
-leaving · `--ease-spring` for the sheet snap **only**.
+leaving · `--ease-spring` for the sheet snap **only** · `--ease-out-expo`
+`cubic-bezier(.16,1,.3,1)` (D-57, matches acadigma-website) for entrances that
+want a stronger overshoot-free deceleration than `--ease-entrance` — still
+subject to the "motion must be motivated" rule below; it does not license a
+new class of decorative animation.
 
 **Motion must be motivated.** Permitted: a sheet sliding from the edge it will
 return to; a row collapsing after an undo expires; a number counting when it
@@ -427,8 +510,8 @@ xl  1280  tables gain optional columns; detail pages gain a right rail
 - `env(safe-area-inset-bottom)` padding, with `--inset-bottomnav` reserved as
   scroll padding on the content region so the last row is never trapped.
 
-**Desktop ≥ 1024.** BottomNav is replaced by the navy `Sidebar`
-(`--size-sidebar: 264px`, collapsible to 68px), carrying the **full** nav — the
+**Desktop ≥ 1024.** BottomNav is replaced by the paper/chalk `Sidebar`
+(amended per D-57; was navy) (`--size-sidebar: 264px`, collapsible to 68px), carrying the **full** nav — the
 "More" grouping disappears entirely, since the constraint that created it is
 gone. The TopBar keeps the workspace switcher, adds breadcrumbs, and adds
 `⌘K / Ctrl+K`. Same nav config object, different renderer.
