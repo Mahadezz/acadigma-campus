@@ -59,6 +59,11 @@ export const ACTIONS = [
   "listing.create",
   "listing.review",
   "payouts.manage",
+  // Audit (F-ID-09 §2)
+  "audit.read",
+  "audit.read.platform",
+  "audit.read.self",
+  "audit.export",
   // Platform console
   "platform.console",
   // -----------------------------------------------------------------------
@@ -134,6 +139,10 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "labels.assign",
     "modules.visibility.write",
     "workspace.archive",
+    // Audit (F-ID-09 §2)
+    "audit.read",
+    "audit.read.self",
+    "audit.export",
   ],
   // Runs the school day to day. Money and owner-only settings (modules, danger
   // zone) stay with the owner; the F-OP-07 policy blobs do not (RLS §3.1).
@@ -171,6 +180,10 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.leave",
     "labels.write",
     "labels.assign",
+    // NOT audit.read by default — DECISION-LOG D-25(2) / F-ID-09 §11 OQ-2:
+    // the trail must be able to record what an admin did without that
+    // admin curating it.
+    "audit.read.self",
   ],
   teacher: [
     "attendance.read",
@@ -189,6 +202,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.read",
     "members.staff_fields.write",
     "members.leave",
+    // Audit (F-ID-09 §2)
+    "audit.read.self",
   ],
   // Office staff: sees the school, changes almost nothing.
   staff: [
@@ -203,6 +218,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "workspace.read",
     "members.staff_fields.write",
     "members.leave",
+    // Audit (F-ID-09 §2)
+    "audit.read.self",
   ],
   // Read-only parent portal (DECISION-LOG D-10), narrowed to their children by RLS.
   parent: [
@@ -214,6 +231,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // Tenancy & membership (F-ID-03 §2): name-only workspace read, can leave.
     "workspace.read",
     "members.leave",
+    // Audit (F-ID-09 §2)
+    "audit.read.self",
   ],
   // Acadigma staff. Moderation and payouts only — never a tenant's academic data.
   platform: [
@@ -230,6 +249,11 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.contact.read",
     "workspace.archive",
     "platform.workspace.suspend",
+    // Audit (F-ID-09 §2)
+    "audit.read",
+    "audit.read.platform",
+    "audit.read.self",
+    "audit.export",
   ],
 }
 

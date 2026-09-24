@@ -101,11 +101,11 @@ select ok(
   'the invitation token is redacted from the audit payload');
 
 select ok(
-  (select after ->> 'email' = 'invitee@test.local'
+  (select after ->> 'email' = 'i***@test.local'
      from public.audit_events
     where action = 'workspace_invitations.insert'
     order by id desc limit 1),
-  'but the rest of the row is still recorded');
+  'but the rest of the row is still recorded, the address masked at write time (F-ID-09 §5.3)');
 
 -- =====================================================================
 -- append-only, for everyone

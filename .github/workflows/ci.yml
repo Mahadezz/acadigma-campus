@@ -266,6 +266,12 @@ jobs:
       - name: Notification catalogue parity
         run: node scripts/check-notification-catalog-parity.mjs
 
+      # F-ID-09 §5.1, acceptance criterion 17: the SQL and TypeScript audit action
+      # catalogues must name the exact same actions, or app.log_audit_event()'s
+      # runtime guard and the viewer's filter UI silently drift apart.
+      - name: Audit action catalogue parity (SQL <-> TypeScript)
+        run: node scripts/check-audit-catalog-parity.mjs
+
       # Generated-type freshness moved to the `db` job (DECISION-LOG D-55): types
       # are generated from THIS PR's migrations applied to the CI Postgres, not
       # from the live project, which only receives a PR's migrations after merge.

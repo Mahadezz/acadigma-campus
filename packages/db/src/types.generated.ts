@@ -9,47 +9,95 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      audit_action_catalog: {
+        Row: {
+          action: string
+          created_at: string
+          domain: string | null
+          is_generic: boolean
+          sentence_bn: string
+          sentence_en: string
+          severity: Database["public"]["Enums"]["audit_severity"]
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          domain?: string | null
+          is_generic?: boolean
+          sentence_bn: string
+          sentence_en: string
+          severity: Database["public"]["Enums"]["audit_severity"]
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          domain?: string | null
+          is_generic?: boolean
+          sentence_bn?: string
+          sentence_en?: string
+          severity?: Database["public"]["Enums"]["audit_severity"]
+        }
+        Relationships: []
+      }
       audit_events: {
         Row: {
           action: string
           actor_id: string | null
+          actor_kind: Database["public"]["Enums"]["audit_actor_kind"]
           after: Json | null
           before: Json | null
+          changed_fields: string[] | null
           correlation_id: string | null
           created_at: string
           id: number
           ip: unknown
+          request_ip_hash: string | null
           row_id: string | null
+          severity: Database["public"]["Enums"]["audit_severity"]
+          subject_user_id: string | null
           table_name: string
           user_agent: string | null
+          user_agent_family: string | null
           workspace_id: string | null
         }
         Insert: {
           action: string
           actor_id?: string | null
+          actor_kind?: Database["public"]["Enums"]["audit_actor_kind"]
           after?: Json | null
           before?: Json | null
+          changed_fields?: string[] | null
           correlation_id?: string | null
           created_at?: string
           id?: never
           ip?: unknown
+          request_ip_hash?: string | null
           row_id?: string | null
+          severity?: Database["public"]["Enums"]["audit_severity"]
+          subject_user_id?: string | null
           table_name: string
           user_agent?: string | null
+          user_agent_family?: string | null
           workspace_id?: string | null
         }
         Update: {
           action?: string
           actor_id?: string | null
+          actor_kind?: Database["public"]["Enums"]["audit_actor_kind"]
           after?: Json | null
           before?: Json | null
+          changed_fields?: string[] | null
           correlation_id?: string | null
           created_at?: string
           id?: never
           ip?: unknown
+          request_ip_hash?: string | null
           row_id?: string | null
+          severity?: Database["public"]["Enums"]["audit_severity"]
+          subject_user_id?: string | null
           table_name?: string
           user_agent?: string | null
+          user_agent_family?: string | null
           workspace_id?: string | null
         }
         Relationships: []
@@ -1642,7 +1690,63 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      audit_events_view: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          actor_kind: Database["public"]["Enums"]["audit_actor_kind"] | null
+          after: Json | null
+          before: Json | null
+          changed_fields: string[] | null
+          correlation_id: string | null
+          created_at: string | null
+          id: number | null
+          request_ip_hash: string | null
+          row_id: string | null
+          severity: Database["public"]["Enums"]["audit_severity"] | null
+          subject_user_id: string | null
+          table_name: string | null
+          user_agent_family: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor_id?: string | null
+          actor_kind?: Database["public"]["Enums"]["audit_actor_kind"] | null
+          after?: Json | null
+          before?: Json | null
+          changed_fields?: string[] | null
+          correlation_id?: string | null
+          created_at?: string | null
+          id?: number | null
+          request_ip_hash?: string | null
+          row_id?: string | null
+          severity?: Database["public"]["Enums"]["audit_severity"] | null
+          subject_user_id?: string | null
+          table_name?: string | null
+          user_agent_family?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor_id?: string | null
+          actor_kind?: Database["public"]["Enums"]["audit_actor_kind"] | null
+          after?: Json | null
+          before?: Json | null
+          changed_fields?: string[] | null
+          correlation_id?: string | null
+          created_at?: string | null
+          id?: number | null
+          request_ip_hash?: string | null
+          row_id?: string | null
+          severity?: Database["public"]["Enums"]["audit_severity"] | null
+          subject_user_id?: string | null
+          table_name?: string | null
+          user_agent_family?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       list_my_workspaces: {
@@ -1701,6 +1805,8 @@ export type Database = {
     Enums: {
       access_mode: "normal" | "read_only"
       ai_billing_model: "shared_pool" | "individual_allocation"
+      audit_actor_kind: "user" | "platform_staff" | "system" | "webhook"
+      audit_severity: "info" | "notable" | "critical"
       billing_interval: "monthly" | "yearly"
       device_platform: "web" | "android" | "windows" | "ios"
       email_status:
@@ -1863,6 +1969,8 @@ export const Constants = {
     Enums: {
       access_mode: ["normal", "read_only"],
       ai_billing_model: ["shared_pool", "individual_allocation"],
+      audit_actor_kind: ["user", "platform_staff", "system", "webhook"],
+      audit_severity: ["info", "notable", "critical"],
       billing_interval: ["monthly", "yearly"],
       device_platform: ["web", "android", "windows", "ios"],
       email_status: [
