@@ -68,7 +68,7 @@ Outputs consumed by later jobs: the store cache key, and a `changed` matrix (`ap
 
 ### 2.2 `typecheck` → **`CI / typecheck`**
 
-`tsc --noEmit` for every package plus `apps/web`, using project references so it is incremental. Runs against the **committed** `types.generated.ts`; freshness is `contracts`' job, so a stale-types failure reports as the right thing.
+`tsc --noEmit` for every package plus `apps/web`, using project references so it is incremental. Runs against the **committed** `types.generated.ts`; freshness is the `db` job's (D-55), so a stale-types failure reports as the right thing.
 
 ### 2.3 `db` → **`CI / db`**
 
@@ -76,7 +76,7 @@ The authorization gate. Runs against a disposable **Postgres 17 service containe
 
 1. **Migration append-only check** (PRs only): `scripts/check-migrations-append-only.mjs` verifies every file in `supabase/migrations` is new-only relative to `origin/<base-ref>` (no edits to already-applied migrations — forward-only is checked mechanically, not trusted). Fails with the offending filename.
 2. pgTAP is installed **inside the service container** (`apt-get install postgresql-17-pgtap` against the official `postgres:17` image); `psql` and `pg_prove` (`libtap-parser-sourcehandler-pgtap-perl`) are installed on the runner.
-3. `supabase/ci/bootstrap.sql` creates the Supabase-shaped roles and schemas the migrations expect.
+3. `supabase/ci/bootstrap.sql` creates the Supabase-shaped roles and schemas the migrations expect — **including Supabase's default function-EXECUTE grant** (D-54): `alter default privileges for role postgres in schema public grant execute on functions to anon, authenticated, service_role`, matching what the Supabase platform runs once when a project is created. A plain `postgres:17` container has no such default, so without this line a migration that grants a function to the wrong role — or forgets a `revoke`/grant entirely — passes CI's pgTAP grant assertions and is only wrong on the real project. `supabase/tests/12_function_grants_invariant.sql` is the standing assertion that this parity holds and that new functions are deny-by-default; a migration that grants EXECUTE too broadly turns it (and the narrower per-function assertions in `06_auth.sql`/`09_tenancy.sql`) red here, in CI, instead of on production.
 4. Every file in `supabase/migrations/*.sql` is applied in sorted order with `psql`.
 5. **RLS coverage:** if `supabase/tests/coverage.sql` exists it runs and fails the job on any gap. **It does not exist yet** — the job emits a `::warning::` instead of failing until the database agent lands it.
 6. `pg_prove --verbose --ext .sql supabase/tests/*.sql`; the TAP output is tee'd to `pgtap.tap`, tailed into `$GITHUB_STEP_SUMMARY`, and uploaded as the `pgtap` artifact (14 days).
@@ -97,7 +97,7 @@ Fails on: an edited historical migration, or any pgTAP assertion failure. Covera
 Cheap drift detection, separated so the failure message is unambiguous:
 
 - Postgres enums ↔ Zod enums: identical names and labels, exhaustively both ways.
-- `pnpm db:types` regenerated and byte-compared with the committed `packages/db/src/types.generated.ts`. Stale → fail with the diff.
+- Generated-type freshness moved to the `db` job (D-55): see that job's "Generated types match this PR's migrations" step.
 - Every permission key used in code exists in the domain matrix, and vice versa.
 - Every feature flag key referenced in code exists in the `feature_flags` seed.
 
@@ -200,7 +200,7 @@ Repository secrets (Settings → Secrets and variables → Actions). Nothing her
 | Secret                                                              | Used by                        | Purpose                                                               |
 | ------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------- |
 | `SUPABASE_ACCESS_TOKEN`                                             | `db`, `release`                | CLI auth: branches, migrations, type generation                       |
-| `SUPABASE_PROJECT_REF`                                              | `db`, `release`                | `bvqzhrvcrxebawjusrxk` (a variable, not a secret, but kept alongside) |
+| `SUPABASE_PROJECT_REF`                                              | `db`, `release`                | `kekfmibwjejdhxjkmezo` (a variable, not a secret, but kept alongside) |
 | `SUPABASE_DB_PASSWORD`                                              | `release`                      | Production migration promotion                                        |
 | `SUPABASE_DEV_DB_URL`                                               | `db`, `unit`                   | Direct Postgres URL for pgTAP and integration tests                   |
 | `SUPABASE_SERVICE_ROLE_KEY_DEV`                                     | `unit`, `e2e`                  | Seeding and test fixtures **on the dev branch only**                  |
@@ -233,7 +233,7 @@ Never cache anything derived from a secret or from database content. Caches rest
 
 ## 6. Previews and the Supabase project
 
-- There is no Supabase dev branch yet: branching needs the Pro plan, and until Release 1 launches `acadigma-suite` is deliberately both dev and prod (D-20). The dev machine also has no Docker, so there is no per-PR local database either.
+- There is no Supabase dev branch yet: branching needs the Pro plan, and until Release 1 launches the Campus project `kekfmibwjejdhxjkmezo` is deliberately both dev and prod (D-20, D-53). The dev machine also has no Docker, so there is no per-PR local database either.
 - Vercel builds a preview per PR commit. Where a preview needs data, it points at the same production Supabase project **read-only** — previews never seed, migrate, or otherwise write against it.
 - `CI / db` never touches that project: a PR's migrations are applied and pgTAP-tested against a disposable Postgres 17 service container (§2.3), not the shared project. Only the `push` job in `db.yml`, triggered by a `push` to `main`, applies migrations to production; previews see the new schema once that lands.
 - Seed data on the shared project is marked demo and is wiped before launch.
@@ -266,3 +266,15 @@ Not merge gates. They fail loudly and open or update an issue labelled `weekly` 
 - `continue-on-error` is never used on a required job. If a check is not worth blocking on, it does not belong in §3.
 - Target total PR wall-clock: **under 12 minutes** for a ready PR, under 5 for a draft. Parallelism and caching are how; skipping tests is not.
 - Fork PRs: `e2e`, `lighthouse` and `report` skip with an explicit "skipped: no secrets on fork PRs" annotation. A maintainer re-runs them from a branch in the repository before merge.
+
+## Generated types (D-55)
+
+`packages/db/src/types.generated.ts` is checked in the `db` job, after the PR's own migrations are applied to the CI Postgres: `supabase gen types typescript --db-url <ci postgres> --schema public`, formatted with Prettier, byte-compared with the committed file. It is **not** generated from the live project, because the live project only receives a PR's migrations after the PR merges, so a schema-changing PR could never pass a live-based check.
+
+On a mismatch the job fails and uploads the fresh file as the `types-generated` artifact. To fix, from the repo root:
+
+```
+gh run download <run-id> -n types-generated -D packages/db/src
+```
+
+then commit. No local Docker is needed.

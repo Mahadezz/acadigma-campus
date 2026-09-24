@@ -274,6 +274,19 @@ export async function signInWithPassword(
     throttleReset(supabase, ipKey),
   ])
 
+  // F-ID-03 review follow-up (shared-phone scenario): a stale `acadigma_workspace`
+  // cookie from whoever was last signed in on this device must never survive into
+  // THIS person's session. Left alone, middleware mirrors it into `x-workspace-id`
+  // on every subsequent request, `resolveWorkspaceContext` re-verifies it against
+  // this (different) user's memberships, finds none, writes a FALSE
+  // `tenancy.context_rejected` "forgery" row into the previous person's school, and
+  // strands this person on /onboarding instead of their real landing route. Cleared
+  // as soon as the credential exchange has actually succeeded, not only on
+  // `signOut()` (F-ID-01 §4.10) — that fix covers leaving a session, not starting a
+  // new one on top of someone else's leftover cookie.
+  const cookieStore = await cookies()
+  cookieStore.delete(WORKSPACE_COOKIE)
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("suspended_at")
@@ -291,7 +304,7 @@ export async function signInWithPassword(
     context: ctx,
   })
 
-  const fallback = resolveLandingRoute()
+  const fallback = await resolveLandingRoute(supabase)
   const destination = safeReturnTo(next, fallback)
   if (destination.rejected) {
     const log = await requestLogger({ route: "auth.login" })
@@ -418,6 +431,13 @@ export async function resetPassword(
     await throttleRecordFailure(supabase, "passwordResetSubmit", ipKey)
     return err(apiError("unauthenticated", "TOKEN_INVALID"))
   }
+
+  // `verifyOtp` above just minted a live session, possibly for a different person
+  // than whoever last used this device (shared-phone scenario, F-ID-03 review).
+  // Same reasoning as `signInWithPassword`: a stale `acadigma_workspace` cookie
+  // must not survive into this newly-authenticated session.
+  const cookieStore = await cookies()
+  cookieStore.delete(WORKSPACE_COOKIE)
 
   const passwordCheck = checkPassword({
     password,

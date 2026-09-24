@@ -1,11 +1,11 @@
-# Supabase CLI configuration for project `acadigma-suite` (DECISION-LOG D-19).
+# Supabase CLI configuration for project `Acadigma Campus` (DECISION-LOG D-53, superseding D-19).
 #
 # There is no Docker on the development machine, so the local stack is never
 # started: migrations are authored here and applied to the cloud project by CI on
 # merge to main (ARCHITECTURE §4, §8). The [db] and [auth] blocks below still matter
 # because `supabase db diff`, `supabase db push` and the pgTAP runner read them.
 
-project_id = "bvqzhrvcrxebawjusrxk"
+project_id = "kekfmibwjejdhxjkmezo"
 
 [api]
 enabled = true

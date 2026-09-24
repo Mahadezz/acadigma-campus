@@ -105,6 +105,7 @@ app/
   create policy del on t for delete using (app.has_role(workspace_id, '{owner,admin}'));
   ```
   Parent policies are separate and student-scoped. Platform admin has a bypass policy on the tables the console needs (read) and on moderation tables (write).
+- **Client-callable RPCs live in `public`, never `app` (D-50):** `supabase/config.toml` exposes only `public`/`graphql_public` to PostgREST, so any SECURITY DEFINER function `apps/web` reaches via `supabase.rpc(...)` — `public.log_auth_event`, `public.switch_workspace`, `public.list_my_workspaces`, `public.log_tenancy_context_rejected`, and every one after them — must live in `public` and (where the real logic belongs in the RLS-helper layer) forward to an `app.*` function. `app` stays exactly what its name says: helpers RLS policies and other `app`/`public` functions call, never a client.
 - **Server data access:** the browser uses the anon key + user JWT **only for reads that RLS already protects and for Realtime subscriptions**. All writes go through Server Actions / Route Handlers using the **user's JWT** (so RLS still applies) — the **service role** is used only in (a) webhooks, (b) cron jobs, (c) explicitly reviewed admin operations, each wrapped in `withServiceRole(reason)` which logs the reason.
 
 ## 4. Data conventions

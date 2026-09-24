@@ -3,8 +3,8 @@
 |                  |                                                                                                                                                                                     |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Area             | platform                                                                                                                                                                            |
-| Status           | planned                                                                                                                                                                             |
-| Owner branch     | `feat/identity-audit-viewer`                                                                                                                                                        |
+| Status           | Parts 1-3 shipped (append-only substrate + catalogue, owner viewer, correlation/per-record history); Part 4 (export, platform viewer, integrity job) planned                        |
+| Owner branch     | `feat/identity-audit`                                                                                                                                                               |
 | Depends on       | F-ID-01, F-ID-03, F-ID-08                                                                                                                                                           |
 | Plan             | `docs/plan/ROADMAP.md` chunk 3                                                                                                                                                      |
 | Base44 reference | `docs/reference/base44-inventory/01-auth-tenancy-personal.md` §5.2 D4; §5.3 W1, W5; `docs/reference/base44-security-review.md` finding 5; PRODUCT-DECISIONS §6.8; DECISION-LOG D-05 |

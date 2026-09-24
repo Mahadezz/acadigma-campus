@@ -11,6 +11,7 @@ const CTX: WorkspaceContext = {
   workspaceId: WORKSPACE_ID,
   userId: "8c2b1d4e-5f60-4a7b-9c8d-0e1f2a3b4c5d",
   role: "admin",
+  workspaceType: "school",
   plan: "pro",
 }
 

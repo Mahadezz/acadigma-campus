@@ -77,6 +77,62 @@ Next.js on Vercel + Supabase; web PWA only for v1.
 
 **Why:** Its worktree was built for the Fastify design (D-02 rejected). Not deleted — the owner can remove it. Its domain policy tests and Zod contract shape are ported into the new repo.
 
+## D-12 — Node 24 + pnpm 10 · ACCEPTED · 2026-09-17
+
+**Why:** Node 24.19 is what's installed. The old plan pinned pnpm 11.19.0 which does not exist on this machine's corepack; pnpm 10 (current stable) is used and pinned via `packageManager`.
+
+---
+
+## Research-debate synthesis, adopted · 2026-09-17
+
+Source: `docs/product/research/debate/SYNTHESIS.md` and `docs/product/research/DECISION-CHANGES.md`. The lead adopts the synthesis verdicts as defaults: Free school plan abolished pending owner sign-off, the MARKET-STRATEGY §c price list as given, attendance default unmarked, fees offline P1–6 inside the R1 gate, hiring M4 apply-only, marketplace gate immediately after M3, the listed PLG loops killed, compliance MUSTs accepted. Amendments to previously-numbered decisions are appended below rather than rewritten in place, to keep the original reasoning intact; brand-new rules are numbered D-40 onward.
+
+## Amendment to D-22 — Attendance no longer pre-fills present · AMENDED · 2026-09-17
+
+**Amends:** D-22 point 1 (`defaulted_present = true`, pre-fill present + confirm).
+**New rule:** Default `unmarked`. "সবাই উপস্থিত / Mark all present" ships as **one explicit header tap writing an audited bulk action** carrying the actor's user id, surfaced in the monthly register. `defaulted_present` is dropped; `bulk_marked_by` / `bulk_marked_at` are recorded instead. The undo toast is retained.
+**Why:** A default that fabricates attendance records poisons every downstream number (%, risk score, health score, GPA denominators) and cannot be fixed retroactively once schools rely on the history. Read-back audits catch a bad _action_ fast; a bad _default_ is invisible until it is load-bearing (SYNTHESIS X-01). Priority: R1, before M2 2.4.
+
+## Amendment to D-27 (finalized) · 2026-09-17
+
+**Amends:** D-27 points (1), (2), (3), (8).
+
+1. **Fees:** offline recording (F-CM-08 P1–6) moves inside the **R1 launch gate** (M3, not M4); online payment (P7–14) stays R1.5. The CFO's objection was to the online rail's unbudgeted cost, not to recording fees at all — separating them satisfies both critics.
+2. **SMS:** priced per UCS-2 segment (৳0.75) with margin, and recognised as a **legal-entity dependency** (BTRC enlistment needs a company name, trade licence, TIN, NID), not two engineering glue parts.
+3. **Pricing:** band + overage confirmed as the shape; **teacher caps are deleted** on every plan.
+4. **Market sizing:** BANBEIS 2022 (137 schools / 71,456 students) is the number of record; BEMA's "300+/300,000+" is a labelled trade-body claim; Eduman, ClassTune and IEIMS/EMIS are added to the competitive map as the real incumbents.
+   **Why:** Fees are the market's anchor module — a school will not switch to a system that cannot collect money — and the offline half has no gateway dependency, so there is no reason to hold it for M4. SMS lead time is regulatory, not engineering, and treating it as "2 glue parts" hid a company-formation dependency from the schedule. Per-seat pricing was suppressing our own north-star metric (login frequency) by making schools ration accounts.
+
+## Resolution of D-28 — RESOLVED from PROVISIONAL · 2026-09-17
+
+1. Plan shape and numbers are final (MARKET-STRATEGY §c; migration `20260917010300_plans_and_notifications.sql`).
+2. AI approval is universal **except that parent-facing text may never be bulk-approved** — a per-student edit or typed sentence before `parent_visible`, teacher's name on the comment.
+3. `open_to_work` is a private preference; **candidate browse is deleted; hiring is apply-only.**
+4. Pilot = 8–10 weeks paid, spanning one terminal exam; self-serve trial = **30 days**. **Hiring timing resolved: M4, minimal 4 parts (P1–4), apply-only.**
+   **Why:** The debate round closed every item D-28 left provisional. "Approve all" for forty children at 9pm is one tap and the first wrong comment costs the school; a browsable teacher directory is safe only for the unemployed in a city where forty principals share a WhatsApp group (SYNTHESIS A-05, H-03).
+
+## Completion of D-39 · 2026-09-17
+
+**Completes** the D-39 entry above (allowances restated as per-MONTH). Final numbers: **trial 100 AI actions lifetime · Starter 200/month · Pro 600/month, pooled · Enterprise contractual cap.** Top-up **৳1,200 / 500 actions**, hard ceiling **3× plan allowance / month**. COGS planning at **৳1.45/action**, budgeted at **cost + 30%**.
+**Why:** Pooling matches how teachers actually work — Thursday-night bursts, not daily quotas — and a hard ceiling with a priced top-up keeps an uncapped top-up from becoming an unsecured credit line against a monthly invoice-and-pay subscription (MARKET-STRATEGY §h).
+
+## Supersession of D-26(4) · 2026-09-17
+
+**Supersedes:** `ai_actions.min_plan_tier` gating (Free limited to haiku-backed actions).
+**New rule:** Model routing is **by language risk, not plan tier.** Any Bangla, parent-facing output uses the stronger model on every plan; cost is controlled by _which actions_ a tier may call, never by degrading Bangla.
+**Why:** `min_plan_tier` gates by cost, cost tracks model size, and model size determines Bangla quality — so the old rule guaranteed the worst Bengali went to the schools least able to notice the errors, directly contradicting "never ship unreviewed Bangla to parents" (SYNTHESIS A-04).
+
+## Amendment to D-34 — Minimisation strengthened · AMENDED · 2026-09-17
+
+**Amends:** D-34's minimisation clause.
+**New rule:** **Student/guardian NID and birth-certificate _numbers_, and `monthly_income_bdt`, are dropped entirely** — replaced by an attestation record `{type, last4, verified_at, verified_by}`. Scans purge at **admission decision + 14 days** (not 90). KYC images retained **180 days** (F-CM-02 wins over COMPLIANCE §4.4's "2 years"). `redactForAI()` moves to M0/M1 and **fails closed**. Localisation gains a roadmap item, a named owner and a decision gate at M6.
+**Why:** A number we never store cannot leak, be subpoenaed wrongly, or need a retention clock at all; "we don't archive" is only a true claim once the numbers themselves are gone, not just the scans. Priority: MUST.
+
+## Update to D-17 — OPEN to the owner, recommendation attached · 2026-09-17
+
+Current rule: payout minimum ৳1,000, monthly on the 1st. **Recommendation: ৳300, weekly auto-payout, instant-on-request with the fee stated**, bKash cash-out cost shown honestly in the earnings screen. ৳1,000 **stands until the owner rules** (OQ-15).
+**Why:** Median new marketplace sellers earn ~$32 in month 2; at ৳1,000 most first-cohort sellers never cash out and never make a second product — the 29-day wait to a first payout is the retention event we are currently failing. Priority: later (M6).
+
 ## D-13 — Native Android + Windows via wrappers around one mobile-first web app · ACCEPTED (owner requirement) · 2026-09-17
 
 **Owner's words:** "this will be a native android and windows app since it's for teachers, so the versions should also support the phone and make the app optimized for the mobile phones so it feels like it was made for a phone."
@@ -114,7 +170,7 @@ Earnings state machine: `pending` (sale) → `available` (after 7 days, unless r
 
 Plans live in a `plans` table (limits + prices), editable from the platform console without deploy. Placeholder matrix is in `docs/product/PRODUCT-DECISIONS.md` §Billing.
 
-## D-19 — Supabase project · ACCEPTED · 2026-09-17
+## D-19 — Supabase project · SUPERSEDED by D-53 (2026-09-24) · 2026-09-17
 
 `acadigma-suite`, ref `bvqzhrvcrxebawjusrxk`, region ap-south-1, URL `https://bvqzhrvcrxebawjusrxk.supabase.co`. Publishable key `sb_publishable_6POCbYjBAcrSiT1AlCPSVQ_SG3ohfsL` (safe for browser). Service-role key is never written to disk outside `.env.local`.
 
@@ -221,62 +277,6 @@ From `docs/architecture/DATA-MODEL.md` (129 tables; 29 in foundation migrations 
 
 PRODUCT-DECISIONS §3.3/§5.1 said "credits/day"; costed at ৳1.45/action that makes every tier negative-margin on AI. All plan allowances are restated as **AI actions per month** with pooled use (burst-friendly for Thursday-night planning), hard cap, and top-ups priced above cost (placeholder ৳1,200 / 500 actions, ceiling 3× allowance/month). Exact per-plan numbers set by the debate synthesis; the plans seed in migration 0004 must be updated before M0 0.5 builds on it.
 
-## D-12 — Node 24 + pnpm 10 · ACCEPTED · 2026-09-17
-
-**Why:** Node 24.19 is what's installed. The old plan pinned pnpm 11.19.0 which does not exist on this machine's corepack; pnpm 10 (current stable) is used and pinned via `packageManager`.
-
----
-
-## Research-debate synthesis, adopted · 2026-09-17
-
-Source: `docs/product/research/debate/SYNTHESIS.md` and `docs/product/research/DECISION-CHANGES.md`. The lead adopts the synthesis verdicts as defaults: Free school plan abolished pending owner sign-off, the MARKET-STRATEGY §c price list as given, attendance default unmarked, fees offline P1–6 inside the R1 gate, hiring M4 apply-only, marketplace gate immediately after M3, the listed PLG loops killed, compliance MUSTs accepted. Amendments to previously-numbered decisions are appended below rather than rewritten in place, to keep the original reasoning intact; brand-new rules are numbered D-40 onward.
-
-## Amendment to D-22 — Attendance no longer pre-fills present · AMENDED · 2026-09-17
-
-**Amends:** D-22 point 1 (`defaulted_present = true`, pre-fill present + confirm).
-**New rule:** Default `unmarked`. "সবাই উপস্থিত / Mark all present" ships as **one explicit header tap writing an audited bulk action** carrying the actor's user id, surfaced in the monthly register. `defaulted_present` is dropped; `bulk_marked_by` / `bulk_marked_at` are recorded instead. The undo toast is retained.
-**Why:** A default that fabricates attendance records poisons every downstream number (%, risk score, health score, GPA denominators) and cannot be fixed retroactively once schools rely on the history. Read-back audits catch a bad _action_ fast; a bad _default_ is invisible until it is load-bearing (SYNTHESIS X-01). Priority: R1, before M2 2.4.
-
-## Amendment to D-27 (finalized) · 2026-09-17
-
-**Amends:** D-27 points (1), (2), (3), (8).
-
-1. **Fees:** offline recording (F-CM-08 P1–6) moves inside the **R1 launch gate** (M3, not M4); online payment (P7–14) stays R1.5. The CFO's objection was to the online rail's unbudgeted cost, not to recording fees at all — separating them satisfies both critics.
-2. **SMS:** priced per UCS-2 segment (৳0.75) with margin, and recognised as a **legal-entity dependency** (BTRC enlistment needs a company name, trade licence, TIN, NID), not two engineering glue parts.
-3. **Pricing:** band + overage confirmed as the shape; **teacher caps are deleted** on every plan.
-4. **Market sizing:** BANBEIS 2022 (137 schools / 71,456 students) is the number of record; BEMA's "300+/300,000+" is a labelled trade-body claim; Eduman, ClassTune and IEIMS/EMIS are added to the competitive map as the real incumbents.
-   **Why:** Fees are the market's anchor module — a school will not switch to a system that cannot collect money — and the offline half has no gateway dependency, so there is no reason to hold it for M4. SMS lead time is regulatory, not engineering, and treating it as "2 glue parts" hid a company-formation dependency from the schedule. Per-seat pricing was suppressing our own north-star metric (login frequency) by making schools ration accounts.
-
-## Resolution of D-28 — RESOLVED from PROVISIONAL · 2026-09-17
-
-1. Plan shape and numbers are final (MARKET-STRATEGY §c; migration `20260917010300_plans_and_notifications.sql`).
-2. AI approval is universal **except that parent-facing text may never be bulk-approved** — a per-student edit or typed sentence before `parent_visible`, teacher's name on the comment.
-3. `open_to_work` is a private preference; **candidate browse is deleted; hiring is apply-only.**
-4. Pilot = 8–10 weeks paid, spanning one terminal exam; self-serve trial = **30 days**. **Hiring timing resolved: M4, minimal 4 parts (P1–4), apply-only.**
-   **Why:** The debate round closed every item D-28 left provisional. "Approve all" for forty children at 9pm is one tap and the first wrong comment costs the school; a browsable teacher directory is safe only for the unemployed in a city where forty principals share a WhatsApp group (SYNTHESIS A-05, H-03).
-
-## Completion of D-39 · 2026-09-17
-
-**Completes** the D-39 entry above (allowances restated as per-MONTH). Final numbers: **trial 100 AI actions lifetime · Starter 200/month · Pro 600/month, pooled · Enterprise contractual cap.** Top-up **৳1,200 / 500 actions**, hard ceiling **3× plan allowance / month**. COGS planning at **৳1.45/action**, budgeted at **cost + 30%**.
-**Why:** Pooling matches how teachers actually work — Thursday-night bursts, not daily quotas — and a hard ceiling with a priced top-up keeps an uncapped top-up from becoming an unsecured credit line against a monthly invoice-and-pay subscription (MARKET-STRATEGY §h).
-
-## Supersession of D-26(4) · 2026-09-17
-
-**Supersedes:** `ai_actions.min_plan_tier` gating (Free limited to haiku-backed actions).
-**New rule:** Model routing is **by language risk, not plan tier.** Any Bangla, parent-facing output uses the stronger model on every plan; cost is controlled by _which actions_ a tier may call, never by degrading Bangla.
-**Why:** `min_plan_tier` gates by cost, cost tracks model size, and model size determines Bangla quality — so the old rule guaranteed the worst Bengali went to the schools least able to notice the errors, directly contradicting "never ship unreviewed Bangla to parents" (SYNTHESIS A-04).
-
-## Amendment to D-34 — Minimisation strengthened · AMENDED · 2026-09-17
-
-**Amends:** D-34's minimisation clause.
-**New rule:** **Student/guardian NID and birth-certificate _numbers_, and `monthly_income_bdt`, are dropped entirely** — replaced by an attestation record `{type, last4, verified_at, verified_by}`. Scans purge at **admission decision + 14 days** (not 90). KYC images retained **180 days** (F-CM-02 wins over COMPLIANCE §4.4's "2 years"). `redactForAI()` moves to M0/M1 and **fails closed**. Localisation gains a roadmap item, a named owner and a decision gate at M6.
-**Why:** A number we never store cannot leak, be subpoenaed wrongly, or need a retention clock at all; "we don't archive" is only a true claim once the numbers themselves are gone, not just the scans. Priority: MUST.
-
-## Update to D-17 — OPEN to the owner, recommendation attached · 2026-09-17
-
-Current rule: payout minimum ৳1,000, monthly on the 1st. **Recommendation: ৳300, weekly auto-payout, instant-on-request with the fee stated**, bKash cash-out cost shown honestly in the earnings screen. ৳1,000 **stands until the owner rules** (OQ-15).
-**Why:** Median new marketplace sellers earn ~$32 in month 2; at ৳1,000 most first-cohort sellers never cash out and never make a second product — the 29-day wait to a first payout is the retention event we are currently failing. Priority: later (M6).
-
 ## D-40 — Attendance is never fabricated by default · ADDED · 2026-09-17
 
 The full rule is D-22 (amended) above. **Why:** a default that fabricates records poisons every downstream number and cannot be fixed later (SYNTHESIS X-01). Priority: R1.
@@ -327,3 +327,65 @@ Admins see **scheduled periods only**; workload variance is teacher-private by d
 **Context (F-ID-01 build):** Supabase exposes only the `public` schema (and schemas explicitly added to PostgREST) as RPC. Functions in `app.*` — designed as the SECURITY DEFINER helper layer — cannot be called from the browser or from `supabase-js`, so `app.redeem_invitation`, `app.request_join_with_code` and the auth throttle helpers were unreachable as written.
 **Decision:** every function a client must call gets a thin `public.<name>()` wrapper that validates arguments and delegates to the `app.*` implementation; `public` wrappers are the only functions granted `EXECUTE` to `authenticated`/`anon`. `app.*` keeps the logic, is granted to no client role, and is the only layer tests target for behaviour. RLS helpers used inside policies remain in `app`. Each feature spec that names an RPC (F-ID-03, F-ID-04, F-CM-08 …) must list its `public` wrapper.
 **Why:** keeps the security-definer surface auditable and the PostgREST surface minimal; the alternative (exposing `app` to PostgREST) would publish every helper.
+
+## D-51 — Audit substrate: generic-trigger actions stay separate from the named catalogue, and correlation id rides a PostgREST pre-request hook · ACCEPTED · 2026-09-17
+
+**Context:** F-ID-09 Part 1 (append-only substrate). Two things the spec left for the builder: (1) the generic trigger `app.tg_audit()` (D-05, shipped in 0003) has always written `<table>.<op>` actions (`workspace_members.update`), while F-ID-09 §5.1's catalogue names business actions (`member.role_changed`) — these do not line up, and acceptance criterion 17 requires every action actually written to exist in `app.audit_action_catalog`. (2) the trigger already read a transaction-local `app.correlation_id` setting, but nothing in the stack ever set it — `supabase-js` talks to PostgREST, which runs one transaction per HTTP request, so a `set_config(..., true)` made by one RPC call cannot be seen by a later `.from().insert()` call in the same server action.
+**Decision:** (1) Seed **both** sets into `app.audit_action_catalog`: the curated business actions from §5.1 (for explicit `app.log_audit_event()` calls business logic makes going forward) and a generated `<table>.insert|update|delete` row for every table the trigger is attached to (`GENERIC_AUDIT_TABLES` in `packages/domain/src/audit/catalog.ts`, mirrored in the migration's `v_tables` array and diffed by `scripts/check-audit-catalog-parity.mjs`). `app.log_audit_event()` raises on an uncatalogued action; `app.tg_audit()` defaults a missing lookup to `info` rather than blocking a tenant write. (2) `app.pre_request()`, wired as PostgREST's `db-pre-request` function (`alter role authenticator set pgrst.db_pre_request = 'app.pre_request'`, guarded exactly like the 0001 `pg_cron` block), copies `x-correlation-id` into `app.correlation_id` inside the request's own transaction before RLS runs. `app.set_correlation_id(uuid)` is the explicit fallback for callers outside that path (jobs, webhooks).
+**Why:** rejecting every non-catalogued action outright (matching the trigger's real output to the letter) would mean re-deriving ~50 business-meaning actions from raw CRUD before Part 1 could ship at all; separating "what the trigger writes today" from "what business logic will name tomorrow" ships the append-only guarantee now without inventing fake specificity. The pre-request hook is the standard, Supabase-documented mechanism for exactly this per-request-GUC problem — the alternative (thread correlation id as an explicit parameter through every future repository write) would touch every area's migrations, not just this one.
+**Consequences:** a future migration that calls `app.attach_audit()` on a new table must also seed that table's three generic rows (`packages/domain/src/audit/catalog.ts` + the migration's `v_tables`) or the CI parity check fails; this is the intended forcing function. CI's disposable Postgres has no `authenticator`-role restrictions matching a locked-down hosted project, so the pre-request wiring is exercised in CI but its _hosted_ behaviour is verified only once against the Supabase dev branch — tracked as a Part 2 follow-up, not blocking Part 1.
+
+## D-52 — F-ID-03 review follow-ups: a removed/pending member is not a forger; the tenant-freeze trigger has exactly one cascade exception · ACCEPTED · 2026-09-24
+
+> Numbering note: D-51 exists on a not-yet-merged PR at the time this entry was written. If D-51 lands first with a different subject, this entry keeps the number D-52 (`DECISION-LOG.md`'s own rule: "numbers are never reused") — the PR that introduced it flags the collision risk for the merge reviewer to confirm before merge.
+
+**Context:** an Opus review of the merged F-ID-03 Parts 1-3 PR (#7) found two related tenancy gaps.
+
+1. `resolveWorkspaceContext`'s header path (`packages/db/src/workspace-context.ts`) treated "no ACTIVE membership row for the candidate workspace" as a single case: fire the `tenancy.context_rejected` forgery tripwire and fail `not_a_member`. But a **removed** member (F-ID-03 §9 AC6) or a **pending** join-by-code applicant replaying a stale `x-workspace-id`/`acadigma_workspace` cookie — most concretely, a second person signing in on a shared phone after the first person's session expired without signing out — hits the exact same code path as a genuine forged-header attack, and gets logged as one: a false audit row lands in the FIRST person's school, naming the second person as a would-be attacker.
+2. `public.data_requests.workspace_id` is `on delete set null` (a DSAR must outlive the school it names), but F-ID-03 Part 1's tenant-freeze audit attached `app.tg_freeze_workspace` to that table (closing a real re-parenting gap, D-36's degenerate-role-predicate warning). `ON DELETE SET NULL` is itself an internal UPDATE, so the freeze trigger — an unconditional "`workspace_id` never changes" — fired on that cascade and aborted any hard delete of a workspace with a `data_requests` row.
+
+**Decision:**
+
+- `resolveWorkspaceContext` now runs a second, narrower query — "does the caller have ANY `workspace_members` row for this workspace, in any status" (RLS already lets a user see their own row in every status, F-ID-03 §3) — only when the active-membership check comes back empty on the header path. A row found (removed/pending) fails a new, distinct reason, `membership_inactive`; no row at all fails `not_a_member`. **Both fire the tripwire** (amended after the PR #12 Opus review, see below). `public.log_tenancy_context_rejected` (`20260924020000_tenancy_tripwire_membership_status.sql`) looks up the caller's own membership status server-side and writes it into the row as `membership_status` (`none`/`pending`/`removed`) plus `severity` (`forgery` when `none`, otherwise `inactive`), so alerting can rank them without the row ever being skipped.
+- **Amendment (PR #12 review):** the first draft skipped the tripwire for removed/pending callers. Rejected: a `pending` row is one invite code away for anyone (`join_workspace_by_code`), so skipping it would let an outsider probe a school silently, and a removed ex-employee's probes would go unrecorded. The shared-phone false positive that motivated skipping is already fixed at its source by clearing the cookie on sign-in, so the skip bought nothing and weakened AC1. `requireWorkspace()` (`apps/web/lib/workspace.ts`) needed no change — it already renders the same `forbidden()` screen for any reason other than `unauthenticated`, so AC6 ("the removed member sees the no-longer-have-access screen") still holds exactly as before.
+- `app.tg_freeze_workspace()` (`20260924010000_tenancy_freeze_cascade_exception.sql`) allows exactly one transition: `old.workspace_id is not null and new.workspace_id is null`, on `public.data_requests` only, and only when `pg_trigger_depth() > 1` — the signature of being invoked from inside another trigger (the FK action's own internal UPDATE), which a direct client statement (`pg_trigger_depth() = 1`) can never produce. Every other re-parent attempt, on every frozen table including `data_requests` itself, still raises `42501`.
+- Separately (not a schema/behaviour change, but the same review): the `acadigma_workspace` cookie is now cleared on every path that mints a session for a possibly-different user (`signInWithPassword`, `resetPassword`'s `verifyOtp`, and `/api/auth/callback`'s `verifyOtp`), and `resolveLandingRoute` resolves workspace context with an empty header bag rather than the request's real headers, since middleware has already mirrored a possibly-stale cookie into it before that function runs.
+
+**Why:** a security tripwire that fires on ordinary account lifecycle events (being removed, or replaying a shared device's leftover cookie) trains whoever reads `audit_events` to ignore it — the opposite of what a tripwire is for. A blanket immutability trigger that cannot tell "an attacker re-parenting a tenant row" from "the one FK action the schema itself declares as legitimate" is the same class of bug D-36 already named: correct in the common case, wrong at the one boundary that matters. Distinguishing both narrowly, rather than loosening the general rule, keeps the tenant-freeze invariant intact everywhere except the one place it was never meant to apply.
+
+**Consequences:** `WorkspaceContextFailureReason` gains `membership_inactive`; any future caller that branches on `.reason` (none does today outside `workspace-context.ts` itself) must treat it the same as `not_a_member` unless it specifically wants to show different copy. The freeze-trigger exception is narrow by construction (table name + exact transition + nesting depth) and pgTAP (`supabase/tests/10_tenancy_cascade.sql`) proves both the allowed cascade and that a direct client re-parent is still blocked. `docs/features/01-identity/F-ID-03-workspaces-and-membership.md` §11 records both as deviations from the Part 1-3 build.
+
+## D-53 — Campus moves to its own Supabase project on a separate account · ACCEPTED · 2026-09-24
+
+> Numbering note: D-51 (PR #6, audit) and D-52 (PR #12, tenancy follow-ups) are on open PRs at the time of writing. This entry takes the next number after both.
+
+**Context:** the owner created a separate Supabase account (organisation `Acadigma Suite`) for the Campus app. The old project `acadigma-suite` (`bvqzhrvcrxebawjusrxk`) never had the Campus migrations applied (OQ-26 secrets were never set), so it holds only the marketing site's `public.waitlist` table.
+
+**Decision:** Campus uses project **`Acadigma Campus`**, ref **`kekfmibwjejdhxjkmezo`**, region ap-south-1 (same as before), URL `https://kekfmibwjejdhxjkmezo.supabase.co`, publishable key `sb_publishable_VbUqiEvQiuObUZMf5IGYOA_P_EiiyGy` (safe for browser). The service-role/secret key is never written to disk outside `apps/web/.env.local`, Vercel and GitHub secrets. D-20 (one project for dev and prod until launch) still applies, to this project. The marketing website **stays** on the old project for its waitlist; the two apps no longer share a database.
+
+**Consequences:** Vercel and Claude Code keep the owner's existing accounts; only Supabase changed. Every dashboard-only Supabase setting must be (re)applied to the new project — `supabase/config.toml` auth settings via `supabase config push`, plus the dashboard items in OWNER-QUESTIONS (OQ-25 recovery email template, breached-password protection, SMTP, redirect URLs). Historical test reports keep the old ref because that is what they ran against.
+
+## D-54 — Deny function EXECUTE by default in `public`; CI mirrors Supabase's default privileges · ACCEPTED · 2026-09-24
+
+**Context:** Live verification against the production Supabase project `kekfmibwjejdhxjkmezo` (all main migrations applied at the time) showed `has_function_privilege('anon', 'public.switch_workspace(uuid)', 'execute')` returning `true`, despite `20260917020300_tenancy_hardening.sql` §5 granting that function to `authenticated` only. The cause: Supabase provisions every project with `ALTER DEFAULT PRIVILEGES FOR ROLE postgres, supabase_admin IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role`. Every migration's `revoke all on function ... from public` revokes the PUBLIC pseudo-role's grant, not the explicit per-role grant the default already handed to anon/authenticated at `CREATE FUNCTION` time — so the "revoke, then grant back the intended roles" pattern used throughout `identity_auth.sql` and `tenancy_hardening.sql` left the unintended roles granted anyway. Affected: `public.log_auth_event_service` (intended service_role-only — anon/authenticated could forge `account.registered` audit rows with an arbitrary user id, ip and user agent), `public.switch_workspace`, `public.list_my_workspaces`, `public.log_tenancy_context_rejected` (all intended authenticated-only). `log_tenancy_context_rejected` additionally has no `auth.uid() is null` guard, so this was live-exploitable: anon could write a `tenancy.context_rejected` audit row into any workspace with an attacker-chosen `attempted_workspace_id`. CI never caught this because its Postgres 17 service container has no such default, so `has_function_privilege('anon', ...)` pgTAP assertions passed for the wrong reason.
+
+**Opus review of this PR found the first cut was still not deny-by-default for anon:** per-schema default privileges (`... IN SCHEMA public ...`) only _add to_ the role-wide default; Postgres's built-in role-wide default already grants EXECUTE on functions to `PUBLIC`. A future `public` function that skips its own `revoke ... from public` is still anon-callable through that global default even after the schema-scoped fix below, because `PUBLIC` membership is implicit for every role including `anon`.
+
+**Decision:** (1) `supabase/ci/bootstrap.sql` now runs the same `ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role` Supabase runs on project creation, so CI's grant assertions are false exactly when they would be false live. (2) `20260924030000_revoke_default_function_grants.sql` revokes the mis-granted EXECUTE from the four functions above and, going forward, flips the default itself at **both** levels: the schema-scoped `alter default privileges for role postgres in schema public revoke execute on functions from anon, authenticated` (service_role keeps it), **and** the role-wide `alter default privileges for role postgres revoke execute on functions from public` — closing the gap the review found, since a schema-scoped revoke alone cannot undo a grant to the implicit `PUBLIC` role that every future function still inherits. Every new `public` function is now genuinely deny-by-default and must grant EXECUTE explicitly, or it is uncallable rather than silently open. (3) `supabase/tests/12_function_grants_invariant.sql` asserts the allowlists, the default-ACL shape, **and** (new, from the review) a live probe: it creates a throwaway ungranted function inside the test transaction and asserts anon/authenticated cannot execute it while service_role can — a probe that would have failed before the role-wide revoke, so it actually tests the fix rather than just re-describing it. `log_tenancy_context_rejected`'s missing null-check is NOT fixed in this PR — its body was already being replaced by PR #12 (`fix/tenancy-review-followups`, `20260924020000_tenancy_tripwire_membership_status.sql`, merged as D-52); adding the check here would have conflicted. The grant fix alone closes the PostgREST path; the null-check follow-up belongs to a small PR after both merge.
+
+**Knock-on to test infrastructure:** revoking EXECUTE from `PUBLIC` role-wide also affects pgTAP's own `tests.*` helper functions (`tests.login()`, `tests.logout()`, `tests.mkuser()` — created by `postgres` in each spec, called after `SET ROLE authenticated`), which previously worked only because of the same implicit `PUBLIC` grant this fix removes. `supabase/ci/bootstrap.sql` adds `create schema if not exists tests; alter default privileges for role postgres in schema tests grant execute on functions to public;` (plus `grant usage on schema tests to public`) — test infrastructure only, never shipped to the real project, and safe because per-schema default-privilege entries are additive on top of (never replaced by) the role-wide default, so scoping the grant back to `public` for the `tests` schema alone does not reopen anything in `public`/`app`.
+
+**Two further, lower-priority review findings, same PR:** (a) `12_function_grants_invariant.sql`'s allowlist checks originally filtered to `prosecdef` (SECURITY DEFINER) functions only; dropped, so a future plain SECURITY INVOKER function in `public`/`app` is covered by the same allowlist — every function in both schemas today is already either DEFINER or an already-excluded `app` utility, so this cost nothing to extend. Merging `main` (D-51, D-52) into this PR while making that change surfaced one genuine addition the allowlist needed regardless: `app.pre_request()` (D-51, `20260924000100_audit_substrate.sql` §9), PostgREST's `db-pre-request` hook, must be anon-executable because it runs on every request — including anonymous ones — before RLS; it is now on the A1 allowlist with its rationale inline. (b) `supabase/ci/bootstrap.sql` also mirrors Supabase's default table/sequence privilege (`ALTER DEFAULT PRIVILEGES ... GRANT ALL ON TABLES/SEQUENCES TO anon, authenticated, service_role`) for the same reason as the function one — a table-grant pgTAP assertion in a plain container could otherwise be passing because nothing was ever granted, not because it was explicitly revoked. This PR's test report records whether that surfaced a real table/sequence-grant gap (in which case it is a separate finding, not papered over here) or stayed green.
+
+**Why:** a security boundary that depends on the platform's default privileges silently agreeing with the repo's intent, with nothing testing that they do, is not actually enforced — CLAUDE.md rule 1 ("the database and the server are the security boundary") requires the database layer to be verified, not assumed. A schema-scoped revoke that leaves the role-wide `PUBLIC` grant standing is not deny-by-default, it is a default that still works by accident for exactly the schema this repo audits — the review caught that the fix needed to be provably complete, not merely plausible.
+**Consequences:** every future migration that adds a `public` function MUST grant EXECUTE explicitly to whichever of anon/authenticated it intends, or the function is uncallable from the client entirely (service_role is unaffected, and so is anything created inside `supabase/ci/bootstrap.sql`'s `tests` schema). `supabase/tests/README.md` documents the new test file and its probe.
+
+## D-55 — Generated types come from the PR's migrations in CI, not from the live project · ACCEPTED · 2026-09-24
+
+> Numbering note: D-51 (PR #6) and D-52 (PR #12) are on open PRs; D-54 is reserved by the in-progress default-grants security PR. This entry takes D-55.
+
+**Context:** `CI / contracts` regenerated `types.generated.ts` from the live Supabase project and byte-compared it with the committed file. The check was skipped until the Supabase secrets existed (OQ-26); once they did, it exposed that the design cannot work: the live project only receives a PR's migrations after merge (D-20), so any PR that changes the `public` schema (PR #6 adds `set_correlation_id` and audit columns) generates types without its own changes and fails, while committing types that include them also fails.
+
+**Decision:** the freshness check moves to `CI / db`, after the PR's migrations are applied to the CI Postgres: `supabase gen types typescript --db-url <ci postgres> --schema public`, Prettier-formatted, byte-compared. The live-based check is removed from `contracts`. On a mismatch the job uploads the correct file as the `types-generated` artifact, so a developer (or agent) with no local Docker fixes it with `gh run download`.
+
+**Consequences:** the committed file is in `--db-url` output format. Drift between the live project and `main` is a deployment concern (the `push` job applies `main`'s migrations), not a per-PR type check.

@@ -76,22 +76,25 @@ export const hindSiliguri = Hind_Siliguri({
   weight: ["400", "600"],
   display: "swap",
   variable: "--font-hind-siliguri",
+  preload: false, // the Bengali subset is fetched only when painted, never preloaded
   adjustFontFallback: false, // see the metric note below
 })
 ```
 
 Then on `<html>`: `className={`${inter.variable} ${hindSiliguri.variable}`}`.
 
-`tokens.css` names the families by their CSS family name, so `next/font` and a
-plain `<link>` both work. If you prefer to bind to the generated variables,
-override two lines _in this file only_:
+`tokens.css` binds `--font-sans` / `--font-bn` to those generated variables,
+with the CSS family names as fallbacks, so `next/font` (the default: `fonts.ts`
+plus the `<html>` class in `apps/web/app/layout.tsx`) and a plain `<link>` both
+work:
 
 ```css
 :root {
-  --font-sans: var(--font-inter), Roboto, system-ui, sans-serif;
+  --font-sans:
+    var(--font-inter, "Inter"), "Inter Fallback", Roboto, system-ui, sans-serif;
   --font-bn:
-    var(--font-hind-siliguri), "Noto Sans Bengali", var(--font-inter),
-    sans-serif;
+    var(--font-hind-siliguri, "Hind Siliguri"), "Hind Siliguri Fallback",
+    "Noto Sans Bengali", var(--font-inter, "Inter"), sans-serif;
 }
 ```
 

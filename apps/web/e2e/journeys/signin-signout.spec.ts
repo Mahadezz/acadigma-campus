@@ -42,9 +42,12 @@ test.describe("sign in and sign out", () => {
     await page.getByLabel("Password").fill("password123")
     await page.getByRole("button", { name: "Sign in" }).click()
 
-    // Part 3's resolveLandingRoute() stub always returns /onboarding until
-    // F-ID-03 lands (F-ID-01 §7).
-    await expect(page).toHaveURL(/\/onboarding$/)
+    // F-ID-03 §4.4: resolveLandingRoute() is now real. seed.sql explicitly sets
+    // owner@acadigma.test's profiles.last_active_workspace_id to the SCHOOL
+    // workspace ("Everyone's last-opened workspace: the school for staff"), so
+    // resolveWorkspaceContext's fallback chain resolves type='school',
+    // role='owner' -> /app.
+    await expect(page).toHaveURL(/\/app(\/.*)?$/)
   })
 
   test("signed-out visitors are redirected to /login with a return path", async ({

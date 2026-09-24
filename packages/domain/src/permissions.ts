@@ -59,8 +59,41 @@ export const ACTIONS = [
   "listing.create",
   "listing.review",
   "payouts.manage",
+  // Audit (F-ID-09 §2)
+  "audit.read",
+  "audit.read.platform",
+  "audit.read.self",
+  "audit.export",
   // Platform console
   "platform.console",
+  // -----------------------------------------------------------------------
+  // Tenancy & membership (F-ID-03 §2). These are the fine-grained keys the
+  // Team & Access screen, the workspace switcher and their server actions
+  // gate on. `members.read` / `members.manage` above stay as the coarse,
+  // pre-existing keys other areas already reference; the ones below narrow
+  // "manage" into the exact actions F-ID-03 §2's table names, so a reviewer
+  // can read one row of that table and one line of PERMISSIONS and know they
+  // agree. Row-scoping nuances the table also states — "own row only",
+  // "unless sole owner", "cannot target an owner" — are NOT modelled here on
+  // purpose (see the file-level comment): they are enforced by
+  // `memberLifecycle` guards and the database triggers, and are asserted by
+  // their own tests, not by `can()`.
+  "workspace.read",
+  "workspace.settings.write",
+  "workspace.branding.write",
+  "members.contact.read",
+  "members.invite",
+  "members.approve",
+  "members.role.write",
+  "members.staff_fields.write",
+  "members.remove",
+  "members.leave",
+  "workspace.ownership.transfer",
+  "labels.write",
+  "labels.assign",
+  "modules.visibility.write",
+  "workspace.archive",
+  "platform.workspace.suspend",
 ] as const
 
 export type Action = (typeof ACTIONS)[number]
@@ -90,6 +123,26 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "messages.send",
     "ai.use",
     "listing.create",
+    // Tenancy & membership (F-ID-03 §2)
+    "workspace.read",
+    "workspace.settings.write",
+    "workspace.branding.write",
+    "members.contact.read",
+    "members.invite",
+    "members.approve",
+    "members.role.write",
+    "members.staff_fields.write",
+    "members.remove",
+    "members.leave",
+    "workspace.ownership.transfer",
+    "labels.write",
+    "labels.assign",
+    "modules.visibility.write",
+    "workspace.archive",
+    // Audit (F-ID-09 §2)
+    "audit.read",
+    "audit.read.self",
+    "audit.export",
   ],
   // Runs the school day to day. Money and owner-only settings (modules, danger
   // zone) stay with the owner; the F-OP-07 policy blobs do not (RLS §3.1).
@@ -110,6 +163,27 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "messages.send",
     "ai.use",
     "listing.create",
+    // Tenancy & membership (F-ID-03 §2). Notably absent: ownership transfer,
+    // module visibility and archiving stay owner-only; `members.role.write`
+    // is granted but the row-scoping rule "an admin may never create, target
+    // or produce an owner row" is enforced by the trigger and by
+    // `memberLifecycle`, not by this coarse grant.
+    "workspace.read",
+    "workspace.settings.write",
+    "workspace.branding.write",
+    "members.contact.read",
+    "members.invite",
+    "members.approve",
+    "members.role.write",
+    "members.staff_fields.write",
+    "members.remove",
+    "members.leave",
+    "labels.write",
+    "labels.assign",
+    // NOT audit.read by default — DECISION-LOG D-25(2) / F-ID-09 §11 OQ-2:
+    // the trail must be able to record what an admin did without that
+    // admin curating it.
+    "audit.read.self",
   ],
   teacher: [
     "attendance.read",
@@ -122,6 +196,14 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "messages.send",
     "ai.use",
     "listing.create",
+    // Tenancy & membership (F-ID-03 §2): reads the directory card, edits only
+    // their own staff fields (row-scoping enforced elsewhere), can leave.
+    "workspace.read",
+    "members.read",
+    "members.staff_fields.write",
+    "members.leave",
+    // Audit (F-ID-09 §2)
+    "audit.read.self",
   ],
   // Office staff: sees the school, changes almost nothing.
   staff: [
@@ -132,6 +214,12 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.read",
     "reports.read",
     "messages.send",
+    // Tenancy & membership (F-ID-03 §2): same shape as teacher's grant.
+    "workspace.read",
+    "members.staff_fields.write",
+    "members.leave",
+    // Audit (F-ID-09 §2)
+    "audit.read.self",
   ],
   // Read-only parent portal (DECISION-LOG D-10), narrowed to their children by RLS.
   parent: [
@@ -140,6 +228,11 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "marks.read",
     "timetable.read",
     "messages.send",
+    // Tenancy & membership (F-ID-03 §2): name-only workspace read, can leave.
+    "workspace.read",
+    "members.leave",
+    // Audit (F-ID-09 §2)
+    "audit.read.self",
   ],
   // Acadigma staff. Moderation and payouts only — never a tenant's academic data.
   platform: [
@@ -147,12 +240,45 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "payouts.manage",
     "platform.console",
     "reports.read",
+    // Tenancy & membership (F-ID-03 §2): the console's narrow, enumerated
+    // reach into tenant tables (ARCHITECTURE §4 "never a blanket bypass") —
+    // read the roster for support, archive on the owner's behalf, and the
+    // one action that is platform-exclusive everywhere else in this matrix.
+    "workspace.read",
+    "members.read",
+    "members.contact.read",
+    "workspace.archive",
+    "platform.workspace.suspend",
+    // Audit (F-ID-09 §2)
+    "audit.read",
+    "audit.read.platform",
+    "audit.read.self",
+    "audit.export",
   ],
 }
 
-/** May this role attempt this action? The only question this module answers. */
+/**
+ * May this role attempt this action? The only question this module answers.
+ *
+ * Deny-by-default in both arguments — including arguments TypeScript says
+ * cannot happen. A role string that reaches here from a JWT claim, a database
+ * row or a JSON body without passing `isRole()` used to throw `TypeError` on
+ * `undefined.includes(...)`, and `assertCan` is the guard at the top of every
+ * server action, so that throw surfaced as a 500 rather than a denial. A 500 is
+ * a worse answer than "no": it is an unhandled path, and unhandled paths are
+ * where bypasses live. Unknown role, unknown action, or neither: `false`.
+ *
+ * `PERMISSIONS[role]?.includes(...)` is NOT enough, which the tests for this
+ * function prove: `PERMISSIONS` is an object literal, so a role of
+ * `"__proto__"` resolves to `Object.prototype` and `"constructor"` to `Object`
+ * — both truthy, so `?.` happily calls a `.includes` that does not exist and
+ * throws anyway. The grant list is therefore looked up as an OWN property and
+ * type-checked before it is used.
+ */
 export function can(role: Role, action: Action): boolean {
-  return PERMISSIONS[role].includes(action)
+  if (!Object.hasOwn(PERMISSIONS, role)) return false
+  const granted = PERMISSIONS[role]
+  return Array.isArray(granted) && granted.includes(action)
 }
 
 /** True when the role may attempt every one of the actions. */

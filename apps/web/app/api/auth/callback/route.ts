@@ -6,6 +6,7 @@ import { safeReturnTo } from "@acadigma/domain/auth"
 import { logAuthEvent } from "@/lib/audit"
 import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
+import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie"
 
 /**
  * F-ID-01 §7: `GET /api/auth/callback` — query `{token_hash, type, next}`. The
@@ -48,9 +49,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(fallback, url.origin))
   }
 
+  // `verifyOtp` above just minted a live session, possibly for a different person
+  // than whoever last used this device (shared-phone scenario, F-ID-03 review): a
+  // stale `acadigma_workspace` cookie left by an earlier session must not survive
+  // into this one, or the next request mirrors it into `x-workspace-id`,
+  // `resolveWorkspaceContext` re-verifies it against the WRONG person and either
+  // 403s them or fires a false `tenancy.context_rejected` tripwire against
+  // whoever's workspace that id belonged to. Cleared on every branch below.
+  function clearStaleWorkspaceCookie(response: NextResponse): NextResponse {
+    response.cookies.delete(WORKSPACE_COOKIE)
+    return response
+  }
+
   if (type === "recovery") {
     // The recovery session is now active; /reset itself calls updateUser().
-    return NextResponse.redirect(new URL("/reset", url.origin))
+    return clearStaleWorkspaceCookie(
+      NextResponse.redirect(new URL("/reset", url.origin))
+    )
   }
 
   await logAuthEvent(supabase, {
@@ -64,5 +79,7 @@ export async function GET(request: NextRequest) {
     log.warn({ next }, "rejected an off-origin next parameter (AC16)")
   }
 
-  return NextResponse.redirect(new URL(destination.path, url.origin))
+  return clearStaleWorkspaceCookie(
+    NextResponse.redirect(new URL(destination.path, url.origin))
+  )
 }

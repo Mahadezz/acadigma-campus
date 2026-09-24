@@ -153,4 +153,15 @@ If a spec is ambiguous enough that a Sonnet session would have to guess, that is
 8. Add a changeset. Fill the PR template completely, including screenshots at both viewports.
 9. Mark ready. Stop. Do not start the next Part in the same session.
 
+**Rules learned in practice** (details in `docs/plan/HANDOFF-2026-09-24.md`):
+
+- A new migration's timestamp must sort after the newest migration on `main`; `supabase db push` refuses an older-dated one and the production deploy fails on merge.
+- Every new client-callable function needs an explicit `grant execute` to the roles that call it; the defaults deny (D-54). Never a blanket `GRANT EXECUTE ... IN SCHEMA`.
+- `types.generated.ts` comes from CI (D-55): on a type-step failure, `gh run download <run-id> -n types-generated -D packages/db/src` and commit.
+- A PostgREST RPC is its own transaction; a transaction-local setting made over RPC never reaches a later request.
+- In pgTAP, count RLS-protected rows as `postgres` (`tests.logout()`) unless the assertion is about what the caller can see.
+- Seeded-account Playwright journeys carry the `E2E_LIVE_SUPABASE` skip guard until OQ-27 is done.
+- Never `git stash` in shared worktrees. After another session force-pushes, `git switch -C <branch> origin/<branch>` and `pnpm install --frozen-lockfile` before trusting a local typecheck. Verify rebases with `git merge-base --is-ancestor`.
+- `Object.hasOwn` on untrusted keys.
+
 **Do not:** edit an already-applied migration · apply a migration to production · write audit rows from code · accept a price from the client · put a secret anywhere but `.env.local` and Vercel · filter a table in React · ship a green PR whose test report you did not actually run · claim a DoD box you cannot evidence.

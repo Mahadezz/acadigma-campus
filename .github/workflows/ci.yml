@@ -19,9 +19,9 @@ permissions:
   contents: read
 
 env:
-  # Public by design (D-19). Present so `next build` needs no repository secret.
-  NEXT_PUBLIC_SUPABASE_URL: https://bvqzhrvcrxebawjusrxk.supabase.co
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_6POCbYjBAcrSiT1AlCPSVQ_SG3ohfsL
+  # Public by design (D-53, superseding D-19). Present so `next build` needs no repository secret.
+  NEXT_PUBLIC_SUPABASE_URL: https://kekfmibwjejdhxjkmezo.supabase.co
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_VbUqiEvQiuObUZMf5IGYOA_P_EiiyGy
   APP_URL: http://127.0.0.1:3000
   TURBO_TELEMETRY_DISABLED: "1"
   NEXT_TELEMETRY_DISABLED: "1"
@@ -164,6 +164,32 @@ jobs:
             psql -v ON_ERROR_STOP=1 --quiet --file "$file"
           done
 
+      # D-55: generated types must describe THIS PR's schema, so they are
+      # generated from the CI Postgres after the PR's migrations ran, never from
+      # the live project (which only gets a PR's migrations after merge). On a
+      # mismatch the fresh file is uploaded as the `types-generated` artifact:
+      #   gh run download <run-id> -n types-generated -D packages/db/src
+      - uses: ./.github/actions/setup
+
+      - name: Generated types match this PR's migrations
+        run: |
+          set -euo pipefail
+          pnpm exec supabase gen types typescript             --db-url "postgresql://postgres:postgres@127.0.0.1:5432/acadigma_test"             --schema public > /tmp/types.generated.ts
+          pnpm exec prettier --stdin-filepath packages/db/src/types.generated.ts             < /tmp/types.generated.ts > /tmp/types.formatted.ts
+          mkdir -p types-out && cp /tmp/types.formatted.ts types-out/types.generated.ts
+          if ! diff -u packages/db/src/types.generated.ts /tmp/types.formatted.ts; then
+            echo "::error::packages/db/src/types.generated.ts does not match this PR's migrations. Download the types-generated artifact from this run into packages/db/src and commit it."
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: types-generated
+          path: types-out/types.generated.ts
+          retention-days: 14
+          if-no-files-found: ignore
+
       # Fails when a workspace_id table has RLS off, has no test file, or has no
       # audit trigger. Owned by the database agent; absent until it lands.
       - name: RLS coverage
@@ -228,9 +254,6 @@ jobs:
     name: contracts
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # `secrets` cannot be referenced in `if:`; surface it as env and test that.
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
       - uses: ./.github/actions/setup
@@ -243,26 +266,15 @@ jobs:
       - name: Notification catalogue parity
         run: node scripts/check-notification-catalog-parity.mjs
 
-      # Regenerating types needs a live project; without the token the check would
-      # pass vacuously, so say so instead of pretending.
-      - name: Generated types are fresh
-        if: ${{ env.SUPABASE_ACCESS_TOKEN != '' }}
-        env:
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: |
-          set -euo pipefail
-          cp packages/db/src/types.generated.ts /tmp/committed.ts
-          pnpm db:types
-          if ! diff -u /tmp/committed.ts packages/db/src/types.generated.ts; then
-            echo "::error::packages/db/src/types.generated.ts is stale — run pnpm db:types and commit."
-            exit 1
-          fi
+      # F-ID-09 §5.1, acceptance criterion 17: the SQL and TypeScript audit action
+      # catalogues must name the exact same actions, or app.log_audit_event()'s
+      # runtime guard and the viewer's filter UI silently drift apart.
+      - name: Audit action catalogue parity (SQL <-> TypeScript)
+        run: node scripts/check-audit-catalog-parity.mjs
 
-      - name: Note when the type check was skipped
-        if: ${{ env.SUPABASE_ACCESS_TOKEN == '' }}
-        run: |
-          echo "::notice::skipped generated-type freshness: no SUPABASE_ACCESS_TOKEN (fork PR)"
-          echo "### contracts — type freshness skipped (no secrets)" >> "$GITHUB_STEP_SUMMARY"
+      # Generated-type freshness moved to the `db` job (DECISION-LOG D-55): types
+      # are generated from THIS PR's migrations applied to the CI Postgres, not
+      # from the live project, which only receives a PR's migrations after merge.
 
   build:
     name: build

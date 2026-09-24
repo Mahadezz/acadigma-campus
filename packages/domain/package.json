@@ -7,14 +7,17 @@
   "exports": {
     ".": "./src/index.ts",
     "./ai/redact": "./src/ai/redact.ts",
+    "./audit": "./src/audit/index.ts",
     "./auth": "./src/auth/index.ts",
+    "./nav": "./src/nav/index.ts",
     "./permissions": "./src/permissions.ts",
     "./money": "./src/money.ts",
     "./ids": "./src/ids.ts",
     "./time": "./src/time.ts",
     "./settings": "./src/settings/index.ts",
     "./notifications": "./src/notifications/index.ts",
-    "./plans": "./src/plans/index.ts"
+    "./plans": "./src/plans/index.ts",
+    "./workspace": "./src/workspace/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
