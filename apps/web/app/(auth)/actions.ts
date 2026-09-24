@@ -291,7 +291,7 @@ export async function signInWithPassword(
     context: ctx,
   })
 
-  const fallback = resolveLandingRoute()
+  const fallback = await resolveLandingRoute(supabase)
   const destination = safeReturnTo(next, fallback)
   if (destination.rejected) {
     const log = await requestLogger({ route: "auth.login" })
