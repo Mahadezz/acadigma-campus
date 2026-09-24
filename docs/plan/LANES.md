@@ -41,8 +41,8 @@ The roadmap's own streams (ROADMAP §4) still describe long-term ownership. This
 ## How a Part moves
 
 1. The lead starts a builder with the brief (`docs/plan/BUILDER-BRIEF.md`), the lane and its next queue item.
-2. The builder works in `.worktrees/<lane>-<slug>`, runs the full local gate, pushes once, opens the PR and waits for CI.
+2. The builder works in `.worktrees/<lane>-<slug>`: opens a **draft** PR within the first 30 minutes (owner rule, 2026-09-25: no UPS, load shedding can kill the PC at any moment) and pushes a WIP commit at least every 30 minutes and after every green local gate. The PR is marked ready (`gh pr ready <n>`) only once the full local gate is green, then waits for CI.
 3. The lead runs reviews (Opus lead reviewer plus the ECC specialists for what the diff touches). Fixes go back in one batch and one push.
 4. When CI is green and reviews are clean, the lead merges. If the PR has a migration, the lead confirms the live deploy and the smoke test before merging anything else.
 5. The lane's next Part starts only after that.
-6. After each merge the lead appends the `BUILD-LOG.md` entry. Once a day the lead merges the changesets release PR so every package `CHANGELOG` is current, and refreshes `docs/plan/HANDOFF-<date>.md` at the end of each session.
+6. After each merge the lead appends the `BUILD-LOG.md` entry. Once a day the lead merges the changesets release PR so every package `CHANGELOG` is current. The lead writes `docs/plan/HANDOFF-<date>.md` every 2 hours and pushes it, and also refreshes it at the end of each session (same no-UPS rule as step 2 — the lead's own work is saved just as constantly as a lane's).

@@ -28,7 +28,7 @@ Repo: public GitHub `Mahadezz/acadigma-campus`. `gh` must be authenticated.
 - Stay in your lane's folders. Feature lanes may ADD shadcn components to `packages/ui/src/components/ui`; only the design lane edits existing components or tokens. Once `requireWritable` merges, every new write action calls it.
 - If `check-migrations-order` fails (another lane merged a later migration first): `git mv` your unapplied migration to the suggested name, update references, re-run the gate.
 - Before the lead merges you'll be asked to merge `origin/main`: keep every other lane's entries in `DECISION-LOG.md`, the `docs/README.md` test-report table and `DATA-MODEL.md`.
-- Push ONCE per Part after the full local gate passes (CI is a shared queue across four lanes). Review fixes: one batch, one push.
+- **Save work constantly** (owner rule, 2026-09-25: no UPS, load shedding can kill the PC at any moment): open your PR as a **draft** within the first 30 minutes and push a WIP commit at least every 30 minutes and after every green local gate (`wip: ...` commits are fine; they are squashed at merge). Drafts skip the heavy `e2e`/`lighthouse` jobs and a newer push cancels the older run, so this is cheap. Mark the PR ready (`gh pr ready <n>`) only when the full gate is green; review fixes still go as one batch.
 - Vercel previews are off (only `main` builds, D-70); make screenshots locally with Playwright.
 
 ## Frontend components (owner rule, 2026-09-25)
@@ -43,7 +43,7 @@ Migration + pgTAP first → contracts (Zod) → pure domain + unit tests → rep
 
 ## Gate before every push
 
-`pnpm install --frozen-lockfile && pnpm format:check && pnpm typecheck && pnpm lint && pnpm test`, every `node scripts/check-*.mjs`, `pnpm --filter @acadigma/web build`. Batch commits; push as few times as possible.
+`pnpm install --frozen-lockfile && pnpm format:check && pnpm typecheck && pnpm lint && pnpm test`, every `node scripts/check-*.mjs`, `pnpm --filter @acadigma/web build`. Commit often; push WIP to your draft PR (see Lanes).
 
 ## Finish
 
