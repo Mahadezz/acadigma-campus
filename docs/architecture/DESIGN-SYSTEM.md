@@ -438,6 +438,27 @@ gone. The TopBar keeps the workspace switcher, adds breadcrumbs, and adds
 One typed object per workspace type, filtered by `role ∧ plan-entitlement ∧
 owner-visibility` (PRODUCT-DECISIONS 1.12). Order below is the order shipped.
 
+**Single source (D-56, M0 wrap-up).** The types below and the five curated
+trees this section defines live in exactly one place, `packages/domain/src/nav`
+(`types.ts`, `config.ts`, `filterNav.ts`) — zero UI dependency, so the same
+engine filters both a route guard on the server and the rendered nav on the
+client, and the two can never disagree about what a role can see (the direct
+fix for the prototype's D6 finding: `module_*` toggles no navigation code
+read). `packages/ui`'s `nav-config.ts` imports these rather than redefining
+them, and adds only what is genuinely UI-only: the icon-name → `lucide-react`
+lookup, and the `sellerNav`/`platformNav` trees below, which are entered from
+a link/the avatar menu rather than resolved from `workspace type ∧ role`, so
+they have no home in the domain engine. "Owner-only within More" (the
+footnote under the owner/admin table) is `roles: ["owner"]`, not a separate
+flag — `owner` is already its own role, distinct from `admin`. The school
+shell (`/app`) resolves its tree from `WorkspaceContext.role` server-side and
+renders `BottomNavFromConfig` (phone) / `SidebarFromConfig` (desktop) off the
+identical filtered result. The nav's module keys below and the plan
+catalogue's `plan_modules.module` bundles are two different, only partly
+reconciled taxonomies — `packages/domain/src/nav/entitlements.ts` maps the
+few that correspond and leaves every other nav key ungated rather than
+guessing; see D-56 for the full list.
+
 ```ts
 type NavItem = {
   id: string
