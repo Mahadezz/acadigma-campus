@@ -27,6 +27,7 @@ import {
 } from "@acadigma/domain/settings"
 
 import type { AcadigmaSupabaseClient } from "../client"
+import type { Json, TablesUpdate } from "../types.generated"
 import type { WorkspaceContext } from "../workspace-context"
 
 const SETTINGS_COLUMNS =
@@ -101,7 +102,9 @@ export async function updateSchoolSettings(
   const current = await fetchRow(supabase, ctx.workspaceId)
   if (!current.ok) return current
 
-  const update: Record<string, unknown> = {}
+  // Typed from the generated schema, so a misspelled column or a wrong value
+  // type is a compile error rather than a silent no-op UPDATE.
+  const update: TablesUpdate<"school_profiles"> = {}
   if (patch.timezone !== undefined) update.timezone = patch.timezone
   if (patch.working_days !== undefined) update.working_days = patch.working_days
 
@@ -117,7 +120,9 @@ export async function updateSchoolSettings(
       (current.data as Record<string, unknown>)[column],
       blobPatch as Record<string, unknown> | undefined
     )
-    if (merged) update[column] = merged
+    // mergedBlob only ever returns plain JSON objects (it deep-merges JSON
+    // blobs read from the same jsonb columns), so the Json cast is sound.
+    if (merged) update[column] = merged as Json
   }
 
   if (Object.keys(update).length === 0) {
