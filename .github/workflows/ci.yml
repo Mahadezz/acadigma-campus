@@ -190,8 +190,13 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      # Fails when a workspace_id table has RLS off, has no test file, or has no
-      # audit trigger. Owned by the database agent; absent until it lands.
+      # D-56: fails when a workspace_id table has RLS off, checked against
+      # the live catalog after this PR's migrations applied. The other half
+      # of this gate — every workspace_id table named in a
+      # supabase/tests/*.sql file — is `contracts`'s "workspace_id table
+      # coverage" step below: pure static analysis on the checkout, so it
+      # needs no database at all (see coverage.sql's own header comment for
+      # why the split is a job-boundary choice, not a hard requirement).
       - name: RLS coverage
         run: |
           set -euo pipefail
@@ -201,10 +206,13 @@ jobs:
             echo "::warning::supabase/tests/coverage.sql is missing — RLS coverage was not verified."
           fi
 
+      # coverage.sql is plain SQL (a DO/RAISE EXCEPTION block, run separately
+      # above), not a pgTAP file — it has no `select plan(N)`, so pg_prove
+      # fails it with "No plan found in TAP output" if the glob includes it.
       - name: pgTAP
         run: |
           set -euo pipefail
-          pg_prove --verbose --ext .sql supabase/tests/*.sql | tee pgtap.tap
+          pg_prove --verbose --ext .sql $(ls supabase/tests/*.sql | grep -v '/coverage\.sql$') | tee pgtap.tap
 
       - name: Summary
         if: always()
@@ -271,6 +279,14 @@ jobs:
       # runtime guard and the viewer's filter UI silently drift apart.
       - name: Audit action catalogue parity (SQL <-> TypeScript)
         run: node scripts/check-audit-catalog-parity.mjs
+
+      # D-56 (M0 wrap-up), the other half of `db`'s "RLS coverage" step: every
+      # public table with a workspace_id column must be named in at least one
+      # supabase/tests/*.sql file (ARCHITECTURE §9). Pure static analysis on
+      # this job's own checkout, needing no database connection at all (see
+      # coverage.sql's header comment for why this lives in a different job).
+      - name: workspace_id table coverage (named in a supabase/tests/*.sql file)
+        run: node scripts/check-coverage-test-files.mjs
 
       # Generated-type freshness moved to the `db` job (DECISION-LOG D-55): types
       # are generated from THIS PR's migrations applied to the CI Postgres, not

@@ -139,6 +139,19 @@ export async function listPublicPlans(
  * The plan `ctx.workspaceId` is on right now, via `workspaces.plan_id` — the fast
  * denormalised path (PRODUCT-DECISIONS 1.20), not a join through `subscriptions`
  * (a personal workspace has no subscription row at all, §5.9).
+ *
+ * **Caveat (PR #17 Opus review):** `plans(*)` is an embed, so it is subject
+ * to `plans`' own RLS (`plans_select_public`: `status = 'active' and
+ * is_public`) — a private, contact-sales or archived plan (e.g.
+ * `personal_free`, or a custom enterprise contract) makes the embed resolve
+ * to `null` even though the caller can plainly read their own `plan_id`
+ * (`workspaces_select` is membership-only, unrelated to the plan's
+ * visibility). This function therefore correctly reports `not_found` for a
+ * workspace on such a plan — it needs the FULL `plans` row, which really is
+ * unreadable — but a caller that only needs the plan **id**, to feed
+ * something like `listEnabledModules` (whose own RLS is `using (true)`,
+ * unrestricted), should call `getWorkspacePlanId` below instead, which never
+ * embeds `plans` and so never depends on its visibility.
  */
 export async function getWorkspacePlan(
   ctx: WorkspaceContext,
@@ -161,6 +174,32 @@ export async function getWorkspacePlan(
     return err(apiError("internal", "The workspace's plan failed validation."))
   }
   return ok(parsed.data)
+}
+
+/**
+ * Just `workspaces.plan_id`, with no `plans(*)` embed — safe to call
+ * regardless of the plan's own `is_public`/`status` visibility (see the
+ * caveat on `getWorkspacePlan` above). Use this when the caller only needs
+ * the id to look something else up (module entitlements, limits), not the
+ * plan's own display fields.
+ */
+export async function getWorkspacePlanId(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient
+): Promise<Result<string, ApiError>> {
+  const { data, error } = await client
+    .from("workspaces")
+    .select("plan_id")
+    .eq("id", ctx.workspaceId)
+    .maybeSingle()
+
+  if (error) return err(DEPENDENCY_UNAVAILABLE)
+  const row = data ? rawRowSchema.parse(data) : null
+  const planId = row?.["plan_id"]
+  if (!planId || typeof planId !== "string") {
+    return err(apiError("not_found", "This workspace has no plan assigned."))
+  }
+  return ok(planId)
 }
 
 /** The enabled module keys for `planId` — the entitlement half of `hasModule`. */

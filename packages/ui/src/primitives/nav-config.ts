@@ -1,129 +1,131 @@
 /**
- * Navigation config (DESIGN-SYSTEM §3.2): one typed object per workspace type,
- * filtered by `role ∧ plan-entitlement ∧ owner-visibility`. `BottomNav` and the
- * desktop `Sidebar` both render from the same `NavConfig` — the shell changes,
- * the config does not.
+ * Navigation config composition for the UI layer (DESIGN-SYSTEM §3.2).
  *
- * Route paths here are the ones §3.2 names explicitly; "More" items whose route
- * the design doc leaves implicit use a slug derived from the label under the
- * workspace's prefix. Feature areas own the real route as they ship it — this
- * file is the navigation *shape* (order, grouping, gating), not a route table.
+ * `NavItem`/`NavGroup`/`NavConfig`/`NavModuleKey`, `filterNav` and the five
+ * curated school/family/personal trees now live in `@acadigma/domain/nav` —
+ * the single source both the server (route guards, F-ID-03 Part 3) and this
+ * client-side composition read, so they can never drift the way they did
+ * before D-56 (this file used to hold its own parallel copy of all of it).
+ * `BottomNav`/`Sidebar` are the two renderers of that one config; the shell
+ * changes, the config does not (DESIGN-SYSTEM §3.1).
+ *
+ * What stays genuinely UI-only:
+ * - icon name -> `lucide-react` component resolution (`IconName`/`ICON_MAP`
+ *   in `bottom-nav.tsx` and `sidebar-from-config.tsx`) — domain has no UI
+ *   dependency, so `NavItem.icon` is a plain string there.
+ * - the seller (`/sell`) and platform (`/platform`) sub-shell trees.
+ *   `packages/domain`'s `resolveNavConfigKey` deliberately returns `null` for
+ *   both — they are not resolved from `workspace type ∧ role`, they are
+ *   entered from a link/the avatar menu (DESIGN-SYSTEM §3.2) — so they have
+ *   no home in the domain nav engine and are authored here instead.
  */
 import * as React from "react"
 
+import {
+  BOTTOM_NAV_PRIMARY_MAX,
+  filterNav,
+  NAV_CONFIGS,
+  NAV_MODULE_KEYS,
+  type NavConfig,
+  type NavConfigKey,
+  type NavGroup,
+  type NavItem,
+  type NavModuleKey,
+} from "@acadigma/domain/nav"
+import type { WorkspaceRole } from "@acadigma/domain/permissions"
+
+export type { NavConfig, NavConfigKey, NavGroup, NavItem, NavModuleKey }
+
 /** One tree-shaken icon per item, resolved by name so a config stays serialisable. */
 export type IconName =
-  | "home"
-  | "check-square"
-  | "calendar"
-  | "message-square"
-  | "more-horizontal"
+  | "layout-dashboard"
+  | "clipboard-check"
   | "users"
-  | "graduation-cap"
+  | "message-circle"
+  | "school"
+  | "calendar-days"
+  | "file-check"
+  | "list-checks"
   | "book-open"
   | "clipboard-list"
-  | "clipboard-check"
-  | "printer"
-  | "file-text"
-  | "bar-chart"
+  | "notebook"
+  | "user-cog"
+  | "shield-check"
   | "briefcase"
-  | "shield"
-  | "settings"
-  | "help-circle"
+  | "user-round-search"
+  | "tag"
+  | "bar-chart-3"
+  | "printer"
+  | "megaphone"
+  | "library"
+  | "sparkles"
+  | "credit-card"
   | "wallet"
   | "store"
+  | "trending-up"
+  | "history"
+  | "settings"
+  | "life-buoy"
+  | "book-marked"
+  | "heart-handshake"
+  | "alert-triangle"
+  | "file-text"
+  | "folder-open"
+  | "gauge"
+  | "folder-lock"
+  | "id-card"
+  | "home"
   | "package"
   | "receipt"
-  | "banknote"
-  | "user-check"
-  | "megaphone"
-  | "folder"
-  | "trending-up"
-  | "shield-check"
-  | "layout-grid"
-  | "credit-card"
-  | "arrow-left-right"
-  | "building-2"
   | "hand-coins"
+  | "building-2"
+  | "arrow-left-right"
+  | "more-horizontal"
 
-/** `docs/architecture/DATA-MODEL.md` roles, widened to a plain string so a new
- * role (e.g. a future workspace type) never needs an edit here to compile. */
-export type Role = string
+/** Named re-exports of the five curated trees, matching the DESIGN-SYSTEM §3.2
+ * section names this file used to define locally. */
+export const schoolAdminNav: NavConfig = NAV_CONFIGS["school:owner_admin"]
+export const schoolTeacherNav: NavConfig = NAV_CONFIGS["school:teacher"]
+export const schoolStaffNav: NavConfig = NAV_CONFIGS["school:staff"]
+export const parentNav: NavConfig = NAV_CONFIGS["family:parent"]
+export const personalNav: NavConfig = NAV_CONFIGS["personal:owner"]
 
-/** A plan-gated module key, e.g. `"fees"`, `"marketplace"`, `"hiring"`. */
-export type ModuleKey = string
+export type BadgeSource = { count?: number }
 
-export type BadgeSource = {
-  /** Pre-resolved count. `AppShell`/`BottomNav` never fetch — the caller does. */
-  count?: number
-}
-
-export type NavItem = {
-  id: string
-  href: string
-  labelEn: string
-  labelBn: string
-  icon: IconName
-  /** Omitted = every role in this workspace type. */
-  roles?: Role[]
-  /** Gated by plan entitlement + owner visibility. */
-  module?: ModuleKey
-  /** Visible to the workspace owner only, regardless of role (§3.2 "Owner-only within More"). */
-  ownerOnly?: boolean
-  badge?: BadgeSource
-}
-
-export type NavGroup = {
-  id: string
-  labelEn: string
-  labelBn: string
-  items: readonly NavItem[]
-}
-
-export type NavConfig = {
-  /** The primary destinations. `BottomNav` renders these, then always appends
-   * "More" as the final slot when `more` is non-empty — so this holds at most
-   * 4 items, keeping the rendered bar at the documented 5-slot ceiling. */
-  bottom: readonly NavItem[]
-  more: readonly NavGroup[]
-}
-
-export const BOTTOM_NAV_PRIMARY_MAX = 4
+export { BOTTOM_NAV_PRIMARY_MAX }
 
 export type NavFilterContext = {
-  role: Role
-  /** True for the workspace owner. Personal workspaces: every member is the owner. */
-  isOwner: boolean
+  role: string
   /** Plan-entitlement + feature-flag check for a gated module. */
-  hasModule: (module: ModuleKey) => boolean
-}
-
-function isItemVisible(item: NavItem, ctx: NavFilterContext): boolean {
-  if (item.roles && !item.roles.includes(ctx.role)) return false
-  if (item.ownerOnly && !ctx.isOwner) return false
-  if (item.module && !ctx.hasModule(item.module)) return false
-  return true
+  hasModule: (module: NavModuleKey) => boolean
 }
 
 /**
- * Applies `role ∧ plan-entitlement ∧ owner-visibility` to a nav config. Pure —
- * safe to call on the server (to decide what to render) or memoised on the
- * client via `useFilteredNav`.
+ * Applies `role ∧ plan-entitlement` to a nav config by delegating to
+ * `@acadigma/domain/nav`'s `filterNav` — this function only adapts the
+ * `hasModule` predicate this package's callers already pass into the
+ * `entitledModules` set `filterNav` expects. Pure — safe to call on the
+ * server or memoise on the client via `useFilteredNav`.
+ *
+ * `role` is typed loosely (`string`) because this same context also filters
+ * the seller/platform trees below, neither of which is a `WorkspaceRole` —
+ * their items never declare `roles`, so the cast below is never actually
+ * exercised for them.
  */
 export function filterNavConfig(
   config: NavConfig,
   ctx: NavFilterContext
 ): NavConfig {
+  const entitledModules = new Set(
+    NAV_MODULE_KEYS.filter((key) => ctx.hasModule(key))
+  )
+  const filtered = filterNav(config, {
+    role: ctx.role as WorkspaceRole,
+    entitledModules,
+  })
   return {
-    bottom: config.bottom
-      .filter((item) => isItemVisible(item, ctx))
-      .slice(0, BOTTOM_NAV_PRIMARY_MAX),
-    more: config.more
-      .map((group) => ({
-        ...group,
-        items: group.items.filter((item) => isItemVisible(item, ctx)),
-      }))
-      .filter((group) => group.items.length > 0),
+    bottom: filtered.bottom.slice(0, BOTTOM_NAV_PRIMARY_MAX),
+    more: filtered.more,
   }
 }
 
@@ -132,10 +134,10 @@ export function useFilteredNav(
   config: NavConfig,
   ctx: NavFilterContext
 ): NavConfig {
-  const { role, isOwner, hasModule } = ctx
+  const { role, hasModule } = ctx
   return React.useMemo(
-    () => filterNavConfig(config, { role, isOwner, hasModule }),
-    [config, role, isOwner, hasModule]
+    () => filterNavConfig(config, { role, hasModule }),
+    [config, role, hasModule]
   )
 }
 
@@ -149,855 +151,27 @@ export function aggregateMoreBadgeCount(config: NavConfig): number {
   )
 }
 
-// ---------------------------------------------------------------------------
-// School workspace `/app` — teacher (DESIGN-SYSTEM §3.2)
-// ---------------------------------------------------------------------------
-
-export const schoolTeacherNav: NavConfig = {
-  bottom: [
-    {
-      id: "today",
-      href: "/app/dashboard",
-      labelEn: "Today",
-      labelBn: "আজ",
-      icon: "home",
-      roles: ["teacher"],
-    },
-    {
-      id: "attendance",
-      href: "/app/attendance",
-      labelEn: "Attendance",
-      labelBn: "হাজিরা",
-      icon: "check-square",
-      roles: ["teacher"],
-    },
-    {
-      id: "timetable",
-      href: "/app/timetable",
-      labelEn: "Timetable",
-      labelBn: "রুটিন",
-      icon: "calendar",
-      roles: ["teacher"],
-    },
-    {
-      id: "messages",
-      href: "/app/messages",
-      labelEn: "Messages",
-      labelBn: "বার্তা",
-      icon: "message-square",
-      roles: ["teacher"],
-    },
-  ],
-  more: [
-    {
-      id: "teaching",
-      labelEn: "Teaching",
-      labelBn: "শিক্ষাদান",
-      items: [
-        item("classes", "/app/classes", "Classes", "ক্লাস", "users", [
-          "teacher",
-        ]),
-        item("marks", "/app/marks", "Marks", "নম্বর", "clipboard-check", [
-          "teacher",
-        ]),
-        item(
-          "assignments",
-          "/app/assignments",
-          "Assignments",
-          "অ্যাসাইনমেন্ট",
-          "clipboard-list",
-          ["teacher"]
-        ),
-        item(
-          "lesson-plans",
-          "/app/lesson-plans",
-          "Lesson plans",
-          "পাঠ পরিকল্পনা",
-          "book-open",
-          ["teacher"]
-        ),
-        item(
-          "curriculum",
-          "/app/curriculum",
-          "Curriculum & pacing",
-          "পাঠ্যক্রম",
-          "book-open",
-          ["teacher"]
-        ),
-        item(
-          "lesson-log",
-          "/app/lesson-log",
-          "Lesson log",
-          "পাঠ লগ",
-          "file-text",
-          ["teacher"]
-        ),
-      ],
-    },
-    {
-      id: "students",
-      labelEn: "Students",
-      labelBn: "শিক্ষার্থী",
-      items: [
-        item("students", "/app/students", "Students", "শিক্ষার্থী", "users", [
-          "teacher",
-        ]),
-        item(
-          "behaviour-notes",
-          "/app/behaviour-notes",
-          "Behaviour notes",
-          "আচরণ নোট",
-          "file-text",
-          ["teacher"]
-        ),
-        item("at-risk", "/app/at-risk", "At-risk", "ঝুঁকিপূর্ণ", "shield", [
-          "teacher",
-        ]),
-      ],
-    },
-    {
-      id: "exams",
-      labelEn: "Exams",
-      labelBn: "পরীক্ষা",
-      items: [
-        item("exams", "/app/exams", "Exams", "পরীক্ষা", "file-text", [
-          "teacher",
-        ]),
-        item(
-          "mark-entry",
-          "/app/exams/mark-entry",
-          "Mark entry",
-          "নম্বর প্রবেশ",
-          "clipboard-check",
-          ["teacher"]
-        ),
-        item(
-          "report-cards",
-          "/app/report-cards",
-          "Report cards",
-          "রিপোর্ট কার্ড",
-          "file-text",
-          ["teacher"]
-        ),
-      ],
-    },
-    {
-      id: "library",
-      labelEn: "Library",
-      labelBn: "লাইব্রেরি",
-      items: [
-        item(
-          "my-resources",
-          "/app/resources/mine",
-          "My resources",
-          "আমার রিসোর্স",
-          "folder",
-          ["teacher"]
-        ),
-        item(
-          "school-library",
-          "/app/resources",
-          "School library",
-          "স্কুল লাইব্রেরি",
-          "folder",
-          ["teacher"]
-        ),
-        item(
-          "ai-tools",
-          "/app/ai",
-          "AI tools & credits",
-          "এআই টুলস",
-          "graduation-cap",
-          ["teacher"]
-        ),
-      ],
-    },
-    {
-      id: "work",
-      labelEn: "Work",
-      labelBn: "কর্ম",
-      items: [
-        item(
-          "my-workload",
-          "/app/workload/mine",
-          "My workload",
-          "আমার কর্মভার",
-          "bar-chart",
-          ["teacher"]
-        ),
-        item(
-          "cover-requests",
-          "/app/cover-requests",
-          "Cover requests",
-          "কভার অনুরোধ",
-          "user-check",
-          ["teacher"]
-        ),
-        item(
-          "staff-attendance",
-          "/app/staff-attendance/self",
-          "Staff attendance",
-          "স্টাফ হাজিরা",
-          "check-square",
-          ["teacher"]
-        ),
-      ],
-    },
-    {
-      id: "other",
-      labelEn: "Other",
-      labelBn: "অন্যান্য",
-      items: [
-        item("reports", "/app/reports", "Reports", "রিপোর্ট", "bar-chart", [
-          "teacher",
-        ]),
-        item(
-          "print-queue",
-          "/app/print",
-          "Print queue",
-          "প্রিন্ট সারি",
-          "printer",
-          ["teacher"]
-        ),
-        item(
-          "marketplace",
-          "/market",
-          "Marketplace",
-          "মার্কেটপ্লেস",
-          "store",
-          ["teacher"],
-          "marketplace"
-        ),
-        item(
-          "selling",
-          "/sell",
-          "Selling",
-          "বিক্রয়",
-          "wallet",
-          ["teacher"],
-          "marketplace"
-        ),
-        item("settings", "/app/settings", "Settings", "সেটিংস", "settings", [
-          "teacher",
-        ]),
-        item("help", "/app/help", "Help & feedback", "সহায়তা", "help-circle", [
-          "teacher",
-        ]),
-      ],
-    },
-  ],
+/** Small builder so the tables below read close to the §3.2 source tables. */
+function item(
+  id: string,
+  href: string,
+  labelEn: string,
+  labelBn: string,
+  icon: IconName
+): NavItem {
+  return { id, href, labelEn, labelBn, icon }
 }
 
 // ---------------------------------------------------------------------------
-// School workspace `/app` — owner / admin
-// ---------------------------------------------------------------------------
-
-export const schoolAdminNav: NavConfig = {
-  bottom: [
-    {
-      id: "overview",
-      href: "/app/dashboard",
-      labelEn: "Overview",
-      labelBn: "সারসংক্ষেপ",
-      icon: "home",
-      roles: ["owner", "admin"],
-    },
-    {
-      id: "attendance",
-      href: "/app/attendance",
-      labelEn: "Attendance",
-      labelBn: "হাজিরা",
-      icon: "check-square",
-      roles: ["owner", "admin"],
-    },
-    {
-      id: "students",
-      href: "/app/students",
-      labelEn: "Students",
-      labelBn: "শিক্ষার্থী",
-      icon: "users",
-      roles: ["owner", "admin"],
-    },
-    {
-      id: "messages",
-      href: "/app/messages",
-      labelEn: "Messages",
-      labelBn: "বার্তা",
-      icon: "message-square",
-      roles: ["owner", "admin"],
-    },
-  ],
-  more: [
-    {
-      id: "academic",
-      labelEn: "Academic",
-      labelBn: "একাডেমিক",
-      items: [
-        item(
-          "classes-sections",
-          "/app/classes",
-          "Classes & sections",
-          "ক্লাস ও শাখা",
-          "users",
-          ["owner", "admin"]
-        ),
-        item("timetable", "/app/timetable", "Timetable", "রুটিন", "calendar", [
-          "owner",
-          "admin",
-        ]),
-        item("exams", "/app/exams", "Exams", "পরীক্ষা", "file-text", [
-          "owner",
-          "admin",
-        ]),
-        item("marks", "/app/marks", "Marks", "নম্বর", "clipboard-check", [
-          "owner",
-          "admin",
-        ]),
-        item(
-          "curriculum",
-          "/app/curriculum",
-          "Curriculum",
-          "পাঠ্যক্রম",
-          "book-open",
-          ["owner", "admin"]
-        ),
-        item(
-          "assignments",
-          "/app/assignments",
-          "Assignments",
-          "অ্যাসাইনমেন্ট",
-          "clipboard-list",
-          ["owner", "admin"]
-        ),
-        item(
-          "lesson-plans",
-          "/app/lesson-plans",
-          "Lesson plans",
-          "পাঠ পরিকল্পনা",
-          "book-open",
-          ["owner", "admin"]
-        ),
-      ],
-    },
-    {
-      id: "people",
-      labelEn: "People",
-      labelBn: "কর্মী",
-      items: [
-        item("staff", "/app/staff", "Staff", "স্টাফ", "users", [
-          "owner",
-          "admin",
-        ]),
-        item(
-          "staff-attendance",
-          "/app/staff-attendance",
-          "Staff attendance",
-          "স্টাফ হাজিরা",
-          "check-square",
-          ["owner", "admin"]
-        ),
-        item(
-          "team-access",
-          "/app/team",
-          "Team & access",
-          "দল ও প্রবেশাধিকার",
-          "shield",
-          ["owner", "admin"]
-        ),
-        item(
-          "hiring",
-          "/app/hiring",
-          "Hiring",
-          "নিয়োগ",
-          "briefcase",
-          ["owner", "admin"],
-          "hiring"
-        ),
-        item(
-          "cover-teacher",
-          "/app/cover-requests",
-          "Cover teacher",
-          "কভার শিক্ষক",
-          "user-check",
-          ["owner", "admin"]
-        ),
-        item(
-          "custom-labels",
-          "/app/settings/labels",
-          "Custom labels",
-          "কাস্টম লেবেল",
-          "layout-grid",
-          ["owner", "admin"]
-        ),
-      ],
-    },
-    {
-      id: "output",
-      labelEn: "Output",
-      labelBn: "আউটপুট",
-      items: [
-        item("reports", "/app/reports", "Reports", "রিপোর্ট", "bar-chart", [
-          "owner",
-          "admin",
-        ]),
-        item(
-          "print-queue",
-          "/app/print",
-          "Print queue",
-          "প্রিন্ট সারি",
-          "printer",
-          ["owner", "admin"]
-        ),
-        item(
-          "announcements",
-          "/app/announcements",
-          "Announcements",
-          "ঘোষণা",
-          "megaphone",
-          ["owner", "admin"]
-        ),
-      ],
-    },
-    {
-      id: "library",
-      labelEn: "Library",
-      labelBn: "লাইব্রেরি",
-      items: [
-        item(
-          "resource-library",
-          "/app/resources",
-          "Resource library",
-          "রিসোর্স লাইব্রেরি",
-          "folder",
-          ["owner", "admin"]
-        ),
-        item(
-          "ai-usage",
-          "/app/ai",
-          "AI usage & credits",
-          "এআই ব্যবহার",
-          "graduation-cap",
-          ["owner", "admin"]
-        ),
-      ],
-    },
-    {
-      id: "business",
-      labelEn: "Business",
-      labelBn: "ব্যবসা",
-      items: [
-        item(
-          "billing-plan",
-          "/app/billing",
-          "Billing & plan",
-          "বিলিং ও প্ল্যান",
-          "credit-card",
-          ["owner", "admin"],
-          undefined,
-          true
-        ),
-        item("expenses", "/app/expenses", "Expenses", "খরচ", "banknote", [
-          "owner",
-          "admin",
-        ]),
-        item(
-          "marketplace",
-          "/market",
-          "Marketplace",
-          "মার্কেটপ্লেস",
-          "store",
-          ["owner", "admin"],
-          "marketplace"
-        ),
-        item(
-          "analytics",
-          "/app/analytics",
-          "Analytics",
-          "বিশ্লেষণ",
-          "trending-up",
-          ["owner", "admin"]
-        ),
-      ],
-    },
-    {
-      id: "admin",
-      labelEn: "Admin",
-      labelBn: "প্রশাসন",
-      items: [
-        item(
-          "audit-log",
-          "/app/audit",
-          "Audit log",
-          "অডিট লগ",
-          "shield-check",
-          ["owner", "admin"],
-          undefined,
-          true
-        ),
-        item(
-          "school-settings",
-          "/app/settings",
-          "School settings",
-          "স্কুল সেটিংস",
-          "settings",
-          ["owner", "admin"]
-        ),
-        item("help", "/app/help", "Help & feedback", "সহায়তা", "help-circle", [
-          "owner",
-          "admin",
-        ]),
-      ],
-    },
-  ],
-}
-
-// ---------------------------------------------------------------------------
-// School workspace `/app` — staff (office, accounts, library)
-// ---------------------------------------------------------------------------
-
-export const schoolStaffNav: NavConfig = {
-  bottom: [
-    {
-      id: "home",
-      href: "/app/dashboard",
-      labelEn: "Home",
-      labelBn: "হোম",
-      icon: "home",
-      roles: ["staff"],
-    },
-    {
-      id: "students",
-      href: "/app/students",
-      labelEn: "Students",
-      labelBn: "শিক্ষার্থী",
-      icon: "users",
-      roles: ["staff"],
-    },
-    {
-      id: "print",
-      href: "/app/print",
-      labelEn: "Print",
-      labelBn: "প্রিন্ট",
-      icon: "printer",
-      roles: ["staff"],
-    },
-    {
-      id: "messages",
-      href: "/app/messages",
-      labelEn: "Messages",
-      labelBn: "বার্তা",
-      icon: "message-square",
-      roles: ["staff"],
-    },
-  ],
-  more: [
-    {
-      id: "more",
-      labelEn: "More",
-      labelBn: "আরও",
-      items: [
-        item(
-          "my-attendance",
-          "/app/staff-attendance/self",
-          "My attendance",
-          "আমার হাজিরা",
-          "check-square",
-          ["staff"]
-        ),
-        item("timetable", "/app/timetable", "Timetable", "রুটিন", "calendar", [
-          "staff",
-        ]),
-        item(
-          "resource-library",
-          "/app/resources",
-          "Resource library",
-          "রিসোর্স লাইব্রেরি",
-          "folder",
-          ["staff"]
-        ),
-        item("expenses", "/app/expenses", "Expenses", "খরচ", "banknote", [
-          "staff",
-        ]),
-        item("files", "/app/files", "Files", "ফাইল", "folder", ["staff"]),
-        item("reports", "/app/reports", "Reports", "রিপোর্ট", "bar-chart", [
-          "staff",
-        ]),
-        item(
-          "marketplace",
-          "/market",
-          "Marketplace",
-          "মার্কেটপ্লেস",
-          "store",
-          ["staff"],
-          "marketplace"
-        ),
-        item("settings", "/app/settings", "Settings", "সেটিংস", "settings", [
-          "staff",
-        ]),
-        item("help", "/app/help", "Help", "সহায়তা", "help-circle", ["staff"]),
-      ],
-    },
-  ],
-}
-
-// ---------------------------------------------------------------------------
-// Parent shell `/family` — parent
-// ---------------------------------------------------------------------------
-
-export const parentNav: NavConfig = {
-  bottom: [
-    {
-      id: "home",
-      href: "/family",
-      labelEn: "Home",
-      labelBn: "হোম",
-      icon: "home",
-      roles: ["parent"],
-    },
-    {
-      id: "attendance",
-      href: "/family/attendance",
-      labelEn: "Attendance",
-      labelBn: "হাজিরা",
-      icon: "check-square",
-      roles: ["parent"],
-    },
-    {
-      id: "results",
-      href: "/family/results",
-      labelEn: "Results",
-      labelBn: "ফলাফল",
-      icon: "file-text",
-      roles: ["parent"],
-    },
-    {
-      id: "messages",
-      href: "/family/messages",
-      labelEn: "Messages",
-      labelBn: "বার্তা",
-      icon: "message-square",
-      roles: ["parent"],
-    },
-  ],
-  more: [
-    {
-      id: "more",
-      labelEn: "More",
-      labelBn: "আরও",
-      items: [
-        item(
-          "timetable",
-          "/family/timetable",
-          "Timetable",
-          "রুটিন",
-          "calendar",
-          ["parent"]
-        ),
-        item(
-          "exam-schedule",
-          "/family/exams",
-          "Exam schedule",
-          "পরীক্ষার সময়সূচী",
-          "file-text",
-          ["parent"]
-        ),
-        item(
-          "assignments",
-          "/family/assignments",
-          "Assignments",
-          "অ্যাসাইনমেন্ট",
-          "clipboard-list",
-          ["parent"]
-        ),
-        item(
-          "behaviour-notes",
-          "/family/behaviour-notes",
-          "Behaviour notes",
-          "আচরণ নোট",
-          "file-text",
-          ["parent"]
-        ),
-        item(
-          "announcements",
-          "/family/announcements",
-          "Announcements",
-          "ঘোষণা",
-          "megaphone",
-          ["parent"]
-        ),
-        item(
-          "fees-receipts",
-          "/family/fees",
-          "Fees & receipts",
-          "ফি ও রসিদ",
-          "receipt",
-          ["parent"],
-          "fees"
-        ),
-        item(
-          "contact-school",
-          "/family/contact",
-          "Contact the school",
-          "স্কুলের সাথে যোগাযোগ",
-          "message-square",
-          ["parent"]
-        ),
-        item(
-          "switch-child",
-          "/family/switch-child",
-          "Switch child",
-          "সন্তান পরিবর্তন",
-          "users",
-          ["parent"]
-        ),
-        item("settings", "/family/settings", "Settings", "সেটিংস", "settings", [
-          "parent",
-        ]),
-        item("help", "/family/help", "Help", "সহায়তা", "help-circle", [
-          "parent",
-        ]),
-      ],
-    },
-  ],
-}
-
-// ---------------------------------------------------------------------------
-// Personal workspace `/personal` — flat, no role filtering
-// ---------------------------------------------------------------------------
-
-export const personalNav: NavConfig = {
-  bottom: [
-    {
-      id: "home",
-      href: "/personal",
-      labelEn: "Home",
-      labelBn: "হোম",
-      icon: "home",
-    },
-    {
-      id: "students",
-      href: "/personal/students",
-      labelEn: "Students",
-      labelBn: "শিক্ষার্থী",
-      icon: "users",
-    },
-    {
-      id: "attendance",
-      href: "/personal/attendance",
-      labelEn: "Attendance",
-      labelBn: "হাজিরা",
-      icon: "check-square",
-    },
-    {
-      id: "diary",
-      href: "/personal/diary",
-      labelEn: "Diary",
-      labelBn: "ডায়েরি",
-      icon: "book-open",
-    },
-  ],
-  more: [
-    {
-      id: "more",
-      labelEn: "More",
-      labelBn: "আরও",
-      items: [
-        item(
-          "file-vault",
-          "/personal/files",
-          "File vault",
-          "ফাইল ভল্ট",
-          "folder"
-        ),
-        item(
-          "cv-profile",
-          "/personal/profile",
-          "CV & teacher profile",
-          "সিভি ও প্রোফাইল",
-          "graduation-cap"
-        ),
-        item(
-          "job-applications",
-          "/personal/applications",
-          "Job applications",
-          "চাকরির আবেদন",
-          "briefcase",
-          undefined,
-          "hiring"
-        ),
-        item(
-          "document-requests",
-          "/personal/documents",
-          "Document requests",
-          "নথি অনুরোধ",
-          "file-text"
-        ),
-        item("schools", "/personal/schools", "Schools", "স্কুল", "building-2"),
-        item(
-          "selling",
-          "/sell",
-          "Selling",
-          "বিক্রয়",
-          "wallet",
-          undefined,
-          "marketplace"
-        ),
-        item(
-          "marketplace",
-          "/market",
-          "Marketplace",
-          "মার্কেটপ্লেস",
-          "store",
-          undefined,
-          "marketplace"
-        ),
-        item(
-          "settings",
-          "/personal/settings",
-          "Settings",
-          "সেটিংস",
-          "settings"
-        ),
-        item("help", "/personal/help", "Help", "সহায়তা", "help-circle"),
-      ],
-    },
-  ],
-}
-
-// ---------------------------------------------------------------------------
-// Seller area `/sell` — a focused sub-shell, not a workspace
+// Seller area `/sell` — a focused sub-shell, not a workspace (§3.2)
 // ---------------------------------------------------------------------------
 
 export const sellerNav: NavConfig = {
   bottom: [
-    {
-      id: "dashboard",
-      href: "/sell",
-      labelEn: "Dashboard",
-      labelBn: "ড্যাশবোর্ড",
-      icon: "home",
-    },
-    {
-      id: "listings",
-      href: "/sell/listings",
-      labelEn: "Listings",
-      labelBn: "তালিকা",
-      icon: "package",
-    },
-    {
-      id: "orders",
-      href: "/sell/orders",
-      labelEn: "Orders",
-      labelBn: "অর্ডার",
-      icon: "receipt",
-    },
-    {
-      id: "earnings",
-      href: "/sell/earnings",
-      labelEn: "Earnings",
-      labelBn: "আয়",
-      icon: "hand-coins",
-    },
+    item("dashboard", "/sell", "Dashboard", "ড্যাশবোর্ড", "home"),
+    item("listings", "/sell/listings", "Listings", "তালিকা", "package"),
+    item("orders", "/sell/orders", "Orders", "অর্ডার", "receipt"),
+    item("earnings", "/sell/earnings", "Earnings", "আয়", "hand-coins"),
   ],
   more: [
     {
@@ -1046,43 +220,23 @@ export const sellerNav: NavConfig = {
 }
 
 // ---------------------------------------------------------------------------
-// Platform console `/platform`
+// Platform console `/platform` (§3.2) — gated on `is_platform_admin`
+// server-side (F-ID-08), not on a `WorkspaceRole`, so no item here declares
+// `roles` at all.
 // ---------------------------------------------------------------------------
 
 export const platformNav: NavConfig = {
   bottom: [
-    {
-      id: "queue",
-      href: "/platform/queue",
-      labelEn: "Queue",
-      labelBn: "সারি",
-      icon: "clipboard-list",
-      roles: ["platform_staff"],
-    },
-    {
-      id: "sellers",
-      href: "/platform/sellers",
-      labelEn: "Sellers",
-      labelBn: "বিক্রেতা",
-      icon: "store",
-      roles: ["platform_staff"],
-    },
-    {
-      id: "payouts",
-      href: "/platform/payouts",
-      labelEn: "Payouts",
-      labelBn: "পেআউট",
-      icon: "hand-coins",
-      roles: ["platform_staff"],
-    },
-    {
-      id: "workspaces",
-      href: "/platform/workspaces",
-      labelEn: "Workspaces",
-      labelBn: "কর্মক্ষেত্র",
-      icon: "building-2",
-      roles: ["platform_staff"],
-    },
+    item("queue", "/platform/queue", "Queue", "সারি", "clipboard-list"),
+    item("sellers", "/platform/sellers", "Sellers", "বিক্রেতা", "store"),
+    item("payouts", "/platform/payouts", "Payouts", "পেআউট", "hand-coins"),
+    item(
+      "workspaces",
+      "/platform/workspaces",
+      "Workspaces",
+      "কর্মক্ষেত্র",
+      "building-2"
+    ),
   ],
   more: [
     {
@@ -1095,51 +249,31 @@ export const platformNav: NavConfig = {
           "/platform/refunds",
           "Refunds",
           "ফেরত",
-          "arrow-left-right",
-          ["platform_staff"]
+          "arrow-left-right"
         ),
         item(
           "plans-pricing",
           "/platform/plans",
           "Plans & pricing",
           "প্ল্যান ও মূল্য",
-          "credit-card",
-          ["platform_staff"]
+          "credit-card"
         ),
         item(
           "platform-settings",
           "/platform/settings",
           "Platform settings",
           "প্ল্যাটফর্ম সেটিংস",
-          "settings",
-          ["platform_staff"]
+          "settings"
         ),
-        item("audit", "/platform/audit", "Audit", "অডিট", "shield-check", [
-          "platform_staff",
-        ]),
+        item("audit", "/platform/audit", "Audit", "অডিট", "shield-check"),
         item(
           "exit",
           "/app/dashboard",
           "Exit to my workspace",
           "আমার কর্মক্ষেত্রে ফিরুন",
-          "arrow-left-right",
-          ["platform_staff"]
+          "arrow-left-right"
         ),
       ],
     },
   ],
-}
-
-/** Small builder so the tables above read close to the §3.2 source tables. */
-function item(
-  id: string,
-  href: string,
-  labelEn: string,
-  labelBn: string,
-  icon: IconName,
-  roles?: Role[],
-  module?: ModuleKey,
-  ownerOnly?: boolean
-): NavItem {
-  return { id, href, labelEn, labelBn, icon, roles, module, ownerOnly }
 }
