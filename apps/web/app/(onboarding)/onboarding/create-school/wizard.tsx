@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import type { RefObject } from "react"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CheckIcon, ChevronsUpDownIcon, Loader2Icon } from "lucide-react"
@@ -116,12 +117,27 @@ type Step1FormValues = z.infer<typeof step1FormSchema>
  * client-side step transition. Step1/Step2/DoneScreen are each their own
  * function component, so this fires exactly once per mount — which is
  * exactly once per step transition, since switching `stage` swaps which of
- * them is on screen. */
-function useFocusHeadingOnMount() {
+ * them is on screen.
+ *
+ * `shouldFocusRef` (final react review of a6588dc, blocking): a mount alone
+ * is not a "step transition" — the FIRST mount is also just a direct page
+ * load (or a resumed session landing straight on step 2), and stealing
+ * focus there is wrong. `shouldFocusRef` is `CreateSchoolWizard`'s own
+ * ref, flipped `true` by its `useEffect(() => {...}, [])` after its first
+ * commit. React fires a subtree's effects bottom-up (children before their
+ * parent) on every commit, so on the wizard's very first render this
+ * child's mount effect runs BEFORE that parent effect sets the ref —
+ * `shouldFocusRef.current` reads `false`, no focus. On every later stage
+ * change the parent's own mount effect has already run once (it never
+ * re-fires — empty deps), so the ref already reads `true` when the newly
+ * mounted step's effect checks it, and focus moves as intended. */
+function useFocusHeadingOnMount(shouldFocusRef: RefObject<boolean>) {
   const ref = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
-    ref.current?.focus()
-  }, [])
+    if (shouldFocusRef.current) {
+      ref.current?.focus()
+    }
+  }, [shouldFocusRef])
   return ref
 }
 
@@ -150,6 +166,14 @@ export function CreateSchoolWizard({
   const [stage, setStage] = useState<Stage>(initialStage)
   const [draft, setDraft] = useState<CreateSchoolDraft>(initialDraft)
   const [eiinChecking, setEiinChecking] = useState(false)
+  // Flips true after this component's own first commit — see
+  // `useFocusHeadingOnMount`'s docblock. Never reset back to `false`
+  // (empty deps): once the wizard has rendered once, every later stage
+  // swap is a real transition.
+  const hasRenderedOnceRef = useRef(false)
+  useEffect(() => {
+    hasRenderedOnceRef.current = true
+  }, [])
 
   async function saveAndAdvance(
     nextStep: 2 | 3,
@@ -203,6 +227,7 @@ export function CreateSchoolWizard({
         draft={draft}
         backLabel={backLabel}
         onBack={() => setStage(2)}
+        shouldFocusRef={hasRenderedOnceRef}
       />
     )
   }
@@ -215,6 +240,7 @@ export function CreateSchoolWizard({
         onSubmit={handleStep1}
         eiinChecking={eiinChecking}
         backLabel={backLabel}
+        shouldFocusRef={hasRenderedOnceRef}
       />
     )
   }
@@ -226,6 +252,7 @@ export function CreateSchoolWizard({
       onBack={() => setStage(1)}
       onSubmit={handleStep2}
       backLabel={backLabel}
+      shouldFocusRef={hasRenderedOnceRef}
     />
   )
 }
@@ -238,13 +265,15 @@ function DoneScreen({
   draft,
   backLabel,
   onBack,
+  shouldFocusRef,
 }: {
   t: WizardMessages
   draft: CreateSchoolDraft
   backLabel: string
   onBack: () => void
+  shouldFocusRef: RefObject<boolean>
 }) {
-  const headingRef = useFocusHeadingOnMount()
+  const headingRef = useFocusHeadingOnMount(shouldFocusRef)
   return (
     <OnboardingShell
       ref={headingRef}
@@ -273,14 +302,16 @@ function Step1({
   onSubmit,
   eiinChecking,
   backLabel,
+  shouldFocusRef,
 }: {
   t: WizardMessages
   draft: CreateSchoolDraft
   onSubmit: (values: CreateSchoolStep1) => Promise<StepOutcome>
   eiinChecking: boolean
   backLabel: string
+  shouldFocusRef: RefObject<boolean>
 }) {
-  const headingRef = useFocusHeadingOnMount()
+  const headingRef = useFocusHeadingOnMount(shouldFocusRef)
   const [formError, setFormError] = useState<string | null>(null)
   const form = useForm<Step1FormValues>({
     resolver: zodResolver(step1FormSchema),
@@ -478,14 +509,16 @@ function Step2({
   onBack,
   onSubmit,
   backLabel,
+  shouldFocusRef,
 }: {
   t: WizardMessages
   draft: CreateSchoolDraft
   onBack: () => void
   onSubmit: (values: CreateSchoolStep2) => Promise<StepOutcome>
   backLabel: string
+  shouldFocusRef: RefObject<boolean>
 }) {
-  const headingRef = useFocusHeadingOnMount()
+  const headingRef = useFocusHeadingOnMount(shouldFocusRef)
   const [formError, setFormError] = useState<string | null>(null)
   const [detectedTimezone, setDetectedTimezone] = useState<string | null>(null)
   const [timezoneOpen, setTimezoneOpen] = useState(false)
