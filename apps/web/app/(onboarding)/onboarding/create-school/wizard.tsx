@@ -1,0 +1,832 @@
+"use client"
+
+import { useEffect, useMemo, useRef, useState } from "react"
+import type { RefObject } from "react"
+
+import { zodResolver } from "@hookform/resolvers/zod"
+import { CheckIcon, ChevronsUpDownIcon, Loader2Icon } from "lucide-react"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+
+import {
+  createSchoolStep1Schema,
+  createSchoolStep2Schema,
+  eiinSchema,
+  schoolBoardSchema,
+  schoolMediumSchema,
+  type CreateSchoolDraft,
+  type CreateSchoolStep1,
+  type CreateSchoolStep2,
+} from "@acadigma/contracts"
+import {
+  DEFAULT_WORKING_DAYS,
+  SAT_FIRST_ORDER,
+  validateAcademicYearRange,
+} from "@acadigma/domain/academic"
+import { DEFAULT_TIMEZONE } from "@acadigma/domain/time"
+import { Button } from "@acadigma/ui/components/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@acadigma/ui/components/command"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@acadigma/ui/components/form"
+import { Input } from "@acadigma/ui/components/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@acadigma/ui/components/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@acadigma/ui/components/select"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@acadigma/ui/components/toggle-group"
+import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
+import { OnboardingShell } from "@acadigma/ui/primitives/onboarding-shell"
+
+import type { Messages } from "@/lib/i18n"
+
+import { checkEiinAvailability, saveOnboardingDraft } from "../../actions"
+
+type WizardMessages = Messages["onboarding"]["wizard"]
+type Stage = 1 | 2 | "done"
+
+/** What a step's submit handler reports back: either it advanced, or it
+ * did not and says why — a top-level message, a specific field, or both. */
+type StepOutcome =
+  | { ok: true }
+  | { ok: false; message?: string; fieldErrors?: Record<string, string> }
+
+// `Intl.supportedValuesOf` (native, no dependency) lists every IANA zone the
+// runtime knows about. PR #34 follow-up (Opus review + owner instruction):
+// a plain `<Select>` over ~400 entries was unusable on touch even with
+// typeahead — `timezone`'s field below is now a shadcn combobox
+// (`Command` inside `Popover`, real search, not just typeahead), with
+// `DEFAULT_TIMEZONE` ("Asia/Dhaka" — this app's primary market) pinned
+// first rather than left in alphabetical order.
+// Cast rather than relying on ambient lib typing: this app's tsconfig lib
+// target (ES2023) predates `Intl.supportedValuesOf`'s own lib entry, even
+// though every runtime this ships to (Node 24, evergreen browsers) has it.
+function listIanaTimezones(): string[] {
+  const supportedValuesOf = (
+    Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
+  ).supportedValuesOf
+  const all =
+    typeof supportedValuesOf === "function"
+      ? supportedValuesOf("timeZone")
+      : [DEFAULT_TIMEZONE]
+  return all.includes(DEFAULT_TIMEZONE)
+    ? [DEFAULT_TIMEZONE, ...all.filter((zone) => zone !== DEFAULT_TIMEZONE)]
+    : all
+}
+
+const TIMEZONES: string[] = listIanaTimezones()
+
+/**
+ * `createSchoolStep1Schema`'s own `eiin` accepts a 6-digit string or
+ * `undefined` — never `""`. A controlled `<input>` always holds a string,
+ * so an untouched, correctly-left-blank field arrives at the resolver as
+ * `""`, not `undefined`. This form-only schema accepts that third shape;
+ * `handleSubmit` below normalises `""` back to `undefined` before calling
+ * the shared `onSubmit(values: CreateSchoolStep1)` contract.
+ */
+const step1FormSchema = createSchoolStep1Schema.extend({
+  eiin: z.union([z.literal(""), eiinSchema]).optional(),
+})
+type Step1FormValues = z.infer<typeof step1FormSchema>
+
+/** REACT HIGH (PR #34 review): each step's `<h1>` (`OnboardingShell`'s own
+ * contract, see its docblock lines 15-24) is where focus should land on a
+ * client-side step transition. Step1/Step2/DoneScreen are each their own
+ * function component, so this fires exactly once per mount — which is
+ * exactly once per step transition, since switching `stage` swaps which of
+ * them is on screen.
+ *
+ * `shouldFocusRef` (final react review of a6588dc, blocking): a mount alone
+ * is not a "step transition" — the FIRST mount is also just a direct page
+ * load (or a resumed session landing straight on step 2), and stealing
+ * focus there is wrong. `shouldFocusRef` is `CreateSchoolWizard`'s own
+ * ref, flipped `true` by its `useEffect(() => {...}, [])` after its first
+ * commit. React fires a subtree's effects bottom-up (children before their
+ * parent) on every commit, so on the wizard's very first render this
+ * child's mount effect runs BEFORE that parent effect sets the ref —
+ * `shouldFocusRef.current` reads `false`, no focus. On every later stage
+ * change the parent's own mount effect has already run once (it never
+ * re-fires — empty deps), so the ref already reads `true` when the newly
+ * mounted step's effect checks it, and focus moves as intended. */
+function useFocusHeadingOnMount(shouldFocusRef: RefObject<boolean>) {
+  const ref = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (shouldFocusRef.current) {
+      ref.current?.focus()
+    }
+  }, [shouldFocusRef])
+  return ref
+}
+
+/**
+ * F-ID-05 Part 3 §4.3 — steps 1-2 of the create-school wizard. Steps are one
+ * component's local state, not separate routes (§4.3: draft saves on
+ * advance, not a URL change per step) — Part 4 owns steps 3-5, so the only
+ * things past step 2 are "save and stop here for now" (§8 Part 3 scope:
+ * "do not create the workspace yet").
+ */
+export function CreateSchoolWizard({
+  t,
+  initialStage,
+  initialDraft,
+  backLabel,
+}: {
+  t: WizardMessages
+  initialStage: Stage
+  initialDraft: CreateSchoolDraft
+  /** OPUS 1 (PR #34 review): none of this wizard's `OnboardingShell`
+   * screens passed `backLabel`, so every locale saw the component's
+   * hardcoded English default ("Back") regardless of `bn`. The caller
+   * (`page.tsx`) supplies the localised `common.actions.back` string. */
+  backLabel: string
+}) {
+  const [stage, setStage] = useState<Stage>(initialStage)
+  const [draft, setDraft] = useState<CreateSchoolDraft>(initialDraft)
+  const [eiinChecking, setEiinChecking] = useState(false)
+  // Flips true after this component's own first commit — see
+  // `useFocusHeadingOnMount`'s docblock. Never reset back to `false`
+  // (empty deps): once the wizard has rendered once, every later stage
+  // swap is a real transition.
+  const hasRenderedOnceRef = useRef(false)
+  useEffect(() => {
+    hasRenderedOnceRef.current = true
+  }, [])
+
+  async function saveAndAdvance(
+    nextStep: 2 | 3,
+    patch: Partial<CreateSchoolDraft>
+  ): Promise<StepOutcome> {
+    const merged = { ...draft, ...patch }
+    const saved = await saveOnboardingDraft({
+      path: "create_school",
+      step: nextStep,
+      draft: merged,
+    })
+    if (!saved.ok) return { ok: false, message: t.saveError }
+    setDraft(merged)
+    setStage(nextStep === 2 ? 2 : "done")
+    return { ok: true }
+  }
+
+  async function handleStep1(values: CreateSchoolStep1): Promise<StepOutcome> {
+    if (values.eiin) {
+      setEiinChecking(true)
+      const check = await checkEiinAvailability({ eiin: values.eiin })
+      setEiinChecking(false)
+      if (!check.ok) return { ok: false, message: t.eiinCheckError }
+      if (!check.data.available) {
+        return { ok: false, fieldErrors: { eiin: t.eiinTaken } }
+      }
+    }
+    return saveAndAdvance(2, values)
+  }
+
+  async function handleStep2(values: CreateSchoolStep2): Promise<StepOutcome> {
+    const range = validateAcademicYearRange(values.academic_year)
+    if (!range.ok) {
+      return {
+        ok: false,
+        fieldErrors: {
+          academic_year:
+            range.issue === "ends_before_starts"
+              ? t.dateRangeEndsBeforeStarts
+              : t.dateRangeTooLong,
+        },
+      }
+    }
+    return saveAndAdvance(3, values)
+  }
+
+  if (stage === "done") {
+    return (
+      <DoneScreen
+        t={t}
+        draft={draft}
+        backLabel={backLabel}
+        onBack={() => setStage(2)}
+        shouldFocusRef={hasRenderedOnceRef}
+      />
+    )
+  }
+
+  if (stage === 1) {
+    return (
+      <Step1
+        t={t}
+        draft={draft}
+        onSubmit={handleStep1}
+        eiinChecking={eiinChecking}
+        backLabel={backLabel}
+        shouldFocusRef={hasRenderedOnceRef}
+      />
+    )
+  }
+
+  return (
+    <Step2
+      t={t}
+      draft={draft}
+      onBack={() => setStage(1)}
+      onSubmit={handleStep2}
+      backLabel={backLabel}
+      shouldFocusRef={hasRenderedOnceRef}
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// "More on the way" — the Part 3 stopping screen (§8: Part 4 owns steps 3-5)
+// ---------------------------------------------------------------------------
+function DoneScreen({
+  t,
+  draft,
+  backLabel,
+  onBack,
+  shouldFocusRef,
+}: {
+  t: WizardMessages
+  draft: CreateSchoolDraft
+  backLabel: string
+  onBack: () => void
+  shouldFocusRef: RefObject<boolean>
+}) {
+  const headingRef = useFocusHeadingOnMount(shouldFocusRef)
+  return (
+    <OnboardingShell
+      ref={headingRef}
+      title={t.moreComingTitle}
+      onBack={onBack}
+      backLabel={backLabel}
+    >
+      <div className="space-y-6">
+        <p className="text-muted-foreground text-sm">
+          {t.moreComingBody.replace("{name}", draft.name ?? "")}
+        </p>
+        <Button asChild className="h-12 w-full">
+          <a href="/onboarding">{t.backToChooser}</a>
+        </Button>
+      </div>
+    </OnboardingShell>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step 1 — Identity (§4.3)
+// ---------------------------------------------------------------------------
+function Step1({
+  t,
+  draft,
+  onSubmit,
+  eiinChecking,
+  backLabel,
+  shouldFocusRef,
+}: {
+  t: WizardMessages
+  draft: CreateSchoolDraft
+  onSubmit: (values: CreateSchoolStep1) => Promise<StepOutcome>
+  eiinChecking: boolean
+  backLabel: string
+  shouldFocusRef: RefObject<boolean>
+}) {
+  const headingRef = useFocusHeadingOnMount(shouldFocusRef)
+  const [formError, setFormError] = useState<string | null>(null)
+  const form = useForm<Step1FormValues>({
+    resolver: zodResolver(step1FormSchema),
+    defaultValues: {
+      name: draft.name ?? "",
+      eiin: draft.eiin ?? "",
+      board: draft.board,
+      medium: draft.medium,
+    },
+  })
+
+  async function handleSubmit(values: Step1FormValues) {
+    setFormError(null)
+    const outcome = await onSubmit({
+      ...values,
+      eiin: values.eiin ? values.eiin : undefined,
+    })
+    if (outcome.ok) return
+    if (outcome.fieldErrors?.eiin) {
+      form.setError("eiin", {
+        type: "manual",
+        message: outcome.fieldErrors.eiin,
+      })
+    }
+    if (outcome.message) setFormError(outcome.message)
+  }
+
+  return (
+    <OnboardingShell
+      ref={headingRef}
+      title={t.step1Title}
+      progress={{ current: 1, total: 5 }}
+      backHref="/onboarding"
+      backLabel={backLabel}
+    >
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(handleSubmit)}
+          className="space-y-5"
+          noValidate
+        >
+          {formError ? (
+            <InlineAlert tone="error">{formError}</InlineAlert>
+          ) : null}
+
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t.nameLabel}</FormLabel>
+                <FormControl>
+                  <Input autoComplete="organization" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="eiin"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t.eiinLabel}</FormLabel>
+                <FormControl>
+                  <Input
+                    inputMode="numeric"
+                    maxLength={6}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                {eiinChecking ? (
+                  <p
+                    className="text-muted-foreground text-xs"
+                    aria-live="polite"
+                  >
+                    {t.eiinChecking}
+                  </p>
+                ) : null}
+                <details>
+                  <summary className="text-muted-foreground inline-flex min-h-11 w-fit cursor-pointer items-center text-xs underline underline-offset-2">
+                    {t.eiinHelperTitle}
+                  </summary>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {t.eiinHelperBody}
+                  </p>
+                </details>
+                <FormMessage />
+                {form.formState.errors.eiin?.type === "manual" ? (
+                  <a
+                    href="mailto:support@acadigma.com"
+                    className="text-primary inline-flex min-h-11 items-center text-xs underline underline-offset-2"
+                  >
+                    {t.eiinTakenContact}
+                  </a>
+                ) : null}
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="medium"
+            render={({ field }) => (
+              <FormItem>
+                {/* fieldset/legend, not FormLabel: ToggleGroup's root is a
+                    `role="radiogroup"`, not a single focusable input, so
+                    FormLabel's `htmlFor` would point at a form-item id no
+                    element in this field ever carries (OPUS 6, PR #34
+                    review) — the same reasoning `working_days` below
+                    already used for `DayPickerRow`. */}
+                <fieldset className="min-w-0 border-0 p-0">
+                  <legend className="text-foreground mb-2 p-0 text-sm font-medium">
+                    {t.mediumLabel}
+                  </legend>
+                  <ToggleGroup
+                    type="single"
+                    variant="outline"
+                    value={field.value ?? ""}
+                    onValueChange={(value) => {
+                      if (value) field.onChange(value)
+                    }}
+                    aria-label={t.mediumLabel}
+                    className="flex-wrap"
+                  >
+                    {schoolMediumSchema.options.map((value) => (
+                      <ToggleGroupItem
+                        key={value}
+                        value={value}
+                        className="min-h-11 flex-1"
+                      >
+                        {t.mediums[value]}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </fieldset>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="board"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t.boardLabel}</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t.boardPlaceholder} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {schoolBoardSchema.options.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {t.boards[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Button
+            type="submit"
+            className="h-12 w-full"
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting ? (
+              <>
+                <Loader2Icon className="animate-spin" aria-hidden="true" />
+                {t.continuingButton}
+              </>
+            ) : (
+              t.continueButton
+            )}
+          </Button>
+        </form>
+      </Form>
+    </OnboardingShell>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Step 2 — Where and when (§4.3)
+// ---------------------------------------------------------------------------
+function Step2({
+  t,
+  draft,
+  onBack,
+  onSubmit,
+  backLabel,
+  shouldFocusRef,
+}: {
+  t: WizardMessages
+  draft: CreateSchoolDraft
+  onBack: () => void
+  onSubmit: (values: CreateSchoolStep2) => Promise<StepOutcome>
+  backLabel: string
+  shouldFocusRef: RefObject<boolean>
+}) {
+  const headingRef = useFocusHeadingOnMount(shouldFocusRef)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [detectedTimezone, setDetectedTimezone] = useState<string | null>(null)
+  const [timezoneOpen, setTimezoneOpen] = useState(false)
+
+  const currentYear = useMemo(() => new Date().getFullYear(), [])
+  const defaultAcademicYear = useMemo(
+    () => ({
+      name: String(currentYear),
+      starts_on: `${currentYear}-01-01`,
+      ends_on: `${currentYear}-12-31`,
+    }),
+    [currentYear]
+  )
+
+  const form = useForm<CreateSchoolStep2>({
+    resolver: zodResolver(createSchoolStep2Schema),
+    defaultValues: {
+      timezone: draft.timezone ?? DEFAULT_TIMEZONE,
+      working_days: draft.working_days ?? [...DEFAULT_WORKING_DAYS],
+      academic_year: {
+        name: draft.academic_year?.name ?? defaultAcademicYear.name,
+        starts_on:
+          draft.academic_year?.starts_on ?? defaultAcademicYear.starts_on,
+        ends_on: draft.academic_year?.ends_on ?? defaultAcademicYear.ends_on,
+      },
+    },
+  })
+
+  // Browser-only: the server has no meaningful "local" zone, so this is
+  // computed after mount rather than during render (avoids an SSR/client
+  // hydration mismatch) and is offered as a suggestion chip only — never
+  // silently applied (§5).
+  useEffect(() => {
+    try {
+      setDetectedTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)
+    } catch {
+      // Stays null; the chip simply does not render.
+    }
+  }, [])
+
+  // Keyed on the exact literal union `SAT_FIRST_ORDER` produces (not a
+  // general `Record<number, string>`) so indexing stays `string`, not
+  // `string | undefined`, under this project's `noUncheckedIndexedAccess`.
+  const dayLabels: Record<(typeof SAT_FIRST_ORDER)[number], string> = {
+    6: t.days["6"],
+    7: t.days["7"],
+    1: t.days["1"],
+    2: t.days["2"],
+    3: t.days["3"],
+    4: t.days["4"],
+    5: t.days["5"],
+  }
+  const dayFullLabels: Record<(typeof SAT_FIRST_ORDER)[number], string> = {
+    6: t.daysFull["6"],
+    7: t.daysFull["7"],
+    1: t.daysFull["1"],
+    2: t.daysFull["2"],
+    3: t.daysFull["3"],
+    4: t.daysFull["4"],
+    5: t.daysFull["5"],
+  }
+  const dayOptions = SAT_FIRST_ORDER.map((value) => ({
+    value,
+    label: dayLabels[value],
+    fullLabel: dayFullLabels[value],
+  }))
+
+  async function handleSubmit(values: CreateSchoolStep2) {
+    setFormError(null)
+    const outcome = await onSubmit(values)
+    if (outcome.ok) return
+    if (outcome.fieldErrors?.academic_year) {
+      // OPUS 6 (PR #34 review): a manual RHF error, not local state — it
+      // gets FormControl's aria-describedby/aria-invalid wiring and
+      // FormMessage rendering for free, and `clearErrors` below (called
+      // from both date fields' onChange) clears it the moment the user
+      // edits either date, instead of it lingering until the next submit.
+      form.setError("academic_year.ends_on", {
+        type: "manual",
+        message: outcome.fieldErrors.academic_year,
+      })
+    }
+    if (outcome.message) setFormError(outcome.message)
+  }
+
+  const startsOn = form.watch("academic_year.starts_on")
+
+  return (
+    <OnboardingShell
+      ref={headingRef}
+      title={t.step2Title}
+      progress={{ current: 2, total: 5 }}
+      onBack={onBack}
+      backLabel={backLabel}
+    >
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(handleSubmit)}
+          className="space-y-6"
+          noValidate
+        >
+          {formError ? (
+            <InlineAlert tone="error">{formError}</InlineAlert>
+          ) : null}
+
+          <FormField
+            control={form.control}
+            name="timezone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t.timezoneLabel}</FormLabel>
+                {/* PR #34 follow-up: a shadcn combobox (Command inside
+                    Popover) replaces the plain ~400-entry Select — real
+                    search, not just typeahead, and DEFAULT_TIMEZONE
+                    ("Asia/Dhaka") sorts first (see `listIanaTimezones`
+                    above). Resolves OPUS 3's "unusable on touch" finding. */}
+                <Popover open={timezoneOpen} onOpenChange={setTimezoneOpen}>
+                  <FormControl>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={timezoneOpen}
+                        className="w-full justify-between font-normal"
+                      >
+                        {field.value}
+                        <ChevronsUpDownIcon
+                          className="text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      </Button>
+                    </PopoverTrigger>
+                  </FormControl>
+                  <PopoverContent
+                    align="start"
+                    className="w-(--radix-popover-trigger-width) p-0"
+                  >
+                    <Command>
+                      <CommandInput placeholder={t.timezoneSearchPlaceholder} />
+                      <CommandList>
+                        <CommandEmpty>{t.timezoneNoResults}</CommandEmpty>
+                        <CommandGroup>
+                          {TIMEZONES.map((zone) => (
+                            <CommandItem
+                              key={zone}
+                              value={zone}
+                              onSelect={() => {
+                                field.onChange(zone)
+                                setTimezoneOpen(false)
+                              }}
+                            >
+                              <CheckIcon
+                                aria-hidden="true"
+                                className={
+                                  zone === field.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                }
+                              />
+                              {zone}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {detectedTimezone && detectedTimezone !== field.value ? (
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(detectedTimezone)}
+                    className="text-primary inline-flex min-h-11 w-fit items-center text-xs underline underline-offset-2"
+                  >
+                    {t.timezoneSuggestion.replace(
+                      "{timezone}",
+                      detectedTimezone
+                    )}
+                  </button>
+                ) : null}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="working_days"
+            render={({ field }) => (
+              <FormItem>
+                {/* fieldset/legend, not FormLabel — same reasoning as the
+                    medium field above; ToggleGroup's root here is
+                    `role="toolbar"` (Radix's `type="multiple"` shape). */}
+                <fieldset className="min-w-0 border-0 p-0">
+                  <legend className="text-foreground mb-2 p-0 text-sm font-medium">
+                    {t.workingDaysLabel}
+                  </legend>
+                  <ToggleGroup
+                    type="multiple"
+                    variant="outline"
+                    value={field.value.map(String)}
+                    onValueChange={(values) =>
+                      field.onChange(values.map(Number))
+                    }
+                    aria-label={t.workingDaysLabel}
+                    className="flex-wrap"
+                  >
+                    {dayOptions.map((option) => (
+                      <ToggleGroupItem
+                        key={option.value}
+                        value={String(option.value)}
+                        aria-label={option.fullLabel}
+                        className="min-h-11 min-w-11 rounded-full"
+                      >
+                        {option.label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                  <p className="text-muted-foreground mt-2 text-xs">
+                    {t.workingDaysHelp}
+                  </p>
+                </fieldset>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="academic_year.name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t.academicYearNameLabel}</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="academic_year.starts_on"
+                render={({ field }) => (
+                  <FormItem>
+                    {/* PR #34 follow-up (ponytail): the platform's own
+                        `<input type="date">` is already accessible and
+                        keyboard-operable — no reason for a bespoke
+                        `DateField` primitive over one native input inside
+                        the same `FormControl` every other field here uses. */}
+                    <FormLabel>{t.academicYearStartLabel}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        onChange={(event) => {
+                          field.onChange(event)
+                          form.clearErrors("academic_year.ends_on")
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="academic_year.ends_on"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.academicYearEndLabel}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        min={startsOn}
+                        {...field}
+                        onChange={(event) => {
+                          field.onChange(event)
+                          form.clearErrors("academic_year.ends_on")
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            className="h-12 w-full"
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting ? (
+              <>
+                <Loader2Icon className="animate-spin" aria-hidden="true" />
+                {t.continuingButton}
+              </>
+            ) : (
+              t.continueButton
+            )}
+          </Button>
+        </form>
+      </Form>
+    </OnboardingShell>
+  )
+}

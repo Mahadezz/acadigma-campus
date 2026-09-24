@@ -167,8 +167,26 @@ describe("saveOnboardingDraft", () => {
       path: "create_school",
       step: 2,
       draft: { name: "Ideal School" },
+      completed_at: null,
     })
     expect(sentPayload).not.toHaveProperty("started_at")
+  })
+
+  it("clears completed_at on every save (F-ID-05 §11 / D-60 follow-up: a fresh draft after a prior completion must become resumable again)", async () => {
+    let sentPayload: Record<string, unknown> | undefined
+    const client = fakeClient({
+      onUpsert: (payload) => {
+        sentPayload = payload
+      },
+    })
+
+    await saveOnboardingDraft(client, USER_ID, {
+      path: "create_school",
+      step: 1,
+      draft: { name: "Second School" },
+    })
+
+    expect(sentPayload?.completed_at).toBeNull()
   })
 
   it("returns dependency_unavailable when the upsert fails", async () => {
