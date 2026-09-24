@@ -219,6 +219,8 @@ Check constraints keep `working_days` non-empty and inside `{1..7}`, and every p
 
 **RLS** — class **T2**, with SELECT widened to every active member (a teacher needs the timezone and the working week). **Triggers** — `updated_at`, audit, `app.tg_freeze_workspace()` (F-ID-03 Part 1). **Soft delete** — no (cascades from `workspaces`).
 
+**Indexes (F-ID-05 Part 3, D-66)** — `unique (eiin) where eiin is not null` (`school_profiles_eiin_unique`, `20260925000700_school_eiin_availability.sql`): §5's "EIIN ... unique across the platform," partial because most schools have none yet and personal workspaces have no row here at all. A caller filling in the create-school wizard is, by definition, a member of nothing yet, so this class's own SELECT policy (above) gives them no RLS path to "does anyone already have this EIIN" — `public.check_eiin_available(eiin text) returns boolean` (SECURITY DEFINER, same migration) is the boolean-only probe the wizard's step 1 calls instead, same shape as `public.throttle_status` (§1.8a). Granted to `authenticated` only, not `anon` — onboarding requires a signed-in, verified account (§2 of the spec).
+
 ### 1.4 `workspace_members` — the only source of membership
 
 | Column                                     | Type                                                       | Null | Default             |

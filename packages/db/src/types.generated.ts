@@ -2123,6 +2123,7 @@ export type Database = {
       }
     }
     Functions: {
+      check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       expire_pro_trials: { Args: never; Returns: number }
       list_my_workspaces: {
         Args: never
