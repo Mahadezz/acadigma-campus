@@ -35,7 +35,7 @@ export function StartOverLink({ label }: { label: string }) {
       type="button"
       onClick={onClick}
       disabled={isPending}
-      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm underline underline-offset-4 disabled:opacity-60"
+      className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-2 text-sm underline underline-offset-4 disabled:opacity-60"
     >
       {isPending ? (
         <Loader2Icon className="size-3.5 animate-spin" aria-hidden="true" />

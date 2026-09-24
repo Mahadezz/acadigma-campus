@@ -9,9 +9,12 @@ import { cn } from "../lib/utils"
  * and "Join a school". Icon, title, one description line, ≥120px tall (§6
  * wireframe: "each 120 px tall"), fully within thumb reach, never a
  * carousel. Renders an `<a>` when `href` is given (the chooser's normal
- * case — real navigation, works without JS) or a `<button>` when `onClick`
- * is given instead (the tutoring exit link's sibling affordance, which runs
- * a server action before navigating).
+ * case — real navigation, works without JS), a `<button>` when `onClick` is
+ * given instead (the tutoring exit link's sibling affordance, which runs a
+ * server action before navigating), or a non-interactive `<div
+ * aria-disabled>` when `disabled` is set — used for a card whose
+ * destination does not exist yet (Opus review, PR #24: a disabled card with
+ * a "Coming soon" `badge`, not a link that 404s).
  */
 export type ChoiceCardProps = {
   icon: React.ReactNode
@@ -20,6 +23,8 @@ export type ChoiceCardProps = {
   href?: string
   onClick?: () => void
   disabled?: boolean
+  /** Shown next to the title, only while `disabled` — e.g. "Coming soon". */
+  badge?: React.ReactNode
   className?: string
 }
 
@@ -30,6 +35,7 @@ export function ChoiceCard({
   href,
   onClick,
   disabled,
+  badge,
   className,
 }: ChoiceCardProps) {
   const content = (
@@ -41,27 +47,43 @@ export function ChoiceCard({
         {icon}
       </span>
       <span className="min-w-0 flex-1 space-y-0.5">
-        <span className="text-foreground block text-base font-semibold">
-          {title}
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="text-foreground block text-base font-semibold">
+            {title}
+          </span>
+          {disabled && badge ? (
+            <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+              {badge}
+            </span>
+          ) : null}
         </span>
         <span className="text-muted-foreground block text-sm text-balance">
           {description}
         </span>
       </span>
-      <ChevronRightIcon
-        className="text-muted-foreground size-5 shrink-0"
-        aria-hidden="true"
-      />
+      {disabled ? null : (
+        <ChevronRightIcon
+          className="text-muted-foreground size-5 shrink-0"
+          aria-hidden="true"
+        />
+      )}
     </>
   )
 
   const shared = cn(
     "flex min-h-[120px] w-full items-center gap-4 rounded-xl border bg-card p-4 text-left shadow-flat transition-colors",
-    "hover:bg-accent/5",
+    disabled ? "cursor-not-allowed opacity-60" : "hover:bg-accent/5",
     "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
-    "disabled:pointer-events-none disabled:opacity-50",
     className
   )
+
+  if (disabled) {
+    return (
+      <div className={shared} aria-disabled="true">
+        {content}
+      </div>
+    )
+  }
 
   if (href) {
     return (
@@ -72,12 +94,7 @@ export function ChoiceCard({
   }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={shared}
-    >
+    <button type="button" onClick={onClick} className={shared}>
       {content}
     </button>
   )

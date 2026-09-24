@@ -10,12 +10,22 @@ export type OnboardingChooserState = {
   path: OnboardingPath
   draft: Record<string, unknown>
   completedAt: string | null
-  /** True when the caller already has at least one active membership
-   * (§4.2: "A user who already has memberships sees the same two cards plus
-   * a 'Back to {current workspace}' link"). */
-  hasActiveMembership: boolean
-  /** The membership to link back to, if any — `null` when there is none or
-   * when the caller has more than one and no single obvious default. */
+  /**
+   * True when the caller already has at least one active `type='school'`
+   * membership (§4.2: "A user who already has memberships sees the same two
+   * cards plus a 'Back to {current workspace}' link"; §4.6: the personal
+   * exit link is hidden once a school membership exists).
+   *
+   * Deliberately school-only, not "any membership": every account has
+   * exactly one personal workspace from registration (F-ID-05 §4.1) — using
+   * "any active membership" here would show "Back to {personal}" and hide
+   * the tutoring exit link for literally every user, including a brand-new
+   * one who has never seen the chooser (Opus review, PR #24, AC3/§4.6).
+   */
+  hasActiveSchoolMembership: boolean
+  /** The school workspace to link back to, if any — `null` when
+   * `hasActiveSchoolMembership` is false or the caller has more than one
+   * school and no single obvious default. */
   activeWorkspaceName: string | null
 }
 
@@ -30,11 +40,17 @@ export type OnboardingChooserView =
       draftName: string | null
       showBackLink: boolean
       activeWorkspaceName: string | null
+      /** §4.6: hidden once the caller has a school membership — "take me to
+       * my personal workspace" makes no sense once they have somewhere
+       * better to go, and would otherwise show for literally everyone since
+       * a personal workspace always exists. */
+      showTutoringExit: boolean
     }
   | {
       mode: "fresh"
       showBackLink: boolean
       activeWorkspaceName: string | null
+      showTutoringExit: boolean
     }
 
 function hasDraftContent(draft: Record<string, unknown>): boolean {
@@ -44,7 +60,8 @@ function hasDraftContent(draft: Record<string, unknown>): boolean {
 export function resolveOnboardingChooserView(
   state: OnboardingChooserState
 ): OnboardingChooserView {
-  const showBackLink = state.hasActiveMembership
+  const showBackLink = state.hasActiveSchoolMembership
+  const showTutoringExit = !state.hasActiveSchoolMembership
 
   const isResumable =
     !state.completedAt &&
@@ -64,6 +81,7 @@ export function resolveOnboardingChooserView(
       draftName,
       showBackLink,
       activeWorkspaceName: state.activeWorkspaceName,
+      showTutoringExit,
     }
   }
 
@@ -71,5 +89,6 @@ export function resolveOnboardingChooserView(
     mode: "fresh",
     showBackLink,
     activeWorkspaceName: state.activeWorkspaceName,
+    showTutoringExit,
   }
 }

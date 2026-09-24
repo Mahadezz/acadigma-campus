@@ -17,6 +17,26 @@ export type LandingResolutionInput = {
   workspaceType: "school" | "personal" | null
   /** Required whenever `workspaceType` is non-null; ignored otherwise. */
   role?: WorkspaceRole | null
+  /**
+   * F-ID-05 §8 Part 2's forced-onboarding redirect: `profiles.onboarding_completed_at`.
+   * `null` means "never completed." **Optional and paired with
+   * `hasActiveSchoolMembership` below** — both must be explicitly provided
+   * for the override to fire at all, so a caller that omits them (e.g.
+   * `switchWorkspace`, an explicit user-picked destination that must never
+   * be overridden — F-ID-05 §2: "Be forced through onboarding: never" once a
+   * membership exists) keeps its old behaviour unchanged.
+   */
+  onboardingCompletedAt?: string | null
+  /**
+   * Whether the caller has at least one ACTIVE `type='school'` membership,
+   * independent of which single workspace resolved as "active" this session.
+   * `workspaceType` alone cannot answer this: every account has exactly one
+   * personal workspace from registration (F-ID-05 §4.1) and it resolves
+   * first when nothing else is active (F-ID-03 §4.3), so `workspaceType ===
+   * 'personal'` is true for both a genuinely tutoring-only user and a
+   * brand-new user who has never seen the chooser.
+   */
+  hasActiveSchoolMembership?: boolean
 }
 
 export const LANDING_ROUTES = {
@@ -29,10 +49,12 @@ export const LANDING_ROUTES = {
 export type LandingRoute = (typeof LANDING_ROUTES)[keyof typeof LANDING_ROUTES]
 
 /**
- * `resolveLandingRoute` — F-ID-03 §4.4's table, verbatim:
+ * `resolveLandingRoute` — F-ID-03 §4.4's table, verbatim, with one override
+ * F-ID-05 §8 Part 2 adds ahead of it (checked first, below):
  *
  * | Condition (first match wins)                              | Route         |
  * | ------------------------------------------------------------------------ |
+ * | onboarding never completed AND no school membership (F-ID-05) | /onboarding |
  * | No active membership at all                                | /onboarding  |
  * | Resolved workspace type='personal'                         | /personal    |
  * | type='school' and role in {owner,admin,teacher,staff}      | /app         |
@@ -58,6 +80,17 @@ const SCHOOL_SHELL_ROLES: readonly WorkspaceRole[] = [
 export function resolveLandingRoute(
   input: LandingResolutionInput
 ): LandingRoute {
+  // F-ID-05 §8 Part 2: a verified user who has never finished onboarding
+  // AND has no school membership yet is forced to /onboarding, even though
+  // their personal workspace already resolves — see the field comments
+  // above for why both inputs must be explicitly provided.
+  if (
+    input.onboardingCompletedAt === null &&
+    input.hasActiveSchoolMembership === false
+  ) {
+    return LANDING_ROUTES.onboarding
+  }
+
   if (!input.workspaceType) return LANDING_ROUTES.onboarding
   if (input.workspaceType === "personal") return LANDING_ROUTES.personal
 

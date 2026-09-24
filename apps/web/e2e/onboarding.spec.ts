@@ -46,12 +46,12 @@ test.describe("onboarding chooser — /onboarding", () => {
     await page.getByRole("button", { name: "Sign in" }).click()
     await expect(page).toHaveURL(/\/onboarding$/)
 
-    await expect(
-      page.getByRole("link", { name: /create a school/i })
-    ).toBeVisible()
-    await expect(
-      page.getByRole("link", { name: /join a school/i })
-    ).toBeVisible()
+    // Both cards render disabled ("Coming soon") — /onboarding/create-school
+    // and /onboarding/join don't exist until Parts 3-5, so they are not
+    // links (see F-ID-05 §11's Part 2 status note).
+    await expect(page.getByText(/create a school/i)).toBeVisible()
+    await expect(page.getByText(/join a school/i)).toBeVisible()
+    await expect(page.getByText("Coming soon")).toHaveCount(2)
     const tutoringLink = page.getByRole("button", {
       name: /tutoring on my own/i,
     })

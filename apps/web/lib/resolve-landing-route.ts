@@ -34,9 +34,19 @@ import { createClient } from "@/lib/supabase/server"
  * (`profiles.last_active_workspace_id` → first active membership).
  *
  * Pure routing decision lives in `packages/domain/workspace/resolveLanding.ts`;
- * this file's only job is the one DB round trip that feeds it. `supabaseOverride`
+ * this file's only job is the DB round trip(s) that feed it. `supabaseOverride`
  * exists so a caller that already has a client for this request (e.g. the login
  * action, mid sign-in) does not pay for a second one.
+ *
+ * F-ID-05 §8 Part 2 addendum (Opus review, PR #24): on a successful workspace
+ * resolution this also reads `profiles.onboarding_completed_at` and probes for
+ * any ACTIVE `type='school'` membership (via the `list_my_workspaces` RPC —
+ * already `getOnboardingState`'s source of truth), feeding both into the pure
+ * domain function's forced-onboarding override. `workspaceType` alone cannot
+ * distinguish a genuine tutoring-only user from a brand-new one who has never
+ * seen the chooser: every account gets exactly one personal workspace at
+ * registration (F-ID-05 §4.1), and it resolves first whenever nothing else is
+ * active (F-ID-03 §4.3) — so `workspaceType === 'personal'` is true for both.
  */
 export async function resolveLandingRoute(
   supabaseOverride?: AcadigmaSupabaseClient
@@ -53,8 +63,45 @@ export async function resolveLandingRoute(
     return "/onboarding"
   }
 
+  const [{ data: profile }, { data: membershipRows }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("onboarding_completed_at")
+      .eq("id", result.data.userId)
+      .maybeSingle(),
+    supabase.rpc("list_my_workspaces"),
+  ])
+
   return resolveLandingRouteForContext({
     workspaceType: result.data.workspaceType,
     role: result.data.role,
+    onboardingCompletedAt:
+      (profile as { onboarding_completed_at?: string | null } | null)
+        ?.onboarding_completed_at ?? null,
+    // If `resolveWorkspaceContext` itself already resolved a `school`
+    // workspace, that alone proves an active school membership exists —
+    // OR'd in ahead of the RPC probe so a transient `list_my_workspaces`
+    // failure can never force an already-resolved school member back to
+    // `/onboarding` (fails closed toward "let them in", not toward
+    // "show the chooser to someone who plainly already has a school").
+    hasActiveSchoolMembership:
+      result.data.workspaceType === "school" ||
+      hasActiveSchoolMembershipRow(membershipRows),
   })
+}
+
+/**
+ * Fails CLOSED to `false` (never falls back to "assume they have a school")
+ * on a malformed or errored RPC response — the worst case is showing the
+ * chooser again to someone who already has a school, not the reverse.
+ */
+function hasActiveSchoolMembershipRow(rows: unknown): boolean {
+  if (!Array.isArray(rows)) return false
+  return rows.some(
+    (row) =>
+      typeof row === "object" &&
+      row !== null &&
+      (row as Record<string, unknown>)["type"] === "school" &&
+      (row as Record<string, unknown>)["status"] === "active"
+  )
 }

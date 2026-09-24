@@ -49,7 +49,7 @@ export function OnboardingShell({
         {backHref ? (
           <a
             href={backHref}
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm font-medium"
+            className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-1 text-sm font-medium"
           >
             <ChevronLeftIcon className="size-4" aria-hidden="true" />
             {backLabel}

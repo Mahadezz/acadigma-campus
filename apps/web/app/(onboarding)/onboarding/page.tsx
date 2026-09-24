@@ -60,15 +60,19 @@ export default async function OnboardingChooserPage() {
   }
 
   const state = stateResult.data
+  // school only — every account also has a personal-workspace membership
+  // from registration, which must not count as "already has a workspace"
+  // here (Opus review, PR #24: AC3/§4.6).
   const activeMembership = state.memberships.find(
-    (membership) => membership.status === "active"
+    (membership) =>
+      membership.status === "active" && membership.type === "school"
   )
 
   const view = resolveOnboardingChooserView({
     path: state.path,
     draft: state.draft,
     completedAt: state.completedAt,
-    hasActiveMembership: Boolean(activeMembership),
+    hasActiveSchoolMembership: Boolean(activeMembership),
     activeWorkspaceName: activeMembership?.name ?? null,
   })
 
@@ -113,11 +117,10 @@ export default async function OnboardingChooserPage() {
                   : t.onboarding.chooser.resumeFallbackTitle
               }
               description={t.onboarding.chooser.resumeDescription}
-              href={
-                view.path === "create_school"
-                  ? "/onboarding/create-school"
-                  : "/onboarding/join"
-              }
+              // Parts 3-5 ship the wizard/join routes this links to; until
+              // then it is disabled rather than a link that 404s.
+              disabled
+              badge={t.onboarding.chooser.comingSoon}
             />
             <StartOverLink label={t.onboarding.chooser.startOver} />
           </>
@@ -127,20 +130,27 @@ export default async function OnboardingChooserPage() {
               icon={<GraduationCapIcon aria-hidden="true" />}
               title={t.onboarding.chooser.createSchoolTitle}
               description={t.onboarding.chooser.createSchoolDescription}
-              href="/onboarding/create-school"
+              disabled
+              badge={t.onboarding.chooser.comingSoon}
             />
             <ChoiceCard
               icon={<KeyRoundIcon aria-hidden="true" />}
               title={t.onboarding.chooser.joinSchoolTitle}
               description={t.onboarding.chooser.joinSchoolDescription}
-              href="/onboarding/join"
+              disabled
+              badge={t.onboarding.chooser.comingSoon}
             />
           </>
         )}
 
-        <div className="pt-2 text-center sm:text-left">
-          <TutoringExitLink label={t.onboarding.chooser.tutoringLink} />
-        </div>
+        {view.showTutoringExit ? (
+          <div className="pt-2 text-center sm:text-left">
+            <TutoringExitLink
+              label={t.onboarding.chooser.tutoringLink}
+              errorLabel={t.onboarding.chooser.tutoringExitError}
+            />
+          </div>
+        ) : null}
       </div>
     </OnboardingShell>
   )

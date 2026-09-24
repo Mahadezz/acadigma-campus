@@ -46,16 +46,35 @@ describe("ChoiceCard", () => {
     expect(screen.getByRole("link").className).toContain("min-h-[120px]")
   })
 
-  it("disables the button variant when disabled is set", () => {
+  it("renders a non-interactive, aria-disabled card with a badge instead of a dead link when disabled", () => {
     render(
       <ChoiceCard
         icon={<span />}
         title="Create a school"
         description="…"
-        onClick={() => {}}
+        href="/onboarding/create-school"
         disabled
+        badge="Coming soon"
       />
     )
-    expect(screen.getByRole("button")).toBeDisabled()
+    // Never a real link — a disabled card must not be a dead href a user can click into.
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
+    expect(screen.getByText("Coming soon")).toBeInTheDocument()
+    const card = screen.getByText("Create a school").closest("[aria-disabled]")
+    expect(card).toHaveAttribute("aria-disabled", "true")
+  })
+
+  it("does not render a badge when not disabled, even if one is passed", () => {
+    render(
+      <ChoiceCard
+        icon={<span />}
+        title="Create a school"
+        description="…"
+        href="/x"
+        badge="Coming soon"
+      />
+    )
+    expect(screen.queryByText("Coming soon")).not.toBeInTheDocument()
   })
 })

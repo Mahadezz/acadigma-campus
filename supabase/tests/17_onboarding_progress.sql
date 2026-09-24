@@ -25,10 +25,12 @@
 --      (checked against the catalog, not by comparing `now()` values — the
 --      whole file runs inside one `begin;`/`rollback;` transaction, so
 --      `now()` returns the SAME value everywhere in it; `updated_at` and
---      `started_at` would be indistinguishable by timestamp alone here).
+--      `started_at` would be indistinguishable by timestamp alone here);
+--   7. the 32000-byte draft size cap is enforced at the database (CHECK
+--      constraint, 23514), not only by the app-layer Zod schema.
 -- =====================================================================
 begin;
-select plan(11);
+select plan(12);
 
 create schema if not exists tests;
 
@@ -186,6 +188,18 @@ select lives_ok(
        set path = 'join_school', step = 2, draft = '{"code":"ACD-1234"}'::jsonb
      where user_id = 'f1050101-0000-0000-0000-000000000001'$$,
   'the row''s own owner can update path/step/draft');
+
+-- =====================================================================
+-- 7. The 32000-byte draft cap is enforced at the database, not just by
+--    packages/contracts' Zod schema — a direct authenticated write must
+--    not be able to bypass it (Opus review, PR #24).
+-- =====================================================================
+select throws_ok(
+  $$update public.onboarding_progress
+       set draft = jsonb_build_object('blob', repeat('x', 40000))
+     where user_id = 'f1050101-0000-0000-0000-000000000001'$$,
+  '23514',
+  'an oversized draft is rejected by the CHECK constraint (23514), as the row''s own authenticated owner');
 
 select tests.logout();
 

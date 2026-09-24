@@ -187,7 +187,9 @@
       "resumeFallbackTitle": "Continue setting up your school",
       "resumeDescription": "Pick up right where you left off.",
       "startOver": "Start over",
-      "loadError": "We couldn't load your account. Try again."
+      "comingSoon": "Coming soon",
+      "loadError": "We couldn't load your account. Try again.",
+      "tutoringExitError": "Something went wrong. Try again."
     }
   },
   "nav": {

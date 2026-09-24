@@ -35,7 +35,11 @@ create table if not exists public.onboarding_progress (
   -- Nullable (unlike user_preferences' jsonb columns): §4.7 clears a
   -- finished onboarding by "setting completed_at and nulling draft" —
   -- draft therefore has to be able to hold NULL, not just '{}'.
-  draft        jsonb default '{}'::jsonb,
+  -- The 32000-byte cap mirrors packages/contracts/src/identity/onboarding.ts's
+  -- onboardingDraftSchema (Opus review, PR #24: the app-layer cap alone is
+  -- not a boundary — a direct authenticated write bypasses Zod entirely).
+  draft        jsonb default '{}'::jsonb
+                 check (draft is null or octet_length(draft::text) <= 32000),
   started_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   completed_at timestamptz
