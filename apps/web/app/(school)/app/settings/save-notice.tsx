@@ -3,7 +3,11 @@
 import { Button } from "@acadigma/ui/components/button"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
-export type Notice = { tone: "error" | "success"; text: string; stale?: boolean }
+export type Notice = {
+  tone: "error" | "success"
+  text: string
+  stale?: boolean
+}
 
 /** Form-level save result. A stale-version conflict (§7) offers a reload. */
 export function SaveNotice({

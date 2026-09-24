@@ -248,9 +248,15 @@ export async function updateSchoolProfile(
   if (error) {
     if (error.code === "23505") {
       return err(
-        apiError("conflict", "This EIIN is already registered to another school.", {
-          fieldErrors: { eiin: ["This EIIN is already registered to another school."] },
-        })
+        apiError(
+          "conflict",
+          "This EIIN is already registered to another school.",
+          {
+            fieldErrors: {
+              eiin: ["This EIIN is already registered to another school."],
+            },
+          }
+        )
       )
     }
     return err(UNAVAILABLE)

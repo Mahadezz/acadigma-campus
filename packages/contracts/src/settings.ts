@@ -131,7 +131,8 @@ export const schoolTypeSchema = z.enum([
 ])
 export type SchoolType = z.infer<typeof schoolTypeSchema>
 
-const optionalText = (max: number) => z.string().trim().min(1).max(max).nullable()
+const optionalText = (max: number) =>
+  z.string().trim().min(1).max(max).nullable()
 
 export const schoolProfileFieldsSchema = z.object({
   legal_name: optionalText(200),

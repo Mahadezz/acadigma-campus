@@ -1,9 +1,7 @@
-import { listAuditEvents } from "@acadigma/db"
+import { listAuditEvents, type WorkspaceContext } from "@acadigma/db"
 import { can } from "@acadigma/domain"
 
 import { createClient } from "@/lib/supabase/server"
-
-import type { WorkspaceContext } from "@acadigma/db"
 
 type HistoryMessages = {
   title: string
@@ -37,12 +35,15 @@ export async function SettingsHistory({
     limit: 5,
   })
   const events = result.ok ? result.data.items : []
-  const dateFormat = new Intl.DateTimeFormat(locale === "bn" ? "bn-BD" : "en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Asia/Dhaka",
-  })
+  const dateFormat = new Intl.DateTimeFormat(
+    locale === "bn" ? "bn-BD" : "en-GB",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Dhaka",
+    }
+  )
 
   return (
     <section aria-labelledby="settings-history" className="space-y-2 pt-4">
@@ -70,7 +71,10 @@ export async function SettingsHistory({
                 {t.line
                   .replace("{fields}", fields.join(", "))
                   .replace("{name}", event.actorName ?? t.someone)
-                  .replace("{date}", dateFormat.format(new Date(event.createdAt)))}
+                  .replace(
+                    "{date}",
+                    dateFormat.format(new Date(event.createdAt))
+                  )}
               </li>
             )
           })}

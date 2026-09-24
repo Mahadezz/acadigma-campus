@@ -96,7 +96,10 @@ async function gateWrite(permission: Action): Promise<WriteGate> {
   const ctx = await requireWorkspace()
   if (!can(ctx.role, permission)) {
     return err(
-      apiError("forbidden", "Only an owner or admin can change school settings.")
+      apiError(
+        "forbidden",
+        "Only an owner or admin can change school settings."
+      )
     )
   }
   const supabase = await createClient()
@@ -139,7 +142,9 @@ export async function updateBranding(
   for (const key of ["header_line_1", "header_line_2"] as const) {
     const unknown = unknownHeaderTokens(parsed.data.branding[key] ?? "")
     if (unknown.length > 0) {
-      fieldErrors[key] = [`Unknown token: ${unknown.map((t) => `{${t}}`).join(", ")}`]
+      fieldErrors[key] = [
+        `Unknown token: ${unknown.map((t) => `{${t}}`).join(", ")}`,
+      ]
     }
   }
   if (Object.keys(fieldErrors).length > 0) {

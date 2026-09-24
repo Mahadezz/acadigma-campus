@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { useForm, type FieldPath } from "react-hook-form"
 
 import { updateBrandingInputSchema } from "@acadigma/contracts"
+import type { SchoolProfile } from "@acadigma/db/repositories/settings"
 import {
   renderHeaderLine,
   unknownHeaderTokens,
@@ -29,8 +30,6 @@ import type { Messages } from "@/lib/i18n"
 import { updateBranding } from "../actions"
 import { SaveNotice, type Notice } from "../save-notice"
 import { StickySaveBar } from "../sticky-save-bar"
-
-import type { SchoolProfile } from "@acadigma/db/repositories/settings"
 
 const KEYS = [
   "header_line_1",

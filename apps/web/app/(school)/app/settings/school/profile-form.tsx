@@ -13,6 +13,7 @@ import {
   schoolTypeSchema,
   type SchoolProfileFields,
 } from "@acadigma/contracts"
+import type { SchoolProfile } from "@acadigma/db/repositories/settings"
 import {
   Form,
   FormControl,
@@ -36,8 +37,6 @@ import type { Messages } from "@/lib/i18n"
 import { updateSchoolProfile } from "../actions"
 import { SaveNotice, type Notice } from "../save-notice"
 import { StickySaveBar } from "../sticky-save-bar"
-
-import type { SchoolProfile } from "@acadigma/db/repositories/settings"
 
 type FieldKey = keyof SchoolProfileFields
 type FormValues = Record<FieldKey, string>
