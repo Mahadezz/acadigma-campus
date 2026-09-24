@@ -28,7 +28,7 @@ GitHub's dependency graph, enabled today, surfaced "7 vulnerabilities (7 moderat
 | #6    | `@vitest/mocker` | `pnpm-lock.yaml`                  | transitive (via `vitest`)             | dev         | same as #1 (mocker is what `vitest` uses internally for `vi.mock`)                                  | 4.1.11 (via vitest) |
 | #7    | `vitest`         | `pnpm-lock.yaml`                  | direct (lockfile-level view of #1–#5) | dev         | same as #1                                                                                          | 4.1.11              |
 
-None of the seven ship to the browser or the server runtime — `vitest`/`@vitest/mocker` are devDependencies only, never imported by `apps/web` route handlers, server actions, or any `packages/*/src` module reachable from a production build (confirmed by the `pnpm --filter @acadigma/web build` output below, which does not bundle either package). All seven are **safely fixable**: `vitest@4.1.11` was published 2026-09-15, which is more than D-49's 2-day (`minimumReleaseAge: 2880`) cooldown before today (2026-09-24), so no `minimumReleaseAgeExclude` entry was needed. `.audit-exceptions.json`'s own convention (`$comment`) is explicitly scoped to "high or critical advisory we cannot fix yet" — these seven are all **moderate** and are fixed outright, so no exception entry was added; the file's `exceptions: []` is unchanged.
+None of the seven ship to the browser or the server runtime — `vitest`/`@vitest/mocker` are devDependencies only, never imported by `apps/web` route handlers, server actions, or any `packages/*/src` module reachable from a production build (confirmed by the `pnpm --filter @acadigma/web build` output below, which does not bundle either package). All seven are **safely fixable**: `vitest@4.1.11` was published 2026-08-18, which is more than D-49's 2-day (`minimumReleaseAge: 2880`) cooldown before today (2026-09-24), so no `minimumReleaseAgeExclude` entry was needed. `.audit-exceptions.json`'s own convention (`$comment`) is explicitly scoped to "high or critical advisory we cannot fix yet" — these seven are all **moderate** and are fixed outright, so no exception entry was added; the file's `exceptions: []` is unchanged.
 
 **Action:** bumped `vitest` (and its peer `@vitest/coverage-v8`, which must track vitest's major version) from `3.2.7` to `4.1.11` in all five manifests via direct `package.json` edits + `pnpm install` (transitively resolves `@vitest/mocker` to `4.1.11` too — `pnpm why @vitest/mocker -r` confirms a single resolved version, no `overrides` needed).
 
@@ -71,7 +71,7 @@ No other code changes. No production dependency changed.
 | `node scripts/check-permission-parity.mjs`           | PASS   |                                                                                                   |
 | `pnpm --filter @acadigma/web build`                  | PASS   | `next build` — 18/18 static pages generated, no type/lint errors during build                     |
 
-Coverage thresholds (root `vitest.config.ts`, unchanged by this PR): 92.45% statements / 83.13% branches / 92.07% functions / 94.08% lines overall — all above the 70% floor; `packages/domain` above its 80% floor. No threshold regressions.
+Coverage thresholds unchanged; coverage **scope** did change (see §3a): 92.45% statements / 83.13% branches / 92.07% functions / 94.08% lines overall — all above the 70% floor; `packages/domain` above its 80% floor. No threshold regressions.
 
 ---
 
@@ -112,3 +112,9 @@ None introduced by this PR. `@vitest/coverage-v8`/`vitest`/`@vitest/mocker` each
 
 **Signed off by:** Claude (Sonnet 5)
 **Date:** 2026-09-24
+
+## 3a. Addendum after the Opus review (2026-09-24)
+
+- **Coverage scope changed, on purpose.** Under Vitest 4 the `packages/*/src/**/*.ts` include glob also matches the 15 `.tsx` files in `packages/ui` (components and primitives), which Vitest 3 did not report. The headline dropped from 97.2 / 88.87 / 97.23 / 97.2 (statements / branches / functions / lines, main) to 92.45 / 83.13 / 92.07 / 94.08: the same tests, measured over more real code. Keeping the wider scope because the UI components are production code; `**/*.test.tsx` is now excluded so test files never count. All thresholds still pass.
+- **Correction:** Vitest 4.1.11 was published 2026-08-18 (not 09-15). D-49's release-age rule is met either way.
+- **Correction:** on `main` (Vitest 3.2.7) all 700 tests already ran in their intended environments. The 67 DOM-test failures happened only mid-upgrade (Vitest 4 ignoring the removed `vitest.workspace.ts`) and failed loudly; migrating the projects into `vitest.config.ts` fixed that. Nothing on `main` was passing vacuously.

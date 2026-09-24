@@ -45,6 +45,7 @@ export default defineConfig({
       include: ["packages/*/src/**/*.ts"],
       exclude: [
         "**/*.test.ts",
+        "**/*.test.tsx",
         "**/index.ts",
         "packages/db/src/types.generated.ts",
       ],
