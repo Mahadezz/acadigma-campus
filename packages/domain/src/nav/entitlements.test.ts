@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   buildEntitledNavModules,
+  FALLBACK_PLAN_MODULES_WHEN_UNKNOWN,
   NAV_MODULE_TO_PLAN_MODULE,
 } from "./entitlements"
 import { NAV_MODULE_KEYS } from "./types"
@@ -73,5 +74,38 @@ describe("buildEntitledNavModules", () => {
     expect(entitled.has("marketplace")).toBe(false)
     expect(entitled.has("attendance")).toBe(true)
     expect(entitled.has("timetable")).toBe(true)
+  })
+})
+
+describe("FALLBACK_PLAN_MODULES_WHEN_UNKNOWN (PR #17 review: fail visible, not empty)", () => {
+  it("keeps every daily-loop screen visible when the plan cannot be resolved at all", () => {
+    const entitled = buildEntitledNavModules(FALLBACK_PLAN_MODULES_WHEN_UNKNOWN)
+    for (const key of [
+      "attendance",
+      "timetable",
+      "students",
+      "exams",
+      "marks",
+      "assignments",
+      "curriculum",
+      "lessons",
+      "resources",
+      "library",
+      "reports",
+      "print",
+      "messages",
+      "staff",
+      "billing",
+      "ai",
+    ] as const) {
+      expect(entitled.has(key)).toBe(true)
+    }
+  })
+
+  it("keeps the upsell-gated modules hidden until a real plan is known", () => {
+    const entitled = buildEntitledNavModules(FALLBACK_PLAN_MODULES_WHEN_UNKNOWN)
+    expect(entitled.has("hiring")).toBe(false)
+    expect(entitled.has("cover")).toBe(false)
+    expect(entitled.has("marketplace")).toBe(false)
   })
 })

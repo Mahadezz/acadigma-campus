@@ -1,46 +1,15 @@
 import { BellIcon } from "lucide-react"
 
-import {
-  getWorkspacePlan,
-  listEnabledModules,
-  type AcadigmaSupabaseClient,
-  type WorkspaceContext,
-} from "@acadigma/db"
-import {
-  buildEntitledNavModules,
-  getNavConfig,
-  type NavConfig,
-  type NavModuleKey,
-} from "@acadigma/domain/nav"
+import { getNavConfig, type NavConfig } from "@acadigma/domain/nav"
 import { Button } from "@acadigma/ui/components/button"
 import { AppShell } from "@acadigma/ui/primitives/app-shell"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
 
+import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
 
 import { SchoolBottomNav, SchoolSidebar } from "./nav"
-
-/**
- * The entitled module set for `ctx`'s workspace, from the plans engine
- * (`getWorkspacePlan` + `listEnabledModules`, F-CM-06 Parts 1-3), translated
- * into nav module keys by `buildEntitledNavModules` (D-56). Degrades to "every
- * nav key that has no plan-catalogue mapping yet" — never to an empty nav —
- * when the plan lookup itself fails, so a transient read error hides billing
- * gates rather than the whole shell.
- */
-async function resolveEntitledNavModules(
-  ctx: WorkspaceContext,
-  client: AcadigmaSupabaseClient
-): Promise<readonly NavModuleKey[]> {
-  const planResult = await getWorkspacePlan(ctx, client)
-  if (!planResult.ok) return [...buildEntitledNavModules([])]
-
-  const modulesResult = await listEnabledModules(client, planResult.data.id)
-  if (!modulesResult.ok) return [...buildEntitledNavModules([])]
-
-  return [...buildEntitledNavModules(modulesResult.data)]
-}
 
 /**
  * School workspace shell.

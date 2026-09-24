@@ -13,7 +13,9 @@ import { NAV_MODULE_KEYS, type NavModuleKey } from "./types"
  *
  * The two taxonomies were never reconciled (D-56, M0 wrap-up). Until they
  * are, this map only names the nav keys that DO have a real plan-module
- * equivalent today; every other nav key is intentionally left unmapped and
+ * equivalent today — 16 of the 19 `NAV_MODULE_KEYS`, onto 10 distinct
+ * `plan_modules` codes (`staff`, `billing`, `ai` have no equivalent at all
+ * yet); every other nav key is intentionally left unmapped and
  * `buildEntitledNavModules` always includes it — a missing mapping must never
  * silently hide a screen nobody meant to gate.
  */
@@ -56,3 +58,29 @@ export function buildEntitledNavModules(
   }
   return entitled
 }
+
+/**
+ * `plan_modules` codes to assume when a workspace's real plan genuinely
+ * cannot be resolved at all — a `plan_id`-lookup failure (dependency down, or
+ * a workspace mid-provisioning with no plan row yet), never "the plan's own
+ * row failed RLS" (that case has a real fix, `getWorkspacePlanId` in
+ * `packages/db`, which never embeds `plans(*)` and so never depends on the
+ * plan's public/active visibility — PR #17 Opus review).
+ *
+ * Fed through `buildEntitledNavModules` the same as a real plan's module
+ * list, this is every bundle the cheapest real school plan (`starter`)
+ * ships — the daily-loop screens stay visible (fail VISIBLE, not an empty
+ * nav) — while the two unambiguously premium, upsell-gated bundles
+ * (`hiring`, `cover`, `marketplace_school_funded`) stay hidden until a real
+ * plan is known (fail closed for anything that reads as "a paid add-on").
+ * Recorded as the D-56 follow-up decision.
+ */
+export const FALLBACK_PLAN_MODULES_WHEN_UNKNOWN: readonly string[] = [
+  "academics",
+  "attendance",
+  "lessons",
+  "messaging",
+  "resources",
+  "reports",
+  "print",
+]
