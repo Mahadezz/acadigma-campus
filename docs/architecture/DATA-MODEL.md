@@ -1100,6 +1100,8 @@ begin
 end $$;
 ```
 
+**`revoke all on function ... from public` is not enough in `public` (D-54).** Supabase provisions every project with `ALTER DEFAULT PRIVILEGES FOR ROLE postgres, supabase_admin IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role` — an explicit per-role grant handed out at `CREATE FUNCTION` time, which the `revoke ... from public` pattern above does not touch (`public` here is the PUBLIC pseudo-role, not the schema). A `public.<name>()` function that never explicitly revokes EXECUTE from `anon`/`authenticated` is callable by both regardless of what its own grants section says. Since `20260924030000_revoke_default_function_grants.sql`, that default is flipped for this project: new `public` functions are deny-by-default (`alter default privileges for role postgres in schema public revoke execute on functions from anon, authenticated`; `service_role` keeps it), so every function must grant EXECUTE explicitly to whichever client role it intends. `supabase/ci/bootstrap.sql` reproduces the original platform default so CI's pgTAP assertions (`supabase/tests/12_function_grants_invariant.sql`) are false on a forgotten grant exactly as they would be on the real project.
+
 ---
 
 ## 10. The generic audit trigger
