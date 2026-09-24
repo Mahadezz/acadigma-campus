@@ -641,5 +641,118 @@
         }
       }
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "back": "Back to settings",
+    "searchLabel": "Search settings",
+    "searchPlaceholder": "Search, e.g. EIIN, logo, grading",
+    "searchEmpty": "No setting matches that search.",
+    "rows": {
+      "school": {
+        "title": "School profile",
+        "description": "Name, EIIN, board, address and contacts",
+        "keywords": "name eiin board medium address phone email website bin vat motto"
+      },
+      "branding": {
+        "title": "Branding",
+        "description": "The header printed on report cards and certificates",
+        "keywords": "logo header footer colour color pdf report print"
+      },
+      "overview": {
+        "title": "How this school works",
+        "description": "Grading, attendance and the school week, read-only",
+        "keywords": "grade pass mark attendance late working days weekend friday timezone"
+      }
+    },
+    "notSet": "Not set",
+    "save": "Save",
+    "saving": "Saving…",
+    "discard": "Discard",
+    "unsaved": "You have unsaved changes",
+    "saved": "Saved.",
+    "saveError": "Could not save. Try again.",
+    "reload": "Reload",
+    "history": {
+      "title": "Recent changes",
+      "empty": "No changes recorded yet.",
+      "line": "{fields} changed by {name}, {date}",
+      "someone": "Someone"
+    },
+    "profile": {
+      "title": "School profile",
+      "description": "The legal name prints on certificates and report cards.",
+      "identity": "Identity",
+      "address": "Address",
+      "contact": "Contacts",
+      "finance": "Invoices",
+      "boardPlaceholder": "Select a board",
+      "mediumPlaceholder": "Select a medium",
+      "schoolTypePlaceholder": "Select a type",
+      "eiinHelp": "6 digits. Leave blank if you don't have one yet.",
+      "cityDefault": "Default: Dhaka",
+      "fields": {
+        "legal_name": "Legal name",
+        "eiin": "EIIN",
+        "board": "Education board",
+        "school_type": "School type",
+        "medium": "Medium",
+        "motto": "Motto",
+        "address_line1": "Address line 1",
+        "address_line2": "Address line 2",
+        "city": "City",
+        "district": "District",
+        "postal_code": "Postcode",
+        "contact_email": "Email",
+        "contact_phone": "Phone",
+        "website": "Website",
+        "bin_number": "BIN",
+        "vat_number": "VAT registration no."
+      },
+      "schoolTypes": {
+        "government": "Government",
+        "private": "Private",
+        "mpo": "MPO",
+        "international": "International",
+        "madrasa": "Madrasa",
+        "kindergarten": "Kindergarten",
+        "other": "Other"
+      }
+    },
+    "branding": {
+      "title": "Branding",
+      "description": "Every printed document reads this header. No template contains a school name.",
+      "fields": {
+        "header_line_1": "Header line 1",
+        "header_line_2": "Header line 2",
+        "accent": "Accent colour",
+        "report_footer": "Footer note"
+      },
+      "tokensHelp": "You can use tokens like {address_line1}, {city}, {eiin}, {contact_phone}.",
+      "accentHelp": "A hex colour, e.g. #1F4E79. Default: none (ink).",
+      "footerDefault": "Default: none",
+      "preview": "Preview",
+      "previewNote": "How the header looks on a report card.",
+      "unknownTokens": "Unknown tokens print as blank: {tokens}",
+      "logoLater": "Logo upload is coming soon; the preview shows your initials for now.",
+      "legalNameMissing": "Add a legal name in School profile"
+    },
+    "overview": {
+      "title": "How this school works",
+      "description": "The rules this school runs on. Ask an owner or admin to change them.",
+      "week": "School week",
+      "workingDays": "Working days",
+      "timezone": "Timezone",
+      "grading": "Grading",
+      "passMark": "Pass mark",
+      "gradeScale": "Grade scale",
+      "failRule": "A failed subject makes the GPA zero",
+      "attendance": "Attendance",
+      "lateCounts": "Late counts as present",
+      "halfDayCounts": "Half day counts as present",
+      "minAttendance": "Minimum attendance (warning only)",
+      "yes": "Yes",
+      "no": "No"
+    }
   }
 }

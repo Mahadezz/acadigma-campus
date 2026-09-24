@@ -1,6 +1,11 @@
 import { z } from "zod"
 
 import { timeOfDaySchema } from "./common"
+import {
+  eiinSchema,
+  schoolBoardSchema,
+  schoolMediumSchema,
+} from "./identity/school"
 
 /**
  * The Zod schema of record for `school_profiles`' five jsonb policy blobs
@@ -106,3 +111,70 @@ export const schoolSettingsPatchSchema = z
   })
   .strict()
 export type SchoolSettingsPatch = z.infer<typeof schoolSettingsPatchSchema>
+
+// ---------------------------------------------------------------------------
+// F-OP-07 Part 1 — school profile + branding (§4 W2, §7 `updateSchoolProfile`,
+// `updateBranding`). Typed `school_profiles` columns (DATA-MODEL.md §1.3).
+// Board/medium reuse the wizard's enums (identity/school.ts) so the two screens
+// that write these columns cannot disagree.
+// ---------------------------------------------------------------------------
+
+/** F-OP-07 §3.1 `school_type`. */
+export const schoolTypeSchema = z.enum([
+  "government",
+  "private",
+  "mpo",
+  "international",
+  "madrasa",
+  "kindergarten",
+  "other",
+])
+export type SchoolType = z.infer<typeof schoolTypeSchema>
+
+const optionalText = (max: number) => z.string().trim().min(1).max(max).nullable()
+
+export const schoolProfileFieldsSchema = z.object({
+  legal_name: optionalText(200),
+  eiin: eiinSchema.nullable(),
+  board: schoolBoardSchema,
+  school_type: schoolTypeSchema.nullable(),
+  medium: schoolMediumSchema,
+  motto: optionalText(200),
+  address_line1: optionalText(200),
+  address_line2: optionalText(200),
+  city: z.string().trim().min(1).max(100),
+  district: optionalText(100),
+  postal_code: optionalText(20),
+  contact_email: z.string().trim().toLowerCase().email().max(200).nullable(),
+  contact_phone: optionalText(30),
+  website: z.string().trim().url().max(200).nullable(),
+  bin_number: optionalText(50),
+  vat_number: optionalText(50),
+})
+export type SchoolProfileFields = z.infer<typeof schoolProfileFieldsSchema>
+
+/**
+ * `updated_at` of the row the editor loaded — the optimistic-concurrency
+ * version (§7: "a conflict returns stale_version with the current value").
+ */
+const versionSchema = z.string().min(1)
+
+/** Only the changed fields travel; `.strict()` rejects unknown columns. */
+export const updateSchoolProfileInputSchema = z
+  .object({
+    version: versionSchema,
+    profile: schoolProfileFieldsSchema.partial().strict(),
+  })
+  .strict()
+export type UpdateSchoolProfileInput = z.infer<
+  typeof updateSchoolProfileInputSchema
+>
+
+/** Branding minus `logo_file_id`: logo upload is deferred (D-200). */
+export const updateBrandingInputSchema = z
+  .object({
+    version: versionSchema,
+    branding: schoolBrandingPatchSchema.omit({ logo_file_id: true }).strict(),
+  })
+  .strict()
+export type UpdateBrandingInput = z.infer<typeof updateBrandingInputSchema>

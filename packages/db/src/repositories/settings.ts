@@ -18,10 +18,12 @@ import {
   ok,
   type ApiError,
   type Result,
+  type SchoolProfileFields,
   type SchoolSettingsPatch,
 } from "@acadigma/contracts"
 import {
   resolve,
+  type Branding,
   type ResolvedSettings,
   type SchoolProfileRow,
 } from "@acadigma/domain/settings"
@@ -141,4 +143,118 @@ export async function updateSchoolSettings(
   if (error) return err(UNAVAILABLE)
   if (!data) return err(NOT_FOUND)
   return ok(resolve(data as unknown as SchoolProfileRow))
+}
+
+// ---------------------------------------------------------------------------
+// F-OP-07 Part 1 — school profile + branding (§4 W2, §7). Optimistic
+// concurrency: the caller sends back the `updated_at` it loaded as `version`,
+// and the UPDATE only matches while that is still the row's `updated_at`
+// (`app.attach_updated_at` bumps it on every write). Zero rows matched means
+// someone else saved first -> `conflict`, nothing clobbered (§9 AC5).
+// ---------------------------------------------------------------------------
+
+const PROFILE_FIELDS = [
+  "legal_name",
+  "eiin",
+  "board",
+  "school_type",
+  "medium",
+  "motto",
+  "address_line1",
+  "address_line2",
+  "city",
+  "district",
+  "postal_code",
+  "contact_email",
+  "contact_phone",
+  "website",
+  "bin_number",
+  "vat_number",
+] as const satisfies readonly (keyof SchoolProfileFields)[]
+
+const PROFILE_COLUMNS = `${PROFILE_FIELDS.join(", ")}, branding, updated_at`
+
+/**
+ * Stored values as-is: `board`/`medium` may still hold a pre-enum legacy value
+ * (column defaults `'BD National'`/`'Bangla'`), so they are plain strings here
+ * and the form treats an unrecognised value as "not chosen yet".
+ */
+export type SchoolProfile = {
+  version: string
+  fields: Record<(typeof PROFILE_FIELDS)[number], string | null>
+  branding: Branding
+}
+
+export const STALE_VERSION: ApiError = apiError(
+  "conflict",
+  "Someone else saved these settings first. Reload to see their changes, then try again."
+)
+
+function toProfile(row: Record<string, unknown>): SchoolProfile {
+  const fields = {} as SchoolProfile["fields"]
+  for (const key of PROFILE_FIELDS) {
+    const value = row[key]
+    fields[key] = typeof value === "string" ? value : null
+  }
+  return {
+    version: String(row["updated_at"]),
+    fields,
+    branding: resolve({ branding: row["branding"] }).branding,
+  }
+}
+
+export async function getSchoolProfile(
+  supabase: AcadigmaSupabaseClient,
+  ctx: WorkspaceContext
+): Promise<Result<SchoolProfile, ApiError>> {
+  const { data, error } = await supabase
+    .from("school_profiles")
+    .select(PROFILE_COLUMNS)
+    .eq("workspace_id", ctx.workspaceId)
+    .maybeSingle()
+  if (error) return err(UNAVAILABLE)
+  if (!data) return err(NOT_FOUND)
+  return ok(toProfile(data as unknown as Record<string, unknown>))
+}
+
+export async function updateSchoolProfile(
+  supabase: AcadigmaSupabaseClient,
+  ctx: WorkspaceContext,
+  input: {
+    version: string
+    profile?: Partial<SchoolProfileFields>
+    branding?: Partial<Branding>
+  }
+): Promise<Result<SchoolProfile, ApiError>> {
+  const update: TablesUpdate<"school_profiles"> = { ...input.profile }
+
+  if (input.branding && Object.keys(input.branding).length > 0) {
+    // Merge onto the *stored* blob (see mergedBlob): a default never gets frozen in.
+    const current = await fetchRow(supabase, ctx.workspaceId)
+    if (!current.ok) return current
+    update.branding = mergedBlob(current.data.branding, input.branding) as Json
+  }
+
+  if (Object.keys(update).length === 0) return getSchoolProfile(supabase, ctx)
+
+  const { data, error } = await supabase
+    .from("school_profiles")
+    .update(update)
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("updated_at", input.version)
+    .select(PROFILE_COLUMNS)
+    .maybeSingle()
+
+  if (error) {
+    if (error.code === "23505") {
+      return err(
+        apiError("conflict", "This EIIN is already registered to another school.", {
+          fieldErrors: { eiin: ["This EIIN is already registered to another school."] },
+        })
+      )
+    }
+    return err(UNAVAILABLE)
+  }
+  if (!data) return err(STALE_VERSION)
+  return ok(toProfile(data as unknown as Record<string, unknown>))
 }
