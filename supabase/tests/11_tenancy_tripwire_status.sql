@@ -9,7 +9,7 @@
 -- none of these callers can read audit_events (owner + platform only, D-36).
 -- =====================================================================
 begin;
-select plan(9);
+select plan(11);
 
 create schema if not exists tests;
 
@@ -128,6 +128,25 @@ select is(
       and workspace_id = '99991111-0011-0011-0011-000000000011'),
   3, 'the school owner sees all three tripwire rows');
 select tests.logout();
+
+-- ---------------------------------------------------------------------
+-- 20260924040000: no auth.uid() -> refused, and nothing is written. Run as
+-- postgres with the JWT claims cleared (tests.logout()), the shape of a
+-- service_role or misgranted caller with no user behind it.
+-- ---------------------------------------------------------------------
+select tests.logout();
+
+select throws_ok(
+  $$select public.log_tenancy_context_rejected('99991111-0011-0011-0011-000000000011')$$,
+  '42501', 'authentication required',
+  'a caller with no auth.uid() is refused (like switch_workspace / list_my_workspaces)');
+
+select is(
+  (select count(*)::int from public.audit_events
+    where action = 'tenancy.context_rejected'
+      and workspace_id = '99991111-0011-0011-0011-000000000011'
+      and actor_id is null),
+  0, 'the refused call wrote no actor-less tripwire row');
 
 select * from finish();
 rollback;
