@@ -9,6 +9,63 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      academic_years: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          ends_on: string
+          exam_weights: Json
+          fourth_subject_bonus_threshold_gp: number
+          id: string
+          is_current: boolean
+          name: string
+          starts_on: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          ends_on: string
+          exam_weights?: Json
+          fourth_subject_bonus_threshold_gp?: number
+          id?: string
+          is_current?: boolean
+          name: string
+          starts_on: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string
+          exam_weights?: Json
+          fourth_subject_bonus_threshold_gp?: number
+          id?: string
+          is_current?: boolean
+          name?: string
+          starts_on?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_years_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_years_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_action_catalog: {
         Row: {
           action: string
@@ -546,6 +603,57 @@ export type Database = {
           },
           {
             foreignKeyName: "files_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grade_levels: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          level_number: number
+          name: string
+          name_bn: string
+          stage: Database["public"]["Enums"]["grade_stage"] | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          level_number: number
+          name: string
+          name_bn: string
+          stage?: Database["public"]["Enums"]["grade_stage"] | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          level_number?: number
+          name?: string
+          name_bn?: string
+          stage?: Database["public"]["Enums"]["grade_stage"] | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grade_levels_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grade_levels_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1788,6 +1896,7 @@ export type Database = {
     }
     Functions: {
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
+      create_school_workspace: { Args: { p_input: Json }; Returns: Json }
       expire_pro_trials: { Args: never; Returns: number }
       list_my_workspaces: {
         Args: never
@@ -1864,6 +1973,7 @@ export type Database = {
         | "preview"
         | "delete"
       file_visibility: "private" | "workspace" | "public"
+      grade_stage: "early" | "primary" | "secondary" | "higher"
       invitation_channel: "email" | "phone"
       invitation_status:
         | "pending"
@@ -2031,6 +2141,7 @@ export const Constants = {
         "delete",
       ],
       file_visibility: ["private", "workspace", "public"],
+      grade_stage: ["early", "primary", "secondary", "higher"],
       invitation_channel: ["email", "phone"],
       invitation_status: [
         "pending",
