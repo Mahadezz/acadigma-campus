@@ -1,6 +1,6 @@
 {
   "name": "@acadigma/config",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Shared tsconfig presets, ESLint config and Tailwind preset.",
