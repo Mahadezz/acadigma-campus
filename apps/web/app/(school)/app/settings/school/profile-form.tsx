@@ -34,7 +34,7 @@ import {
 
 import type { Messages } from "@/lib/i18n"
 
-import { updateSchoolProfile } from "../actions"
+import { updateSchoolProfile } from "../profile-actions"
 import { SaveNotice, type Notice } from "../save-notice"
 import { StickySaveBar } from "../sticky-save-bar"
 

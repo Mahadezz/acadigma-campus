@@ -36,7 +36,8 @@ vi.mock("@acadigma/db/repositories/settings", () => ({
   updateSchoolProfile: (...args: unknown[]) => mockUpdate(...args),
 }))
 
-const { updateBranding, updateSchoolProfile } = await import("./actions")
+const { updateBranding, updateSchoolProfile } =
+  await import("./profile-actions")
 
 const VERSION = "2026-09-25T10:00:00+00:00"
 

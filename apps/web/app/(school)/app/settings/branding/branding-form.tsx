@@ -27,7 +27,7 @@ import { Textarea } from "@acadigma/ui/components/textarea"
 
 import type { Messages } from "@/lib/i18n"
 
-import { updateBranding } from "../actions"
+import { updateBranding } from "../profile-actions"
 import { SaveNotice, type Notice } from "../save-notice"
 import { StickySaveBar } from "../sticky-save-bar"
 
