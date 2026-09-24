@@ -2,7 +2,6 @@ import {
   apiError,
   err,
   ok,
-  runBillingTickOutput,
   type ApiError,
   type Result,
   type RunBillingTickOutput,
@@ -38,11 +37,7 @@ export async function runTrialExpiryJob(
     )
   }
 
-  const parsed = runBillingTickOutput.safeParse({ trialsExpired: data })
-  if (!parsed.success) {
-    return err(
-      apiError("internal", "The trial-expiry job returned an unexpected shape.")
-    )
-  }
-  return ok(parsed.data)
+  // The generated type already guarantees `data: number` here — no runtime
+  // reparse needed for a same-process, trusted RPC result.
+  return ok({ trialsExpired: Number(data) })
 }

@@ -21,7 +21,7 @@ vi.mock("@acadigma/db", () => ({
   runTrialExpiryJob: (...args: unknown[]) => mockRunTrialExpiryJob(...args),
 }))
 
-const { GET, POST } = await import("./route")
+const { GET } = await import("./route")
 
 const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET
 
@@ -63,6 +63,16 @@ describe("authorization", () => {
     expect(mockWithServiceRole).not.toHaveBeenCalled()
   })
 
+  it("401s a wrong secret of the same length as the real one (timing-safe path)", async () => {
+    // Same length as "test-cron-secret" — exercises timingSafeEqual itself
+    // rather than the length-mismatch early-out.
+    const response = await GET(
+      requestWith({ authorization: "Bearer test-cron-decoyy" })
+    )
+    expect(response.status).toBe(401)
+    expect(mockWithServiceRole).not.toHaveBeenCalled()
+  })
+
   it("401s every request when CRON_SECRET is not set — fails closed, never open", async () => {
     delete process.env.CRON_SECRET
     const response = await GET(
@@ -98,20 +108,6 @@ describe("the job", () => {
       expect.any(Function)
     )
     expect(mockRunTrialExpiryJob).toHaveBeenCalledTimes(1)
-  })
-
-  it("also accepts POST, with the identical check and job", async () => {
-    mockRunTrialExpiryJob.mockResolvedValue({
-      ok: true,
-      data: { trialsExpired: 0 },
-    })
-
-    const response = await POST(
-      requestWith({ authorization: "Bearer test-cron-secret" })
-    )
-
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ trialsExpired: 0 })
   })
 
   it("maps a failed job to the error's own HTTP status, not a hardcoded one", async () => {

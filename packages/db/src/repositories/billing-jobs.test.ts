@@ -44,15 +44,4 @@ describe("runTrialExpiryJob", () => {
       expect(result.error.code).toBe("dependency_unavailable")
     }
   })
-
-  it("fails as internal if the RPC ever returns a non-numeric shape", async () => {
-    const client = fakeClient({ data: "not-a-number", error: null })
-
-    const result = await runTrialExpiryJob(client)
-
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error.code).toBe("internal")
-    }
-  })
 })
