@@ -5,7 +5,7 @@
 | Feature | D-56 follow-up — `scripts/check-coverage-test-files.mjs` `KNOWN_GAPS` shrink-only allowlist (added in PR #17)           |
 | Part    | Isolation + escalation pgTAP for the five allowlisted tables                                                            |
 | Spec    | `supabase/tests/README.md`; ARCHITECTURE §9 ("every new tenant table needs an isolation case … and an escalation case") |
-| PR      | test(db): isolation + escalation tests for the 5 KNOWN_GAPS tables (see PR description for the number)                  |
+| PR      | #18 — test(db): isolation + escalation tests for the 5 KNOWN_GAPS tables                                                |
 | Status  | **PASS**                                                                                                                |
 | Date    | 2026-09-24                                                                                                              |
 | Run by  | Claude (Sonnet 5, builder session)                                                                                      |
@@ -37,45 +37,54 @@ No migration, application code or RLS policy is touched. This is a tests + docs 
 
 ## 2. Environment
 
-|                |                                                                |
-| -------------- | -------------------------------------------------------------- |
-| Commit         | see PR — HEAD of `test/rls-known-gaps` at PR-open time         |
-| Branch         | `test/rls-known-gaps`, cut from `origin/main`                  |
-| Base           | `main`                                                         |
-| CI run         | see PR checks                                                  |
-| Preview URL    | n/a — no UI change                                             |
-| Supabase       | not reachable from this sandbox — no Docker, no local Postgres |
-| Migration head | unchanged — no migration in this PR                            |
-| Seed           | `supabase/seed` — unchanged                                    |
-| Node / pnpm    | v24.x / 10.x                                                   |
-| Browsers       | n/a                                                            |
-| Feature flags  | none                                                           |
+|                |                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------- |
+| Commit         | `a1cf502`                                                                                    |
+| Branch         | `test/rls-known-gaps`, cut from `origin/main`                                                |
+| Base           | `main`                                                                                       |
+| CI run         | [36002920933](https://github.com/Mahadezz/acadigma-campus/actions/runs/36002920933) — PR #18 |
+| Preview URL    | n/a — no UI change                                                                           |
+| Supabase       | not reachable from this sandbox — no Docker, no local Postgres                               |
+| Migration head | unchanged — no migration in this PR                                                          |
+| Seed           | `supabase/seed` — unchanged                                                                  |
+| Node / pnpm    | v24.x / 10.x                                                                                 |
+| Browsers       | n/a                                                                                          |
+| Feature flags  | none                                                                                         |
 
 ---
 
 ## 3. Unit and integration (Vitest)
 
-No `apps/`/`packages/` code changed. `pnpm test` was still run as part of the pre-push gate to confirm nothing regressed; see the gate log referenced in the PR for the pass/fail count actually observed in this sandbox.
+No `apps/`/`packages/` code changed. `pnpm test` (`vitest run --coverage`) was run locally as part of the pre-push gate to confirm nothing regressed: **49 test files, 673 tests, 673 passed, 0 failed.** Coverage unaffected (this PR adds no source file). CI's `unit` job also ran and passed independently.
 
 ---
 
 ## 4. Database (pgTAP)
 
-**Not run locally** — no Docker, no local Postgres and no reachable Supabase project in this sandbox. CI's `db` job (fresh Postgres 17 + pgTAP, all migrations applied in order, then `supabase test db`) is the real gate for this PR, exactly as for every prior DB-only report in this directory.
+**Not run locally** — no Docker, no local Postgres and no reachable Supabase project in this sandbox. CI's `db` job (fresh Postgres 17 + pgTAP, all migrations applied in order, then `supabase test db`) is the real gate for this PR, and it has now run — see the result below.
 
-| Table                 | Isolation assertions                                                                                           | Escalation assertions                | Result  | File                                   |
-| --------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------- | -------------------------------------- |
-| `consent_records`     | 8 — own-row, cross-tenant, non-owner-in-workspace, owner/admin, platform admin, anon grant                     | 3 — INSERT/UPDATE/DELETE all `42501` | CI only | `supabase/tests/14_rls_known_gaps.sql` |
-| `legal_acceptances`   | 9 — own-row, cross-tenant, non-owner-in-workspace, owner/admin, platform admin, anon grant                     | 3 — INSERT/UPDATE/DELETE all `42501` | CI only | `supabase/tests/14_rls_known_gaps.sql` |
-| `file_access_log`     | 6 — no own-row branch (subject of the row still sees 0), cross-tenant, owner/admin, platform admin, anon grant | 3 — INSERT/UPDATE/DELETE all `42501` | CI only | `supabase/tests/14_rls_known_gaps.sql` |
-| `email_log`           | 7 — no own-row branch, cross-tenant, owner/admin, platform admin, anon grant                                   | 3 — INSERT/UPDATE/DELETE all `42501` | CI only | `supabase/tests/14_rls_known_gaps.sql` |
-| `subscription_events` | 7 — no own-row branch, cross-tenant, owner/admin, platform admin, anon grant                                   | 3 — INSERT/UPDATE/DELETE all `42501` | CI only | `supabase/tests/14_rls_known_gaps.sql` |
+| Table                 | Isolation assertions                                                                                           | Escalation assertions                | Result | File                                   |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------ | -------------------------------------- |
+| `consent_records`     | 8 — own-row, cross-tenant, non-owner-in-workspace, owner/admin, platform admin, anon grant                     | 3 — INSERT/UPDATE/DELETE all `42501` | PASS   | `supabase/tests/14_rls_known_gaps.sql` |
+| `legal_acceptances`   | 9 — own-row, cross-tenant, non-owner-in-workspace, owner/admin, platform admin, anon grant                     | 3 — INSERT/UPDATE/DELETE all `42501` | PASS   | `supabase/tests/14_rls_known_gaps.sql` |
+| `file_access_log`     | 6 — no own-row branch (subject of the row still sees 0), cross-tenant, owner/admin, platform admin, anon grant | 3 — INSERT/UPDATE/DELETE all `42501` | PASS   | `supabase/tests/14_rls_known_gaps.sql` |
+| `email_log`           | 7 — no own-row branch, cross-tenant, owner/admin, platform admin, anon grant                                   | 3 — INSERT/UPDATE/DELETE all `42501` | PASS   | `supabase/tests/14_rls_known_gaps.sql` |
+| `subscription_events` | 7 — no own-row branch, cross-tenant, owner/admin, platform admin, anon grant                                   | 3 — INSERT/UPDATE/DELETE all `42501` | PASS   | `supabase/tests/14_rls_known_gaps.sql` |
 
 51 assertions total (`plan(51)`), one file, self-contained fixtures (`tests.mkuser`/`login`/`logout` duplicated per house style), everything inside `begin`/`rollback`.
 
-**CI result (pg_prove):** _pending — pasted here after the `db` job runs on this PR; see the addendum in §10 once available._
+**CI result (pg_prove), PR #18 head `a1cf502`, run [36002920933](https://github.com/Mahadezz/acadigma-campus/actions/runs/36002920933):**
 
-**Specifically proven (once CI runs it):**
+```
+supabase/tests/14_rls_known_gaps.sql ............. ok
+All tests successful.
+Files=13, Tests=326,  1 wallclock secs ( 0.07 usr  0.01 sys +  0.24 cusr  0.07 csys =  0.39 CPU)
+Result: PASS
+```
+
+`14_rls_known_gaps.sql` ran its full `plan(51)` (`1..51`) and reported `ok` — all 51 assertions passed. The full suite is now 13 files, 326 tests total, all passing.
+
+**Specifically proven:**
 
 - A member of workspace A reads zero rows of every one of the five tables scoped to workspace B.
 - `anon` has no `SELECT` privilege at all on any of the five — not merely an empty result set.
@@ -100,22 +109,23 @@ Not applicable — no new query added to an application code path; these are pgT
 
 ## 7. Security checks
 
-| Check                           | Result                                                                |
-| ------------------------------- | --------------------------------------------------------------------- |
-| gitleaks / secret scan          | not run locally — CI's `security` job covers it; no secret introduced |
-| Semgrep                         | not run locally — CI's `security` job covers it                       |
-| `pnpm audit --audit-level high` | not run in this session — no dependency changes                       |
-| Supabase advisors               | not applicable — no reachable project, no schema change               |
-| Authorized DAST                 | not applicable — no new endpoint or UI surface                        |
+| Check                           | Result                                                  |
+| ------------------------------- | ------------------------------------------------------- |
+| gitleaks / secret scan          | PASS — CI `security` job, run 36002920933               |
+| Semgrep                         | PASS — CI `security` job, run 36002920933               |
+| `pnpm audit --audit-level high` | not run in this session — no dependency changes         |
+| Supabase advisors               | not applicable — no reachable project, no schema change |
+| Authorized DAST                 | not applicable — no new endpoint or UI surface          |
 
 ---
 
 ## 8. Known issues
 
-| #   | Issue                                                                                                                                                                                                                                                   | Severity | Ship anyway?                                                                                                                                                                           | Tracked |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| 1   | `supabase/tests/14_rls_known_gaps.sql` was authored against the RLS policies as they read on `main` and reviewed by eye — not executed against a real Postgres in this sandbox                                                                          | high     | yes — CI's `db` job is the required, real gate; see §10 for the addendum once it runs                                                                                                  | —       |
-| 2   | This branch cannot remove the five table names from `scripts/check-coverage-test-files.mjs`'s `KNOWN_GAPS` in this same PR: that script does not exist on `main` yet — it ships in PR #17 (`feat/m0-wrapup`), still open at the time this PR was opened | medium   | yes — deliberate. Once #17 merges, this branch merges `origin/main` and removes the five entries from `KNOWN_GAPS` (the shrink-only check will otherwise fail); see the PR description | —       |
+| #   | Issue                                                                                                                                                                                                                                                                                                                                                           | Severity          | Ship anyway?                                                                                                                                                                                                                       | Tracked |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | `supabase/tests/14_rls_known_gaps.sql` was authored against the RLS policies as they read on `main` and reviewed by eye before running — resolved: CI's `db` job ran it for real and it passed (§4, §10)                                                                                                                                                        | ~~high~~ resolved | —                                                                                                                                                                                                                                  | —       |
+| 2   | This branch cannot remove the five table names from `scripts/check-coverage-test-files.mjs`'s `KNOWN_GAPS` in this same PR: that script does not exist on `main` yet — it ships in PR #17 (`feat/m0-wrapup`), still open as of 2026-09-24                                                                                                                       | medium            | yes — deliberate. Once #17 merges, this branch merges `origin/main` and removes the five entries from `KNOWN_GAPS` (the shrink-only check will otherwise fail); see the PR description                                             | —       |
+| 3   | This PR's `report` CI job (a github-script step that posts/updates a PR-summary comment) failed with "recent account payments have failed or your spending limit needs to be increased" — a GitHub Actions billing condition on the account, unrelated to this PR's code. The identical job is failing the same way, at the same time, on the still-open PR #17 | low               | yes — the job only posts a comment; it gates nothing this PR's code touches, and every substantive job (`lint`, `typecheck`, `db`, `unit`, `contracts`, `build`, `security`, `e2e`, `lighthouse`, `changeset`, `docs-sync`) passed | —       |
 
 **Deliberately not tested, and why:**
 
@@ -125,25 +135,38 @@ Not applicable — no new query added to an application code path; these are pgT
 
 ## 9. Sign-off
 
-| Definition of Done                           | Met                                                                          |
-| -------------------------------------------- | ---------------------------------------------------------------------------- |
-| Spec written and matches the build           | ☑ (ARCHITECTURE §9, D-56)                                                    |
-| Migration + pgTAP isolation and escalation   | ☑ written (no migration — none needed) / ☐ executed until CI's `db` job runs |
-| Unit tests + coverage thresholds             | n/a — no application code changed                                            |
-| UI built and verified at both viewports      | ☐ n/a — no UI change                                                         |
-| Playwright journey at both viewports         | ☐ n/a — no new journey                                                       |
-| a11y — zero serious/critical + manual checks | ☐ n/a — no UI change                                                         |
-| This test report, with real numbers          | ☑ (§4 filled in as an addendum once CI runs — see §10)                       |
-| Docs updated in the same PR                  | ☑ (`docs/README.md`, `supabase/tests/README.md`, this report)                |
+| Definition of Done                           | Met                                                           |
+| -------------------------------------------- | ------------------------------------------------------------- |
+| Spec written and matches the build           | ☑ (ARCHITECTURE §9, D-56)                                     |
+| Migration + pgTAP isolation and escalation   | ☑ written / ☑ executed — CI `db` job, PASS (§4, §10)          |
+| Unit tests + coverage thresholds             | n/a — no application code changed (673/673 local, CI green)   |
+| UI built and verified at both viewports      | ☐ n/a — no UI change                                          |
+| Playwright journey at both viewports         | ☐ n/a — no new journey; CI `e2e` job unaffected and green     |
+| a11y — zero serious/critical + manual checks | ☐ n/a — no UI change                                          |
+| This test report, with real numbers          | ☑ (§4, §10 — real `pg_prove` output pasted)                   |
+| Docs updated in the same PR                  | ☑ (`docs/README.md`, `supabase/tests/README.md`, this report) |
 
 **Signed off by:** Claude (Sonnet 5, builder session)
 **Date:** 2026-09-24
-**Commit:** see PR
+**Commit:** `a1cf502` (PR #18 head at CI-green time)
 
-> This PR adds tests and docs only — no migration, no application code. `supabase/tests/14_rls_known_gaps.sql` was written from the actual policy text in `supabase/migrations/20260917010200_audit_and_files.sql` and `20260917010300_plans_and_notifications.sql`, not from assumption, and reviewed by eye against the house style in `02_tenant_isolation.sql`/`03_role_escalation.sql`/`11_tenancy_tripwire_status.sql`. It was **not** run against a real Postgres in this sandbox (no Docker, no local Postgres). CI's `db` job is the required, real gate; §10 below is filled in with the actual `pg_prove` numbers once that job runs on this PR.
+> This PR adds tests and docs only — no migration, no application code. `supabase/tests/14_rls_known_gaps.sql` was written from the actual policy text in `supabase/migrations/20260917010200_audit_and_files.sql` and `20260917010300_plans_and_notifications.sql`, not from assumption, and reviewed by eye against the house style in `02_tenant_isolation.sql`/`03_role_escalation.sql`/`11_tenancy_tripwire_status.sql` before ever running. It was **not** run against a real Postgres in this sandbox (no Docker, no local Postgres) — CI's `db` job is the required, real gate, and it has now run: PASS, 51/51 assertions, no defect found. See §10.
 
 ---
 
-## 10. Addendum — CI results
+## 10. Addendum — CI results, 2026-09-24
 
-_Filled in once CI's `db` job runs on this PR's head commit. Do not treat §4/§9 as complete until this section carries real `pg_prove` numbers._
+**CI on head `a1cf502` (PR #18), run [36002920933](https://github.com/Mahadezz/acadigma-campus/actions/runs/36002920933):** every substantive check passed — `lint`, `typecheck`, `db`, `unit`, `contracts`, `build`, `security`, `e2e`, `lighthouse`, `changeset`, `docs-sync`, `sql-lint`. The `db` job's `pg_prove` output:
+
+```
+supabase/tests/14_rls_known_gaps.sql ............. ok
+All tests successful.
+Files=13, Tests=326,  1 wallclock secs
+Result: PASS
+```
+
+`14_rls_known_gaps.sql` reported `1..51` and `ok` — all 51 written assertions ran and passed, confirming §4's table for real. No RLS gap, leak or unexpected grant was found in any of the five tables: the isolation and escalation behaviour matches exactly what the Opus review of PR #17 described.
+
+The only failing check on this PR is `report`, a github-script step that posts a PR-summary comment. Its log reads: _"The job was not started because recent account payments have failed or your spending limit needs to be increased."_ — a GitHub Actions billing condition on the repository/account, not a code or test defect. The same job is failing identically, at essentially the same timestamp, on PR #17 (`feat/m0-wrapup`), which this PR did not touch — confirming it is an account-wide condition, not something introduced here. It posts a comment only and gates nothing; every check that verifies this PR's actual content passed.
+
+**Follow-up status:** PR #17 was still **OPEN** (not merged) at the time this addendum was written, so the `KNOWN_GAPS` edit in `scripts/check-coverage-test-files.mjs` described in this PR's description has not been done yet — that script does not exist on `main`. It remains the required follow-up once #17 merges.
