@@ -51,7 +51,7 @@
 | Branch         | `feat/<area>-<slug>`                         |
 | CI run         | \<link to the GitHub Actions run>            |
 | Preview URL    | \<vercel preview>                            |
-| Supabase       | project `bvqzhrvcrxebawjusrxk`, branch `dev` |
+| Supabase       | project `kekfmibwjejdhxjkmezo`, branch `dev` |
 | Migration head | `<timestamp>_<name>.sql`                     |
 | Seed           | `supabase/seed` @ `<sha>`                    |
 | Node / pnpm    | v24.x / 10.x                                 |

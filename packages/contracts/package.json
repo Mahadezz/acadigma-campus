@@ -13,7 +13,8 @@
     "./notifications": "./src/notifications.ts",
     "./plans": "./src/plans.ts",
     "./identity/auth": "./src/identity/auth.ts",
-    "./identity/workspace": "./src/identity/workspace.ts"
+    "./identity/workspace": "./src/identity/workspace.ts",
+    "./audit": "./src/audit.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

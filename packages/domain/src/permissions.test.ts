@@ -234,6 +234,10 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "listing.review": [...rolesWithAction("listing.review")],
     "payouts.manage": [...rolesWithAction("payouts.manage")],
     "platform.console": [...rolesWithAction("platform.console")],
+    "audit.read": [...rolesWithAction("audit.read")],
+    "audit.read.platform": [...rolesWithAction("audit.read.platform")],
+    "audit.read.self": [...rolesWithAction("audit.read.self")],
+    "audit.export": [...rolesWithAction("audit.export")],
   }
 
   it("gives every declared action in ACTIONS an entry in this table", () => {

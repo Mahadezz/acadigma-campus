@@ -3,6 +3,7 @@ export * from "./repositories"
 export * from "./workspace-context"
 export type {
   Database,
+  Json,
   Tables,
   TablesInsert,
   TablesUpdate,
