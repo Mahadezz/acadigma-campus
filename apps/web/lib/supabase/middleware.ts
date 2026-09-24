@@ -14,6 +14,12 @@ const PROTECTED_PREFIXES = [
   // ARCHITECTURE §2 (account) route group: user-level settings, added by
   // F-ID-01 Part 4 (Security > Change password).
   "/account",
+  // F-ID-05 Part 2: /onboarding needs a session (§2's permission table —
+  // signed-out is always ❌ → /login). The finer-grained "signed in but
+  // unverified → /verify" check is `resolveOnboardingAccess`, at the page —
+  // middleware only owns the redirect-with-`next` for the signed-out case,
+  // same division of labour as every other prefix here.
+  "/onboarding",
 ]
 
 /**
