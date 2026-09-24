@@ -80,6 +80,16 @@ export type SaveOnboardingDraftArgs = {
  * purpose: on a fresh insert the column default applies; on a conflict
  * (every save after the first) PostgREST's upsert only sets the columns
  * named here, so an in-progress wizard's original start time never moves.
+ *
+ * Always clears `completed_at` (F-ID-05 §11, PR #24's Part 2 status note,
+ * D-60's flagged follow-up): a caller who already finished onboarding once
+ * (e.g. the tutoring exit) and re-enters via the switcher to start a new
+ * draft would otherwise keep the old `completed_at`, and
+ * `resolveOnboardingChooserView`'s `isResumable` check requires
+ * `!completedAt` — the chooser would never offer to resume a draft actively
+ * being saved. Actively saving wizard progress is definitionally "not
+ * finished yet"; `completeOnboarding` (`markOnboardingComplete` below) is
+ * the only place that sets it back.
  */
 export async function saveOnboardingDraft(
   supabase: AcadigmaSupabaseClient,
@@ -91,6 +101,7 @@ export async function saveOnboardingDraft(
     path: input.path,
     step: input.step,
     draft: input.draft as Json,
+    completed_at: null,
   }
 
   const { data, error } = await supabase
