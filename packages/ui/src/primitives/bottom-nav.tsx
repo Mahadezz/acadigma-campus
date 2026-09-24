@@ -3,36 +3,47 @@
 import * as React from "react"
 
 import {
+  AlertTriangleIcon,
   ArrowLeftRightIcon,
-  BanknoteIcon,
   BarChart3Icon,
+  BookMarkedIcon,
   BookOpenIcon,
   BriefcaseIcon,
   Building2Icon,
   CalendarDaysIcon,
-  CheckSquareIcon,
   ClipboardCheckIcon,
   ClipboardListIcon,
   CreditCardIcon,
   EllipsisIcon,
+  FileCheckIcon,
   FileTextIcon,
-  FolderIcon,
-  GraduationCapIcon,
+  FolderLockIcon,
+  FolderOpenIcon,
+  GaugeIcon,
   HandCoinsIcon,
-  HelpCircleIcon,
+  HeartHandshakeIcon,
+  HistoryIcon,
   HomeIcon,
-  LayoutGridIcon,
+  IdCardIcon,
+  LayoutDashboardIcon,
+  LibraryIcon,
+  LifeBuoyIcon,
+  ListChecksIcon,
   MegaphoneIcon,
-  MessageSquareIcon,
+  MessageCircleIcon,
+  NotebookIcon,
   PackageIcon,
   PrinterIcon,
   ReceiptIcon,
+  SchoolIcon,
   SettingsIcon,
   ShieldCheckIcon,
-  ShieldIcon,
+  SparklesIcon,
   StoreIcon,
+  TagIcon,
   TrendingUpIcon,
-  UserCheckIcon,
+  UserCogIcon,
+  UserRoundSearchIcon,
   UsersIcon,
   WalletIcon,
   type LucideIcon,
@@ -178,39 +189,62 @@ export function BottomNavItem({
 // primary `BottomNav` slots plus a "More" slot opening a grouped `Sheet`.
 // ---------------------------------------------------------------------------
 
-const ICON_MAP: Record<IconName, LucideIcon> = {
-  home: HomeIcon,
-  "check-square": CheckSquareIcon,
-  calendar: CalendarDaysIcon,
-  "message-square": MessageSquareIcon,
-  "more-horizontal": EllipsisIcon,
+export const ICON_MAP: Record<IconName, LucideIcon> = {
+  "layout-dashboard": LayoutDashboardIcon,
+  "clipboard-check": ClipboardCheckIcon,
   users: UsersIcon,
-  "graduation-cap": GraduationCapIcon,
+  "message-circle": MessageCircleIcon,
+  school: SchoolIcon,
+  "calendar-days": CalendarDaysIcon,
+  "file-check": FileCheckIcon,
+  "list-checks": ListChecksIcon,
   "book-open": BookOpenIcon,
   "clipboard-list": ClipboardListIcon,
-  "clipboard-check": ClipboardCheckIcon,
-  printer: PrinterIcon,
-  "file-text": FileTextIcon,
-  "bar-chart": BarChart3Icon,
+  notebook: NotebookIcon,
+  "user-cog": UserCogIcon,
+  "shield-check": ShieldCheckIcon,
   briefcase: BriefcaseIcon,
-  shield: ShieldIcon,
-  settings: SettingsIcon,
-  "help-circle": HelpCircleIcon,
+  "user-round-search": UserRoundSearchIcon,
+  tag: TagIcon,
+  "bar-chart-3": BarChart3Icon,
+  printer: PrinterIcon,
+  megaphone: MegaphoneIcon,
+  library: LibraryIcon,
+  sparkles: SparklesIcon,
+  "credit-card": CreditCardIcon,
   wallet: WalletIcon,
   store: StoreIcon,
+  "trending-up": TrendingUpIcon,
+  history: HistoryIcon,
+  settings: SettingsIcon,
+  "life-buoy": LifeBuoyIcon,
+  "book-marked": BookMarkedIcon,
+  "heart-handshake": HeartHandshakeIcon,
+  "alert-triangle": AlertTriangleIcon,
+  "file-text": FileTextIcon,
+  "folder-open": FolderOpenIcon,
+  gauge: GaugeIcon,
+  "folder-lock": FolderLockIcon,
+  "id-card": IdCardIcon,
+  home: HomeIcon,
   package: PackageIcon,
   receipt: ReceiptIcon,
-  banknote: BanknoteIcon,
-  "user-check": UserCheckIcon,
-  megaphone: MegaphoneIcon,
-  folder: FolderIcon,
-  "trending-up": TrendingUpIcon,
-  "shield-check": ShieldCheckIcon,
-  "layout-grid": LayoutGridIcon,
-  "credit-card": CreditCardIcon,
-  "arrow-left-right": ArrowLeftRightIcon,
-  "building-2": Building2Icon,
   "hand-coins": HandCoinsIcon,
+  "building-2": Building2Icon,
+  "arrow-left-right": ArrowLeftRightIcon,
+  "more-horizontal": EllipsisIcon,
+}
+
+/**
+ * `NavItem.icon` is a plain `string` in `@acadigma/domain/nav` (that package
+ * has no UI dependency, so it cannot reference `IconName`). Looking it up
+ * here is the one place a config's icon name and this map's keys can drift —
+ * an unrecognised name falls back to `EllipsisIcon` rather than crashing the
+ * shell, since a mis-typed icon string is a content bug, not a reason to
+ * break navigation.
+ */
+export function resolveNavIcon(icon: string): LucideIcon {
+  return (ICON_MAP as Record<string, LucideIcon>)[icon] ?? EllipsisIcon
 }
 
 /**
@@ -281,7 +315,7 @@ export function MoreSheet({
               </h3>
               <ul className="divide-border divide-y">
                 {group.items.map((navItem) => {
-                  const Icon = ICON_MAP[navItem.icon]
+                  const Icon = resolveNavIcon(navItem.icon)
                   const active = isActive(navItem.href)
                   const label =
                     locale === "bn" ? navItem.labelBn : navItem.labelEn
@@ -370,7 +404,7 @@ export function BottomNavFromConfig({
     <>
       <BottomNav label={navLabel} className={className}>
         {filtered.bottom.map((navItem: NavItem) => {
-          const Icon = ICON_MAP[navItem.icon]
+          const Icon = resolveNavIcon(navItem.icon)
           const label = locale === "bn" ? navItem.labelBn : navItem.labelEn
           const active = isActive(navItem.href)
           const badge = navItem.badge?.count
