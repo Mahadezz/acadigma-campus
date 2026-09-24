@@ -15,7 +15,7 @@
 -- `school_profiles` tenant-freeze gap this migration closes.
 -- =====================================================================
 begin;
-select plan(31);
+select plan(32);
 
 create schema if not exists tests;
 
@@ -321,11 +321,25 @@ select lives_ok(
   $$select public.log_tenancy_context_rejected('99992222-2222-2222-2222-222222222222')$$,
   'log_tenancy_context_rejected: does not raise for an authenticated caller');
 
+-- The caller is not an owner of School B, so the audit_events read policy
+-- (owner + platform staff only, D-36) hides the row from them. That is the
+-- point: a forger must not be able to read back what the tripwire recorded.
+select is(
+  (select count(*)::int from public.audit_events
+    where action = 'tenancy.context_rejected'
+      and workspace_id = '99992222-2222-2222-2222-222222222222'),
+  0, 'log_tenancy_context_rejected: the caller cannot read back the row it triggered (audit_events RLS)');
+
+-- Count as postgres (RLS bypassed) to prove the row really was written.
+select tests.logout();
+
 select is(
   (select count(*)::int from public.audit_events
     where action = 'tenancy.context_rejected'
       and workspace_id = '99992222-2222-2222-2222-222222222222'),
   1, 'log_tenancy_context_rejected: writes exactly one audit_events row, tagged to the attempted workspace');
+
+select tests.login('99990001-0000-0000-0000-000000000003');
 
 select throws_ok(
   $$select public.log_tenancy_context_rejected(null)$$,
