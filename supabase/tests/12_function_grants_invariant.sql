@@ -112,7 +112,8 @@ with allowed as (
     ('public.list_my_workspaces()'),
     ('public.log_tenancy_context_rejected(uuid)'),
     ('public.pre_request()'),  -- D-65: the hook's public wrapper
-    ('public.check_eiin_available(text)')  -- F-ID-05 Part 3, D-66
+    ('public.check_eiin_available(text)'),  -- F-ID-05 Part 3, D-66
+    ('public.create_school_workspace(jsonb)')  -- F-ID-05 Part 4, D-100
   ) as a(sig)
   union all
   select p.oid

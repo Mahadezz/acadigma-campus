@@ -15,7 +15,7 @@
 --   5. grade_levels / academic_years isolation and escalation (T2).
 -- =====================================================================
 begin;
-select plan(52);
+select plan(56);
 
 create schema if not exists tests;
 
@@ -141,8 +141,8 @@ select results_eq(
   $$select s.status::text, p.code, s.trial_ends_at::date
       from public.subscriptions s join public.plans p on p.id = s.plan_id
      where s.workspace_id = (select id from ids where label = 'ideal')$$,
-  $$values ('trialing', 'pro', (now() + interval '14 days')::date)$$,
-  'a 14-day Pro trial subscription exists');
+  $$values ('trialing', 'pro', (now() + make_interval(days => (select trial_days from public.plans where code = 'pro')))::date)$$,
+  'a Pro trial subscription exists, as long as the plan catalogue says (PRODUCT-DECISIONS §5.2)');
 
 select ok(
   (select onboarding_completed_at is not null
@@ -378,7 +378,7 @@ select throws_ok(
 select throws_ok(
   $$update public.grade_levels set workspace_id = (select id from ids where label = 'ideal')
      where workspace_id = (select id from ids where label = 'other')$$,
-  '42501', 'new row violates row-level security policy for table "grade_levels"',
+  '42501', 'workspace_id is immutable',
   'isolation: a grade level cannot be moved into a school the caller does not administer');
 select tests.logout();
 
@@ -401,12 +401,12 @@ select throws_ok(
             'f1050401-0000-0000-0000-000000000003')$$,
   '42501', 'new row violates row-level security policy for table "academic_years"',
   'escalation: a teacher cannot add an academic year');
-select is(
-  (with u as (update public.grade_levels set name = 'Hacked'
-               where workspace_id = (select id from ids where label = 'ideal') returning 1)
-   select count(*)::int from u),
-  0, 'escalation: a teacher''s update of a grade level touches no rows');
+update public.grade_levels set name = 'Hacked'
+ where workspace_id = (select id from ids where label = 'ideal');
 select tests.logout();
+select is(
+  (select count(*)::int from public.grade_levels where name = 'Hacked'),
+  0, 'escalation: a teacher''s update of a grade level touches no rows');
 
 select tests.login('f1050401-0000-0000-0000-000000000004');
 select is(
