@@ -48,7 +48,7 @@ jobs:
           publish-script: pnpm release
           commit-message: "chore(release): version packages"
           pr-title: "chore(release): version packages"
-          createGithubReleases: true
+          create-github-releases: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Summary
