@@ -50,8 +50,19 @@
 --      SECURITY DEFINER function and so is unaffected by this RLS policy;
 --      packages/db/src/repositories/plans.ts:148 only ever reads
 --      `workspaces`), so this closes the direct-insert path with no loss of
---      legitimate function — including the school-creation path Part 4 will
---      still need.
+--      the RLS-level function a future school-creation path needs — a
+--      type='school' row still PASSES this WITH CHECK clause (proven in
+--      15_personal_workspace_registration.sql). Whether such an insert
+--      succeeds END TO END is a separate question this migration does not
+--      answer: writing that new test surfaced a pre-existing, unrelated bug
+--      where app.tg_workspace_billing_bootstrap()'s own nested UPDATE trips
+--      app.tg_workspaces_guard()'s app.is_privileged_context() check as
+--      though it were an ordinary client statement, despite running inside
+--      a SECURITY DEFINER function — tracked in this PR's test report as a
+--      known issue, NOT fixed here (out of scope: unrelated to the
+--      personal-workspace exploit this migration closes, and Part 4's
+--      planned `app.create_school_workspace()` RPC should be re-verified
+--      against this before anyone assumes it is unaffected).
 -- =====================================================================
 
 create unique index if not exists workspaces_one_personal_per_creator
