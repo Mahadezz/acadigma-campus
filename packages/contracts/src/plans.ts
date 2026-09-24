@@ -230,3 +230,19 @@ export const planReadOnlyErrorSchema = z.object({
   reason: z.string().nullable(),
 })
 export type PlanReadOnlyErrorPayload = z.infer<typeof planReadOnlyErrorSchema>
+
+// ---------------------------------------------------------------------------
+// Trial expiry job (Part 4) — `GET|POST /api/cron/billing/tick`
+// ---------------------------------------------------------------------------
+
+/**
+ * `runSubscriptionJobs`'s output (§7), narrowed to what Part 4 actually builds
+ * (D-62): only the trial-expiry count. §7's fuller shape
+ * (`{remindersSent, pastDue, lapsed, downgradesApplied}`) belongs to Parts 5-8
+ * (renewal, dunning, downgrade scheduling), which are not built yet — those keys
+ * are added to this schema when those Parts land, not stubbed out now.
+ */
+export const runBillingTickOutput = z.object({
+  trialsExpired: z.number().int().min(0),
+})
+export type RunBillingTickOutput = z.infer<typeof runBillingTickOutput>
