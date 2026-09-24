@@ -5,6 +5,7 @@ import { getNavConfig, type NavConfig } from "@acadigma/domain/nav"
 import { Button } from "@acadigma/ui/components/button"
 import { AppShell } from "@acadigma/ui/primitives/app-shell"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
+import { Logo } from "@acadigma/ui/primitives/logo"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
 
 import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
@@ -81,7 +82,7 @@ export default async function SchoolLayout({
               t={t.workspace.switcher}
             />
           }
-          title="Acadigma Campus"
+          title={<Logo product="campus" />}
           subtitle={`Signed in as ${ctx.role}`}
           actions={
             <Button variant="ghost" size="icon" aria-label="Notifications">

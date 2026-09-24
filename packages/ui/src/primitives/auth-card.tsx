@@ -30,12 +30,12 @@ export function AuthCard({
   return (
     <div
       className={cn(
-        "w-full space-y-6 sm:rounded-xl sm:border sm:bg-card sm:p-8 sm:shadow-flat",
+        "w-full space-y-6 sm:rounded-lg sm:bg-card sm:p-8 sm:shadow-flat",
         className
       )}
     >
       <div className="space-y-1.5">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+        <h1 className="text-2xl font-medium tracking-tight">
           {title}
         </h1>
         {subtitle ? (

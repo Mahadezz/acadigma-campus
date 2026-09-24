@@ -42,24 +42,24 @@
   --font-mono: var(--font-mono);
 
   /* radius — shadcn v4 derives the rest from --radius. Multipliers match
-     acadigma-website's globals.css (D-57), applied to the same 0.75rem base
-     this product already used, so both products round to the same documented
-     pixel steps (DESIGN-SYSTEM §2.6): ~7 / ~10 / 12 / ~17 / ~22 / ~26 / ~31px. */
+     acadigma-website's globals.css (D-57); the base is 6px since D-68, so
+     the documented pixel steps (DESIGN-SYSTEM §2.6) are
+     ~4 / ~5 / 6 / ~8 / ~11 / ~13 / ~16px. */
   --radius-sm: calc(
     var(--radius) * 0.6
-  ); /* ~7px  — chips, badges, in-grid inputs */
-  --radius-md: calc(var(--radius) * 0.8); /* ~10px — inputs, buttons          */
-  --radius-lg: var(--radius); /* 12px  — cards, sheets, popovers  */
-  --radius-xl: calc(var(--radius) * 1.4); /* ~17px — sheet top corners        */
+  ); /* ~4px  — chips, badges, in-grid inputs */
+  --radius-md: calc(var(--radius) * 0.8); /* ~5px  — inputs, buttons          */
+  --radius-lg: var(--radius); /* 6px   — cards, popovers, dialogs */
+  --radius-xl: calc(var(--radius) * 1.4); /* ~8px  — sheet top corners        */
   --radius-2xl: calc(
     var(--radius) * 1.8
-  ); /* ~22px — avatars on stat tiles    */
+  ); /* ~11px — avatars on stat tiles    */
   --radius-3xl: calc(
     var(--radius) * 2.2
-  ); /* ~26px — reserved, website parity */
+  ); /* ~13px — reserved, website parity */
   --radius-4xl: calc(
     var(--radius) * 2.6
-  ); /* ~31px — reserved, website parity */
+  ); /* ~16px — reserved, website parity */
 
   /* surfaces + ink */
   --color-background: var(--background);
@@ -205,7 +205,7 @@
   --text-2xs: 0.6875rem; /* 11px — only for the attendance legend + table units */
   --text-xs: 0.75rem; /* 12px — metadata, timestamps, helper text          */
   --text-sm: 0.8125rem; /* 13px — dense table cells, chips                   */
-  --text-base: 0.9375rem; /* 15px — body, list rows, form values (phone)       */
+  --text-base: 1rem; /* 16px — body, list rows, form values (D-68; was 15) */
   --text-md: 1rem; /* 16px — form inputs (never smaller: iOS zoom)      */
   --text-lg: 1.125rem; /* 18px — card titles, sheet titles                  */
   --text-xl: 1.375rem; /* 22px — page titles on phone                       */
@@ -217,7 +217,8 @@
   --leading-normal: 1.5; /* Latin body                                        */
   --leading-bn: 1.75; /* Bengali needs room for reph/matra above + below   */
 
-  --tracking-tight: -0.02em; /* ≥22px Latin only. Never on Bengali.           */
+  --tracking-tight: -0.03em; /* headings, Latin only (D-68). Never on Bengali. */
+  --tracking-eyebrow: 0.08em; /* mono uppercase eyebrow labels (D-68)          */
   --tracking-normal: 0em;
   --tracking-wide: 0.01em; /* ≤12px Latin                                   */
 
@@ -273,7 +274,7 @@
   /* -------------------------------------------------------------------------
      4. Radius
      ------------------------------------------------------------------------- */
-  --radius: 0.75rem; /* 12px — carried over from the prototype, unchanged */
+  --radius: 0.375rem; /* 6px (D-68, the Vercel-reference "Blend"; was 12px) */
 
   /* -------------------------------------------------------------------------
      5. Motion — durations, easings, reduced-motion switch
@@ -495,14 +496,14 @@
   --sidebar-border: #e2e2df; /* decorative — see --border above */
   --sidebar-ring: #0b0b0b;
 
-  /* — elevation. Ink-tinted flat shadows (D-57): rgb(11 11 11 / a), matching
-     acadigma-website's `shadow-input` utility, replacing the old hue-272
-     tint. Structurally unchanged — three levels, hairline-plus-lift. */
+  /* — elevation. D-68: cards and popovers are separated by a hairline 1px
+     ring, never a drop shadow. flat = the default ring (ink-tinted, D-57);
+     raised/overlay = the same ring one step darker, for a card that must
+     stand out and for anything floating over content. Only the bottom sheet
+     keeps a real shadow — it slides over the page from the bottom edge. */
   --shadow-flat: 0 0 0 1px rgb(11 11 11 / 0.08);
-  --shadow-raised:
-    0 1px 2px rgb(11 11 11 / 0.06), 0 2px 6px -2px rgb(11 11 11 / 0.08);
-  --shadow-overlay:
-    0 8px 24px -6px rgb(11 11 11 / 0.14), 0 2px 6px -2px rgb(11 11 11 / 0.08);
+  --shadow-raised: 0 0 0 1px var(--border-strong);
+  --shadow-overlay: 0 0 0 1px var(--border-strong);
   --shadow-sheet: 0 -8px 28px -8px rgb(11 11 11 / 0.18);
   --shadow-nav: 0 -1px 0 0 var(--border); /* a rule, not a shadow */
 }
@@ -626,9 +627,8 @@
   /* Ink-tinted flat shadows (D-57) — already achromatic in dark mode before
      this change (pure black has no hue to retint), kept structurally as-is. */
   --shadow-flat: 0 0 0 1px rgb(244 244 242 / 0.06);
-  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 6px -2px rgb(0 0 0 / 0.36);
-  --shadow-overlay:
-    0 8px 24px -6px rgb(0 0 0 / 0.52), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --shadow-raised: 0 0 0 1px var(--border-strong); /* D-68 ring */
+  --shadow-overlay: 0 0 0 1px var(--border-strong);
   --shadow-sheet: 0 -8px 28px -8px rgb(0 0 0 / 0.55);
   --shadow-nav: 0 -1px 0 0 var(--border);
 }
@@ -776,11 +776,11 @@
     overscroll-behavior-y: none; /* we own pull-to-refresh */
   }
 
-  /* Bengali runs. <BnEnText lang="bn"> and any [lang="bn"] subtree. */
+  /* Bengali runs. <BnEnText lang="bn"> and any [lang="bn"] subtree.
+     letter-spacing lives in the unlayered rule below, not here. */
   :lang(bn) {
     font-family: var(--font-bn);
     line-height: var(--leading-bn);
-    letter-spacing: 0; /* never track Bengali */
   }
 
   /* Everything numeric: marks, money, attendance %, IDs, dates, phone numbers. */
@@ -816,6 +816,26 @@
       border: 1px solid CanvasText;
     }
   }
+}
+
+/* Never track Bengali (§1.6). Unlayered on purpose (D-68): a `tracking-*`
+   utility on a heading lives in Tailwind's utilities layer, which beats any
+   @layer base rule, so this must sit outside the layers to win. */
+:lang(bn) {
+  letter-spacing: 0;
+}
+
+/* D-68 eyebrow: the small mono, uppercase, letter-spaced label that sits
+   above a section title (acadigma.com / the Vercel reference). Latin only —
+   :lang(bn) above zeroes the tracking, and uppercase is a no-op in Bengali. */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--muted-foreground);
 }
 
 /* ---------------------------------------------------------------------------

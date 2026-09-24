@@ -55,7 +55,7 @@ export function ChoiceCard({
       </span>
       <span className="min-w-0 flex-1 space-y-0.5">
         <span className="flex flex-wrap items-center gap-2">
-          <span className="text-foreground block text-base font-semibold">
+          <span className="text-foreground block text-base font-medium">
             {title}
           </span>
           {disabled && badge ? (
@@ -78,7 +78,7 @@ export function ChoiceCard({
   )
 
   const shared = cn(
-    "flex min-h-[120px] w-full items-center gap-4 rounded-xl border bg-card p-4 text-left shadow-flat transition-colors",
+    "flex min-h-[120px] w-full items-center gap-4 rounded-lg bg-card p-4 text-left shadow-flat transition-colors",
     disabled ? "cursor-not-allowed opacity-60" : "hover:bg-accent/5",
     "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
     className

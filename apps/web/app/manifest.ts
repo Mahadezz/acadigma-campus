@@ -15,8 +15,9 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#ffffff",
-    theme_color: "#ffffff",
+    // D-68: paper, matching --background and the Campus app icon's own fill.
+    background_color: "#f4f4f2",
+    theme_color: "#f4f4f2",
     lang: "en",
     dir: "ltr",
     categories: ["education", "productivity"],

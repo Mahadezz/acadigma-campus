@@ -42,7 +42,7 @@
  */
 @layer base {
   :root {
-    --radius: 0.75rem;
+    --radius: 0.375rem; /* D-68 */
 
     --background: #f4f4f2;
     --foreground: #0b0b0b;
