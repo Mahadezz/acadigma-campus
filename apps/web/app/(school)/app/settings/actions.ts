@@ -23,11 +23,11 @@ import {
   type ApiError,
   type Result,
 } from "@acadigma/contracts"
+import { requireWritable } from "@acadigma/db/repositories"
 import {
   getSchoolSettings as getSchoolSettingsRepo,
   updateSchoolSettings as updateSchoolSettingsRepo,
 } from "@acadigma/db/repositories/settings"
-import { requireWritable } from "@acadigma/db/repositories"
 import { can } from "@acadigma/domain"
 import type { ResolvedSettings } from "@acadigma/domain/settings"
 
