@@ -361,6 +361,7 @@ Shipped on `feat/F-OP-06-p1-staff-schema`: `staff_records`, `staff_compensation`
 
 - **§3.1's compensation-table-vs-column question is answered:** `staff_compensation` is a separate table, keyed by `staff_record_id` (not `(workspace_id, user_id)`), `effective_to` inclusive. `app.staff_hourly_rate` takes `(user_id, on_date)` — two arguments, not three — and checks the caller's own membership internally.
 - **`staff_records`' columns that overlap `workspace_members`** (`designation_label_id`/`department`/`subject_ids`/`work_phone` vs. that table's pre-existing `label_id`/`department`/`subjects`/`phone`, from F-ID-03) are **not reconciled in this Part**. Both exist, independently, right now. Part 2 (the directory) must read from `staff_directory`/`staff_records`, not `workspace_members`, and whoever removes the duplication should do it as its own decision, not a silent side effect of a later Part.
+- **§3.4's tenth seeded label, Guardian → `parent`, is not seeded.** `custom_labels_base_role_not_parent` (`20260917010100_identity.sql`, pre-existing) forbids `base_role = 'parent'` entirely — a check constraint this Part does not touch. New schools get the other nine defaults only. Caught by CI (pgTAP `20_staff_schema.sql` failing every downstream fixture that creates a school workspace) before merge, not found in local testing (no local Postgres available this session).
 
 ### Open questions
 

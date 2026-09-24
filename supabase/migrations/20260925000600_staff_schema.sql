@@ -584,8 +584,12 @@ begin
     on conflict (workspace_id) do nothing;
 
     -- Seeded defaults (F-OP-06 §3.4). base_role carries permissions;
-    -- these ten rows are display strings and a sort order, nothing more
+    -- these nine rows are display strings and a sort order, nothing more
     -- (PRODUCT-DECISIONS §1.4) — a school is free to rename or delete them.
+    -- The spec's tenth default, Guardian -> parent, is NOT seeded here:
+    -- custom_labels_base_role_not_parent (20260917010100_identity.sql)
+    -- forbids base_role = 'parent' entirely, and this migration does not
+    -- touch that pre-existing constraint (D-63 deviation).
     insert into public.custom_labels (workspace_id, base_role, name, sort_order, created_by)
     values
       (new.id, 'admin',   'Principal',          0, new.owner_id),
@@ -596,8 +600,7 @@ begin
       (new.id, 'teacher', 'Assistant Teacher',  2, new.owner_id),
       (new.id, 'staff',   'Office Assistant',   0, new.owner_id),
       (new.id, 'staff',   'Accountant',         1, new.owner_id),
-      (new.id, 'staff',   'Librarian',          2, new.owner_id),
-      (new.id, 'parent',  'Guardian',           0, new.owner_id)
+      (new.id, 'staff',   'Librarian',          2, new.owner_id)
     on conflict (workspace_id, lower(name)) do nothing;
   end if;
 

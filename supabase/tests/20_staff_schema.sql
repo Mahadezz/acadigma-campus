@@ -81,11 +81,13 @@ values ('dddd0002-0000-0000-0000-000000000002', '11111111-1111-1111-1111-1111111
 
 -- =====================================================================
 -- 0. custom_labels seeding (F-OP-06 §3.4) — the workspace_bootstrap
---    trigger seeded ten default labels for each school workspace above.
+--    trigger seeded nine default labels for each school workspace above
+--    (Guardian/parent is not one of them — custom_labels forbids
+--    base_role = 'parent' entirely; D-63 deviation from spec §3.4).
 -- =====================================================================
 select is(
   (select count(*)::int from public.custom_labels where workspace_id = '11111111-1111-1111-1111-111111111111'),
-  10, 'a new school workspace is seeded with the ten default custom labels');
+  9, 'a new school workspace is seeded with the nine default custom labels');
 
 select is(
   (select name from public.custom_labels
