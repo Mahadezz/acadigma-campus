@@ -26,6 +26,13 @@ function fakeClient(options: {
   /** Row `workspace_members` returns for the header-candidate query. */
   headerRow?: MembershipRow
   headerQueryError?: boolean
+  /**
+   * Row `workspace_members` returns for the header path's SECOND query — "does
+   * the caller have ANY row for this workspace, any status" — only reached
+   * when `headerRow` is null (F-ID-03 review: removed/pending vs. forger).
+   */
+  anyMembershipRow?: MembershipRow
+  anyMembershipQueryError?: boolean
   /** `profiles.last_active_workspace_id` for the fallback chain. */
   lastActiveWorkspaceId?: string | null
   profileQueryError?: boolean
@@ -45,6 +52,8 @@ function fakeClient(options: {
     userError = false,
     headerRow = null,
     headerQueryError = false,
+    anyMembershipRow = null,
+    anyMembershipQueryError = false,
     lastActiveWorkspaceId = null,
     profileQueryError = false,
     lastActiveRow = null,
@@ -54,6 +63,14 @@ function fakeClient(options: {
     rpc = vi.fn(async () => ({ data: null, error: null })),
     onSelect = () => {},
   } = options
+
+  // Persists across every `.from("workspace_members")` call this ONE fakeClient
+  // makes, so the header path's second query (the any-status membership check,
+  // only reached when the first comes back empty) can answer differently from
+  // the first without the two queries needing to look different structurally —
+  // resolveWorkspaceContext only ever runs one `.select(...).maybeSingle()` on
+  // this table per candidate; the header path is the one place it can run two.
+  let workspaceMembersSelectCount = 0
 
   return {
     auth: {
@@ -87,27 +104,39 @@ function fakeClient(options: {
       }
 
       if (table === "workspace_members") {
-        // `resolveWorkspaceContext` only ever runs ONE single-candidate query
-        // per call (`.eq(workspace_id).eq(user_id).eq(status).maybeSingle()`)
-        // — either for the header, or (only when there is no header) for the
-        // `last_active_workspace_id` hint, never both. So `headerRow` and
-        // `lastActiveRow` (only one of which a given test sets; the other
-        // stays at its `null` default) can simply be coalesced into a single
-        // response, with no need to pattern-match on the candidate id.
+        // Either for the header, or (only when there is no header) for the
+        // `last_active_workspace_id` hint, never both in the same call. So
+        // `headerRow` and `lastActiveRow` (only one of which a given test
+        // sets; the other stays at its `null` default) can simply be
+        // coalesced into a single response, with no need to pattern-match on
+        // the candidate id.
         const singleCandidateRow = headerRow ?? lastActiveRow
         const singleCandidateErrored = headerQueryError || lastActiveQueryError
         const builder = {
           select: (columns: string) => {
+            workspaceMembersSelectCount += 1
             onSelect("workspace_members", columns)
             return builder
           },
           eq: () => builder,
-          maybeSingle: async () => ({
-            data: singleCandidateErrored ? null : singleCandidateRow,
-            error: singleCandidateErrored
-              ? { message: "connection reset" }
-              : null,
-          }),
+          maybeSingle: async () => {
+            if (workspaceMembersSelectCount <= 1) {
+              return {
+                data: singleCandidateErrored ? null : singleCandidateRow,
+                error: singleCandidateErrored
+                  ? { message: "connection reset" }
+                  : null,
+              }
+            }
+            // The header path's second query: "any row at all for this
+            // workspace, regardless of status" (removed/pending vs. forger).
+            return {
+              data: anyMembershipQueryError ? null : anyMembershipRow,
+              error: anyMembershipQueryError
+                ? { message: "connection reset" }
+                : null,
+            }
+          },
           // `.order(...)` is awaited directly by resolveWorkspaceContext (no
           // `.maybeSingle()` follows it for this query shape), so it must
           // itself resolve to `{ data, error }`.
@@ -260,6 +289,72 @@ describe("resolveWorkspaceContext", () => {
       headers(WORKSPACE_ID)
     )
     expect(!result.ok && result.error.reason).toBe("not_a_member")
+  })
+
+  // F-ID-03 review follow-up (D-52 as amended by the PR #12 review): a removed
+  // or pending member is refused (AC6, 403) with a distinct reason, and the
+  // tripwire STILL fires. A pending row is one invite code away, so skipping
+  // it would allow silent probing; the RPC classifies severity server-side.
+  describe("removed/pending member vs. a genuine forger (F-ID-03 review)", () => {
+    it("fails membership_inactive for a REMOVED member, and still fires the tripwire once", async () => {
+      const rpc = vi.fn(async () => ({ data: null, error: null }))
+      const result = await resolveWorkspaceContext(
+        fakeClient({
+          headerRow: null, // no ACTIVE row
+          anyMembershipRow: { status: "removed" }, // but a row exists
+          rpc,
+        }),
+        headers(WORKSPACE_ID)
+      )
+      expect(!result.ok && result.error.code).toBe("forbidden")
+      expect(!result.ok && result.error.reason).toBe("membership_inactive")
+      expect(rpc).toHaveBeenCalledTimes(1)
+    })
+
+    it("fails membership_inactive for a PENDING member, and still fires the tripwire once", async () => {
+      const rpc = vi.fn(async () => ({ data: null, error: null }))
+      const result = await resolveWorkspaceContext(
+        fakeClient({
+          headerRow: null,
+          anyMembershipRow: { status: "pending" },
+          rpc,
+        }),
+        headers(WORKSPACE_ID)
+      )
+      expect(!result.ok && result.error.reason).toBe("membership_inactive")
+      expect(rpc).toHaveBeenCalledTimes(1)
+    })
+
+    it("still fails not_a_member and fires the tripwire exactly once for someone who never joined", async () => {
+      const rpc = vi.fn(async () => ({ data: null, error: null }))
+      const result = await resolveWorkspaceContext(
+        fakeClient({
+          headerRow: null,
+          anyMembershipRow: null, // no row at all, in any status
+          rpc,
+        }),
+        headers(WORKSPACE_ID)
+      )
+      expect(!result.ok && result.error.reason).toBe("not_a_member")
+      expect(rpc).toHaveBeenCalledTimes(1)
+      expect(rpc).toHaveBeenCalledWith("log_tenancy_context_rejected", {
+        p_attempted_workspace_id: WORKSPACE_ID,
+      })
+    })
+
+    it("reports a database failure on the any-row check as a dependency problem, not a tripwire", async () => {
+      const rpc = vi.fn(async () => ({ data: null, error: null }))
+      const result = await resolveWorkspaceContext(
+        fakeClient({
+          headerRow: null,
+          anyMembershipQueryError: true,
+          rpc,
+        }),
+        headers(WORKSPACE_ID)
+      )
+      expect(!result.ok && result.error.reason).toBe("dependency_unavailable")
+      expect(rpc).not.toHaveBeenCalled()
+    })
   })
 
   it("refuses a role it does not recognise", async () => {

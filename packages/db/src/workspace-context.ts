@@ -93,6 +93,7 @@ export const WORKSPACE_CONTEXT_FAILURE_REASONS = [
   "no_workspace_selected",
   "malformed_workspace_id",
   "not_a_member",
+  "membership_inactive",
   "invalid_role",
   "invalid_workspace_type",
   "dependency_unavailable",
@@ -166,6 +167,36 @@ function toContext(
 }
 
 /**
+ * Distinguishes "never a member" (the forged-header attack, AC1) from "removed
+ * or pending member replaying a stale header/session" — only called from the
+ * header path, and only once the active-membership check has already come back
+ * empty.
+ *
+ * F-ID-03 §3: the `workspace_members_select` policy lets a user see their OWN
+ * row in the workspace in EVERY status, including `pending` and `removed` —
+ * that is exactly what lets the personal-area workspace list render "Pending
+ * approval" and what this function leans on. A removed employee whose browser
+ * still carries the workspace cookie, or a pending join-by-code applicant, is
+ * not attempting a forgery: they are replaying a header that used to be valid.
+ * AC6 still holds — the request is still refused with a 403 — but under a
+ * distinct `membership_inactive` reason so `requireWorkspace()` can render the
+ * ordinary "you no longer have access" screen without also writing a false
+ * `tenancy.context_rejected` row into a school nobody attacked.
+ */
+async function loadAnyMembershipRow(
+  supabase: AcadigmaSupabaseClient,
+  userId: string,
+  workspaceId: string
+): Promise<{ data: unknown; error: unknown }> {
+  return supabase
+    .from("workspace_members")
+    .select("status")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userId)
+    .maybeSingle()
+}
+
+/**
  * Writes the `tenancy.context_rejected` audit tripwire (F-ID-03 §4.3 failure
  * cases, AC1) via the `public` wrapper (DECISION-LOG D-50: `app` is not
  * PostgREST-exposed). Only called for a *well-formed* workspace id the caller
@@ -208,8 +239,12 @@ async function logContextRejected(
  * Every candidate is re-queried against `workspace_members` for
  * `(workspace_id, auth.uid(), status='active')` — the header and the hint are
  * both *hints*; only that query is the authority (DECISION-LOG D-04). A
- * well-formed but non-member header id writes the `tenancy.context_rejected`
- * tripwire before failing.
+ * well-formed header id with NO `workspace_members` row at all writes the
+ * `tenancy.context_rejected` tripwire before failing `not_a_member`; a
+ * well-formed header id with a `removed`/`pending` row for the caller fails
+ * `membership_inactive` instead, WITHOUT the tripwire — F-ID-03 review
+ * follow-up: a removed or pending member replaying a stale header is not a
+ * forger (`loadAnyMembershipRow`, above `logContextRejected`).
  *
  * On `set_config('app.workspace_id', ...)`: PostgREST/Supabase-js gives every
  * `.from()`/`.rpc()` call its own transaction, so a GUC set here cannot be
@@ -264,8 +299,30 @@ export async function resolveWorkspaceContext(
       )
     }
     if (!data) {
+      const { data: anyRow, error: anyRowError } = await loadAnyMembershipRow(
+        supabase,
+        userId,
+        workspaceId
+      )
+      if (anyRowError) {
+        return fail(
+          "dependency_unavailable",
+          apiError(
+            "dependency_unavailable",
+            "Could not verify your workspace access."
+          )
+        )
+      }
+      // The tripwire ALWAYS fires (D-52, as amended by the PR #12 review): a
+      // pending row is one invite code away for anyone, so skipping the row
+      // for pending/removed callers would let them probe a school silently.
+      // The RPC records the caller's membership status server-side, so the
+      // row itself says "inactive" vs "forgery"; the distinct reason here only
+      // feeds logs. AC6 holds either way: the request is refused with a 403.
       await logContextRejected(supabase, workspaceId)
-      return fail("not_a_member", FORBIDDEN)
+      return anyRow
+        ? fail("membership_inactive", FORBIDDEN)
+        : fail("not_a_member", FORBIDDEN)
     }
     return toContext(workspaceId, userId, data)
   }
