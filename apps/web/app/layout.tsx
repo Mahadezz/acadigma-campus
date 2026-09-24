@@ -1,6 +1,6 @@
 import { SkipToContent } from "@acadigma/ui/primitives/app-shell"
 
-import { hindSiliguri, inter } from "./fonts"
+import { hindSiliguri, inter, jetbrainsMono } from "./fonts"
 import { Providers } from "./providers"
 
 import type { Metadata, Viewport } from "next"
@@ -31,8 +31,9 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    // Matches --background in packages/ui/tokens/tokens.css (D-57 ink/paper).
+    { media: "(prefers-color-scheme: light)", color: "#f4f4f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0b" },
   ],
 }
 
@@ -44,7 +45,7 @@ export default function RootLayout({
     // class on <html> from an inline script before React hydrates.
     <html
       lang="en"
-      className={`${inter.variable} ${hindSiliguri.variable}`}
+      className={`${inter.variable} ${hindSiliguri.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="antialiased">

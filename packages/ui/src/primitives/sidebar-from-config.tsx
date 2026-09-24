@@ -11,12 +11,15 @@ import type { NavLinkRenderer } from "./bottom-nav"
 import type { NavConfig, NavFilterContext, NavItem } from "./nav-config"
 
 /**
- * Desktop rail (DESIGN-SYSTEM §3.1 "Desktop ≥ 1024"): the navy `Sidebar`,
- * carrying the **full** nav — "More" disappears entirely once there is no
- * space constraint, so every `more` group renders inline instead of behind a
+ * Desktop rail (DESIGN-SYSTEM §3.1 "Desktop ≥ 1024"): the paper/chalk
+ * `Sidebar` with ink text (D-57; was an inverted navy surface), carrying the
+ * **full** nav — "More" disappears entirely once there is no space
+ * constraint, so every `more` group renders inline instead of behind a
  * sheet. Same `NavConfig`, same `filterNav` gating as `BottomNavFromConfig`
  * (§3.1 "Same nav config object, different renderer") — the two never see a
- * different set of items for the same role/plan.
+ * different set of items for the same role/plan. Purely token-driven
+ * (`bg-sidebar`, `bg-sidebar-accent`, `text-sidebar-accent-foreground`) —
+ * no colour is hard-coded here, so the D-57 token change alone restyles it.
  */
 export function SidebarFromConfig({
   config,

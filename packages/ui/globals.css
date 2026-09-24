@@ -7,11 +7,23 @@
  *
  * tokens.css is written by the design system; scripts/ensure-tokens.mjs drops a
  * placeholder on postinstall if it has not landed yet, so this import always
- * resolves. Tokens declared there override the fallbacks below, because they are
- * imported after the engine and before these :root rules are cascaded by
- * specificity — anything tokens.css sets on :root with the same specificity wins by
- * source order only if it comes later, so keep genuinely overriding values in
- * tokens.css under a @layer theme block.
+ * resolves.
+ *
+ * CASCADE FIX (D-57). The old comment here claimed tokens.css's plain :root
+ * rules "win by source order" over the fallback :root below. That was wrong,
+ * and the bug was real: an `@import`ed rule is spliced in at the import
+ * point, so tokens.css's :root ended up EARLIER in this file's effective
+ * source order than the fallback :root that follows it textually — and for
+ * two unlayered rules of equal specificity, the LATER one wins. The fallback
+ * was therefore silently overriding every real token it also declared, in
+ * every build, including production: `getComputedStyle(document.documentElement)
+ * .getPropertyValue('--primary')` on `/design` measured `oklch(20.5% 0 0)`
+ * (the stock shadcn fallback) instead of the design system's intended value,
+ * confirmed against a build of `main` before this PR. The fallback now lives
+ * inside `@layer base` — CSS Cascade Layers give any unlayered rule (tokens.css's
+ * plain :root/.dark) priority over ANY layered rule regardless of source
+ * order, so this is now a real fallback: it applies only until tokens.css's
+ * import above resolves, never after.
  */
 @import "@acadigma/config/tailwind";
 @import "./tokens/tokens.css";
@@ -21,83 +33,96 @@
 @source "./src/**/*.{ts,tsx}";
 
 /*
- * Fallback theme. These are the shadcn "neutral" defaults and exist so a surface
- * renders correctly before the brand tokens land. tokens.css replaces the colour
- * values; the variable *names* are the contract every component depends on.
+ * Fallback theme — ink/paper (D-57), matching tokens.css's light/dark values
+ * so a surface that renders before the real tokens land (or a consumer that
+ * never imports tokens.css) still gets Campus's actual chrome rather than
+ * stock shadcn neutral. Wrapped in `@layer base` (see the cascade-fix note
+ * above) so tokens.css's real, unlayered values always win once loaded; the
+ * variable *names* here are the contract every component depends on.
  */
-:root {
-  --radius: 0.625rem;
+@layer base {
+  :root {
+    --radius: 0.75rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+    --background: #f4f4f2;
+    --foreground: #0b0b0b;
+    --card: #fbfbfa;
+    --card-foreground: #0b0b0b;
+    --popover: #fbfbfa;
+    --popover-foreground: #0b0b0b;
+    --primary: #0b0b0b;
+    --primary-foreground: #f4f4f2;
+    --secondary: #e9e9e6;
+    --secondary-foreground: #0b0b0b;
+    --muted: #e9e9e6;
+    --muted-foreground: #636363;
+    --accent: #e9e9e6;
+    --accent-foreground: #0b0b0b;
+    --destructive: #b42318;
+    /* `--color-destructive` (below) reads `--danger`, matching tokens.css's
+       own alias, so this fallback also needs a `--danger` (identical value
+       to `--destructive` above) for the momentary window before the real
+       tokens.css lands, where only this @layer base block exists. */
+    --danger: #b42318;
+    --border: #e2e2df;
+    --input: #808080;
+    --ring: #0b0b0b;
 
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+    /* Chart fallback stays the shadcn default categorical hues — tokens.css's
+     fixed, validated §6.1 palette is what feature code actually renders. */
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+    --sidebar: #fbfbfa;
+    --sidebar-foreground: #0b0b0b;
+    --sidebar-primary: #0b0b0b;
+    --sidebar-primary-foreground: #fbfbfa;
+    --sidebar-accent: #e9e9e6;
+    --sidebar-accent-foreground: #0b0b0b;
+    --sidebar-border: #e2e2df;
+    --sidebar-ring: #0b0b0b;
+  }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.269 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  .dark {
+    --background: #0b0b0b;
+    --foreground: #f4f4f2;
+    --card: #121212;
+    --card-foreground: #f4f4f2;
+    --popover: #121212;
+    --popover-foreground: #f4f4f2;
+    --primary: #f4f4f2;
+    --primary-foreground: #0b0b0b;
+    --secondary: #1c1c1c;
+    --secondary-foreground: #f4f4f2;
+    --muted: #1c1c1c;
+    --muted-foreground: #8e8e8e;
+    --accent: #1c1c1c;
+    --accent-foreground: #f4f4f2;
+    --destructive: #f97066;
+    --danger: #f97066;
+    --border: #232323;
+    --input: #6b6b6b;
+    --ring: #f4f4f2;
 
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
 
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.439 0 0);
-}
+    --sidebar: #161616;
+    --sidebar-foreground: #f4f4f2;
+    --sidebar-primary: #f4f4f2;
+    --sidebar-primary-foreground: #0b0b0b;
+    --sidebar-accent: #242424;
+    --sidebar-accent-foreground: #f4f4f2;
+    --sidebar-border: #232323;
+    --sidebar-ring: #f4f4f2;
+  }
+} /* end fallback @layer base */
 
 /* Maps the variables above onto Tailwind utility names (bg-background, etc.). */
 @theme inline {
@@ -115,7 +140,13 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
+  /* Reads --danger, not the fallback-only --destructive (Opus review, PR #20):
+     tokens.css's own @theme inline block already maps `--color-destructive:
+     var(--danger)` ("shadcn alias"), so this file's `@theme inline` block —
+     which is textually later and therefore wins for any custom property both
+     declare — must point at the same source, or --color-destructive silently
+     stops tracking tokens.css the moment their hex values ever diverge. */
+  --color-destructive: var(--danger);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -135,10 +166,14 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  /* D-57: website-matched multipliers (see tokens.css §1) instead of the
+     stock shadcn fixed-px steps, so the fallback rounds the same way the
+     real tokens do once they load. */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
 }
 
 @layer base {
