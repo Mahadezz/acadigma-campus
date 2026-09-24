@@ -520,7 +520,7 @@ This is the transfer most likely to be asked about, because it is the one where 
 
 ### 5.3 Vercel: what we can pin and what we cannot
 
-- **Serverless / Node function region:** pin to `bom1` (Mumbai) in `vercel.json` so server-rendered pages, server actions, PDF rendering and cron routes run in the same region as the database. This also fixes a latency problem, so it is easy to justify internally. **[Action: engineering, one-line config]**
+- **Serverless / Node function region:** pin to `bom1` (Mumbai) in `vercel.json` so server-rendered pages, server actions, PDF rendering and cron routes run in the same region as the database. This also fixes a latency problem, so it is easy to justify internally. **[Done 2026-09-24: `apps/web/vercel.json` `regions: ["bom1"]`. Before this, production functions ran in `iad1` (US East), verified on the live deployment.]**
 - **Edge middleware and the Edge Network** run at the PoP nearest the user. For Bangladeshi users that is typically Singapore, Mumbai or Dhaka-adjacent PoPs, but it is **not contractually pinnable**. Therefore: **middleware must never touch personal data** beyond the session cookie and the workspace id — no student rows, no profile reads, no logging of request bodies. Add this as a review rule and a Semgrep check.
 - Static assets and the marketing site are not a personal-data transfer.
 - **Do not claim "all processing happens in Mumbai."** Claim "our database and our application servers are in Mumbai; requests are routed through a global edge network that does not store your data."
