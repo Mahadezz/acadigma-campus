@@ -2,6 +2,14 @@ import { expect, test } from "@playwright/test"
 
 import { expectNoA11yViolations } from "../axe"
 
+// Needs the live Supabase project with migrations + seed applied (CI sets
+// E2E_LIVE_SUPABASE=1 once the Supabase secrets exist — OQ-26/OQ-27). Same
+// guard as signin-signout.spec.ts: skipped, not silently passing, elsewhere.
+test.skip(
+  !process.env.E2E_LIVE_SUPABASE,
+  "live Supabase journey: set E2E_LIVE_SUPABASE=1 with a migrated project"
+)
+
 /**
  * F-ID-03 §4.3 failure case / §9 AC1 (the Base44 root cause, directly):
  * "Given a signed-in user with no membership in school S, when their client
