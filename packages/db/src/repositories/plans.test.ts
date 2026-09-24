@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   getWorkspacePlan,
+  getWorkspacePlanId,
   listEnabledModules,
   listPublicPlans,
   getPlanLimits,
@@ -28,13 +29,22 @@ const CTX: WorkspaceContext = {
  * need to know whether the repository calls `.maybeSingle()` or awaits the builder
  * directly, only what the query should ultimately resolve to.
  */
-function queryResult(result: {
-  data?: unknown
-  error?: unknown
-  count?: number | null
-}) {
+function queryResult(
+  result: {
+    data?: unknown
+    error?: unknown
+    count?: number | null
+  },
+  /** Records every `.select(...)` argument, so a test can assert exactly
+   * which columns/embeds a repository function asked for — the regression
+   * guard for "must not embed plans(*)" (PR #17 Opus review). */
+  onSelect?: (arg: unknown) => void
+) {
   const builder: Record<string, unknown> = {
-    select: () => builder,
+    select: (arg?: unknown) => {
+      onSelect?.(arg)
+      return builder
+    },
     eq: () => builder,
     order: () => builder,
     limit: () => builder,
@@ -165,6 +175,51 @@ describe("getWorkspacePlan", () => {
       workspaces: queryResult({ data: null, error: { message: "timeout" } }),
     })
     const result = await getWorkspacePlan(CTX, client)
+    expect(!result.ok && result.error.code).toBe("dependency_unavailable")
+  })
+})
+
+describe("getWorkspacePlanId (PR #17 Opus review: personal_free / any non-public plan)", () => {
+  it("resolves plan_id even when the row's embedded plans(*) would be RLS-null", async () => {
+    // This is the exact shape a non-public plan (e.g. `personal_free`, or a
+    // custom enterprise contract) produces: `plan_id` is a plain column the
+    // caller can always read on their own workspace row, but the embed
+    // `getWorkspacePlan` uses is null because `plans_select_public` hides it.
+    const client = fakeClient({
+      workspaces: queryResult({
+        data: { plan_id: PLAN_ID, plans: null },
+        error: null,
+      }),
+    })
+    const result = await getWorkspacePlanId(CTX, client)
+    expect(result).toEqual({ ok: true, data: PLAN_ID })
+  })
+
+  it("never asks for the plans(*) embed at all (regression guard)", async () => {
+    const selects: unknown[] = []
+    const client = fakeClient({
+      workspaces: queryResult(
+        { data: { plan_id: PLAN_ID }, error: null },
+        (arg) => selects.push(arg)
+      ),
+    })
+    await getWorkspacePlanId(CTX, client)
+    expect(selects).toEqual(["plan_id"])
+  })
+
+  it("is not_found when the workspace has no plan_id at all", async () => {
+    const client = fakeClient({
+      workspaces: queryResult({ data: { plan_id: null }, error: null }),
+    })
+    const result = await getWorkspacePlanId(CTX, client)
+    expect(!result.ok && result.error.code).toBe("not_found")
+  })
+
+  it("is dependency_unavailable on a query error", async () => {
+    const client = fakeClient({
+      workspaces: queryResult({ data: null, error: { message: "timeout" } }),
+    })
+    const result = await getWorkspacePlanId(CTX, client)
     expect(!result.ok && result.error.code).toBe("dependency_unavailable")
   })
 })

@@ -124,7 +124,7 @@ function DesignSmoke() {
       bottomNav={
         <BottomNavFromConfig
           config={schoolTeacherNav}
-          filter={{ role: "teacher", isOwner: false, hasModule: () => true }}
+          filter={{ role: "teacher", hasModule: () => true }}
           pathname="/design"
           renderLink={renderLink}
         />
