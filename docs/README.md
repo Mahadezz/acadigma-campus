@@ -80,7 +80,7 @@ A spec describes _what_; `ARCHITECTURE.md` fixes _how_. Each spec breaks into Pa
 | [`F-ID-09-audit-viewer.md`](features/01-identity/F-ID-09-audit-viewer.md)                             | Reading the append-only audit trail: who changed what, when, and under which correlation id.                     |
 | [`F-ID-10-basic-mode.md`](features/01-identity/F-ID-10-basic-mode.md)                                 | Basic mode: a per-user, class-by-class simple layout with bigger text and targets, plain confirmations and help. |
 | [`F-ID-11-offline.md`](features/01-identity/F-ID-11-offline.md)                                       | Offline across the app: read cache, one outbox replaying the same server actions, conflicts and purges.          |
-| [`README.md`](features/01-identity/README.md)                                                         | Area overview: how the nine identity features fit together.                                                      |
+| [`README.md`](features/01-identity/README.md)                                                         | Area overview: how the eleven identity features fit together.                                                    |
 
 ### 02-academics/ — the school's core records
 

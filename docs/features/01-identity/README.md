@@ -1,6 +1,6 @@
 # Area 01 — Identity, tenancy, onboarding, personal workspace, notifications, platform console
 
-**Owner area:** auth + platform · **Features:** 11 · **Build parts:** **63** (54 + F-ID-10's 4 + F-ID-11's 5) (each ≤ ~2 days, each with a demo criterion)
+**Owner area:** auth + platform · **Features:** 11 · **Build parts:** **64** (54 + F-ID-10's 4 + F-ID-11's 6) (each ≤ ~2 days, each with a demo criterion)
 **Binding inputs:** [`docs/product/PRODUCT-DECISIONS.md`](../../product/PRODUCT-DECISIONS.md) §1, §5.5, §6.5, §6.8 · [`docs/architecture/ARCHITECTURE.md`](../../architecture/ARCHITECTURE.md) §2, §3, §4, §5, §6 · [`docs/reference/base44-inventory/01-auth-tenancy-personal.md`](../../reference/base44-inventory/01-auth-tenancy-personal.md) · [`docs/reference/base44-security-review.md`](../../reference/base44-security-review.md)
 **Table names and columns:** proposed in each spec's §3 and marked _"proposed; DATA-MODEL.md wins"_ — [`docs/architecture/DATA-MODEL.md`](../../architecture/DATA-MODEL.md) is authoritative.
 
@@ -43,7 +43,7 @@ Each is an acceptance criterion with a pgTAP or Playwright test behind it.
 | [F-ID-08](./F-ID-08-platform-console-shell.md)     | Platform console shell                         | 6     | 01, 03, 07     | `is_platform_admin`, `/platform` layout, schools list + inspector, impersonation-free support grants, feature flags, plans entry, broadcasts                                              |
 | [F-ID-09](./F-ID-09-audit-viewer.md)               | Audit viewer                                   | 4     | 01, 03, 08     | Append-only `audit_events` viewer for owners and platform staff, filters, diff, correlation, export                                                                                       |
 | [F-ID-10](./F-ID-10-basic-mode.md)                 | Basic mode                                     | 4     | 02, 03         | Per-user simple layout for older teachers: class-by-class home and class hubs, 56 px targets, text size (both modes), plain confirmations, help + call school office, voice hints (D-403) |
-| [F-ID-11](./F-ID-11-offline.md)                    | Offline (platform-wide)                        | 5     | 01, 03         | Read cache + one IndexedDB outbox replaying through the same server actions; everything except generating/sending works offline; conflicts, purges, shared phones (D-71)                  |
+| [F-ID-11](./F-ID-11-offline.md)                    | Offline (platform-wide)                        | 6     | 01, 03         | Read cache + one IndexedDB outbox replaying through the same server actions; everything except generating/sending works offline; conflicts, purges, shared phones (D-71)                  |
 
 ## 3. Dependency graph
 
