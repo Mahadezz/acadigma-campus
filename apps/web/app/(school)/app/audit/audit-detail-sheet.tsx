@@ -3,12 +3,14 @@
 import { useState } from "react"
 
 import type { AuditEventDto } from "@acadigma/contracts/audit"
-import { renderAuditSentence } from "@acadigma/domain/audit"
+import { GENERIC_TABLE_NOUNS } from "@acadigma/domain/audit"
 import { Button } from "@acadigma/ui/components/button"
+import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 
 import { CorrelationList } from "./correlation-list"
 import { DiffView } from "./diff-view"
+import { AuditSentence } from "./sentence"
 import { SeverityChip } from "./severity-chip"
 
 /**
@@ -33,11 +35,6 @@ export function AuditDetailSheet({
 
   if (!event) return null
 
-  const sentence = renderAuditSentence(event.action, language, {
-    actor: event.actorName,
-    subject: event.subjectName,
-  })
-
   return (
     <FormSheet
       open={Boolean(event)}
@@ -45,7 +42,7 @@ export function AuditDetailSheet({
         if (!open) setShowCorrelation(false)
         onOpenChange(open)
       }}
-      title={sentence}
+      title={<AuditSentence event={event} language={language} />}
       description={
         <span className="flex items-center gap-2">
           <SeverityChip severity={event.severity} />
@@ -71,7 +68,11 @@ export function AuditDetailSheet({
             {language === "bn" ? "কার্যকারী" : "Actor"}
           </h3>
           <p className="text-sm">
-            {event.actorName ?? (language === "bn" ? "সিস্টেম" : "System")}
+            <BnEnText
+              text={
+                event.actorName ?? (language === "bn" ? "সিস্টেম" : "System")
+              }
+            />
             {event.userAgentFamily ? ` · ${event.userAgentFamily}` : ""}
           </p>
         </section>
@@ -81,7 +82,14 @@ export function AuditDetailSheet({
             <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
               {language === "bn" ? "রেকর্ড" : "Record"}
             </h3>
-            <p className="text-sm break-all">
+            {event.tableName && GENERIC_TABLE_NOUNS[event.tableName] ? (
+              <p className="text-sm first-letter:uppercase">
+                {GENERIC_TABLE_NOUNS[event.tableName]?.[language]}
+              </p>
+            ) : null}
+            {/* F-ID-09 §4.1: the raw table and row id stay here, as a
+                muted technical reference, for anyone who needs them. */}
+            <p className="text-muted-foreground font-mono text-xs break-all">
               {event.tableName ?? "—"} {event.rowId ? `· ${event.rowId}` : ""}
             </p>
           </section>

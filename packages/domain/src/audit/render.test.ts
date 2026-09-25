@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { AUDIT_ACTION_CATALOG } from "./catalog"
+import {
+  AUDIT_ACTION_CATALOG,
+  FULL_AUDIT_ACTION_CATALOG,
+  GENERIC_AUDIT_TABLES,
+} from "./catalog"
 import { renderAuditSentence } from "./render"
 
 describe("renderAuditSentence", () => {
@@ -67,10 +71,59 @@ describe("renderAuditSentence", () => {
     ).toBe("Nusrat Jahan changed Rahim Uddin's role from Teacher to Admin")
   })
 
-  it("falls back to a generic sentence for an unrecognised action", () => {
-    expect(renderAuditSentence("mystery.happened", "en")).toBe(
-      "Someone performed an unrecognised action (mystery.happened)"
+  it("falls back to a readable sentence for an unrecognised action, never the raw code", () => {
+    expect(
+      renderAuditSentence("mystery.happened", "en", { actor: "Nusrat" })
+    ).toBe("Nusrat made a change")
+    expect(renderAuditSentence("mystery.happened", "bn")).toBe(
+      "কেউ একজন একটি পরিবর্তন করেছেন"
     )
+  })
+
+  it("names what a generic row changed, not the table (D-402)", () => {
+    expect(
+      renderAuditSentence("holidays.insert", "en", { actor: "Nusrat" })
+    ).toBe("Nusrat added a holiday")
+    expect(
+      renderAuditSentence("school_profiles.update", "en", { actor: "Nusrat" })
+    ).toBe("Nusrat updated a school setting")
+    expect(
+      renderAuditSentence("school_profiles.update", "bn", {
+        actor: "নুসরাত",
+      })
+    ).toBe("নুসরাত স্কুলের একটি সেটিং হালনাগাদ করেছেন")
+  })
+
+  it("drops a parenthetical whose value is missing instead of showing ()", () => {
+    expect(
+      renderAuditSentence("profile.updated", "en", { actor: "Nusrat" })
+    ).toBe("Nusrat updated their profile")
+    expect(
+      renderAuditSentence("profile.updated", "en", {
+        actor: "Nusrat",
+        fields: "name",
+      })
+    ).toBe("Nusrat updated their profile (name)")
+  })
+
+  it("uses a plain stand-in for a missing subject or workspace", () => {
+    expect(
+      renderAuditSentence("member.removed", "en", { actor: "Nusrat" })
+    ).toBe("Nusrat removed a member from the school")
+  })
+
+  it("never renders a raw table name, an empty () or a double space", () => {
+    for (const entry of FULL_AUDIT_ACTION_CATALOG) {
+      for (const language of ["en", "bn"] as const) {
+        const sentence = renderAuditSentence(entry.action, language, {
+          actor: "A",
+        })
+        expect(sentence).not.toMatch(/\(\s*\)|\s{2}|_|\{/)
+        for (const table of GENERIC_AUDIT_TABLES) {
+          expect(sentence).not.toContain(table.replace(/_/g, " ") + " record")
+        }
+      }
+    }
   })
 
   it("falls back to 'Someone' / 'কেউ একজন' when no actor is supplied", () => {
