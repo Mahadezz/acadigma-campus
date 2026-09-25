@@ -228,6 +228,8 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "billing.manage": [...rolesWithAction("billing.manage")],
     "settings.manage": [...rolesWithAction("settings.manage")],
     "policies.manage": [...rolesWithAction("policies.manage")],
+    // F-AC-06 §2 — asserted explicitly, not derived.
+    "settings.grade_scale.write": ["owner", "admin"],
     "reports.read": [...rolesWithAction("reports.read")],
     "messages.send": [...rolesWithAction("messages.send")],
     "ai.use": [...rolesWithAction("ai.use")],
