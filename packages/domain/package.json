@@ -10,6 +10,7 @@
     "./ai/redact": "./src/ai/redact.ts",
     "./audit": "./src/audit/index.ts",
     "./auth": "./src/auth/index.ts",
+    "./grading": "./src/grading/index.ts",
     "./nav": "./src/nav/index.ts",
     "./onboarding": "./src/onboarding/index.ts",
     "./permissions": "./src/permissions.ts",
