@@ -97,7 +97,9 @@ values
   ('53000000-0000-4000-c000-000000000031', '53000000-0000-4000-b000-000000000001', 'Mathematics 53'),
   ('53000000-0000-4000-c000-000000000032', '53000000-0000-4000-b000-000000000001', 'English 53');
 
+select tests.login('53000000-0000-4000-a000-000000000001');
 select public.seed_bd_grade_scale('53000000-0000-4000-b000-000000000001');
+select tests.logout();
 
 -- ---------------------------------------------------------------------
 -- A. create_exam (owner A)
@@ -152,7 +154,7 @@ select throws_ok(
   '42501', 'GRADING_SNAPSHOT_IMMUTABLE', 'the owner cannot rewrite the snapshot');
 
 select lives_ok(
-  format($$select public.save_grade_scale(
+  format($$select public.save_grade_scale('53000000-0000-4000-b000-000000000001',
     (select id from public.grade_scales
       where workspace_id = '53000000-0000-4000-b000-000000000001' and code = 'BD_GPA5'),
     'Pass / fail', '[

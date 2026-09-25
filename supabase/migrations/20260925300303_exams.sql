@@ -1,7 +1,7 @@
 -- =====================================================================
 -- F-AC-06 Part 2 (demo cut) — exams and papers (D-303)
 -- ---------------------------------------------------------------------
--- Builds on grade_scales (20260925300202, D-302) and sections/subjects
+-- Builds on grade_scales (20260925300302, D-302) and sections/subjects
 -- (20260925300203, D-102). Demo-cut shape, recorded in D-303:
 --   - No `terms` table exists yet, so an exam has no term_id; `exam_type`
 --     (midterm, term_final, annual, ...) says which part of the year it is.
