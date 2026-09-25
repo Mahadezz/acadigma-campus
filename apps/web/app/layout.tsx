@@ -1,5 +1,7 @@
 import { SkipToContent } from "@acadigma/ui/primitives/app-shell"
 
+import { getLocale } from "@/lib/i18n"
+
 import { hindSiliguri, inter, jetbrainsMono } from "./fonts"
 import { Providers } from "./providers"
 
@@ -37,14 +39,22 @@ export const viewport: Viewport = {
   ],
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // F-ID-02 §5 "Language resolution order" (demo cut, this Part): the same
+  // `acadigma_locale` cookie the auth screens already read (`lib/i18n.ts`)
+  // decides `<html lang>` for the whole app, signed in or not — this is what
+  // makes `:lang(bn)` in tokens.css (D-68: Bengali font, zero letter-spacing)
+  // apply from first paint instead of only inside components that set their
+  // own `lang`.
+  const locale = await getLocale()
+
   return (
     // suppressHydrationWarning is required by next-themes, which sets the theme
     // class on <html> from an inline script before React hydrates.
     <html
-      lang="en"
+      lang={locale}
       className={`${inter.variable} ${hindSiliguri.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >

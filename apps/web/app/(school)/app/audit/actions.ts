@@ -21,6 +21,7 @@ import {
 } from "@acadigma/db/repositories"
 import { can } from "@acadigma/domain/permissions"
 
+import { getLocale, type Locale } from "@/lib/i18n"
 import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
@@ -100,17 +101,15 @@ export async function getRecordHistory(
   return getRecordHistoryRepo(ctx, client, parsed.data)
 }
 
-/** The signed-in user's reading language (`profiles.locale`), for the sentence
- * renderer (F-ID-09 §5.2, acceptance criterion 18). Defaults to English on any
- * failure — a viewer that renders in the wrong language is recoverable; one that
- * errors out is not. */
-export async function getReaderLanguage(): Promise<"en" | "bn"> {
-  const ctx = await requireWorkspace()
-  const client = await createClient()
-  const { data } = await client
-    .from("profiles")
-    .select("locale")
-    .eq("id", ctx.userId)
-    .maybeSingle()
-  return data && (data as { locale?: string })["locale"] === "bn" ? "bn" : "en"
+/** The signed-in user's reading language, for the sentence renderer (F-ID-09
+ * §5.2, acceptance criterion 18). D-401: delegates to `getLocale()` (the one
+ * app-wide resolver: `acadigma_locale` cookie, then `profiles.locale`, then
+ * `en`) instead of reading `profiles.locale` directly — this used to ignore
+ * the cookie entirely, so switching language from the `UserMenu` left this
+ * page on whatever `profiles.locale` last was. `requireWorkspace()` keeps
+ * this page's existing membership gate; it plays no part in the language
+ * choice. */
+export async function getReaderLanguage(): Promise<Locale> {
+  await requireWorkspace()
+  return getLocale()
 }

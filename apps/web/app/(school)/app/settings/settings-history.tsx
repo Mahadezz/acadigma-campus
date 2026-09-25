@@ -1,6 +1,7 @@
 import { listAuditEvents, type WorkspaceContext } from "@acadigma/db"
 import { can } from "@acadigma/domain"
 
+import { toIntlLocale, type Locale } from "@/lib/locale"
 import { createClient } from "@/lib/supabase/server"
 
 import { historyLine } from "./history-line"
@@ -27,7 +28,7 @@ export async function SettingsHistory({
   ctx: WorkspaceContext
   fieldLabels: Record<string, string>
   t: HistoryMessages
-  locale: string
+  locale: Locale
 }) {
   if (!can(ctx.role, "audit.read")) return null
 
@@ -38,15 +39,15 @@ export async function SettingsHistory({
     limit: 5,
   })
   const events = result.ok ? result.data.items : []
-  const dateFormat = new Intl.DateTimeFormat(
-    locale === "bn" ? "bn-BD" : "en-GB",
-    {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      timeZone: "Asia/Dhaka",
-    }
-  )
+  // `toIntlLocale` pins `-u-nu-latn` on bn (DESIGN-SYSTEM §1.6): Bengali
+  // month names, Western digits. The bare bn-BD tag renders Bengali digits,
+  // which this trail (and every other UI date) never should by default.
+  const dateFormat = new Intl.DateTimeFormat(toIntlLocale(locale), {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Dhaka",
+  })
 
   return (
     <section aria-labelledby="settings-history" className="space-y-2 pt-4">
