@@ -22,14 +22,14 @@ describe("updateSchoolProfileInputSchema", () => {
     expect(
       updateSchoolProfileInputSchema.safeParse({
         version,
-        profile: { eiin: null, motto: null },
+        profile: { legal_name: null, motto: null },
       }).success
     ).toBe(true)
   })
 
-  it("rejects a 5-digit EIIN, an unknown board and a blank city", () => {
+  it("rejects any EIIN (read-only, D-100), an unknown board and a blank city", () => {
     for (const profile of [
-      { eiin: "12345" },
+      { eiin: "123456" }, // D-100: EIIN is read-only in Settings
       { board: "BD National" },
       { city: "  " },
     ]) {

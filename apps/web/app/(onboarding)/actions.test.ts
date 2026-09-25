@@ -13,11 +13,16 @@ import { describe, expect, it, vi } from "vitest"
  * failed one, since the thing being capped is enumeration volume.
  */
 
+const mockCookieSet = vi.fn()
+
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
     get: () => undefined,
+    set: mockCookieSet,
   })),
 }))
+
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
 const mockGetUser = vi.fn()
 const mockRpc = vi.fn()
@@ -37,7 +42,8 @@ vi.mock("@/lib/throttle", () => ({
   throttleRecordFailure: mockThrottleRecordFailure,
 }))
 
-const { checkEiinAvailability } = await import("./actions")
+const { checkEiinAvailability, createSchoolWorkspace } =
+  await import("./actions")
 
 const FAKE_USER = { id: "11111111-1111-1111-1111-111111111111" }
 
@@ -105,5 +111,93 @@ describe("checkEiinAvailability", () => {
       expect.stringContaining("eiin-check:")
     )
     expect(callOrder).toEqual(["throttleRecordFailure", "rpc"])
+  })
+})
+
+describe("createSchoolWorkspace", () => {
+  const input = {
+    name: "Ideal School & College",
+    board: "dhaka",
+    medium: "bangla",
+    timezone: "Asia/Dhaka",
+    working_days: [6, 7, 1, 2, 3, 4],
+    academic_year: {
+      name: "2026",
+      starts_on: "2026-01-01",
+      ends_on: "2026-12-31",
+    },
+    grade_levels: [
+      {
+        name: "Class 6",
+        name_bn: "ষষ্ঠ শ্রেণি",
+        level_number: 6,
+        stage: "secondary",
+      },
+    ],
+    idempotency_key: "0b6f4a8e-3c1d-4e2a-9f7b-5d8c6e4a2b10",
+  }
+  const workspaceId = "5f0c2a1e-8b7d-4c3a-9e6f-1a2b3c4d5e6f"
+
+  it("creates the school, makes it the active workspace and lands on /app", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: FAKE_USER } })
+    mockRpc.mockResolvedValue({
+      data: { workspace_id: workspaceId, name: input.name, replayed: false },
+      error: null,
+    })
+    mockCookieSet.mockClear()
+
+    const result = await createSchoolWorkspace(input)
+
+    expect(result).toEqual({
+      ok: true,
+      data: { workspaceId, landingRoute: "/app" },
+    })
+    expect(mockRpc).toHaveBeenCalledWith("create_school_workspace", {
+      p_input: input,
+    })
+    expect(mockCookieSet).toHaveBeenCalledWith(
+      "acadigma_workspace",
+      workspaceId,
+      expect.objectContaining({ httpOnly: true })
+    )
+  })
+
+  it("refuses an invalid academic year before reaching the database", async () => {
+    mockRpc.mockClear()
+    const result = await createSchoolWorkspace({
+      ...input,
+      academic_year: {
+        name: "2026",
+        starts_on: "2026-12-31",
+        ends_on: "2026-01-01",
+      },
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("validation_failed")
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it("refuses a payload without grade levels", async () => {
+    const result = await createSchoolWorkspace({ ...input, grade_levels: [] })
+    expect(result.ok).toBe(false)
+  })
+
+  it("requires a signed-in user", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    mockRpc.mockClear()
+    const result = await createSchoolWorkspace(input)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("unauthenticated")
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it("does not set the cookie when the database refuses (EIIN_TAKEN)", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: FAKE_USER } })
+    mockRpc.mockResolvedValue({ data: null, error: { message: "EIIN_TAKEN" } })
+    mockCookieSet.mockClear()
+    const result = await createSchoolWorkspace(input)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("conflict")
+    expect(mockCookieSet).not.toHaveBeenCalled()
   })
 })

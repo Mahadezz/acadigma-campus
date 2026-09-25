@@ -3,17 +3,17 @@ import { expect, test } from "@playwright/test"
 import { expectNoA11yViolations } from "../axe"
 
 /**
- * F-ID-05 Part 3 §8: "e2e resume-after-reload at 360×800." Runs at both
- * configured viewports (`playwright.config.ts`'s two projects), per CLAUDE.md
- * rule 12. Needs a seeded, verified Supabase account with zero school
- * memberships — the same fixture `apps/web/e2e/onboarding.spec.ts` already
- * gates on (OQ-27), so this file carries the identical skip guard.
+ * F-ID-05 Parts 3-4 §8: the whole create-school wizard, at both configured
+ * viewports (`playwright.config.ts`), with axe on every step.
  *
- * Demo (§8 Part 3): "fill two steps on a phone, kill the tab, reopen — the
- * draft is there." Reloading stands in for "kill the tab, reopen": both
- * read the same server-side `onboarding_progress` row on next render, so a
- * hard reload exercises exactly the persistence path a killed-and-reopened
- * tab would.
+ * Demo (§8 Part 4): create "Ideal School & College" on a phone with
+ * Class 6–10 and land in `/app`. Along the way it proves AC5 (a reload at
+ * step 3 resumes there with the draft intact) and AC15 (Sat–Thu preselected).
+ *
+ * Needs a seeded, verified account with zero school memberships (OQ-27), so
+ * it carries the same skip guard as the other live journeys. It creates a
+ * real school, so each run needs a fresh account: the database allows three
+ * schools per user per day (AC16) and this spec runs once per viewport.
  */
 test.skip(
   !process.env.E2E_LIVE_SUPABASE,
@@ -27,84 +27,71 @@ test.beforeEach(() => {
   )
 })
 
-test("create-school wizard: steps 1-2 persist across a reload, then stops at the Part 3 boundary", async ({
+test("create-school wizard: identity → where and when → classes → review → /app", async ({
   page,
 }, testInfo) => {
-  const email = process.env.E2E_TEST_USER_EMAIL ?? ""
-  const password = process.env.E2E_TEST_USER_PASSWORD ?? ""
-
   await page.goto("/login")
-  await page.getByLabel("Email").fill(email)
-  await page.getByLabel("Password").fill(password)
+  await page.getByLabel("Email").fill(process.env.E2E_TEST_USER_EMAIL ?? "")
+  await page
+    .getByLabel("Password")
+    .fill(process.env.E2E_TEST_USER_PASSWORD ?? "")
   await page.getByRole("button", { name: "Sign in" }).click()
   await expect(page).toHaveURL(/\/onboarding$/)
 
   await page.getByRole("link", { name: /create a school/i }).click()
   await expect(page).toHaveURL(/\/onboarding\/create-school$/)
+
+  // --- Step 1: Identity -----------------------------------------------------
   await expect(
     page.getByRole("heading", { name: /tell us about your school/i })
   ).toBeVisible()
-
   await expectNoA11yViolations(page, testInfo)
-
-  // --- Step 1: Identity ---------------------------------------------------
   await page.getByLabel("School name").fill("Ideal School & College")
-  // EIIN left blank on purpose — optional (§4.3), and blank must not block
-  // Continue (the "" vs undefined normalisation this Part's wizard.tsx docs).
+  // EIIN left blank: optional (§4.3), and every run would otherwise collide.
   await page.getByRole("radio", { name: "Bangla" }).click()
   await page.getByLabel("Education board").click()
   await page.getByRole("option", { name: "Dhaka" }).click()
   await page.getByRole("button", { name: "Continue" }).click()
 
-  // --- Step 2: Where and when ----------------------------------------------
+  // --- Step 2: Where and when -------------------------------------------------
   await expect(
     page.getByRole("heading", { name: /where and when/i })
   ).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
-
-  // Sat-Thu is preselected by default (§5); Friday stays off. Toggle Sunday
-  // off to prove a real change round-trips through the reload below.
-  // PR #34 follow-up: the working-days picker is now a shadcn `ToggleGroup`
-  // (`type="multiple"`, Radix role="toolbar") instead of the hand-rolled
-  // `DayPickerRow` — each day is a plain button with `aria-pressed`, not a
-  // `role="checkbox"` chip.
   await expect(page.getByRole("button", { name: "Saturday" })).toHaveAttribute(
     "aria-pressed",
     "true"
   )
-  await page.getByRole("button", { name: "Sunday" }).click()
-
-  // --- Reload: the draft must still be there (§8 Part 3 demo) -------------
-  await page.reload()
-  await expect(
-    page.getByRole("heading", { name: /where and when/i })
-  ).toBeVisible()
-  await expect(page.getByRole("button", { name: "Sunday" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Friday" })).toHaveAttribute(
     "aria-pressed",
     "false"
   )
-
-  // Going back to step 1 shows the name/board/medium filled in earlier —
-  // proving step 1's data survived the reload too, not just step 2's.
-  await page.getByRole("button", { name: "Back" }).click()
-  await expect(page.getByLabel("School name")).toHaveValue(
-    "Ideal School & College"
-  )
   await page.getByRole("button", { name: "Continue" }).click()
 
-  // --- Finish step 2: Part 3's boundary (Part 4 owns steps 3-5) -----------
+  // --- Step 3: Classes, then a reload resumes here (AC5) ----------------------
+  const classesHeading = page.getByRole("heading", {
+    name: /which classes does your school have/i,
+  })
+  await expect(classesHeading).toBeVisible()
+  await page.reload()
+  await expect(classesHeading).toBeVisible()
+
   await page.getByRole("button", { name: "Continue" }).click()
+  await expect(page.getByText("Pick at least one class.")).toBeVisible()
+
+  await page.getByRole("button", { name: "Class 6–10" }).click()
+  await expect(page.getByText("5 classes selected")).toBeVisible()
+  await expectNoA11yViolations(page, testInfo)
+  await page.getByRole("button", { name: "Continue" }).click()
+
+  // --- Step 4: Review and create ------------------------------------------------
   await expect(
-    page.getByRole("heading", { name: /more on the way/i })
+    page.getByRole("heading", { name: /review and create/i })
   ).toBeVisible()
+  await expect(page.getByText("Ideal School & College")).toBeVisible()
+  await expect(page.getByText(/day Pro trial starts now/)).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 
-  // The stopping screen also survives a reload.
-  await page.reload()
-  await expect(
-    page.getByRole("heading", { name: /more on the way/i })
-  ).toBeVisible()
-
-  await page.getByRole("link", { name: /back to onboarding/i }).click()
-  await expect(page).toHaveURL(/\/onboarding$/)
+  await page.getByRole("button", { name: "Create school" }).click()
+  await expect(page).toHaveURL(/\/app(\/|$)/, { timeout: 30_000 })
 })

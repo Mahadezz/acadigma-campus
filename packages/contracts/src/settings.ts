@@ -168,10 +168,19 @@ export type SchoolProfileFields = z.infer<typeof schoolProfileFieldsSchema>
 const versionSchema = z.string().datetime({ offset: true })
 
 /** Only the changed fields travel; `.strict()` rejects unknown columns. */
+/** What Settings may change. `eiin` is read-only here (D-100): it is set
+ * at school creation, and a client UPDATE would be an unthrottled "is
+ * this EIIN registered?" oracle through the unique index. */
+export const schoolProfilePatchSchema = schoolProfileFieldsSchema
+  .omit({ eiin: true })
+  .partial()
+  .strict()
+export type SchoolProfilePatch = z.infer<typeof schoolProfilePatchSchema>
+
 export const updateSchoolProfileInputSchema = z
   .object({
     version: versionSchema,
-    profile: schoolProfileFieldsSchema.partial().strict(),
+    profile: schoolProfilePatchSchema,
   })
   .strict()
 export type UpdateSchoolProfileInput = z.infer<

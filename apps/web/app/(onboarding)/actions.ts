@@ -1,5 +1,8 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
+
 import {
   apiError,
   apiErrorFromZod,
@@ -7,35 +10,40 @@ import {
   ok,
   checkEiinAvailabilityInputSchema,
   completeOnboardingInputSchema,
+  createSchoolWorkspaceInputSchema,
   saveOnboardingDraftInputSchema,
   type ApiError,
   type CheckEiinAvailabilityOutput,
   type CompleteOnboardingOutput,
+  type CreateSchoolWorkspaceOutput,
   type GetOnboardingStateOutput,
   type Result,
   type SaveOnboardingDraftOutput,
 } from "@acadigma/contracts"
 import {
   checkEiinAvailability as checkEiinAvailabilityRow,
+  createSchoolWorkspace as createSchoolWorkspaceRow,
   getOnboardingProgress,
   markOnboardingComplete,
   saveOnboardingDraft as saveOnboardingDraftRow,
 } from "@acadigma/db"
+import { validateAcademicYearRange } from "@acadigma/domain/academic"
 import { resolveOnboardingExitRoute } from "@acadigma/domain/onboarding"
 
 import { getMessages } from "@/lib/i18n"
 import { throttleKey } from "@/lib/request-context"
 import { createClient } from "@/lib/supabase/server"
 import { throttleRecordFailure, throttleStatus } from "@/lib/throttle"
+import { WORKSPACE_COOKIE } from "@/lib/workspace"
 
 import { listMyWorkspaces } from "../(shared)/workspace/actions"
 
 /**
  * F-ID-05 §7 "Server contracts" — Part 2's `getOnboardingState`,
  * `saveOnboardingDraft`, `completeOnboarding`, plus Part 3's
- * `checkEiinAvailability` (§4.3 step 1, AC6). `createSchoolWorkspace`,
- * `getFirstRunChecklist`, `dismissFirstRunChecklist` and the join-code
- * actions belong to Part 4-5 and are not modelled here.
+ * `checkEiinAvailability` (§4.3 step 1, AC6) and Part 4's
+ * `createSchoolWorkspace`. `getFirstRunChecklist`,
+ * `dismissFirstRunChecklist` and the join-code actions belong to Part 5.
  *
  * Five-step shape (CLAUDE.md rule 5): parse -> resolve context ->
  * policy -> domain + repository -> return the Result. "Resolve context"
@@ -154,4 +162,49 @@ export async function checkEiinAvailability(
   await throttleRecordFailure(supabase, "eiinCheck", key)
 
   return checkEiinAvailabilityRow(supabase, parsed.data.eiin)
+}
+
+/**
+ * F-ID-05 Part 4 §4.3 "On submit" / §7. Parse → signed in → the domain's
+ * academic-year rule → `public.create_school_workspace` (one transaction;
+ * it re-checks everything, since a direct RPC call skips this action) →
+ * make the new school the active workspace, exactly as `switchWorkspace`
+ * does, so `/app` opens on it.
+ */
+export async function createSchoolWorkspace(
+  raw: unknown
+): Promise<Result<CreateSchoolWorkspaceOutput, ApiError>> {
+  const parsed = createSchoolWorkspaceInputSchema.safeParse(raw)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+
+  if (!validateAcademicYearRange(parsed.data.academic_year).ok) {
+    return err(
+      apiError("validation_failed", "Check the academic year dates.", {
+        fieldErrors: { academic_year: ["INVALID_ACADEMIC_YEAR"] },
+      })
+    )
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return err(apiError("unauthenticated", "Please sign in to continue."))
+  }
+
+  const created = await createSchoolWorkspaceRow(supabase, parsed.data)
+  if (!created.ok) return created
+
+  const cookieStore = await cookies()
+  cookieStore.set(WORKSPACE_COOKIE, created.data.workspaceId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  })
+  revalidatePath("/", "layout")
+
+  return ok({ workspaceId: created.data.workspaceId, landingRoute: "/app" })
 }

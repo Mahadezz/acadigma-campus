@@ -1,8 +1,11 @@
+import { z } from "zod"
+
 import {
   apiError,
   err,
   ok,
   type ApiError,
+  type CreateSchoolWorkspaceInput,
   type Result,
 } from "@acadigma/contracts"
 
@@ -40,4 +43,89 @@ export async function checkEiinAvailability(
   }
 
   return ok({ available: Boolean(data) })
+}
+
+/** Codes `public.create_school_workspace` raises by name (its exception
+ * message), mapped to the envelope. Anything else is a dependency failure. */
+const CREATE_SCHOOL_ERRORS: Record<string, ApiError> = {
+  EIIN_TAKEN: apiError(
+    "conflict",
+    "This EIIN is already registered to another school.",
+    { fieldErrors: { eiin: ["EIIN_TAKEN"] } }
+  ),
+  RATE_LIMITED: apiError(
+    "rate_limited",
+    "You've created three schools today. Try again tomorrow or contact support."
+  ),
+  WORKSPACE_LIMIT_REACHED: apiError(
+    "forbidden",
+    "You've reached the limit of workspaces for one account."
+  ),
+  ACCOUNT_SUSPENDED: apiError("forbidden", "This account is suspended."),
+  INVALID_TIMEZONE: apiError("validation_failed", "Pick a valid timezone.", {
+    fieldErrors: { timezone: ["INVALID_TIMEZONE"] },
+  }),
+  INVALID_ACADEMIC_YEAR: apiError(
+    "validation_failed",
+    "Check the academic year dates.",
+    { fieldErrors: { academic_year: ["INVALID_ACADEMIC_YEAR"] } }
+  ),
+  VALIDATION: apiError(
+    "validation_failed",
+    "Some of the details you entered are not valid."
+  ),
+  // Another unique index than the EIIN's (e.g. a slug collision): a retry
+  // is the right answer.
+  CONFLICT: apiError(
+    "dependency_unavailable",
+    "Could not create the school right now. Your details are saved — try again."
+  ),
+  IDEMPOTENCY_KEY_REUSED: apiError(
+    "conflict",
+    "This request was already used for different details. Reload and try again."
+  ),
+}
+
+/** Success, or — for failures after the attempt is counted in the
+ * `createSchool` throttle bucket — `{ error: CODE }` (returned, not raised,
+ * so the count is not rolled back; D-100). */
+const createSchoolRpcSchema = z.union([
+  z.object({ workspace_id: z.string().uuid(), replayed: z.boolean() }),
+  z.object({ error: z.string() }),
+])
+
+/**
+ * F-ID-05 Part 4 §7 `createSchoolWorkspace`: one call to
+ * `public.create_school_workspace` (SECURITY DEFINER,
+ * `20260925300101_create_school_workspace.sql`), which does every write in
+ * one transaction. No `WorkspaceContext` for the same reason as above — the
+ * workspace does not exist until this returns.
+ */
+export async function createSchoolWorkspace(
+  client: AcadigmaSupabaseClient,
+  input: CreateSchoolWorkspaceInput
+): Promise<Result<{ workspaceId: string; replayed: boolean }, ApiError>> {
+  const { data, error } = await client.rpc("create_school_workspace", {
+    p_input: input,
+  })
+
+  const row = error ? null : createSchoolRpcSchema.safeParse(data)
+  const code =
+    error?.message ??
+    (row?.success && "error" in row.data ? row.data.error : undefined)
+  if (code !== undefined) {
+    return err(
+      (Object.hasOwn(CREATE_SCHOOL_ERRORS, code)
+        ? CREATE_SCHOOL_ERRORS[code]
+        : undefined) ??
+        apiError(
+          "dependency_unavailable",
+          "Could not create the school right now. Your details are saved — try again."
+        )
+    )
+  }
+  if (!row?.success || !("workspace_id" in row.data)) {
+    return err(apiError("internal", "Could not create the school."))
+  }
+  return ok({ workspaceId: row.data.workspace_id, replayed: row.data.replayed })
 }

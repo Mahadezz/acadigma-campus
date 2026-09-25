@@ -240,32 +240,20 @@ select throws_ok(
   $$insert into public.workspaces (type, name, slug, owner_id, created_by)
     values ('personal', 'Sneaky Personal', 'sneaky-personal-f1050001',
             'f1050001-0000-0000-0000-000000000001', 'f1050001-0000-0000-0000-000000000001')$$,
-  '42501', 'new row violates row-level security policy for table "workspaces"',
-  'an authenticated client cannot insert a personal workspace directly — RLS requires type=''school''');
+  '42501', 'permission denied for table workspaces',
+  'an authenticated client cannot insert a personal workspace directly (D-100: no client INSERT on workspaces at all)');
 
 -- =====================================================================
--- 7. the one legitimate client insert path — a school workspace — still
---    PASSES THE RLS POLICY, unaffected by the tightened WITH CHECK, and (as
---    of D-59, 20260925000200_billing_bootstrap_vs_workspace_guard.sql) now
---    succeeds END TO END, not just past the policy.
---
--- Originally this only asserted the insert passed the RLS policy, because a
--- separate, pre-existing bug this PR found but did not fix
--- (app.tg_workspace_billing_bootstrap()'s own nested UPDATE tripping
--- app.tg_workspaces_guard()'s app.is_privileged_context() check) made the
--- full insert fail later in the bootstrap chain — tracked as Known issue #3
--- in the test report and fixed by D-59. See
--- 16_billing_bootstrap_guard.sql for the full end-to-end proof (plan_id,
--- trial_ends_at, subscriptions, subscription_events) and the direct-UPDATE-
--- still-refused proof that the guard itself was not loosened; this test
--- keeps only the narrower "the policy itself passes a school-type insert"
--- claim it originally made.
+-- 7. D-100 (PR #37 review, HIGH): a school-type insert is refused too.
+--    public.create_school_workspace is the only way to create a school;
+--    30_create_school_workspace.sql proves that path end to end.
 -- =====================================================================
-select lives_ok(
+select throws_ok(
   $$insert into public.workspaces (type, name, slug, owner_id, created_by)
     values ('school', 'Owner One''s School', 'owner-one-school',
             'f1050001-0000-0000-0000-000000000001', 'f1050001-0000-0000-0000-000000000001')$$,
-  'a school-type insert PASSES the workspaces_insert RLS policy and now succeeds end to end (D-59 fixed the pre-existing app.tg_workspace_billing_bootstrap()/app.tg_workspaces_guard() interaction)');
+  '42501', 'permission denied for table workspaces',
+  'an authenticated client cannot insert a school workspace directly either');
 
 select tests.logout();
 

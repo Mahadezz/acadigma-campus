@@ -12,6 +12,7 @@ import {
 } from "@acadigma/contracts/identity/school"
 import {
   schoolProfileFieldsSchema,
+  schoolProfilePatchSchema,
   schoolTypeSchema,
   type SchoolProfileFields,
 } from "@acadigma/contracts/settings"
@@ -117,7 +118,7 @@ export function ProfileForm({
       form.setError("city", { message: p.cityRequired })
       return
     }
-    const local = schoolProfileFieldsSchema.partial().safeParse(patch)
+    const local = schoolProfilePatchSchema.safeParse(patch)
     if (!local.success) {
       for (const issue of local.error.issues) {
         form.setError(issue.path[0] as FieldPath<FormValues>, {
@@ -207,6 +208,8 @@ export function ProfileForm({
                   {...field}
                   type={INPUT_TYPES[key] ?? "text"}
                   inputMode={key === "eiin" ? "numeric" : undefined}
+                  // D-100: the EIIN is set at school creation; support changes it.
+                  readOnly={key === "eiin"}
                   className="min-h-11"
                 />
               </FormControl>
