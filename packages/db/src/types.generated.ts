@@ -66,6 +66,200 @@ export type Database = {
           },
         ]
       }
+      attendance_records: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enrollment_id: string
+          id: string
+          marked_by: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["attendance_status"]
+          student_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enrollment_id: string
+          id?: string
+          marked_by?: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["attendance_status"]
+          student_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enrollment_id?: string
+          id?: string
+          marked_by?: string | null
+          session_id?: string
+          status?: Database["public"]["Enums"]["attendance_status"]
+          student_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_enrollment_fkey"
+            columns: ["enrollment_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enrollments"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_records_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_session_fkey"
+            columns: ["session_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_sessions"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_records_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "student_roster"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_records_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_sessions: {
+        Row: {
+          absent_count: number
+          academic_year_id: string
+          bulk_marked_at: string | null
+          bulk_marked_by: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          edited_after_window: boolean
+          excused_count: number
+          expected_count: number
+          half_day_count: number
+          id: string
+          late_count: number
+          present_count: number
+          section_id: string
+          status: Database["public"]["Enums"]["attendance_session_status"]
+          taken_at: string
+          taken_by: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          absent_count?: number
+          academic_year_id: string
+          bulk_marked_at?: string | null
+          bulk_marked_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          edited_after_window?: boolean
+          excused_count?: number
+          expected_count: number
+          half_day_count?: number
+          id?: string
+          late_count?: number
+          present_count?: number
+          section_id: string
+          status?: Database["public"]["Enums"]["attendance_session_status"]
+          taken_at?: string
+          taken_by?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          absent_count?: number
+          academic_year_id?: string
+          bulk_marked_at?: string | null
+          bulk_marked_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          edited_after_window?: boolean
+          excused_count?: number
+          expected_count?: number
+          half_day_count?: number
+          id?: string
+          late_count?: number
+          present_count?: number
+          section_id?: string
+          status?: Database["public"]["Enums"]["attendance_session_status"]
+          taken_at?: string
+          taken_by?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_sessions_bulk_marked_by_fkey"
+            columns: ["bulk_marked_by", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_sessions_section_fkey"
+            columns: ["section_id", "academic_year_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id", "academic_year_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_sessions_taken_by_fkey"
+            columns: ["taken_by", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_sessions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_action_catalog: {
         Row: {
           action: string
@@ -3081,6 +3275,10 @@ export type Database = {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
       }
+      attendance_day: {
+        Args: { p_date?: string; p_workspace_id: string }
+        Returns: Json
+      }
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       create_exam: { Args: { p_input: Json }; Returns: string }
       create_school_workspace: { Args: { p_input: Json }; Returns: Json }
@@ -3115,6 +3313,10 @@ export type Database = {
         Returns: undefined
       }
       pre_request: { Args: never; Returns: undefined }
+      save_attendance: {
+        Args: { p_input: Json; p_workspace_id: string }
+        Returns: Json
+      }
       save_grade_scale: {
         Args: {
           p_bands: Json
@@ -3152,6 +3354,8 @@ export type Database = {
     Enums: {
       access_mode: "normal" | "read_only"
       ai_billing_model: "shared_pool" | "individual_allocation"
+      attendance_session_status: "draft" | "submitted" | "locked"
+      attendance_status: "present" | "absent" | "late" | "excused" | "half_day"
       audit_actor_kind: "user" | "platform_staff" | "system" | "webhook"
       audit_severity: "info" | "notable" | "critical"
       billing_interval: "monthly" | "yearly"
@@ -3382,6 +3586,8 @@ export const Constants = {
     Enums: {
       access_mode: ["normal", "read_only"],
       ai_billing_model: ["shared_pool", "individual_allocation"],
+      attendance_session_status: ["draft", "submitted", "locked"],
+      attendance_status: ["present", "absent", "late", "excused", "half_day"],
       audit_actor_kind: ["user", "platform_staff", "system", "webhook"],
       audit_severity: ["info", "notable", "critical"],
       billing_interval: ["monthly", "yearly"],

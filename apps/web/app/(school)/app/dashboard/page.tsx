@@ -1,5 +1,11 @@
 import { listAuditEventsInputSchema } from "@acadigma/contracts/audit"
-import { getDashboardSummary, listAuditEvents } from "@acadigma/db/repositories"
+import {
+  getAttendanceDay,
+  getDashboardSummary,
+  listAuditEvents,
+} from "@acadigma/db/repositories"
+import { getSchoolSettings } from "@acadigma/db/repositories/settings"
+import { schoolDayRate } from "@acadigma/domain/attendance"
 import { renderAuditSentence } from "@acadigma/domain/audit"
 import {
   buildSetupChecklist,
@@ -41,7 +47,9 @@ export default async function DashboardPage() {
   const isManager = ctx.role === "owner" || ctx.role === "admin"
   const canReadAudit = can(ctx.role, "audit.read")
 
-  const [summary, audit] = await Promise.all([
+  const canReadAttendance =
+    can(ctx.role, "attendance.read") && ctx.role !== "parent"
+  const [summary, audit, day, settings] = await Promise.all([
     getDashboardSummary(ctx, client),
     canReadAudit
       ? listAuditEvents(
@@ -50,6 +58,8 @@ export default async function DashboardPage() {
           listAuditEventsInputSchema.parse({ limit: 30 })
         )
       : null,
+    canReadAttendance ? getAttendanceDay(client, ctx) : null,
+    canReadAttendance ? getSchoolSettings(client, ctx) : null,
   ])
 
   if (!summary.ok) {
@@ -86,6 +96,7 @@ export default async function DashboardPage() {
         trial: trialLabel(d, trialDaysLeft(s.trialEndsAt, s.timezone)),
         readOnly: s.accessMode === "read_only",
       }}
+      attendance={attendanceSlot(d, numberLocale, day, settings)}
       membersByRole={s.membersByRole}
       staffRecordCount={s.staffRecordCount}
       checklist={buildSetupChecklist({
@@ -119,6 +130,32 @@ export default async function DashboardPage() {
       }
     />
   )
+}
+
+/** F-AC-03 (D-104): "92.5 %" and "3 of 5 classes marked", or null until a
+ * class is marked today. */
+function attendanceSlot(
+  d: Messages["dashboard"],
+  numberLocale: string,
+  day: Awaited<ReturnType<typeof getAttendanceDay>> | null,
+  settings: Awaited<ReturnType<typeof getSchoolSettings>> | null
+): { marked: string; rate: string } | null {
+  if (!day?.ok) return null
+  const marked = day.data.sections.flatMap((s) =>
+    s.session ? [s.session] : []
+  )
+  const policy = settings?.ok
+    ? settings.data.attendancePolicy
+    : { late_counts_present: true, half_day_counts_present: true }
+  const rate = schoolDayRate(marked, policy)
+  if (rate === null) return null
+  const n = new Intl.NumberFormat(numberLocale)
+  return {
+    rate: d.attendance.rate.replace("{rate}", n.format(rate)),
+    marked: d.attendance.marked
+      .replace("{done}", n.format(marked.length))
+      .replace("{total}", n.format(day.data.sections.length)),
+  }
 }
 
 function trialLabel(

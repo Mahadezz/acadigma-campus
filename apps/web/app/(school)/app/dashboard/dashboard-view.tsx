@@ -44,6 +44,9 @@ export type DashboardViewProps = {
   checklist: ChecklistRow[]
   /** null when the caller may not read the audit trail. */
   activity: { id: string; sentence: string; when: string }[] | null
+  /** Today's register (F-AC-03, D-104): finished strings, or null while
+   * no class has been marked today. */
+  attendance?: { marked: string; rate: string } | null
 }
 
 type ChecklistRow = Omit<SetupStep, "href"> & { href: string | null }
@@ -80,7 +83,24 @@ export function DashboardView(props: DashboardViewProps) {
                 icon={<ClipboardCheckIcon />}
                 emptyTitle={t.attendance.emptyTitle}
                 emptyDescription={t.attendance.emptyDescription}
-              />
+              >
+                {props.attendance ? (
+                  <div className="space-y-1 px-6 pb-5">
+                    <p className="text-3xl font-medium tabular-nums">
+                      {props.attendance.rate}
+                    </p>
+                    <p className="text-muted-foreground text-sm tabular-nums">
+                      {props.attendance.marked}
+                    </p>
+                    <Link
+                      href="/app/attendance"
+                      className="inline-flex min-h-11 items-center text-sm font-medium underline-offset-4 hover:underline"
+                    >
+                      {t.attendance.open}
+                    </Link>
+                  </div>
+                ) : null}
+              </SlotCard>
               <SlotCard
                 title={t.results.title}
                 icon={<BookOpenCheckIcon />}
@@ -114,6 +134,7 @@ function SlotCard(props: {
   icon: React.ReactNode
   emptyTitle: string
   emptyDescription: string
+  children?: React.ReactNode
 }) {
   return (
     <Card className="gap-0 py-0">
@@ -121,12 +142,14 @@ function SlotCard(props: {
         <h3 className={TITLE}>{props.title}</h3>
       </CardHeader>
       <CardContent className="px-0">
-        <EmptyState
-          icon={props.icon}
-          title={props.emptyTitle}
-          description={props.emptyDescription}
-          className="py-8"
-        />
+        {props.children ?? (
+          <EmptyState
+            icon={props.icon}
+            title={props.emptyTitle}
+            description={props.emptyDescription}
+            className="py-8"
+          />
+        )}
       </CardContent>
     </Card>
   )

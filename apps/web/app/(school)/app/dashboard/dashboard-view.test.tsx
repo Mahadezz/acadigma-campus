@@ -132,4 +132,19 @@ describe("DashboardView", () => {
     // Western digits inside Bengali copy (DESIGN-SYSTEM §1.6).
     expect(screen.getByText("5টির মধ্যে 2টি সম্পন্ন")).toBeTruthy()
   })
+
+  it("fills the attendance slot once a class is marked (F-AC-03)", () => {
+    render(
+      <DashboardView
+        {...BASE}
+        attendance={{
+          rate: "92.5% present so far",
+          marked: "3 of 5 classes marked",
+        }}
+      />
+    )
+    expect(screen.getByText("92.5% present so far")).toBeTruthy()
+    expect(screen.getByText("3 of 5 classes marked")).toBeTruthy()
+    expect(screen.queryByText(en.dashboard.attendance.emptyTitle)).toBeNull()
+  })
 })
