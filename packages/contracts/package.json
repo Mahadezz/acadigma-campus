@@ -16,7 +16,8 @@
     "./identity/workspace": "./src/identity/workspace.ts",
     "./identity/school": "./src/identity/school.ts",
     "./operations/staff": "./src/operations/staff.ts",
-    "./audit": "./src/audit.ts"
+    "./audit": "./src/audit.ts",
+    "./calendar": "./src/calendar.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

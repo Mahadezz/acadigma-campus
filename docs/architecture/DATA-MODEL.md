@@ -448,6 +448,16 @@ Notes that matter:
 
 - **A half-day absence records which half.** `staff_attendance.day_half` is `first`, `second` or NULL (whole day), and `leave_requests` carries `half_day_start_half` / `half_day_end_half` for the two ends of a multi-day request. Without them the cover engine cannot scope its trigger: marking a teacher half-day absent would either pull cover for periods they are actually teaching, or pull none at all. The same columns let the payroll-impact calculation charge the right number of periods.
 
+### 2.1 School calendar _(F-AC-11 Part 1, `20260925300301_school_calendar.sql`, D-202)_
+
+**`holidays`** — `id`, `workspace_id`, `name` (1–120), `name_bn`, `starts_on`, `ends_on` (inclusive; `ends_on >= starts_on` and under 366 days), `kind holiday_kind` (`public|religious|national|school|vacation|weather|emergency`), `source holiday_source` (`seed|manual|import`), `note` (≤ 500), `created_by`, timestamps. Indexes: GiST `(workspace_id, daterange(starts_on, ends_on, '[]'))` for the containment test, `(workspace_id, starts_on)` for the list. `academic_year_id`, `holiday_scopes` and recurrence are deferred (D-202).
+
+**`working_day_overrides`** — `id`, `workspace_id`, `date`, `is_working`, `reason` (required, 1–300), `created_by`, timestamps; `unique (workspace_id, date)`.
+
+**RLS** — SELECT for active owner/admin/teacher/staff and platform admin; parents have no direct policy (they will read through `parent_calendar_v`, F-AC-10). INSERT/UPDATE/DELETE owner/admin. **Triggers** — `updated_at`, tenant freeze, generic audit, `app.tg_require_writable` (D-300).
+
+**Functions** — `app.is_school_day(workspace_id, date)`: override → weekly pattern (`school_profiles.working_days`, default Sat–Thu) → holiday → true. `app.school_days(workspace_id, from, to)` (at most two years) and `app.school_day_count(...)`. All `STABLE`, **SECURITY DEFINER** behind `app.can_read_school_calendar(workspace_id)` (D-203): any active member, parents included, gets the school's real answer; anyone else gets NULL / `FORBIDDEN`. Executable by `authenticated` and `service_role`. `holidays` has `unique (workspace_id, name, starts_on)`; `created_by` is immutable on both tables (`app.tg_created_by_immutable`).
+
 ---
 
 ## 3. Teaching intelligence

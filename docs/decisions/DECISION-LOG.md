@@ -704,6 +704,34 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Consequences:** `supabase/tests/51_readonly_join_and_seed.sql` applies the seed inside pgTAP (`\ir ../seed/seed.sql`), so CI now proves the seed runs on the migrated schema — it did not before. Its first run found the seed broken on main since F-OP-06 (#32): the school bootstrap now creates the default labels, and the seed's own `Principal`/`Vice-Principal`/`Senior Teacher` inserts collided on `custom_labels_workspace_name_key`. The seed now picks those labels by name instead of inserting them.
 
+## D-202 — F-AC-11 Part 1 ships as a demo cut: holidays + overrides + `app.is_school_day` (SECURITY INVOKER), no scopes or academic year yet · ACCEPTED · 2026-09-25
+
+**Context:** F-AC-11 Part 1 specifies `holidays` (with `academic_year_id`), `holiday_scopes` (grade/section), `working_day_overrides`, `app.is_school_day(workspace, date, section?)` as SECURITY DEFINER, a TS mirror with a SQL↔TS parity test, and `GET /api/calendar/school-days`. When this Part started, `main` had no `academic_years` table (PR #37 merged while this PR was open), and there is still no `sections` table for scopes to reference. The lead asked for the demo cut the rest of M2 depends on: the tables, `is_school_day`, and a holidays screen under settings.
+
+**Decision:**
+
+1. `20260925300301_school_calendar.sql` adds `holidays` and `working_day_overrides` with RLS (staff read, owner/admin write, parents none), freeze, audit and `attach_require_writable`, plus `app.is_school_day`, `app.school_days` and `app.school_day_count`.
+2. **SECURITY INVOKER, not DEFINER.** _SUPERSEDED by D-203._ The functions read `school_profiles`, `holidays` and `working_day_overrides`, all of which every staff member may already read. The caller's RLS is therefore the right filter, and a non-member learns only the defaults. A definer function would let any signed-in user probe any school's calendar by id.
+3. **Deferred:** `holidays.academic_year_id` (a follow-up now that #37 has merged, together with the "inside its year" check); `holiday_scopes` and the `section_id` argument (they need `sections`; adding a defaulted argument later keeps every caller compatible); recurrence (materialised per year, Part 2); the TS mirror + parity test and the school-days route (no TS consumer yet); an override screen.
+4. The holidays screen is `/app/settings/calendar`, in line with D-201's "settings owns school configuration". `/app/calendar` views remain Part 3.
+
+**Consequences:** attendance, leave and analytics can call `app.school_day_count(workspace_id, from, to)` today. When scopes land, `is_school_day` gains `p_section_id uuid default null` in a new migration.
+
+## D-203 — The school-day functions are SECURITY DEFINER behind a membership guard (supersedes D-202 point 2) · ACCEPTED · 2026-09-25
+
+**Context:** D-202 made `app.is_school_day`, `app.school_days` and `app.school_day_count` SECURITY INVOKER so that the caller's RLS would filter them. The lead's review of PR #43 found this gives parents the wrong answer. Parents can read `school_profiles` but have no policy on `holidays` or `working_day_overrides`, so a declared holiday came back as a school day for them. Parent leave counts and F-AC-10's attendance % will call these functions.
+
+**Decision:**
+
+1. The three functions are **SECURITY DEFINER** (as the spec says), with `search_path = ''`. Each first calls `app.can_read_school_calendar(workspace_id)`, which is true for an active member of that workspace in any role (parents included), for platform staff, and for a privileged (service) context.
+2. Anyone else gets `NULL` from `is_school_day`, and `42501 FORBIDDEN` from `school_days`/`school_day_count`, so a signed-in user cannot probe another school's calendar by id.
+3. Grants are unchanged: `authenticated` and `service_role` only.
+4. Same review: `created_by` is fixed on both tables by `app.tg_created_by_immutable()` (#37). `holidays` gains `unique (workspace_id, name, starts_on)`, so the same holiday cannot be entered twice. The spec's `HOLIDAY_OVERLAP` warning for differently named overlapping holidays stays deferred; overlapping holidays still close each date once. `school_days` accepts at most 731 dates.
+
+**Why:** the denominator must be the same for every member. Restricting who may ask is the boundary, not what each role may read.
+
+**Consequences:** pgTAP `41_school_calendar.sql` asserts that a parent gets postgres's answer for a holiday, an override and a month count, and that a member of another school gets NULL or FORBIDDEN.
+
 ## D-101 — Per-user throttle keys are derived from `auth.uid()` in the database; rate-limit waits are shown once, in minutes · ACCEPTED · 2026-09-25
 
 **Context:** Two follow-ups. (1) D-100 item 7: `public.throttle_status`, `throttle_record_failure` and `throttle_reset` accept any key from `anon`/`authenticated` (sign-in runs before a session, so they must be callable). The IP/email buckets are safe because the app sends a salted hash nobody else can compute, but `create_school_workspace` keyed its bucket on the plain user id, so anyone who knew a user's id could lock them out of school creation for 15 minutes. (2) A production bug: after the sign-in limit tripped, `/login` showed "Too many attempts. Try again in 900s." twice — in the banner and as the submit button's label.
