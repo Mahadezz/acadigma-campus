@@ -23,7 +23,7 @@ Before, `/app/audit` on the demo school read "Demo Owner updated a profiles reco
 
 ## 2. Unit (Vitest)
 
-`pnpm test`: **89 files, 1007 tests, all passed.** New or changed tests:
+`pnpm test`: **94 files, 1057 tests, all passed** (after merging `origin/main` @ `c1a5060`, which added `grade_scales` and `grade_bands` — both got nouns, as the coverage test requires). New or changed tests:
 
 | Test file           | What it proves                                                                                                                                                                                                                                                                                              |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
