@@ -2,7 +2,7 @@
 -- pgTAP · F-AC-03 demo cut — daily roll call
 -- (20260925300309_attendance.sql, D-104)
 --
--- save_attendance: who may mark (class teacher, owner/admin), the edit
+-- save_attendance: who may mark (owner/admin/teacher; D-105 in 35_), the edit
 -- window, future dates, non-school days, exactly the enrolled students,
 -- "Mark all present" stamping, idempotency, no silent overwrite, audit
 -- only on change; isolation and escalation; one session per section per
@@ -12,7 +12,7 @@
 -- all seven days, so the file passes on any day of the week.
 -- =====================================================================
 begin;
-select plan(47);
+select plan(45);
 
 create schema if not exists tests;
 
@@ -218,18 +218,9 @@ select throws_ok(
   $$select tests.save('c1040000-0000-4000-8000-000000000014', tests.id('ka'), tests.today() - 5,
       tests.recs(array['present', 'absent', 'late']))$$,
   '42501', 'OUTSIDE_EDIT_WINDOW', 'a teacher cannot mark a day beyond the 2-day window');
-select throws_ok(
-  $$select tests.save('c1040000-0000-4000-8000-000000000015', tests.id('kha'), tests.today(),
-      '[]'::jsonb)$$,
-  '42501', 'NOT_ASSIGNED', 'a class teacher cannot mark another section');
 select tests.logout();
 
-select tests.login('f1040000-0000-0000-0000-000000000003');
-select throws_ok(
-  $$select tests.save('c1040000-0000-4000-8000-000000000016', tests.id('ka'), tests.today() - 1,
-      tests.recs(array['present', 'absent', 'late']))$$,
-  '42501', 'NOT_ASSIGNED', 'escalation: a teacher who is not the class teacher cannot mark');
-select tests.logout();
+-- Any teacher may mark any section since D-105: see 35_attendance_any_teacher.sql.
 
 select tests.login('f1040000-0000-0000-0000-000000000004');
 select throws_ok(
