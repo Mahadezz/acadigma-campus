@@ -197,6 +197,7 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     ],
     "workspace.settings.write": ["owner", "admin"],
     "workspace.branding.write": ["owner", "admin"],
+    "calendar.holiday.write": ["owner", "admin"],
     "members.read": ["owner", "admin", "teacher", "staff", "platform"],
     "members.contact.read": ["owner", "admin", "platform"],
     "members.invite": ["owner", "admin"],
@@ -228,7 +229,7 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "settings.manage": [...rolesWithAction("settings.manage")],
     "policies.manage": [...rolesWithAction("policies.manage")],
     // F-AC-06 §2 — asserted explicitly, not derived.
-    "grading.policy.write": ["owner", "admin"],
+    "settings.grade_scale.write": ["owner", "admin"],
     "exams.read": ["owner", "admin", "teacher", "staff"],
     "exams.write": ["owner", "admin"],
     "reports.read": [...rolesWithAction("reports.read")],

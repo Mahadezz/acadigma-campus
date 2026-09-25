@@ -759,6 +759,66 @@ export type Database = {
           },
         ]
       }
+      holidays: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          ends_on: string
+          id: string
+          kind: Database["public"]["Enums"]["holiday_kind"]
+          name: string
+          name_bn: string | null
+          note: string | null
+          source: Database["public"]["Enums"]["holiday_source"]
+          starts_on: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          ends_on: string
+          id?: string
+          kind?: Database["public"]["Enums"]["holiday_kind"]
+          name: string
+          name_bn?: string | null
+          note?: string | null
+          source?: Database["public"]["Enums"]["holiday_source"]
+          starts_on: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["holiday_kind"]
+          name?: string
+          name_bn?: string | null
+          note?: string | null
+          source?: Database["public"]["Enums"]["holiday_source"]
+          starts_on?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "holidays_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holidays_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_acceptances: {
         Row: {
           accepted_at: string
@@ -1997,6 +2057,54 @@ export type Database = {
           },
         ]
       }
+      working_day_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          is_working: boolean
+          reason: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          is_working: boolean
+          reason: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          is_working?: boolean
+          reason?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "working_day_overrides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "working_day_overrides_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invitations: {
         Row: {
           accepted_at: string | null
@@ -2501,7 +2609,12 @@ export type Database = {
       }
       pre_request: { Args: never; Returns: undefined }
       save_grade_scale: {
-        Args: { p_bands: Json; p_name: string; p_scale_id: string }
+        Args: {
+          p_bands: Json
+          p_name: string
+          p_scale_id: string
+          p_workspace_id: string
+        }
         Returns: string
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
@@ -2551,6 +2664,15 @@ export type Database = {
         | "delete"
       file_visibility: "private" | "workspace" | "public"
       grade_stage: "early" | "primary" | "secondary" | "higher"
+      holiday_kind:
+        | "public"
+        | "religious"
+        | "national"
+        | "school"
+        | "vacation"
+        | "weather"
+        | "emergency"
+      holiday_source: "seed" | "manual" | "import"
       invitation_channel: "email" | "phone"
       invitation_status:
         | "pending"
@@ -2738,6 +2860,16 @@ export const Constants = {
       ],
       file_visibility: ["private", "workspace", "public"],
       grade_stage: ["early", "primary", "secondary", "higher"],
+      holiday_kind: [
+        "public",
+        "religious",
+        "national",
+        "school",
+        "vacation",
+        "weather",
+        "emergency",
+      ],
+      holiday_source: ["seed", "manual", "import"],
       invitation_channel: ["email", "phone"],
       invitation_status: [
         "pending",

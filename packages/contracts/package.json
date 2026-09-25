@@ -19,7 +19,8 @@
     "./operations/staff": "./src/operations/staff.ts",
     "./audit": "./src/audit.ts",
     "./academics/grading": "./src/academics/grading.ts",
-    "./academics/exams": "./src/academics/exams.ts"
+    "./academics/exams": "./src/academics/exams.ts",
+    "./calendar": "./src/calendar.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

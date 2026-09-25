@@ -108,6 +108,7 @@ describe("saveGradeScale", () => {
     const { client, rpc } = rpcClient({ data: SCALE_ID, error: null })
     await saveGradeScale(CTX, client, input)
     expect(rpc).toHaveBeenCalledWith("save_grade_scale", {
+      p_workspace_id: CTX.workspaceId,
       p_scale_id: SCALE_ID,
       p_name: "X",
       p_bands: [
@@ -124,7 +125,7 @@ describe("saveGradeScale", () => {
   })
 
   it("maps BAND_GAP / BAND_OVERLAP to validation_failed and not-found to not_found", async () => {
-    for (const code of ["BAND_GAP", "BAND_OVERLAP"]) {
+    for (const code of ["BAND_GAP", "BAND_OVERLAP", "BAND_POINTS_DECREASE"]) {
       const { client } = rpcClient({
         data: null,
         error: { message: code, code: "23514" },

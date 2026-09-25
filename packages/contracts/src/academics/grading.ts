@@ -4,7 +4,7 @@ import { uuidSchema } from "../common"
 
 /**
  * F-AC-06 Part 1 — grade scales (`grade_scales`, `grade_bands`,
- * `supabase/migrations/20260925300202_grade_scales.sql`) and the two §7
+ * `supabase/migrations/20260925300302_grade_scales.sql`) and the two §7
  * contracts Part 1 builds: `upsertGradeScale` (edit an existing scale's
  * name and bands — `saveGradeScaleInputSchema`) and `seedBdGradeScale`.
  * Coverage (no gap / no overlap, 0-100) is checked by the domain
@@ -43,5 +43,17 @@ export const saveGradeScaleInputSchema = z
       new Set(v.bands.map((b) => b.letter.toUpperCase())).size ===
       v.bands.length,
     { message: "Each letter can be used once.", path: ["bands"] }
+  )
+  .refine(
+    (v) => {
+      const sorted = [...v.bands].sort((a, b) => a.minPercent - b.minPercent)
+      return sorted.every(
+        (b, i) => i === 0 || b.gradePoint >= sorted[i - 1]!.gradePoint
+      )
+    },
+    {
+      message: "Grade points cannot go down as the bands go up.",
+      path: ["bands"],
+    }
   )
 export type SaveGradeScaleInput = z.infer<typeof saveGradeScaleInputSchema>
