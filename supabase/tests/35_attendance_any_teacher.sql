@@ -4,11 +4,12 @@
 --
 -- Any active teacher of the school marks any section (substitutes cover);
 -- staff, parents, non-members and other schools' teachers still cannot;
--- the edit window still binds the substitute. "Enrolled on that date" is
+-- pending and removed teachers cannot either; the edit window still binds
+-- the substitute; a closed enrolment must carry its end date. "Enrolled on that date" is
 -- enrolled_on..ended_on, not the enrolment's current status.
 -- =====================================================================
 begin;
-select plan(13);
+select plan(16);
 
 create schema if not exists tests;
 
@@ -92,6 +93,8 @@ select tests.mkuser('f1050000-0000-0000-0000-000000000005', 'd105.parent@test.lo
 select tests.mkuser('f1050000-0000-0000-0000-000000000006', 'd105.ownerb@test.local',   'Owner B');
 select tests.mkuser('f1050000-0000-0000-0000-000000000007', 'd105.teacherb@test.local', 'Teacher B');
 select tests.mkuser('f1050000-0000-0000-0000-000000000008', 'd105.nobody@test.local',   'Not a member');
+select tests.mkuser('f1050000-0000-0000-0000-000000000009', 'd105.pending@test.local',  'Pending Teacher A');
+select tests.mkuser('f1050000-0000-0000-0000-000000000010', 'd105.removed@test.local',  'Removed Teacher A');
 
 select tests.login('f1050000-0000-0000-0000-000000000001');
 insert into ids select 'a', (public.create_school_workspace(
@@ -107,6 +110,8 @@ insert into public.workspace_members (workspace_id, user_id, role, status) value
   (tests.id('a'), 'f1050000-0000-0000-0000-000000000003', 'teacher', 'active'),
   (tests.id('a'), 'f1050000-0000-0000-0000-000000000004', 'staff',   'active'),
   (tests.id('a'), 'f1050000-0000-0000-0000-000000000005', 'parent',  'active'),
+  (tests.id('a'), 'f1050000-0000-0000-0000-000000000009', 'teacher', 'pending'),
+  (tests.id('a'), 'f1050000-0000-0000-0000-000000000010', 'teacher', 'removed'),
   (tests.id('b'), 'f1050000-0000-0000-0000-000000000007', 'teacher', 'active');
 
 insert into ids
@@ -188,6 +193,18 @@ select throws_ok(
       tests.recs(array['present', 'absent', 'late']))$$,
   '42501', 'FORBIDDEN', 'escalation: a parent member cannot mark');
 select tests.logout();
+select tests.login('f1050000-0000-0000-0000-000000000009');
+select throws_ok(
+  $$select tests.save('c1050000-0000-4000-8000-000000000015', tests.id('ka'), tests.today(),
+      tests.recs(array['present', 'absent', 'late']))$$,
+  '42501', 'FORBIDDEN', 'escalation: a pending (not yet active) teacher cannot mark');
+select tests.logout();
+select tests.login('f1050000-0000-0000-0000-000000000010');
+select throws_ok(
+  $$select tests.save('c1050000-0000-4000-8000-000000000016', tests.id('ka'), tests.today(),
+      tests.recs(array['present', 'absent', 'late']))$$,
+  '42501', 'FORBIDDEN', 'escalation: a removed teacher cannot mark');
+select tests.logout();
 select tests.login('f1050000-0000-0000-0000-000000000008');
 select throws_ok(
   $$select tests.save('c1050000-0000-4000-8000-000000000012', tests.id('ka'), tests.today(),
@@ -209,6 +226,10 @@ select tests.logout();
 -- =====================================================================
 -- §5.3: enrolled on the date by enrolled_on/ended_on, not current status
 -- =====================================================================
+select throws_ok(
+  $$update public.enrollments set status = 'withdrawn' where student_id = tests.id('s3')$$,
+  '23514', 'new row for relation "enrollments" violates check constraint "enrollments_closed_has_end"',
+  'a closed enrolment must carry its end date');
 update public.enrollments set status = 'transferred', ended_on = tests.today() - 1
  where student_id = tests.id('s3');
 

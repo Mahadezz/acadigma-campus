@@ -112,8 +112,8 @@ describe("RollCall", () => {
   })
 
   it("is read-only for someone who may not mark", () => {
-    render(<RollCall {...BASE} readOnlyReason="notMine" />)
-    expect(screen.getByText(en.attendance.roll.readOnlyNotMine)).toBeTruthy()
+    render(<RollCall {...BASE} readOnlyReason="cannotMark" />)
+    expect(screen.getByText(en.attendance.roll.readOnlyCannotMark)).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull()
     expect(
       screen.queryByRole("button", { name: "Mark all present" })

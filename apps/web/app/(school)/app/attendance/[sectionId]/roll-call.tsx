@@ -60,7 +60,7 @@ export function RollCall({
   isSchoolDay: boolean
   students: RollCallStudent[]
   sessionUpdatedAt: string | null
-  readOnlyReason: "notMine" | "window" | null
+  readOnlyReason: "cannotMark" | "window" | null
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -191,7 +191,9 @@ export function RollCall({
 
       {readOnlyReason ? (
         <InlineAlert tone="info">
-          {readOnlyReason === "notMine" ? t.readOnlyNotMine : t.readOnlyWindow}
+          {readOnlyReason === "cannotMark"
+            ? t.readOnlyCannotMark
+            : t.readOnlyWindow}
         </InlineAlert>
       ) : null}
 

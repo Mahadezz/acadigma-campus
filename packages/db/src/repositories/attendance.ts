@@ -151,7 +151,7 @@ export async function getRollCall(
 
 const SAVE_ERRORS: Record<string, ApiError> = {
   FORBIDDEN: apiError("forbidden", "You cannot take attendance here.", {
-    fieldErrors: { _root: ["NOT_ASSIGNED"] },
+    fieldErrors: { _root: ["FORBIDDEN"] },
   }),
   OUTSIDE_EDIT_WINDOW: apiError(
     "forbidden",

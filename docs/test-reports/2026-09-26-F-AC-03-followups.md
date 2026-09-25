@@ -33,9 +33,9 @@ Local PostgreSQL 17.10 (embedded) + pgTAP 1.3.4 running the CI `db` job's steps 
 
 ## 4. Database (pgTAP)
 
-Full local run: every file passes — `34_attendance.sql` **45/45** (the two `NOT_ASSIGNED` cases moved to the new rule), `35_attendance_any_teacher.sql` **13/13**, and all other files as on main. `51_readonly_join_and_seed.sql` uses psql meta-commands and does not run in the local harness (pre-existing; it runs in CI).
+Full local run: every file passes — `34_attendance.sql` **45/45** (the two `NOT_ASSIGNED` cases moved to the new rule), `35_attendance_any_teacher.sql` **16/16**, and all other files as on main. `51_readonly_join_and_seed.sql` uses psql meta-commands and does not run in the local harness (pre-existing; it runs in CI).
 
-`35_` proves: a non-class-teacher teacher saves a section, and the session's `taken_by` and every record's `marked_by` name them; a class teacher saves another section; the edit window still binds them; staff, a parent member and a signed-in non-member get `FORBIDDEN`; another school's teacher gets `FORBIDDEN` here and `SECTION_NOT_FOUND` through their own school; a student whose enrolment was set to `transferred` with `ended_on` yesterday is not expected today (2) but is expected two days ago (3); `attendance_day` counts 3 yesterday and 2 today.
+`35_` proves: a non-class-teacher teacher saves a section, and the session's `taken_by` and every record's `marked_by` name them; a class teacher saves another section; the edit window still binds them; staff, a parent member, a pending (not yet active) teacher, a removed teacher (`member_status` has no suspended value) and a signed-in non-member get `FORBIDDEN`; another school's teacher gets `FORBIDDEN` here and `SECTION_NOT_FOUND` through their own school; a student whose enrolment was set to `transferred` with `ended_on` yesterday is not expected today (2) but is expected two days ago (3); `attendance_day` counts 3 yesterday and 2 today; closing an enrolment without `ended_on` violates `enrollments_closed_has_end`. `33_` closes last year's enrolments with an `ended_on` to satisfy the new constraint.
 
 ## 5. End to end
 
@@ -47,9 +47,8 @@ Full local run: every file passes — `34_attendance.sql` **45/45** (the two `NO
 
 ## 7. Known issues
 
-1. A transfer that sets the enrolment's `status` but not `ended_on` would keep the student on the old section's register (D-105 consequence; the future transfer action in F-AC-02 must set `ended_on`). No such action exists today.
-2. If two enrolments of one student in the same section overlap on a date, the database counts the student once but the roll-call screen would list them twice and the save would be refused as `VALIDATION`. Only possible with hand-edited data.
-3. Everything in the demo-cut report's known issues still stands (no offline queue, `CONFLICT` instead of a merge sheet, half day on/off rather than 0.5, no reminders/register/alerts).
+1. If two enrolments of one student in the same section overlap on a date, the database counts the student once but the roll-call screen would list them twice and the save would be refused as `VALIDATION`. Only possible with hand-edited data.
+2. Everything in the demo-cut report's known issues still stands (no offline queue, `CONFLICT` instead of a merge sheet, half day on/off rather than 0.5, no reminders/register/alerts).
 
 ## 8. Sign-off
 

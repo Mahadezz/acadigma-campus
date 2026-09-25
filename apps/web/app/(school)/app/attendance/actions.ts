@@ -35,7 +35,7 @@ export async function saveAttendanceSession(
   if (!can(ctx.role, "attendance.write")) {
     return err(
       apiError("forbidden", "You cannot take attendance here.", {
-        fieldErrors: { _root: ["NOT_ASSIGNED"] },
+        fieldErrors: { _root: ["FORBIDDEN"] },
       })
     )
   }

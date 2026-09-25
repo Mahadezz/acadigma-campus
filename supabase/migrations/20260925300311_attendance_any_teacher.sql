@@ -11,6 +11,9 @@
 --     a student transferred out today still appears on last week's register.
 --     A student with two enrolments in the section covering the date is
 --     counted once (the later enrolment wins).
+--   * An enrolment that is no longer active must say when it ended
+--     (enrollments_closed_has_end), so the date rule above can never keep
+--     a transferred or withdrawn student on a register by accident.
 --   * save_attendance keeps the expected class list in a jsonb map instead
 --     of two temp tables; attendance_day scopes its enrolment count by
 --     workspace_id too.
@@ -304,3 +307,10 @@ comment on function public.attendance_day(uuid, date) is
 
 revoke all on function public.attendance_day(uuid, date) from public, anon;
 grant execute on function public.attendance_day(uuid, date) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- A closed enrolment has an end date (D-105). Nothing writes non-active
+-- enrolments yet, so no existing row is affected.
+-- ---------------------------------------------------------------------
+alter table public.enrollments
+  add constraint enrollments_closed_has_end check (status = 'active' or ended_on is not null);

@@ -90,7 +90,7 @@ export default async function RollCallPage({
       isSchoolDay={day.data.isSchoolDay}
       students={students.data}
       sessionUpdatedAt={section.session?.updatedAt ?? null}
-      readOnlyReason={!mayMark ? "notMine" : !inWindow ? "window" : null}
+      readOnlyReason={!mayMark ? "cannotMark" : !inWindow ? "window" : null}
     />
   )
 }
