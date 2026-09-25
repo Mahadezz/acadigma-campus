@@ -71,7 +71,7 @@ Full local gate, run from the repo root (`pnpm test`):
 | `packages/db`            | (part of below) |          |        |         |          |
 | `packages/ui`            | (part of below) |          |        |         |          |
 | `apps/web`               | (part of below) |          |        |         |          |
-| **Total (all projects)** | **1081**        | **1081** | **0**  | **0**   | ~29s     |
+| **Total (all projects)** | **1118**        | **1118** | **0**  | **0**   | ~30s     |
 
 **Delta vs `main`:** +5 test files / +21 tests are this Part's own new suites (see below); the rest of the delta vs. the pre-merge count is PR #41 (D-400) and PR #49 (D-402), which merged into `main` while this PR was open and were pulled in by merging `main` into this branch (BUILDER-BRIEF: "another design PR (#41) is in review — if it merges while you work, merge `origin/main` and keep both").
 
@@ -193,16 +193,16 @@ One new server action, `updateLocale` (`(shared)/workspace/actions.ts`): validat
 
 ## 9. Sign-off
 
-| Definition of Done                           | Met                                                          |
-| -------------------------------------------- | ------------------------------------------------------------ |
-| Spec written and matches the build           | ☑ (F-ID-02 §11 updated, D-401)                               |
-| Migration + pgTAP isolation and escalation   | n/a — no migration                                           |
-| Unit tests + coverage thresholds             | ☑ (1081/1081 passing; coverage thresholds hold repo-wide)    |
-| UI built and verified at both viewports      | ☑                                                            |
-| Playwright journey at both viewports         | ☑ committed, CI-gated (OQ-27); manual axe run passed locally |
-| a11y — zero serious/critical + manual checks | ☑                                                            |
-| This test report, with real numbers          | ☑                                                            |
-| Docs updated in the same PR                  | ☑ (DECISION-LOG D-401, F-ID-02 §11, `docs/README.md`)        |
+| Definition of Done                           | Met                                                                                        |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Spec written and matches the build           | ☑ (F-ID-02 §11 updated, D-401)                                                             |
+| Migration + pgTAP isolation and escalation   | n/a — no migration                                                                         |
+| Unit tests + coverage thresholds             | ☑ (1118/1118 passing at merge time; count keeps moving as sibling lanes merge into `main`) |
+| UI built and verified at both viewports      | ☑                                                                                          |
+| Playwright journey at both viewports         | ☑ committed, CI-gated (OQ-27); manual axe run passed locally                               |
+| a11y — zero serious/critical + manual checks | ☑                                                                                          |
+| This test report, with real numbers          | ☑                                                                                          |
+| Docs updated in the same PR                  | ☑ (DECISION-LOG D-401, F-ID-02 §11, `docs/README.md`)                                      |
 
 **Signed off by:** Claude (design lane, second builder)
 **Date:** 2026-09-25

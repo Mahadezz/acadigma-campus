@@ -241,6 +241,10 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "audit.read.platform": [...rolesWithAction("audit.read.platform")],
     "audit.read.self": [...rolesWithAction("audit.read.self")],
     "audit.export": [...rolesWithAction("audit.export")],
+    // F-AC-01 §2 (D-102): asserted for real, not against the matrix itself.
+    "academics.structure.read": ["owner", "admin", "teacher", "staff"],
+    "academics.section.write": ["owner", "admin"],
+    "academics.subject.write": ["owner", "admin"],
   }
 
   it("gives every declared action in ACTIONS an entry in this table", () => {

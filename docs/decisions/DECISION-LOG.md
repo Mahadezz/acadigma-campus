@@ -822,3 +822,23 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 **Why:** tying the key to the session inside the database makes "somebody else's bucket" unnameable by construction, for every per-user bucket at once, instead of relying on an app-side secret the database cannot check.
 
 **Consequences:** `supabase/tests/31_throttle_per_user_keys.sql`; `30_create_school_workspace.sql` reads the new key name. Existing per-user rows under the old salted keys simply expire.
+
+## D-102 — F-AC-01 demo cut: sections and subjects on the current year, tenant-bound foreign keys, rooms as text · ACCEPTED · 2026-09-25
+
+**Context:** The owner needs the Classes screen for sales demos before the full F-AC-01 build (six Parts: years/terms, grades, sections/rooms, subjects/templates, section-subjects, setup wizard). `grade_levels` and `academic_years` already exist (D-100); schools created by the wizard have a current year and grade levels.
+
+**Decision:**
+
+1. **Scope:** `sections` (F-AC-01 Part 3 minus rooms) and `subjects` (Part 4 minus `grade_level_subjects`), plus `/app/classes`: a card per grade with this year's sections (add, archive), and a Subjects tab (add, "Use the NCTB starter list"). Terms, rooms, grade templates, section-subjects and the setup wizard stay in their own Parts.
+2. **Sections always belong to the current academic year**, resolved server-side; the client never names a year.
+3. **Tenant-bound foreign keys:** `academic_years`, `grade_levels` and `workspace_members` gain `unique (id, workspace_id)`, and `sections` references them with composite keys that include `workspace_id`. A section cannot point at another school's grade, year or member even through a SECURITY DEFINER path, not just through RLS.
+4. **Class teacher rules in the database:** a trigger requires an active owner/admin/teacher (`MEMBER_NOT_ELIGIBLE`); a partial unique index keeps one live section per teacher per year (§5 rule 10, `CLASS_TEACHER_TAKEN`; `allow_multi_class_teacher` is not built).
+5. **`room` is free text** until the `rooms` table lands (Part 3); **archive, not delete** (`archived_at`), for both tables.
+6. **The NCTB starter list** lives in `packages/domain/src/academic/structure.ts` and is copied into the school's own rows; running it twice adds nothing.
+7. **Permissions:** `academics.structure.read` (owner, admin, teacher, staff), `academics.section.write` and `academics.subject.write` (owner, admin). Parents read nothing here (T2); their view is F-AC-10.
+8. **Migration timestamps:** `20260925300304` sorts after main's newest (`20260925300302`, #46) and after #45's `20260925300303`. The three `add constraint ... unique (id, workspace_id)` statements are plain, not `CONCURRENTLY`: migrations run inside a transaction, where `CONCURRENTLY` is impossible, and these tables are tiny.
+9. **Review follow-ups (PR #47):** when a member stops being an active owner/admin/teacher (removed, or moved to staff/parent), `app.tg_members_release_class_teacher` clears them as class teacher of live sections (§4.5; archived sections keep their history). Sections and subjects are archive-only: no DELETE policy or grant. The NCTB starter list has Bangla and English as two papers each (marks are kept per paper), religion as one subject per faith, and "Physical Education and Health". A Bangla school is offered ক, খ … as section names.
+
+**Why:** the smallest slice that gives a demo school a real class list, without inventing shapes the later Parts would have to undo.
+
+**Consequences:** `supabase/tests/32_sections_and_subjects.sql`. When `rooms` lands, `sections.room` becomes `room_id` (expand, backfill, contract).
