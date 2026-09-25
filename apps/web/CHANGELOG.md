@@ -1,5 +1,60 @@
 # @acadigma/web
 
+## 0.4.0
+
+### Minor Changes
+
+- d704c7e: F-AC-03 demo cut (D-104): daily attendance. `public.save_attendance` is the only writer (class teacher or owner/admin, edit window, school days, exactly the enrolled students, audited "Mark all present", no silent overwrite); `/app/attendance` shows today's classes marked / not marked with the school's rate, `/app/attendance/[sectionId]` is the one-thumb roll call; the dashboard's attendance slot shows today's rate.
+- d1f6cca: F-AC-01 demo cut (D-102): `sections` and `subjects` with T2 RLS, tenant-bound foreign keys and read-only guards; `/app/classes` lists each grade's sections for the current year (add with class teacher, room, capacity; archive) and the subject catalogue (add; copy the NCTB starter list), in English and Bangla.
+- 932f920: F-AC-06 Part 2 (demo cut, D-303): exams. Migration `20260925300305_exams.sql` adds
+  `exams`, `exam_sections` and `exam_subjects`, a grading snapshot written at creation and
+  never changed afterwards, the §5.12 status chain enforced in the database, and
+  `public.create_exam`. `@acadigma/domain/academic` adds `checkExamTransition`,
+  `nextExamStatus`, `reversalFrom` and `defaultPassMarks`; there are new contracts and an
+  exams repository; new permissions `exams.read` and `exams.write`. New screens:
+  `/app/exams` (list and "New exam") and `/app/exams/[id]` (status actions, reasons for
+  reversals, and editing each paper's date, full marks and pass marks).
+- 4091c9e: F-AC-02 demo cut (D-103): students, their private details (date of birth), guardians and enrolments, with the sensitive fields readable only by owner/admin and the class teacher; `public.admit_student` admits a student, guardian and enrolment in one transaction. `/app/students` searches the roster by English or Bangla name or student ID with a class filter and a quick-admit sheet; `/app/students/[id]` shows the profile, with date of birth and guardians locked for other roles.
+- c988d6d: বাংলা now covers the whole signed-in app, not only the sign-in screens: the school shell's sidebar and bottom nav, the top bar, a new language switch in the user menu, the read-only banner, the dashboard, and 404/error pages all follow the existing locale cookie. `<html lang>` follows the active locale. Numbers and dates stay Western-digit in বাংলা (DESIGN-SYSTEM §1.6), formatted with `Intl` bound to the locale. The language switch now also persists to `profiles.locale`, so it follows a signed-in user to their next device, and the audit viewer's separate `profiles.locale`-only lookup now goes through the same one resolver as everywhere else — memoised per request with React's `cache()` so the several call sites in one page share a single lookup instead of each paying their own round trip. The user menu also gets the signed-in shell's first sign-out control, reusing the existing sign-out action.
+- 5b4dbd6: F-OP-03 Parts 1-2 — the print/PDF engine. New `@acadigma/pdf` package: a
+  `@react-pdf/renderer` document shell (letterhead header reading
+  `school_profiles` through the existing `renderHeaderLine`, footer with real
+  page numbers, watermark, signature block), Inter + Hind Siliguri embedded
+  from disk (D-204 — Hind Siliguri over the spec's original Noto Sans Bengali
+  default, to match DESIGN-SYSTEM/acadigma-website), locale-aware
+  `formatNumber`/`formatDate`/`formatDateTime` (Bengali numerals opt-in), and
+  a golden test proving Bengali conjuncts ("ক্ষ") and two schools' letterheads
+  render correctly from real PDF bytes.
+
+  The run pipeline (`report_runs`/`report_run_items`, migration + RLS +
+  pgTAP `40_report_runs.sql`): `createReportRun` (parse -> context -> `can()`
+  -> plan entitlement -> `requireWritable` -> repository -> render, D-300
+  compliant) and `GET /api/pdf/[runId]` (parse -> context -> `can()` -> fetch
+  via the caller's own RLS-scoped client -> render), both with route/action
+  auth tests. `report_kind` ships with one value, `'sample'`, the pipeline's
+  own proof (D-205) — no fake report-card data, since exam/marks tables do not
+  exist yet. No `files`/Storage row is created in this PR (D-205); the
+  download route re-renders deterministically instead. `/app/reports` and
+  `/app/reports/runs/[id]` are new, minimal pages behind the existing
+  `reports` plan-module entitlement (Starter+).
+
+### Patch Changes
+
+- ba295f3: D-101: per-user throttle keys are derived from `auth.uid()` in the database (nobody can lock another user out of a bucket), and a rate-limited sign-in shows the wait once, in minutes, with the button a disabled "Sign in". `ApiError` gains an optional `retryAfterSeconds`.
+- baa055e: The audit trail reads as plain sentences in English and Bengali: "Nusrat added a holiday", "updated a school setting". No table names, no empty "()", and unknown actions read "made a change".
+- Updated dependencies [d704c7e]
+- Updated dependencies [d1f6cca]
+- Updated dependencies [932f920]
+- Updated dependencies [4091c9e]
+- Updated dependencies [ba295f3]
+- Updated dependencies [baa055e]
+- Updated dependencies [5b4dbd6]
+  - @acadigma/contracts@0.4.0
+  - @acadigma/domain@0.4.0
+  - @acadigma/db@0.4.0
+  - @acadigma/pdf@0.2.0
+  - @acadigma/ui@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes
