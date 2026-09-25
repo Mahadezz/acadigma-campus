@@ -320,6 +320,13 @@
       "shellTitle": "Family",
       "emptyTitle": "Your child's school, from here",
       "emptyDescription": "Signed in as {role}. Attendance, results, messages and fees land here in a later part (F-AC-10)."
+    },
+    "userMenu": {
+      "ariaLabel": "Account menu",
+      "languageLabel": "Language"
+    },
+    "readOnly": {
+      "title": "This workspace is read-only"
     }
   },
   "nav": {
@@ -352,6 +359,12 @@
     "notifications": "Notifications",
     "profile": "Profile",
     "switchWorkspace": "Switch workspace"
+  },
+  "dashboard": {
+    "today": "Today · {date}",
+    "noPlan": "No plan",
+    "workspaceResolvedTitle": "Workspace resolved",
+    "workspaceResolvedDescription": "Membership was verified against workspace_members before this screen rendered. Role {role}, workspace {workspaceId}."
   },
   "attendance": {
     "title": "Attendance",
@@ -457,7 +470,23 @@
     "offline": "You're offline",
     "paymentFailed": "Payment failed",
     "creditExhausted": "AI credits are used up for today",
-    "unknown": "An unknown error occurred"
+    "unknown": "An unknown error occurred",
+    "notFoundPage": {
+      "title": "Page not found",
+      "description": "That link has moved, or you do not have access to it.",
+      "action": "Go to the home page"
+    },
+    "forbiddenPage": {
+      "title": "You do not have access",
+      "description": "Your account is not an active member of this workspace. Ask an owner or admin to invite you, then sign in again.",
+      "action": "Back to the home page"
+    },
+    "appError": {
+      "title": "Something went wrong",
+      "description": "We could not load this screen. Try again in a moment.",
+      "descriptionWithDigest": "We could not load this screen. Quote reference {digest} if you report it.",
+      "action": "Try again"
+    }
   },
   "notifications": {
     "events": {

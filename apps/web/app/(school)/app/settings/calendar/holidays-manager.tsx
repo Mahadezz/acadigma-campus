@@ -130,8 +130,10 @@ export function HolidaysManager({
     defaultValues: EMPTY,
   })
 
+  // bn-BD-u-nu-latn, not bare bn-BD (DESIGN-SYSTEM §1.6): Western digits in
+  // both languages — the bare tag renders Bengali digits by default.
   const dateFormat = new Intl.DateTimeFormat(
-    locale === "bn" ? "bn-BD" : "en-GB",
+    locale === "bn" ? "bn-BD-u-nu-latn" : "en-GB",
     { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }
   )
   const formatDate = (d: string) =>

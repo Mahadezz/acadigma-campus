@@ -14,6 +14,8 @@ import {
 import type { NavFilterContext } from "@acadigma/ui/primitives/nav-config"
 import { SidebarFromConfig } from "@acadigma/ui/primitives/sidebar-from-config"
 
+import type { Locale } from "@/lib/locale"
+
 /**
  * The school workspace's nav (DESIGN-SYSTEM §3.2), wired into the single nav
  * system in `@acadigma/domain/nav` (D-56) — this file used to hand-roll its
@@ -26,6 +28,12 @@ import { SidebarFromConfig } from "@acadigma/ui/primitives/sidebar-from-config"
  * — and renders both `BottomNavFromConfig` (phone) and `SidebarFromConfig`
  * (desktop) off the exact same filtered tree (§3.1 "Same nav config object,
  * different renderer").
+ *
+ * `locale` threads through to both renderers, which already know how to pick
+ * `labelBn`/`labelEn` off each `NavItem` (`@acadigma/domain/nav`'s config
+ * data, not the `messages/*.json` catalogue) — before this Part neither
+ * component received it, so the school shell's nav stayed English even after
+ * a user switched the rest of the app to বাংলা.
  */
 
 const renderLink: NavLinkRenderer = ({
@@ -66,6 +74,7 @@ export type SchoolNavProps = {
   config: NavConfig
   role: WorkspaceRole
   entitledModules: readonly NavModuleKey[]
+  locale: Locale
 }
 
 /** Phone tab bar. Hidden from `lg` up, where `SchoolSidebar` takes over. */
@@ -73,6 +82,7 @@ export function SchoolBottomNav({
   config,
   role,
   entitledModules,
+  locale,
 }: SchoolNavProps) {
   const pathname = usePathname()
   const filter = useSchoolNavFilter(role, entitledModules)
@@ -83,6 +93,7 @@ export function SchoolBottomNav({
       filter={filter}
       pathname={pathname}
       renderLink={renderLink}
+      locale={locale}
       navLabel="School"
     />
   )
@@ -93,6 +104,7 @@ export function SchoolSidebar({
   config,
   role,
   entitledModules,
+  locale,
 }: SchoolNavProps) {
   const pathname = usePathname()
   const filter = useSchoolNavFilter(role, entitledModules)
@@ -103,6 +115,7 @@ export function SchoolSidebar({
       filter={filter}
       pathname={pathname}
       renderLink={renderLink}
+      locale={locale}
       title="Acadigma Campus"
       navLabel="School"
     />

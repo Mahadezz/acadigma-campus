@@ -19,6 +19,7 @@ import {
 } from "@acadigma/contracts"
 import { resolveLandingRoute } from "@acadigma/domain/workspace"
 
+import { isLocale, type Locale } from "@/lib/locale"
 import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
 import { WORKSPACE_COOKIE } from "@/lib/workspace"
@@ -174,4 +175,48 @@ export async function listMyWorkspaces(): Promise<
   }
 
   return ok(result.data)
+}
+
+/**
+ * D-401: persists the `UserMenu`'s language switch to `profiles.locale`, in
+ * addition to the `acadigma_locale` cookie the client already wrote — the
+ * cookie makes the switch instant on this device, this makes it follow the
+ * user to their next device (`getLocale()`, `lib/i18n.ts`, falls back to
+ * `profiles.locale` when a device has no cookie yet). Not gated by
+ * `requireWritable`: `profiles` carries no `workspace_id`, a language
+ * preference is not a tenant write, and RLS (`profiles_update_self`) already
+ * limits this to the caller's own row.
+ */
+export async function updateLocale(
+  locale: string
+): Promise<Result<{ locale: Locale }, ApiError>> {
+  if (!isLocale(locale)) {
+    return err(apiError("validation_failed", "Unsupported language."))
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return err(apiError("unauthenticated", "Please sign in to continue."))
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ locale })
+    .eq("id", user.id)
+
+  if (error) {
+    const log = await requestLogger({ route: "profile.update_locale" })
+    log.warn({ code: error.code }, "profiles.locale update failed")
+    return err(
+      apiError(
+        "dependency_unavailable",
+        "Could not save your language preference."
+      )
+    )
+  }
+
+  return ok({ locale })
 }
