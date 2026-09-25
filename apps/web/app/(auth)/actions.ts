@@ -39,6 +39,7 @@ import {
   throttleReset,
   throttleStatus,
 } from "@/lib/throttle"
+import { throttledMessage } from "@/lib/throttle-copy"
 import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie"
 
 /**
@@ -92,10 +93,8 @@ export async function registerWithPassword(
     return err(
       apiError(
         "rate_limited",
-        t.auth.login.throttled.replace(
-          "{seconds}",
-          String(status.retryAfterSeconds)
-        )
+        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        { retryAfterSeconds: status.retryAfterSeconds }
       )
     )
   }
@@ -174,10 +173,8 @@ export async function requestEmailVerification(
     return err(
       apiError(
         "rate_limited",
-        t.auth.login.throttled.replace(
-          "{seconds}",
-          String(status.retryAfterSeconds)
-        )
+        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        { retryAfterSeconds: status.retryAfterSeconds }
       )
     )
   }
@@ -243,10 +240,8 @@ export async function signInWithPassword(
     return err(
       apiError(
         "rate_limited",
-        t.auth.login.throttled.replace(
-          "{seconds}",
-          String(blocking.retryAfterSeconds)
-        )
+        throttledMessage(t.auth.login.throttled, blocking.retryAfterSeconds),
+        { retryAfterSeconds: blocking.retryAfterSeconds }
       )
     )
   }
@@ -405,10 +400,8 @@ export async function resetPassword(
     return err(
       apiError(
         "rate_limited",
-        t.auth.login.throttled.replace(
-          "{seconds}",
-          String(status.retryAfterSeconds)
-        )
+        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        { retryAfterSeconds: status.retryAfterSeconds }
       )
     )
   }
@@ -521,10 +514,8 @@ export async function changePassword(
     return err(
       apiError(
         "rate_limited",
-        t.auth.login.throttled.replace(
-          "{seconds}",
-          String(status.retryAfterSeconds)
-        )
+        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        { retryAfterSeconds: status.retryAfterSeconds }
       )
     )
   }

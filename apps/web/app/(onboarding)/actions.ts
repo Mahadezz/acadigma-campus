@@ -34,6 +34,7 @@ import { getMessages } from "@/lib/i18n"
 import { throttleKey } from "@/lib/request-context"
 import { createClient } from "@/lib/supabase/server"
 import { throttleRecordFailure, throttleStatus } from "@/lib/throttle"
+import { throttledMessage } from "@/lib/throttle-copy"
 import { WORKSPACE_COOKIE } from "@/lib/workspace"
 
 import { listMyWorkspaces } from "../(shared)/workspace/actions"
@@ -152,10 +153,8 @@ export async function checkEiinAvailability(
     return err(
       apiError(
         "rate_limited",
-        t.auth.login.throttled.replace(
-          "{seconds}",
-          String(status.retryAfterSeconds)
-        )
+        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        { retryAfterSeconds: status.retryAfterSeconds }
       )
     )
   }

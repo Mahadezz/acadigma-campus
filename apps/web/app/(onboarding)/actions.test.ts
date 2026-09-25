@@ -60,7 +60,8 @@ describe("checkEiinAvailability", () => {
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error.code).toBe("rate_limited")
-      expect(result.error.message).toContain("137")
+      expect(result.error.retryAfterSeconds).toBe(137)
+      expect(result.error.message).toContain("3 min")
     }
     expect(mockThrottleRecordFailure).not.toHaveBeenCalled()
     expect(mockRpc).not.toHaveBeenCalled()

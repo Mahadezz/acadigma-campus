@@ -29,6 +29,9 @@ export const apiErrorSchema = z.object({
   /** Ties a client report to the server log line (ARCHITECTURE §10). */
   correlationId: z.string().optional(),
   fieldErrors: fieldErrorsSchema.optional(),
+  /** `rate_limited` only: seconds until the block lifts, so a form can
+   * count down without parsing the message (D-101). */
+  retryAfterSeconds: z.number().int().nonnegative().optional(),
 })
 
 export type ApiError = z.infer<typeof apiErrorSchema>

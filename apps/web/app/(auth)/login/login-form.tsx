@@ -28,15 +28,9 @@ import {
   describeSubmitFailure,
   type SubmitFailureTone,
 } from "@/lib/submit-failure"
+import { throttledMessage } from "@/lib/throttle-copy"
 
 import { signInWithPassword } from "../actions"
-
-/** Pulls the numeric countdown out of a "... in 900s." message so the button can
- * tick it down live, without widening the shared `ApiError` shape for one screen. */
-function extractSeconds(message: string): number | null {
-  const match = /(\d+)s/.exec(message)
-  return match?.[1] ? Number(match[1]) : null
-}
 
 /**
  * Email + password sign-in (F-ID-01 §6 `/login`).
@@ -85,7 +79,7 @@ export function LoginForm({
         if (!result.ok) {
           setFormError(result.error.message)
           if (result.error.code === "rate_limited") {
-            setRetrySeconds(extractSeconds(result.error.message))
+            setRetrySeconds(result.error.retryAfterSeconds ?? null)
           }
         }
       } catch {
@@ -111,7 +105,7 @@ export function LoginForm({
         {formError ? (
           <InlineAlert tone={errorTone}>
             {throttled
-              ? t.throttled.replace("{seconds}", String(retrySeconds))
+              ? throttledMessage(t.throttled, retrySeconds)
               : formError}
           </InlineAlert>
         ) : null}
@@ -190,9 +184,9 @@ export function LoginForm({
               <Loader2Icon className="animate-spin" aria-hidden="true" />
               {t.submittingButton}
             </>
-          ) : throttled ? (
-            t.throttled.replace("{seconds}", String(retrySeconds))
           ) : (
+            // Throttled: the banner says how long; the button stays
+            // "Sign in", just disabled (D-101).
             t.submitButton
           )}
         </Button>
