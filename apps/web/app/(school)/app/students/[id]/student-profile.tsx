@@ -1,3 +1,7 @@
+"use client"
+
+// A client module only so the shared ui components tree-shake: imported
+// from a server component, their `radix-ui` barrel ships whole (+40 kB).
 import Link from "next/link"
 
 import { ArrowLeftIcon, LockIcon, PhoneIcon } from "lucide-react"
