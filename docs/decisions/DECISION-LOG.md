@@ -731,3 +731,21 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 **Why:** the denominator must be the same for every member. Restricting who may ask is the boundary, not what each role may read.
 
 **Consequences:** pgTAP `41_school_calendar.sql` asserts that a parent gets postgres's answer for a holiday, an override and a month count, and that a member of another school gets NULL or FORBIDDEN.
+
+## D-400 — The school dashboard ships now, built only from data that exists, with empty slots for what does not · ACCEPTED · 2026-09-25
+
+**Context:** `/app/dashboard` was a developer placeholder ("Workspace resolved … Role owner, workspace <uuid>"). The owner approved a demo cut: replace it with a real owner/admin "today" dashboard before timetable, attendance and marks exist. F-TE-07's analytics views, and DESIGN-SYSTEM §8.2's teacher wireframe (the "NOW" period card), both depend on tables that are not built yet.
+
+**Decision:**
+
+1. Show only what the database already holds: the workspace name and F-OP-07 letterhead, plan code and `trial_ends_at` (days left counted on the school's calendar, `trialDaysLeft`), `access_mode` (a Read-only chip), active members by role, the staff-directory count, the current academic year and grade levels (both created by the F-ID-05 wizard, D-100), and — for roles with `audit.read` — the last five audit events that have a curated sentence, rendered with the existing `renderAuditSentence`. Generic `<table>.<op>` rows name raw tables ("a profiles record"), so they stay on `/app/audit` only (`isCuratedAuditAction`).
+2. Counts are `head: true` count queries under the caller's RLS (`getDashboardSummary`, `packages/db`). No member or staff row reaches the page; a parent never reaches the shell. A settings read that fails for any reason other than a missing profile row is an error state, not a silent "no letterhead" default.
+3. Attendance and exam results are real `EmptyState` cards with copy that says what fills them. No sample number appears anywhere on the page (PRODUCT-DECISIONS 3.9, F-TE-07's anti-mock rule).
+4. A setup checklist (letterhead, academic year, teachers, staff records, students) comes from `buildSetupChecklist` (`packages/domain/dashboard`). A step links only to a page that exists (`/app/settings/branding` for the letterhead today; the others link when their pages ship). "Academic year and classes" is done when the school has a current academic year and at least one grade level — one step, because the wizard does both on one screen. Students stay "to do" until the student table exists. The card is hidden once every step is done.
+5. Owners and admins get the full view; teachers and office staff get the lighter one (date, school, Today slots, Members).
+6. No migration and no new permission: every read is already allowed by existing RLS.
+7. The school shell shows only nav items whose page exists (`apps/web/lib/implemented-routes.ts`, unit-tested against the `page.tsx` files in both directions). The nav configs stay complete; a Part adds its route to the list when it ships its page. Before this, every signed-in page prefetched up to 14 routes that returned 404. The owner's "School settings" item now points to `/app/settings` (D-201).
+
+**Why:** a demo that shows invented numbers would contradict PRODUCT-DECISIONS 3.9 the first time a school compares it with its register. A page built from real counts and honest empty states is useful today and gets richer as each Part ships, without rework.
+
+**Consequences:** F-TE-07 Part 1's `analytics.overview` replaces the Members/Today cards' data source when it ships. F-AC-03 fills the attendance slot, F-AC-05 adds the "NOW" card, and the exams Part fills the results slot. When the student table lands, `page.tsx` passes a real count to `buildSetupChecklist` in place of the constant. The dashboard has its own `loading.tsx` and `error.tsx`, so a slow or failed count keeps the shell on screen.

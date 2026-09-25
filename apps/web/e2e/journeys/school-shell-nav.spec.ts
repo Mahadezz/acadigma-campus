@@ -34,26 +34,26 @@ test.describe("school shell nav — owner", () => {
     page,
   }, testInfo) => {
     await signIn(page, "owner@acadigma.test")
-    await expect(page.getByText("Role owner", { exact: false })).toBeVisible()
+    await expect(page.getByText("Signed in as owner")).toBeVisible()
 
     const isPhone = testInfo.project.name === "phone"
     const nav = page.getByRole("navigation", { name: "School" })
 
-    // DESIGN-SYSTEM §3.2 school owner/admin: Overview, Attendance, Students, Messages.
+    // DESIGN-SYSTEM §3.2 school owner/admin: Overview first. Items whose page
+    // does not exist yet (Students, Billing & plan, ...) are hidden by
+    // `onlyImplemented` (D-400), so no link can 404.
     await expect(nav.getByRole("link", { name: "Overview" })).toBeVisible()
-    await expect(nav.getByRole("link", { name: "Students" })).toBeVisible()
+    await expect(nav.getByRole("link", { name: "Students" })).toHaveCount(0)
 
     if (isPhone) {
       await page.getByRole("button", { name: /more/i }).click()
-      // Owner-only within More (DESIGN-SYSTEM §3.2 footnote): Billing & plan, Audit log.
-      await expect(page.getByText("Billing & plan")).toBeVisible()
-      await expect(page.getByText("Audit log")).toBeVisible()
-    } else {
-      await expect(
-        page.getByRole("link", { name: "Billing & plan" })
-      ).toBeVisible()
-      await expect(page.getByRole("link", { name: "Audit log" })).toBeVisible()
     }
+    // Owner-only within More (DESIGN-SYSTEM §3.2 footnote): Audit log.
+    await expect(page.getByRole("link", { name: "Audit log" })).toBeVisible()
+    await expect(
+      page.getByRole("link", { name: "School settings" })
+    ).toBeVisible()
+    await expect(page.getByText("Billing & plan")).toHaveCount(0)
 
     await expectNoA11yViolations(page, testInfo)
   })
@@ -64,23 +64,15 @@ test.describe("school shell nav — teacher", () => {
     page,
   }, testInfo) => {
     await signIn(page, "teacher@acadigma.test")
-    await expect(page.getByText("Role teacher", { exact: false })).toBeVisible()
+    await expect(page.getByText("Signed in as teacher")).toBeVisible()
 
-    const isPhone = testInfo.project.name === "phone"
     const nav = page.getByRole("navigation", { name: "School" })
 
-    // DESIGN-SYSTEM §3.2 school teacher: Today, Attendance, Timetable, Messages.
+    // DESIGN-SYSTEM §3.2 school teacher: Today first; Timetable is hidden
+    // until its page exists (D-400).
     await expect(nav.getByRole("link", { name: "Today" })).toBeVisible()
-    await expect(nav.getByRole("link", { name: "Timetable" })).toBeVisible()
-
-    if (isPhone) {
-      await page.getByRole("button", { name: /more/i }).click()
-      await expect(page.getByText("Audit log")).not.toBeVisible()
-    } else {
-      await expect(
-        page.getByRole("link", { name: "Audit log" })
-      ).not.toBeVisible()
-    }
+    await expect(nav.getByRole("link", { name: "Timetable" })).toHaveCount(0)
+    await expect(page.getByRole("link", { name: "Audit log" })).toHaveCount(0)
 
     await expectNoA11yViolations(page, testInfo)
   })
