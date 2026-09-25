@@ -287,6 +287,9 @@ importers:
 
   packages/pdf:
     dependencies:
+      '@acadigma/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@acadigma/domain':
         specifier: workspace:*
         version: link:../domain

@@ -766,6 +766,25 @@
       "ss01" 1;
   }
 
+  /* F-ID-10 §5.2 (D-403): the text-size preference (Normal/Large/Extra
+     large) scales the root font size, and with it every `rem`-based token
+     in this file (--text-*, --leading-*) plus any Tailwind `text-*`
+     utility. `data-text-size` is set on <html> by the server
+     (`apps/web/app/layout.tsx`, from the `acadigma_text_size` cookie or the
+     stored preference) before the first paint, so there is no client-side
+     measurement and no flash at the wrong size. Normal (100%) needs no
+     rule — the browser default already is 100%. Basic mode's own sizes
+     (§5.1: 56px tap target = the existing --size-touch-lg, 18px body =
+     --text-lg, 28/40px icons = Tailwind's native size-7/size-10) multiply
+     with this the same way the rest of the page does; Parts 2-3 wire them
+     into BasicShell/ClassBlock. */
+  html[data-text-size="large"] {
+    font-size: 112.5%;
+  }
+  html[data-text-size="xlarge"] {
+    font-size: 125%;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);

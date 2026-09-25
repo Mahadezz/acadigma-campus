@@ -154,12 +154,12 @@
       "successMessage": "Your password was changed."
     },
     "passwordStrength": {
-      "label": "Password strength",
       "0": "Too weak",
       "1": "Weak",
       "2": "Fair",
       "3": "Good",
       "4": "Strong",
+      "label": "Password strength",
       "too_short": "Must be at least 12 characters.",
       "too_long": "That password is too long.",
       "too_common": "This password is too common.",
@@ -279,22 +279,22 @@
         "madrasah": "Madrasah"
       },
       "days": {
-        "6": "Sat",
-        "7": "Sun",
         "1": "Mon",
         "2": "Tue",
         "3": "Wed",
         "4": "Thu",
-        "5": "Fri"
+        "5": "Fri",
+        "6": "Sat",
+        "7": "Sun"
       },
       "daysFull": {
-        "6": "Saturday",
-        "7": "Sunday",
         "1": "Monday",
         "2": "Tuesday",
         "3": "Wednesday",
         "4": "Thursday",
-        "5": "Friday"
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
       }
     }
   },
@@ -361,10 +361,69 @@
     "switchWorkspace": "Switch workspace"
   },
   "dashboard": {
-    "today": "Today · {date}",
-    "noPlan": "No plan",
-    "workspaceResolvedTitle": "Workspace resolved",
-    "workspaceResolvedDescription": "Membership was verified against workspace_members before this screen rendered. Role {role}, workspace {workspaceId}."
+    "eyebrowToday": "Today",
+    "eyebrowSetup": "Setup",
+    "eyebrowPeople": "People",
+    "eyebrowActivity": "Activity",
+    "plan": {
+      "title": "Plan",
+      "trialDaysLeft": "{days} days left in your trial",
+      "trialOneDayLeft": "1 day left in your trial",
+      "trialLastDay": "Your trial ends today",
+      "trialEnded": "Your trial has ended",
+      "readOnly": "Read-only",
+      "active": "Active",
+      "noPlan": "No plan"
+    },
+    "people": {
+      "title": "Members",
+      "total": "{count} active",
+      "roles": {
+        "owner": "Owners",
+        "admin": "Admins",
+        "teacher": "Teachers",
+        "staff": "Office staff",
+        "parent": "Parents"
+      }
+    },
+    "staff": {
+      "title": "Staff directory",
+      "count": "{count} staff records",
+      "empty": "No staff records yet"
+    },
+    "checklist": {
+      "title": "Finish setting up your school",
+      "progress": "{done} of {total} done",
+      "done": "Done",
+      "todo": "To do",
+      "steps": {
+        "school_profile": "Add your school's letterhead and logo",
+        "academic_year": "Set up the academic year and classes",
+        "teachers": "Invite your teachers",
+        "staff_records": "Add staff records",
+        "students": "Add students"
+      }
+    },
+    "attendance": {
+      "title": "Today's attendance",
+      "emptyTitle": "No attendance taken yet",
+      "emptyDescription": "When teachers take today's register, present, absent and late counts show here.",
+      "marked": "{done} of {total} classes marked",
+      "rate": "{rate}% present so far",
+      "open": "Open attendance",
+      "none": "No classes yet"
+    },
+    "results": {
+      "title": "Exam results",
+      "emptyTitle": "No results yet",
+      "emptyDescription": "Results show here once marks are entered and published for an exam."
+    },
+    "activity": {
+      "title": "Recent activity",
+      "viewAll": "Open the audit trail",
+      "empty": "Nothing has changed in this workspace yet."
+    },
+    "loadError": "The dashboard could not load. Refresh to try again."
   },
   "attendance": {
     "title": "Attendance",
@@ -836,6 +895,11 @@
         "title": "Grading",
         "description": "Grade bands, letters and grade points",
         "keywords": "grade scale gpa letter band point pass fail a+ bangladesh"
+      },
+      "display": {
+        "title": "Display",
+        "description": "Text size and basic mode",
+        "keywords": "text size font large extra basic mode accessibility"
       }
     },
     "notSet": "Not set",
@@ -959,6 +1023,7 @@
     "generating": "Generating…",
     "generated": "Generated. Ready to download below.",
     "error": "Could not generate this report. Try again.",
+    "generateReportCard": "Generate progress report (Class 6 sample)",
     "empty": "No reports generated yet.",
     "recent": "Recent runs",
     "status": {
@@ -976,71 +1041,6 @@
       "notReady": "This report is not ready yet.",
       "failedNote": "This report failed to render."
     }
-  },
-  "dashboard": {
-    "eyebrowToday": "Today",
-    "eyebrowSetup": "Setup",
-    "eyebrowPeople": "People",
-    "eyebrowActivity": "Activity",
-    "plan": {
-      "title": "Plan",
-      "trialDaysLeft": "{days} days left in your trial",
-      "trialOneDayLeft": "1 day left in your trial",
-      "trialLastDay": "Your trial ends today",
-      "trialEnded": "Your trial has ended",
-      "readOnly": "Read-only",
-      "active": "Active",
-      "noPlan": "No plan"
-    },
-    "people": {
-      "title": "Members",
-      "total": "{count} active",
-      "roles": {
-        "owner": "Owners",
-        "admin": "Admins",
-        "teacher": "Teachers",
-        "staff": "Office staff",
-        "parent": "Parents"
-      }
-    },
-    "staff": {
-      "title": "Staff directory",
-      "count": "{count} staff records",
-      "empty": "No staff records yet"
-    },
-    "checklist": {
-      "title": "Finish setting up your school",
-      "progress": "{done} of {total} done",
-      "done": "Done",
-      "todo": "To do",
-      "steps": {
-        "school_profile": "Add your school's letterhead and logo",
-        "academic_year": "Set up the academic year and classes",
-        "teachers": "Invite your teachers",
-        "staff_records": "Add staff records",
-        "students": "Add students"
-      }
-    },
-    "attendance": {
-      "title": "Today's attendance",
-      "emptyTitle": "No attendance taken yet",
-      "emptyDescription": "When teachers take today's register, present, absent and late counts show here.",
-      "marked": "{done} of {total} classes marked",
-      "rate": "{rate}% present so far",
-      "open": "Open attendance",
-      "none": "No classes yet"
-    },
-    "results": {
-      "title": "Exam results",
-      "emptyTitle": "No results yet",
-      "emptyDescription": "Results show here once marks are entered and published for an exam."
-    },
-    "activity": {
-      "title": "Recent activity",
-      "viewAll": "Open the audit trail",
-      "empty": "Nothing has changed in this workspace yet."
-    },
-    "loadError": "The dashboard could not load. Refresh to try again."
   },
   "shell": {
     "signedInAs": "Signed in as {role}",
@@ -1380,6 +1380,32 @@
       "ROSTER_CHANGED": "The class list changed. Reload the page.",
       "generic": "Not saved. Your marks are still here — try again.",
       "readOnly": "The school is view-only right now, so nothing can be changed."
+    }
+  },
+  "basicMode": {
+    "settings": {
+      "title": "Display",
+      "description": "Text size and basic mode",
+      "textSizeLabel": "Text size",
+      "normal": "Normal",
+      "large": "Large",
+      "xlarge": "Extra large",
+      "sampleText": "Sample text at this size",
+      "basicModeLabel": "Basic mode",
+      "basicModeDescription": "Bigger buttons, one screen per class. You can switch back any time.",
+      "basicModeComingSoon": "This turns basic mode on for your account. The class-by-class home screen is coming in a later update.",
+      "switchOn": "Turn on",
+      "switchOff": "Turn off",
+      "saved": "Saved",
+      "saveError": "Could not save. Please try again."
+    },
+    "home": {
+      "title": "Basic mode",
+      "message": "Basic mode is on. Your class-by-class home screen is coming in a later update.",
+      "switchToFullApp": "Switch to full app"
+    },
+    "userMenu": {
+      "switchToBasicMode": "Switch to basic mode"
     }
   }
 }

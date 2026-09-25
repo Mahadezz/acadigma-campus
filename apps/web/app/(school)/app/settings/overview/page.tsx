@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import { getSchoolSettings } from "@acadigma/db/repositories/settings"
 import { SAT_FIRST_ORDER } from "@acadigma/domain/academic"
 import { resolve } from "@acadigma/domain/settings"
@@ -68,6 +70,20 @@ export default async function SettingsOverviewPage() {
         title={s.title}
         description={s.description}
       />
+      {/* F-ID-10 §2/§6 (D-403): text size is every role's own setting, but
+          this page's caller (teacher/staff, no workspace.settings.write) is
+          redirected away from the grouped Settings list above, which is the
+          list's only other link to /app/settings/display — without this,
+          those roles could never reach the text-size screen at all. Plain
+          `<Link>`, matching `SubPageHeader`'s own back-link styling, not a
+          `Button`: this route had no client component before, and this is
+          one line for one link, not a reason to pull one in. */}
+      <Link
+        href="/app/settings/display"
+        className="text-muted-foreground hover:text-foreground -ml-2 inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm underline-offset-4 hover:underline"
+      >
+        {t.settings.rows.display.title}
+      </Link>
       <div className="grid gap-4 lg:grid-cols-2">
         {groups.map((group) => (
           <section key={group.title} className="rounded-lg border p-4">

@@ -60,6 +60,11 @@ export default async function SettingsPage() {
       ...s.rows.overview,
       summary: s.rows.overview.description,
     },
+    {
+      href: "/app/settings/display",
+      ...s.rows.display,
+      summary: s.rows.display.description,
+    },
   ]
 
   return (

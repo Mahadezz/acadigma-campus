@@ -297,11 +297,13 @@ Two properties make them safe. First, the helper joins back to `workspace_member
 
 ### 1.7 `user_preferences` — 1:1 with `profiles`
 
-`user_id` **PK**, `theme_mode` (`light`|`dark`|`system`), `palette`, `density`, `language` (`en`|`bn`), `timezone`, `email_digest` (`off`|`instant`|`daily`|`weekly`), `push_enabled`, `channels jsonb` (per-category in-app/push switches), timestamps.
+`user_id` **PK**, `theme_mode` (`light`|`dark`|`system`), `palette`, `density`, `language` (`en`|`bn`), `timezone`, `email_digest` (`off`|`instant`|`daily`|`weekly`), `push_enabled`, `channels jsonb` (per-category in-app/push switches), `ui_mode` (`full`|`basic`, F-ID-10 §3, D-403/D-404), `text_size` (`normal`|`large`|`xlarge`, F-ID-10 §5.2), timestamps.
 
 Deliberately has **no** `workspace_id`: preferences follow the person across school PC and phone (PRODUCT-DECISIONS 1.10). `localStorage` is a cache only.
 
-**Indexes** — PK only. **RLS** — class **U1**. **Triggers** — `updated_at`. **Soft delete** — no.
+`ui_mode`/`text_size` were added by F-ID-10 Part 1 (`20260925300315_user_preferences_ui.sql`) — the table already existed (this row is unchanged since F-ID-02's earlier demo-cut work), so that migration only adds the two columns, not the table (D-404). `ui_mode` is global to the user, never per workspace; a member whose role is `staff` in the active workspace does not see the basic-mode switch or shell there regardless of this value — enforced in application routing (`(school)/app/page.tsx`), not RLS, because it is a layout choice, never a permission (F-ID-10 §2 note 4).
+
+**Indexes** — PK only. **RLS** — class **U1** (select/insert/update/delete, own row only, no platform read) — `ui_mode`/`text_size` ride this unchanged; F-ID-10 §3's own text says "no delete grant" for this table, which was written before Part 1 discovered the table already shipped with a delete grant (D-404) — this section is the one that wins. **Triggers** — `updated_at`. **Soft delete** — no.
 
 ### 1.7a `onboarding_progress` _(F-ID-05 Part 2, `20260925000300_onboarding_progress.sql`)_
 
@@ -761,11 +763,11 @@ The cover-teacher payroll calculation needs the rate but must not be able to _se
 
 `diary_entries` is the one table whose SELECT policy is **creator-only even for owners** — a private diary that an admin can read is not a diary.
 
-### 6.2 `report_runs` and `report_run_items` (F-OP-03 Parts 1-2, D-204/D-205)
+### 6.2 `report_runs` and `report_run_items` (F-OP-03 Parts 1-3, D-204/D-205/D-206)
 
-`report_runs` — one row per requested PDF render, `report_kind` (`'sample'` only so far — real kinds land with the Parts that build the exam/marks data they need; additive `alter type ... add value`, no shape change here), `report_status` (`queued -> rendering -> ready|failed`; `expired` is reserved for the 30-day cron this Part does not build), `params jsonb`, `report_locale` (`bn`/`en`), `requested_by`/`requested_at`, `started_at`/`completed_at`/`duration_ms`, `error_code`/`error_detail`, `idempotency_key` (unique per `(workspace_id, idempotency_key)` while the run is `queued|rendering|ready` — a partial index, so a failed/expired run never blocks a fresh attempt), `expires_at` (default +30 days, not yet swept), `file_id -> files` (always `null` in this PR — D-205: no Storage row is created yet).
+`report_runs` — one row per requested PDF render, `report_kind` (`'sample' | 'report_card'` — `'report_card'` added Part 3, D-206, fixture-backed until F-AC-06 marks entry lands; further real kinds land with the Parts that build the data they need; additive `alter type ... add value`, no shape change here), `report_status` (`queued -> rendering -> ready|failed`; `expired` is reserved for the 30-day cron this Part does not build), `params jsonb`, `report_locale` (`bn`/`en`), `requested_by`/`requested_at`, `started_at`/`completed_at`/`duration_ms`, `error_code`/`error_detail`, `idempotency_key` (unique per `(workspace_id, idempotency_key)` while the run is `queued|rendering|ready` — a partial index, so a failed/expired run never blocks a fresh attempt), `expires_at` (default +30 days, not yet swept), `file_id -> files` (always `null` in this PR — D-205: no Storage row is created yet).
 
-RLS: SELECT `has_role(workspace_id,{owner,admin,teacher})` **and** (`requested_by = self` **or** `has_role(...,{owner,admin})`) — a teacher sees only their own runs. INSERT the same shape, `with check`ed so a teacher cannot attribute a run to someone else. **No UPDATE or DELETE policy for `authenticated` at all** — `report_runs` has no client-writable status; only the render pipeline, running under `withServiceRole`, moves a run from `queued` to `ready`/`failed`. Freeze, audit and `attach_require_writable` (D-300) all attached, per every tenant table.
+RLS: SELECT `has_role(workspace_id,{owner,admin,teacher,staff})` **and** (`requested_by = self` **or** `has_role(...,{owner,admin})`) — a teacher or staff member sees only their own runs. INSERT the same shape, `with check`ed so nobody can attribute a run to someone else; staff may insert only a `report_card` run (D-206, `20260925300313`). **No UPDATE or DELETE policy for `authenticated` at all** — `report_runs` has no client-writable status; only the render pipeline, running under `withServiceRole`, moves a run from `queued` to `ready`/`failed`. Freeze, audit and `attach_require_writable` (D-300) all attached, per every tenant table.
 
 `report_run_items` — per-student/staff/section page ranges for a bulk run (Part 5). Ships now (spec's own Part 2 scope) but no code in this PR writes to it; SELECT policy joins back to the parent run's requester the same way. No INSERT grant for `authenticated` — bulk rendering is entirely a Part 5 concern. `report_run_items.report_run_id`/`workspace_id` is a composite FK to `report_runs (id, workspace_id)` (which carries its own `unique (id, workspace_id)`) — an item's `workspace_id` is constrained by Postgres to match its parent run's, not just left to application code, closing the gap a plain single-column `report_run_id -> report_runs(id)` FK would leave open (pgTAP-confirmed, `40_report_runs.sql`).
 
