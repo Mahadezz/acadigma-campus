@@ -25,6 +25,11 @@ test.describe("smoke", () => {
   }, testInfo) => {
     await page.goto("/login")
 
+    // D-68: the Campus logo heads the page and links home.
+    await expect(
+      page.getByRole("link", { name: "Acadigma Campus home" })
+    ).toBeVisible()
+
     const email = page.getByLabel("Email")
     const password = page.getByLabel("Password")
     await expect(email).toBeVisible()

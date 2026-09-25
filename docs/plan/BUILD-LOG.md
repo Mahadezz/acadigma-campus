@@ -4,6 +4,14 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-09-25 — PR #36 — feat(design): D-68 visual refinement (Blend) + Acadigma product logos
+
+- **Lane:** design
+- **Shipped:** "Blend" visual refinement (6px radius, hairline rings instead of drop shadows, lighter/tighter headings, 16px body, an `eyebrow` utility) on top of D-57's ink/paper palette; real Acadigma/Campus grid-mark logos and app icons replace the placeholder text/icon.
+- **Decisions:** D-68.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
 ## 2026-09-25 — PR #32 — feat(ops): F-OP-06 Part 1 — staff schema, RLS and the compensation split
 
 - **Lane:** operations

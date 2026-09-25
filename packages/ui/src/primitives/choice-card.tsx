@@ -55,7 +55,7 @@ export function ChoiceCard({
       </span>
       <span className="min-w-0 flex-1 space-y-0.5">
         <span className="flex flex-wrap items-center gap-2">
-          <span className="text-foreground block text-base font-semibold">
+          <span className="text-foreground block text-base font-medium">
             {title}
           </span>
           {disabled && badge ? (
@@ -78,7 +78,7 @@ export function ChoiceCard({
   )
 
   const shared = cn(
-    "flex min-h-[120px] w-full items-center gap-4 rounded-xl border bg-card p-4 text-left shadow-flat transition-colors",
+    "flex min-h-[120px] w-full items-center gap-4 rounded-lg bg-card p-4 text-left shadow-flat transition-colors",
     disabled ? "cursor-not-allowed opacity-60" : "hover:bg-accent/5",
     "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
     className
@@ -86,7 +86,7 @@ export function ChoiceCard({
 
   if (disabled) {
     return (
-      <div className={shared} aria-disabled="true">
+      <div data-slot="choice-card" className={shared} aria-disabled="true">
         {content}
       </div>
     )
@@ -94,14 +94,19 @@ export function ChoiceCard({
 
   if (href) {
     return (
-      <a href={href} className={shared}>
+      <a data-slot="choice-card" href={href} className={shared}>
         {content}
       </a>
     )
   }
 
   return (
-    <button type="button" onClick={onClick} className={shared}>
+    <button
+      data-slot="choice-card"
+      type="button"
+      onClick={onClick}
+      className={shared}
+    >
       {content}
     </button>
   )
