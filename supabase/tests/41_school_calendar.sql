@@ -35,6 +35,9 @@ $fn$;
 create or replace function tests.login(p_id uuid)
 returns void language plpgsql as $fn$
 begin
+  -- Switch users without an explicit logout: read auth.users as postgres
+  -- (SET ROLE is checked against the session user, so this is allowed).
+  perform set_config('role', 'postgres', true);
   perform set_config('request.jwt.claims',
     json_build_object('sub', p_id::text, 'role', 'authenticated',
                       'email', (select u.email from auth.users u where u.id = p_id))::text, true);
