@@ -195,6 +195,11 @@ Named owner (lead proposes, owner confirms). Cost table: **minimise now ~৳25,0
 
 Separate Bengali base type size from the Latin scale; self-hosted subset Bengali font with an explicit fallback-flash test on Android 11; Banglish accepted everywhere (never validate "must be Bengali"); transliteration on report comments and behaviour notes; Bengali PDF embedding verified in an old reader, not only Chrome. Target: **R1** (T-09, T-10, X-06).
 
+### New item — Basic mode and offline (owner decisions 2026-09-26, D-403, D-71)
+
+- **Basic mode (F-ID-10, 4 Parts, design lane).** Parts 1–3 (display preferences and text size; basic home, shell and help; class hub with attendance, students and marks) run **after marks entry (F-AC-06 Part 3) and before the school demos**, so the demo can show an older teacher's whole morning in basic mode. **Prerequisite:** F-AC-01 Part 5 (`section_subjects`, per-subject class assignments) must ship **before** the basic-mode demo — without it only class teachers get class blocks and most teachers see an empty home. It moves into the academics queue ahead of the demo. Part 4 (voice hints) is last, behind a go/no-go gate on a 2019-era Android phone.
+- **Offline (F-ID-11, 6 Parts) is its own track, not a side task of basic mode.** Order: app shell + read cache + cache purge → 2a the generic outbox with attendance on it and the outbox purge (absorbs F-AC-03 Part 7's offline half) → 2b conflict sheet, late sync, session expiry → marks on it (absorbs F-AC-06 Part 4's offline half; needs F-AC-06 Part 3) → lesson plans and handouts as F-TE-01/F-TE-05 ship → the 14-day lock and storage. **Size, honestly:** about twelve working days, and it changes the contract of every offline-capable action (idempotency key, named errors, base version), so it lands in the lanes that own those actions as well as in the platform code. Parts 1–2b carry most of the risk (RSC page caching, replay correctness) and should start early, ideally before the demos, so the demos' roll call works in a corridor with no signal.
+
 ## 4. Streams and ownership (no two agents write the same folder)
 
 The lanes that run now are in `docs/plan/LANES.md`, D-69.

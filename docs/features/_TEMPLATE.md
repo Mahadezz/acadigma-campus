@@ -6,6 +6,7 @@
 | Status           | planned · in-progress · shipped (vX.Y.Z)                          |
 | Owner branch     | `feat/<area>-<slug>`                                              |
 | Depends on       | F-…                                                               |
+| Offline          | full · read · needs internet (F-ID-11 §5.1)                       |
 | Plan             | `docs/plan/ROADMAP.md` chunk <n>                                  |
 | Base44 reference | `docs/reference/base44-inventory/<file>.md` §…                    |
 

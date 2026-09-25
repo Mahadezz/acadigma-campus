@@ -44,6 +44,8 @@ Tenant key: `user_preferences` and `profiles` are **user-scoped, not workspace-s
 
 **`user_preferences`** (1:1 with `profiles`; proposed, DATA-MODEL.md wins)
 
+_(2026-09-26, F-ID-10 / D-403, D-401: F-ID-10 Part 1 may create this table first with only `ui_mode` and `text_size`; this spec's columns are then added by `alter table`. `language` is not a column here for now — D-401 keeps the language in `profiles.locale` + the `acadigma_locale` cookie, and F-ID-10 uses that same resolver.)_
+
 | column                  | type                | default                                              | notes                                                                                                                                 |
 | ----------------------- | ------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `user_id`               | uuid PK FK profiles |                                                      |                                                                                                                                       |
@@ -170,11 +172,15 @@ The root layout calls `getPreferences` server-side (uncached per user, `revalida
 
 **Part 1 — `user_preferences` table, server read, no-flash theming** · Migration (table, enums, `handle_new_user()` extension, RLS), `getPreferences`/`updatePreferences`, root-layout server read, `acx_theme` cookie mirror, `resolveTheme`. · Files: `supabase/migrations/*_user_preferences.sql`, `packages/ui/theme/*`, `apps/web/app/layout.tsx`. · Tests: pgTAP (no cross-user read, no platform-admin read, no delete grant), unit tests for `resolveTheme` precedence, a Playwright assertion that the first paint in dark mode has no light-mode frame. · **Demo:** set dark on one browser, hard-reload — no flash; open a second browser signed in as the same user — already dark.
 
+_(2026-09-26, F-ID-10 / D-403: if F-ID-10 Part 1 has already created `user_preferences`, this Part's migration adds its columns with `alter table` instead of creating the table.)_
+
 **Part 2 — Profile screen and avatar pipeline** · `/settings/profile` in both shells, `updateProfile`, `AvatarUploader` with crop+resize, storage policy, initials fallback, `profile.updated` audit. · Tests: magic-byte rejection, oversize rejection, omitted-field semantics (no accidental null), pgTAP on the storage policy path prefix. · **Demo:** change name and photo on a 360×800 viewport; the top bar, the member directory and a generated PDF header all show the new values.
 
 **Part 3 — Appearance and density** · Palette single-source tokens, six swatches, `SegmentedControl`, preview card, popover in the top bar, optimistic apply + queued retry, `reduce_motion` wiring into the motion primitives. · Tests: a unit test asserting the picker's palette list is literally the tokens module (no second list — guards against W15), axe on the picker, offline mutation replay test. · **Demo:** switch palette offline in the PWA, come back online, reload — the choice survived.
 
 **Part 4 — Bangla (bn) localisation and the language switch** · `next-intl` (or equivalent) wiring, `en`/`bn` catalogues for this area's strings, locale cookie, Bengali font subset shared with the PDF renderer, `Intl` formatting helpers, CI key-parity check, missing-key fallback logging. · Tests: catalogue parity test, a Playwright run of the sign-in → settings journey entirely in `bn`, a snapshot asserting no hardcoded English remains in this area's components. · **Demo:** switch to বাংলা on a phone; every screen in F-ID-01/02 reads Bangla and the layout does not overflow at 360 px.
+
+_(2026-09-26, D-401 / F-ID-10: the language stays in `profiles.locale` + the `acadigma_locale` cookie (D-401); basic mode reads the same resolver and never forces Bangla.)_
 
 ## 9. Acceptance criteria
 
