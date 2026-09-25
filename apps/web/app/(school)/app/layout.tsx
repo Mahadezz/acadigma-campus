@@ -110,7 +110,11 @@ export default async function SchoolLayout({
               </Button>
               <UserMenu
                 locale={locale}
-                t={{ ...t.workspace.userMenu, ...t.auth.languageToggle }}
+                t={{
+                  ...t.workspace.userMenu,
+                  ...t.auth.languageToggle,
+                  signOut: t.auth.logout.button,
+                }}
               />
             </>
           }

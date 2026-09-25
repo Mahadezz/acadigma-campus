@@ -4,18 +4,21 @@ import * as React from "react"
 
 import { useRouter } from "next/navigation"
 
-import { UserRoundIcon } from "lucide-react"
+import { LogOutIcon, UserRoundIcon } from "lucide-react"
 
 import { Button } from "@acadigma/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@acadigma/ui/components/dropdown-menu"
 
+import { signOut } from "@/app/(auth)/actions"
 import { isLocale, setLocaleCookie, type Locale } from "@/lib/locale"
 
 import { updateLocale } from "./actions"
@@ -28,6 +31,8 @@ export type UserMenuProps = {
     /** `t.auth.languageToggle` — the same two labels the signed-out toggle uses. */
     bn: string
     en: string
+    /** `t.auth.logout.button` — reserved since F-ID-01, unused until now. */
+    signOut: string
   }
 }
 
@@ -48,6 +53,12 @@ export type UserMenuProps = {
  * only the cookie, so it follows the user to their next device — the cookie
  * alone (what `LanguageToggle` on `/login` still does; there is no signed-in
  * user yet to persist a preference for) only ever covers this browser.
+ *
+ * Review follow-up on PR #51: the signed-in shell had no sign-out control
+ * anywhere. Reuses the existing `signOut` server action (`(auth)/actions.ts`
+ * §4.10 — single-device scope, clears the workspace cookie, redirects to
+ * `/login`) rather than a new one; this menu is simply the first place it is
+ * wired into the UI.
  */
 export function UserMenu({ locale, t }: UserMenuProps) {
   const router = useRouter()
@@ -65,6 +76,10 @@ export function UserMenu({ locale, t }: UserMenuProps) {
     })
   }
 
+  function handleSignOut() {
+    startTransition(() => signOut())
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -78,6 +93,11 @@ export function UserMenu({ locale, t }: UserMenuProps) {
           <DropdownMenuRadioItem value="bn">{t.bn}</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="en">{t.en}</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
+          <LogOutIcon aria-hidden="true" />
+          {t.signOut}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

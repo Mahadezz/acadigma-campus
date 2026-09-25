@@ -1,5 +1,7 @@
 import "server-only"
 
+import { cache } from "react"
+
 import { cookies } from "next/headers"
 
 import { createClient } from "@/lib/supabase/server"
@@ -47,8 +49,17 @@ const MESSAGES = { en, bn } as const satisfies Record<Locale, unknown>
  * The `profiles.locale` lookup only runs when there is no cookie yet (a
  * fresh session, or a browser that never switched language locally) — every
  * other request pays only the cookie read, not a database round trip.
+ *
+ * Wrapped in React's `cache()` (review follow-up on PR #51): `getMessages()`/
+ * `getLocale()` are called separately by the root layout, `GatedShell`,
+ * `(personal)`/`(family)` layouts, `SchoolLayout` and the audit reader's
+ * `getReaderLanguage()` — up to five times in one request. Without the
+ * cookie, each call is an `auth.getUser()` plus a `profiles` query; `cache()`
+ * makes React run the body at most once per request and hand every other
+ * caller the same (pending or resolved) result, the same de-duplication
+ * `requireShell()`'s own docblock already relies on for `auth.getUser()`.
  */
-export async function getLocale(): Promise<Locale> {
+export const getLocale = cache(async (): Promise<Locale> => {
   const store = await cookies()
   const raw = store.get(LOCALE_COOKIE)?.value
   if (isLocale(raw)) return raw
@@ -72,7 +83,7 @@ export async function getLocale(): Promise<Locale> {
     // already followed.
     return DEFAULT_LOCALE
   }
-}
+})
 
 export type Messages = typeof en
 

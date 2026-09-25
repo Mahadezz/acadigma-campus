@@ -48,7 +48,11 @@ export async function GatedShell({
           actions={
             <UserMenu
               locale={locale}
-              t={{ ...t.workspace.userMenu, ...t.auth.languageToggle }}
+              t={{
+                ...t.workspace.userMenu,
+                ...t.auth.languageToggle,
+                signOut: t.auth.logout.button,
+              }}
             />
           }
         />

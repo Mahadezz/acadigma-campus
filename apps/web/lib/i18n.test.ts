@@ -1,4 +1,6 @@
 // @vitest-environment node
+import type * as ReactModule from "react"
+
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 /**
@@ -10,7 +12,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
  * without a real request, plus `@/lib/supabase/server` for the D-401
  * `profiles.locale` fallback (the one app-wide resolver, also used by the
  * audit viewer's `getReaderLanguage`).
+ *
+ * Review follow-up on PR #51: `getLocale` is now wrapped in React's `cache()`
+ * so up to five call sites in one request share a single lookup. React's real
+ * `cache()` only memoises inside an actual Server Component render (it is a
+ * no-op outside one — verified directly: calling a `cache()`-wrapped function
+ * twice from plain Node invokes it twice), so this suite mocks `"react"`'s
+ * `cache` with a small Map-based stand-in that behaves the same way a real
+ * request would, reset every test in `beforeEach` so tests stay independent.
  */
+const mockCacheStore = new Map<unknown, unknown>()
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof ReactModule>()
+  return {
+    ...actual,
+    cache:
+      <T extends (...args: never[]) => unknown>(fn: T) =>
+      (...args: Parameters<T>) => {
+        if (!mockCacheStore.has(fn)) mockCacheStore.set(fn, fn(...args))
+        return mockCacheStore.get(fn)
+      },
+  }
+})
+
 const mockCookieStore = { get: vi.fn() }
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => mockCookieStore),
@@ -37,6 +61,7 @@ const { getLocale, getMessages, LOCALE_COOKIE } = await import("./i18n")
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockCacheStore.clear()
   mockGetUser.mockResolvedValue({ data: { user: null } })
   mockMaybeSingle.mockResolvedValue({ data: null })
 })
@@ -83,6 +108,23 @@ describe("getLocale", () => {
     mockCookieStore.get.mockReturnValue(undefined)
     mockGetUser.mockRejectedValue(new Error("network"))
     expect(await getLocale()).toBe("en")
+  })
+
+  it("is memoised per request: two calls hit the profile loader once", async () => {
+    // Root layout, GatedShell, the (personal)/(family) layouts, SchoolLayout
+    // and the audit reader's getReaderLanguage can all call getLocale() in
+    // one request. Without cache(), each one is its own auth.getUser() +
+    // profiles query.
+    mockCookieStore.get.mockReturnValue(undefined)
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } } })
+    mockMaybeSingle.mockResolvedValue({ data: { locale: "bn" } })
+
+    const [first, second] = await Promise.all([getLocale(), getLocale()])
+
+    expect(first).toBe("bn")
+    expect(second).toBe("bn")
+    expect(mockGetUser).toHaveBeenCalledTimes(1)
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(1)
   })
 })
 
