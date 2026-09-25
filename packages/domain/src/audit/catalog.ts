@@ -606,6 +606,8 @@ export const GENERIC_TABLE_NOUNS: Readonly<
   },
   grade_scales: { en: "a grading scale", bn: "একটি গ্রেডিং স্কেল" },
   grade_bands: { en: "a grade band", bn: "একটি গ্রেড ব্যান্ড" },
+  sections: { en: "a section", bn: "একটি শাখা" },
+  subjects: { en: "a subject", bn: "একটি বিষয়" },
 }
 
 /**
