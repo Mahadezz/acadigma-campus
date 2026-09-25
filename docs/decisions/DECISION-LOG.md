@@ -694,6 +694,16 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Consequences:** `supabase/tests/30_create_school_workspace.sql` proves the happy path, replay, the named errors, all-or-nothing under a failure injected at each of nine writes, and T2 isolation/escalation for both new tables. `12_function_grants_invariant.sql` allows `authenticated` to execute the new function. Adding a logo step later means: file uploads first, then a step between Classes and Review, then `logo_url` in the input.
 
+## D-301 — Joining a read-only school is refused by the join functions; seed passwords are hashed at seed time · ACCEPTED · 2026-09-25
+
+**Context:** PR #35's security re-check (low): D-300's trigger refused a non-member's `workspace_members` INSERT with `PLAN_READ_ONLY` on a read-only school and RLS refused it otherwise, so anyone holding a workspace uuid could learn its access mode. Separately, Semgrep flagged the bcrypt literal of the fourth seed account (`supabase/seed/seed.sql`); the other three were suppressed with `nosemgrep`.
+
+**Decision:** (1) `app.accept_invitation()` and `app.join_workspace_by_code()` check `access_mode` themselves, after the token/email binding or the invite code is verified, and refuse with `PLAN_READ_ONLY` / "This workspace is read-only. Ask the owner to upgrade." (the owner's D-300 ruling). `app.tg_require_writable()` drops its non-member branch, so a stranger's write only ever meets RLS. (2) The seed hashes `password123` with `extensions.crypt(..., gen_salt('bf'))` at seed time for all four accounts; no hash literal and no `nosemgrep` remain. (3) This migration is named `20260925300201_…` per the lead's rule for 2026-09-25 (billing prefix `202609253002NN`): a real-UTC-time name would sort before `20260925300100` (D-300) and `supabase db push` refuses an older-dated migration. Real UTC time applies from 2026-09-26.
+
+**Why:** Only someone who has already proven they were invited learns the mode. Hashing at seed time is one function call and removes the alert class instead of suppressing it.
+
+**Consequences:** `supabase/tests/51_readonly_join_and_seed.sql` applies the seed inside pgTAP (`\ir ../seed/seed.sql`), so CI now proves the seed runs on the migrated schema — it did not before. Its first run found the seed broken on main since F-OP-06 (#32): the school bootstrap now creates the default labels, and the seed's own `Principal`/`Vice-Principal`/`Senior Teacher` inserts collided on `custom_labels_workspace_name_key`. The seed now picks those labels by name instead of inserting them.
+
 ## D-101 — Per-user throttle keys are derived from `auth.uid()` in the database; rate-limit waits are shown once, in minutes · ACCEPTED · 2026-09-25
 
 **Context:** Two follow-ups. (1) D-100 item 7: `public.throttle_status`, `throttle_record_failure` and `throttle_reset` accept any key from `anon`/`authenticated` (sign-in runs before a session, so they must be callable). The IP/email buckets are safe because the app sends a salted hash nobody else can compute, but `create_school_workspace` keyed its bucket on the plain user id, so anyone who knew a user's id could lock them out of school creation for 15 minutes. (2) A production bug: after the sign-in limit tripped, `/login` showed "Too many attempts. Try again in 900s." twice — in the banner and as the submit button's label.
