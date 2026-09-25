@@ -106,7 +106,7 @@ values ('50000000-0000-4000-b000-000000000001', 'school', 'Read-only School',
 
 insert into public.custom_labels (id, workspace_id, base_role, name, created_by)
 values ('50000000-0000-4000-c000-000000000001', '50000000-0000-4000-b000-000000000001',
-        'teacher', 'Coordinator', '50000000-0000-4000-a000-000000000001');
+        'teacher', 'RO Fixture', '50000000-0000-4000-a000-000000000001');
 
 select tests.mkuser('50000000-0000-4000-a000-000000000002', 'ro-teacher@test.local', 'RO Teacher');
 select tests.mkuser('50000000-0000-4000-a000-000000000003', 'ro-decliner@test.local', 'RO Decliner');
@@ -150,7 +150,7 @@ select throws_ok(
 
 select throws_ok(
   $$insert into public.custom_labels (workspace_id, base_role, name, created_by)
-    values ('50000000-0000-4000-b000-000000000001', 'staff', 'Clerk',
+    values ('50000000-0000-4000-b000-000000000001', 'staff', 'RO Clerk',
             '50000000-0000-4000-a000-000000000001')$$,
   '42501', 'PLAN_READ_ONLY',
   'read_only: owner INSERT into custom_labels is refused');
@@ -168,7 +168,7 @@ select throws_ok(
 
 select is(
   (select count(*)::int from public.custom_labels
-    where workspace_id = '50000000-0000-4000-b000-000000000001'),
+    where id = '50000000-0000-4000-c000-000000000001'),
   1,
   'read_only: reads still work (the owner still sees the label)');
 
@@ -232,7 +232,7 @@ select tests.logout();
 select tests.login('50000000-0000-4000-a000-000000000005');
 select throws_ok(
   $$insert into public.custom_labels (workspace_id, base_role, name, created_by)
-    values ('50000000-0000-4000-b000-000000000001', 'staff', 'Spy',
+    values ('50000000-0000-4000-b000-000000000001', 'staff', 'RO Spy',
             '50000000-0000-4000-a000-000000000005')$$,
   '42501', 'new row violates row-level security policy for table "custom_labels"',
   'read_only: a stranger is refused by RLS, not PLAN_READ_ONLY (the reason never leaks)');
@@ -240,7 +240,7 @@ select throws_ok(
 select tests.logout();
 
 select lives_ok(
-  $$update public.custom_labels set name = 'Coordinator (billing)'
+  $$update public.custom_labels set name = 'RO Fixture (billing)'
      where id = '50000000-0000-4000-c000-000000000001'$$,
   'read_only: a privileged caller (service role / billing tick) still writes');
 
@@ -265,7 +265,7 @@ select lives_ok(
 
 select lives_ok(
   $$insert into public.custom_labels (workspace_id, base_role, name, created_by)
-    values ('50000000-0000-4000-b000-000000000001', 'staff', 'Clerk',
+    values ('50000000-0000-4000-b000-000000000001', 'staff', 'RO Clerk',
             '50000000-0000-4000-a000-000000000001')$$,
   'normal: owner INSERT into custom_labels succeeds');
 
@@ -277,7 +277,7 @@ select tests.logout();
 
 select is(
   (select count(*)::int from public.custom_labels
-    where workspace_id = '50000000-0000-4000-b000-000000000001'),
+    where workspace_id = '50000000-0000-4000-b000-000000000001' and name like 'RO %'),
   1,
   'normal: the writes actually landed (one label deleted, one added)');
 
