@@ -91,6 +91,9 @@ export function ResultsView({
 }
 
 const fixed2 = (n: number | null) => (n === null ? "—" : n.toFixed(2))
+/** Marks as entered, without trailing zeros (75, 79.5, 16.49); with the %
+ * column shown from `sm` up, the subject table fits a 360 px screen. */
+const marks = (n: number | null) => (n === null ? "—" : String(n))
 
 function ResultList({
   t,
@@ -169,7 +172,7 @@ function ResultList({
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-muted-foreground mb-2 text-sm tabular-nums">
-                {t.total}: {fixed2(row.totalObtained)}/{fixed2(row.totalFull)}
+                {t.total}: {marks(row.totalObtained)}/{marks(row.totalFull)}
                 {row.percentage !== null
                   ? ` · ${fixed2(row.percentage)} %`
                   : ""}
@@ -179,7 +182,9 @@ function ResultList({
                   <TableRow>
                     <TableHead>{t.subject}</TableHead>
                     <TableHead className="text-right">{t.marks}</TableHead>
-                    <TableHead className="text-right">{t.percent}</TableHead>
+                    <TableHead className="hidden text-right sm:table-cell">
+                      {t.percent}
+                    </TableHead>
                     <TableHead>{t.grade}</TableHead>
                     <TableHead className="text-right">{t.points}</TableHead>
                   </TableRow>
@@ -197,9 +202,9 @@ function ResultList({
                           ? t.absent
                           : line.status === "exempt"
                             ? t.exempt
-                            : `${fixed2(line.obtained)}/${fixed2(line.fullMarks)}`}
+                            : `${marks(line.obtained)}/${marks(line.fullMarks)}`}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="hidden text-right tabular-nums sm:table-cell">
                         {fixed2(line.percentage)}
                       </TableCell>
                       <TableCell>

@@ -2088,6 +2088,7 @@ export type Database = {
           result_id: string
           status: Database["public"]["Enums"]["mark_status"]
           subject_id: string
+          subject_kind: Database["public"]["Enums"]["subject_kind"]
           subject_name: string
           subject_name_bn: string | null
           workspace_id: string
@@ -2105,6 +2106,7 @@ export type Database = {
           result_id: string
           status: Database["public"]["Enums"]["mark_status"]
           subject_id: string
+          subject_kind?: Database["public"]["Enums"]["subject_kind"]
           subject_name: string
           subject_name_bn?: string | null
           workspace_id: string
@@ -2122,6 +2124,7 @@ export type Database = {
           result_id?: string
           status?: Database["public"]["Enums"]["mark_status"]
           subject_id?: string
+          subject_kind?: Database["public"]["Enums"]["subject_kind"]
           subject_name?: string
           subject_name_bn?: string | null
           workspace_id?: string
@@ -2165,6 +2168,7 @@ export type Database = {
           exam_id: string
           failed_subjects: number
           gpa: number | null
+          gpa_without_optional: number | null
           id: string
           letter: string | null
           percentage: number | null
@@ -2183,6 +2187,7 @@ export type Database = {
           exam_id: string
           failed_subjects: number
           gpa?: number | null
+          gpa_without_optional?: number | null
           id?: string
           letter?: string | null
           percentage?: number | null
@@ -2201,6 +2206,7 @@ export type Database = {
           exam_id?: string
           failed_subjects?: number
           gpa?: number | null
+          gpa_without_optional?: number | null
           id?: string
           letter?: string | null
           percentage?: number | null
@@ -3902,7 +3908,7 @@ export type Database = {
       report_kind: "sample"
       report_locale: "bn" | "en"
       report_status: "queued" | "rendering" | "ready" | "failed" | "expired"
-      result_status: "pass" | "fail"
+      result_status: "pass" | "fail" | "incomplete" | "withheld"
       staff_document_kind:
         | "nid"
         | "passport"
@@ -4146,7 +4152,7 @@ export const Constants = {
       report_kind: ["sample"],
       report_locale: ["bn", "en"],
       report_status: ["queued", "rendering", "ready", "failed", "expired"],
-      result_status: ["pass", "fail"],
+      result_status: ["pass", "fail", "incomplete", "withheld"],
       staff_document_kind: [
         "nid",
         "passport",
