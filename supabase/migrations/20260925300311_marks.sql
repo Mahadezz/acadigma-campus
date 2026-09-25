@@ -268,7 +268,9 @@ begin
 
   if jsonb_typeof(p_input) is distinct from 'object'
      or jsonb_typeof(p_input -> 'entries') is distinct from 'array'
-     or jsonb_array_length(p_input -> 'entries') not between 1 and 300
+     or (case when jsonb_typeof(p_input -> 'entries') = 'array'
+              then jsonb_array_length(p_input -> 'entries') not between 1 and 300
+              else true end)
      or v_key is null
      or v_key !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
      or coalesce(p_input ->> 'exam_subject_id', '') !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' then
