@@ -1003,4 +1003,4 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Why:** the fastest way to get a real school's register in, with no new way to create a student and nothing a pgTAP case cannot break.
 
-**Consequences:** migration `20260925300313_student_import_batches.sql`; `supabase/tests/36_student_import.sql` (41 assertions); `12_function_grants_invariant.sql` allow-lists `import_student_batch`. A later admission-wizard or promotion import must still go through `admit_student` (or its successor). When guardian invites land, the import's success screen offers them as a separate queued action (AC 11).
+**Consequences:** migration `20260925300316_student_import_batches.sql`; `supabase/tests/36_student_import.sql` (41 assertions); `12_function_grants_invariant.sql` allow-lists `import_student_batch`. A later admission-wizard or promotion import must still go through `admit_student` (or its successor). When guardian invites land, the import's success screen offers them as a separate queued action (AC 11).
