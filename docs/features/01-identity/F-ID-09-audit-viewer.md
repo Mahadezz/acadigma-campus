@@ -84,7 +84,7 @@ Private files: none. Exports are written to the `private` bucket and delivered b
 
 **Desktop:** the same data as a table (Time · Actor · Action · Subject · Changed fields) with the detail in a right-hand panel and the filters inline.
 
-The list renders **sentences, not raw action strings**: "Nusrat Jahan changed Rahim Uddin's role from Teacher to Admin", not `member.role_changed`. The raw action, table and row id are in the detail sheet for anyone who needs them.
+The list renders **sentences, not raw action strings**: "Nusrat Jahan changed Rahim Uddin's role from Teacher to Admin", not `member.role_changed`. The raw action, table and row id are in the detail sheet for anyone who needs them. **D-402:** every sentence is readable — generic `<table>.<op>` rows name what changed ("Nusrat added a holiday", "updated a school setting"; nouns in `GENERIC_TABLE_NOUNS`), a placeholder with no value never leaves an empty "()" or a blank, an unknown action reads "{actor} made a change", and the desktop "Action" column shows the sentence rather than the action code. The detail sheet leads with the readable noun and keeps the table and row id as a muted technical reference.
 
 **Audit:** reading your own workspace's trail as an owner is **not** itself audited — it would double the table's growth for no safety gain. Exporting is.
 

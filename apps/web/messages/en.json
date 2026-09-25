@@ -89,7 +89,7 @@
       "errorSuspended": "This account is suspended. Contact support to continue.",
       "errorUnverified": "Confirm your email to finish signing in.",
       "linkExpiredBanner": "That link has expired or was already used. Sign in, or request a new one.",
-      "throttled": "Too many attempts. Try again in {seconds}s."
+      "throttled": "Too many attempts. Try again in {minutes} min."
     },
     "register": {
       "title": "Create an account",
@@ -325,7 +325,6 @@
       "ariaLabel": "Account menu",
       "languageLabel": "Language"
     },
-    "signedInAs": "Signed in as {role}",
     "readOnly": {
       "title": "This workspace is read-only"
     }
@@ -707,6 +706,59 @@
     }
   },
   "settings": {
+    "calendar": {
+      "title": "Holidays",
+      "description": "Days the school is closed. Attendance, leave and reports skip these days.",
+      "rowDescription": "Eid, Victory Day, vacations and closures",
+      "rowKeywords": "holiday eid puja vacation closure calendar school days weekend",
+      "add": "Add holiday",
+      "addTitle": "Add a holiday",
+      "addDescription": "The school will be closed on these days. Attendance already taken is kept.",
+      "empty": "No holidays yet. Add the year's holidays so attendance and reports skip them.",
+      "save": "Save holiday",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "delete": "Remove",
+      "deleting": "Removing…",
+      "deleteTitle": "Remove this holiday?",
+      "deleteDescription": "{name} will count as a normal school day again.",
+      "confirmDelete": "Remove holiday",
+      "saved": "Holiday added.",
+      "removed": "Holiday removed.",
+      "error": "Could not save. Try again.",
+      "days": "{n} days",
+      "day": "1 day",
+      "past": "Past",
+      "readOnlyNote": "Only an owner or admin can change holidays.",
+      "fields": {
+        "name": "Name",
+        "nameBn": "Name in Bangla (optional)",
+        "kind": "Kind",
+        "startsOn": "First day",
+        "endsOn": "Last day",
+        "note": "Note (optional)"
+      },
+      "errors": {
+        "nameRequired": "Enter a name.",
+        "invalidDate": "Choose a date.",
+        "endsBeforeStarts": "The last day must be on or after the first day.",
+        "tooLong": "A holiday can be at most one year long.",
+        "forbidden": "Only an owner or admin can change holidays.",
+        "readOnly": "This workspace is read-only. Upgrade to make changes; nothing has been deleted.",
+        "duplicate": "A holiday with this name already starts on that day.",
+        "notFound": "That holiday no longer exists."
+      },
+      "endsOnHelp": "Same as the first day for a one-day holiday.",
+      "kinds": {
+        "public": "Public",
+        "religious": "Religious",
+        "national": "National",
+        "school": "School",
+        "vacation": "Vacation",
+        "weather": "Weather",
+        "emergency": "Emergency"
+      }
+    },
     "title": "Settings",
     "back": "Back to settings",
     "searchLabel": "Search settings",
@@ -727,6 +779,11 @@
         "title": "How this school works",
         "description": "Grading, attendance and the school week, read-only",
         "keywords": "grade pass mark attendance late working days weekend friday timezone"
+      },
+      "grading": {
+        "title": "Grading",
+        "description": "Grade bands, letters and grade points",
+        "keywords": "grade scale gpa letter band point pass fail a+ bangladesh"
       }
     },
     "notSet": "Not set",
@@ -818,6 +875,100 @@
       "minAttendance": "Minimum attendance (warning only)",
       "yes": "Yes",
       "no": "No"
+    },
+    "grading": {
+      "title": "Grading",
+      "description": "The bands that turn a percentage into a letter and a grade point.",
+      "emptyTitle": "No grade scale yet",
+      "emptyBody": "Start from the Bangladesh GPA 5.00 scale (A+ 80-100 … F 0-32.99). You can change it afterwards.",
+      "seed": "Use the Bangladesh default",
+      "seeding": "Adding…",
+      "name": "Scale name",
+      "letter": "Letter",
+      "min": "From %",
+      "max": "To %",
+      "point": "Grade point",
+      "fail": "Fail",
+      "addBand": "Add band",
+      "removeBand": "Remove band {n}",
+      "previewLabel": "Try a percentage",
+      "previewResult": "{pct} % → {letter} ({point})",
+      "previewNone": "No band covers {pct} %",
+      "gap": "Nothing covers {at} %. The bands must cover 0 to 100 with no gap.",
+      "overlap": "Two bands both cover {at} %.",
+      "readOnly": "Only an owner or admin can change grading.",
+      "pointsDecrease": "Grade points cannot go down as the bands go up (at {at} %)."
+    }
+  },
+  "dashboard": {
+    "eyebrowToday": "Today",
+    "eyebrowSetup": "Setup",
+    "eyebrowPeople": "People",
+    "eyebrowActivity": "Activity",
+    "plan": {
+      "title": "Plan",
+      "trialDaysLeft": "{days} days left in your trial",
+      "trialOneDayLeft": "1 day left in your trial",
+      "trialLastDay": "Your trial ends today",
+      "trialEnded": "Your trial has ended",
+      "readOnly": "Read-only",
+      "active": "Active",
+      "noPlan": "No plan"
+    },
+    "people": {
+      "title": "Members",
+      "total": "{count} active",
+      "roles": {
+        "owner": "Owners",
+        "admin": "Admins",
+        "teacher": "Teachers",
+        "staff": "Office staff",
+        "parent": "Parents"
+      }
+    },
+    "staff": {
+      "title": "Staff directory",
+      "count": "{count} staff records",
+      "empty": "No staff records yet"
+    },
+    "checklist": {
+      "title": "Finish setting up your school",
+      "progress": "{done} of {total} done",
+      "done": "Done",
+      "todo": "To do",
+      "steps": {
+        "school_profile": "Add your school's letterhead and logo",
+        "academic_year": "Set up the academic year and classes",
+        "teachers": "Invite your teachers",
+        "staff_records": "Add staff records",
+        "students": "Add students"
+      }
+    },
+    "attendance": {
+      "title": "Today's attendance",
+      "emptyTitle": "No attendance taken yet",
+      "emptyDescription": "When teachers take today's register, present, absent and late counts show here."
+    },
+    "results": {
+      "title": "Exam results",
+      "emptyTitle": "No results yet",
+      "emptyDescription": "Results show here once marks are entered and published for an exam."
+    },
+    "activity": {
+      "title": "Recent activity",
+      "viewAll": "Open the audit trail",
+      "empty": "Nothing has changed in this workspace yet."
+    },
+    "loadError": "The dashboard could not load. Refresh to try again."
+  },
+  "shell": {
+    "signedInAs": "Signed in as {role}",
+    "roles": {
+      "owner": "owner",
+      "admin": "admin",
+      "teacher": "teacher",
+      "staff": "office staff",
+      "parent": "parent"
     }
   }
 }

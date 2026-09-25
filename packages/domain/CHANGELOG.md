@@ -1,5 +1,53 @@
 # @acadigma/domain
 
+## 0.3.0
+
+### Minor Changes
+
+- c1a5060: F-AC-06 Part 1: grade scales (D-302). Migration `20260925300302_grade_scales.sql` adds
+  `grade_scales` / `grade_bands` with a no-gap/no-overlap coverage trigger,
+  `app.band_for` / `app.round_half_up`, and the `seed_bd_grade_scale` / `save_grade_scale`
+  RPCs. `@acadigma/domain/grading` (`bandFor`, `roundHalfUp`, `checkCoverage`,
+  `BD_GRADE_BANDS`) matches SQL on one parity table. New permission
+  `settings.grade_scale.write` (owner/admin). New screen `/app/settings/grade-scale`: the
+  one-tap Bangladesh default and a live "72 % → A (4.00)" preview.
+- 762259e: F-AC-11 School calendar, Part 1 demo cut (D-202): holidays, working-day overrides and `app.is_school_day`.
+
+  - Migration `20260925300301_school_calendar.sql`: `holidays`, `working_day_overrides` (RLS, freeze, audit, read-only guard) and `app.is_school_day` / `app.school_days` / `app.school_day_count` (override > weekly pattern > holiday); pgTAP `41_school_calendar.sql`.
+  - `packages/contracts/src/calendar.ts`: `createHolidayInputSchema`, `deleteHolidayInputSchema`, `Holiday`.
+  - `packages/db/src/repositories/calendar.ts`: `listHolidays`, `createHoliday`, `deleteHoliday`.
+  - `packages/domain`: `calendar.holiday.write` (owner/admin); `holidays` and `working_day_overrides` in the generic audit catalogue.
+  - `/app/settings/calendar`: the holiday list; owners and admins can add and remove holidays.
+
+- a8fa0cd: The school dashboard is real (D-400): owners and admins see their school, plan and trial days left, members by role, the staff-directory count, a setup checklist and recent audit activity. Attendance and exam results are empty slots until those features ship. Teachers get a lighter view. Everything is available in English and Bengali.
+- 0f2fce6: F-ID-05 Onboarding, Part 4: the create-school wizard's classes and review steps, and the transaction that creates the school (D-100).
+
+  - Migration `20260925300101_create_school_workspace.sql`: `grade_levels` and `academic_years` (T2 RLS), and `public.create_school_workspace(jsonb)` — one SECURITY DEFINER transaction that creates the school (owner, join code, Pro trial via the existing triggers), its profile, current academic year and grade levels, completes onboarding, and records an idempotency key; the only way to create a school (the client INSERT on `workspaces` is removed); input validated before the EIIN is tried and every attempt counted in a `createSchool` throttle bucket; named errors `EIIN_TAKEN`, `RATE_LIMITED` (3 per day, 30 attempts per 15 min), `INVALID_TIMEZONE`, `INVALID_ACADEMIC_YEAR`, `VALIDATION`, `WORKSPACE_LIMIT_REACHED`, `IDEMPOTENCY_KEY_REUSED`. `supabase/tests/30_create_school_workspace.sql`.
+  - `packages/domain/src/academic/gradeLevels.ts`: presets (Play–KG, Class 1–12, O/A-Level), ordering, Bangla names, range shortcuts, custom levels.
+  - `packages/contracts`: `gradeLevelsSchema`, `createSchoolWorkspaceInputSchema`/`Output`; the draft carries `grade_levels` and `idempotency_key`.
+  - `packages/db`: `createSchoolWorkspace` repository with the error mapping.
+  - `apps/web`: `createSchoolWorkspace` action (sets the active-workspace cookie, lands on `/app`); wizard step 3 (classes) and step 4 (review and create), en + bn; 44 px inputs on steps 1-2.
+  - `packages/ui`: `OnboardingShell` takes a localised `progressLabel`.
+  - Settings: the EIIN is read-only in the school profile form (set at creation; support changes it), matching the database guard.
+
+- 235470f: F-OP-07 School settings, Part 1 remainder (D-200): `/app/settings` (grouped rows with search), the read-only "How this school works" page for every member, the school profile form and branding with a live report-card header preview.
+
+  - `packages/contracts/src/settings.ts`: `schoolProfileFieldsSchema`, `schoolTypeSchema`, `updateSchoolProfileInputSchema`, `updateBrandingInputSchema` (version = `updated_at`). `./identity/school` is now an export subpath.
+  - `packages/domain/src/settings/header.ts`: `renderHeaderLine` / `unknownHeaderTokens` for `{token}` header lines.
+  - `packages/db/src/repositories/settings.ts`: `getSchoolProfile`, `updateSchoolProfile` with optimistic concurrency (a stale version returns `conflict`, nothing is overwritten) and a duplicate-EIIN `conflict` on the `eiin` field.
+  - `apps/web/app/(school)/app/settings/profile-actions.ts`: `updateSchoolProfile` / `updateBranding`: owner/admin only, `requireWritable` before any write, unknown header tokens refused.
+  - `packages/ui/src/components/ui/native-select.tsx` (new, shadcn `new-york-v4`).
+
+### Patch Changes
+
+- Updated dependencies [c1a5060]
+- Updated dependencies [762259e]
+- Updated dependencies [137ac19]
+- Updated dependencies [0f2fce6]
+- Updated dependencies [235470f]
+- Updated dependencies [4801338]
+  - @acadigma/contracts@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

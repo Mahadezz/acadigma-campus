@@ -32,6 +32,10 @@ The roadmap's own streams (ROADMAP §4) still describe long-term ownership. This
 
 `supabase db push` refuses a migration dated before the newest one already applied. Lanes merge in whatever order they finish, so a PR's real-time timestamp can still fall behind if another lane's migration lands later on main after this one was written. `scripts/check-migrations-order.mjs` fails CI when a PR's new migration sorts before the newest on main, and prints a name that would sort after it (the current UTC time, or one second past main's newest if that isn't later). The builder renames the file with `git mv` (it has never been applied, so this is allowed) and updates references. The lead never merges a PR with a red order check.
 
+## Local ports
+
+Parallel builders run local servers for Playwright and screenshots. Each lane has its own port (`PLAYWRIGHT_PORT`): lead 3100, identity 3101, operations 3102, billing 3103, design 3104; a second builder in the same lane adds 10. Playwright's `reuseExistingServer` is on locally, so without this a builder can silently test another lane's code.
+
 ## Shared files
 
 - Append-only files (DECISION-LOG, the docs/README test-report table, DATA-MODEL.md sections) conflict often. Before a PR is merged, the builder merges `origin/main` and resolves conflicts, keeping every other lane's entries.

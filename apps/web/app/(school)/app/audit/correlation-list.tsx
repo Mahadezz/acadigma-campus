@@ -3,10 +3,10 @@
 import { useEffect, useState, useTransition } from "react"
 
 import type { AuditEventDto } from "@acadigma/contracts/audit"
-import { renderAuditSentence } from "@acadigma/domain/audit"
 import { Skeleton } from "@acadigma/ui/components/skeleton"
 
 import { listCorrelatedEvents } from "./actions"
+import { AuditSentence } from "./sentence"
 import { SeverityChip } from "./severity-chip"
 
 /**
@@ -70,10 +70,7 @@ export function CorrelationList({
           >
             <span className="text-muted-foreground text-xs">#{index + 1}</span>
             <span className="text-sm">
-              {renderAuditSentence(event.action, language, {
-                actor: event.actorName,
-                subject: event.subjectName,
-              })}
+              <AuditSentence event={event} language={language} />
             </span>
             <SeverityChip severity={event.severity} />
           </button>

@@ -13,6 +13,7 @@ import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
 import { UserMenu } from "@/app/(shared)/workspace/user-menu"
 import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
 import { getMessages } from "@/lib/i18n"
+import { onlyImplemented } from "@/lib/implemented-routes"
 import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
@@ -54,10 +55,10 @@ export default async function SchoolLayout({
     requireWritable(ctx, client),
     listMyWorkspaces(),
   ])
-  const config: NavConfig = getNavConfig(ctx.workspaceType, ctx.role) ?? {
-    bottom: [],
-    more: [],
-  }
+  // Only links to pages that exist — no prefetch 404s (D-400).
+  const config: NavConfig = onlyImplemented(
+    getNavConfig(ctx.workspaceType, ctx.role) ?? { bottom: [], more: [] }
+  )
 
   return (
     <AppShell
@@ -86,8 +87,18 @@ export default async function SchoolLayout({
               t={t.workspace.switcher}
             />
           }
-          title={<Logo product="campus" />}
-          subtitle={t.workspace.signedInAs.replace("{role}", ctx.role)}
+          title={
+            // Mark only on a phone, where the switcher and bell share the
+            // bar; the wordmark stays in the accessible name.
+            <Logo
+              product="campus"
+              className="[&>span]:sr-only sm:[&>span]:not-sr-only"
+            />
+          }
+          subtitle={t.shell.signedInAs.replace(
+            "{role}",
+            t.shell.roles[ctx.role]
+          )}
           actions={
             <>
               <Button

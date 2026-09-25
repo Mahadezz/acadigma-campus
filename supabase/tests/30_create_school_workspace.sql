@@ -286,12 +286,12 @@ select tests.logout();
 -- before it counted nothing.
 select is(
   (select attempts from public.auth_throttle
-    where key = 'create-school:f1050401-0000-0000-0000-000000000002'),
+    where key = 'user:createSchool:f1050401-0000-0000-0000-000000000002'),
   1, 'the EIIN_TAKEN attempt was counted in the createSchool bucket');
 
 -- Past 30 attempts in 15 minutes the bucket blocks, before any write.
 update public.auth_throttle set attempts = 30
- where key = 'create-school:f1050401-0000-0000-0000-000000000002';
+ where key = 'user:createSchool:f1050401-0000-0000-0000-000000000002';
 select tests.login('f1050401-0000-0000-0000-000000000002');
 select is(
   (select public.create_school_workspace(tests.school_input(
@@ -300,9 +300,9 @@ select is(
 select tests.logout();
 select ok(
   (select blocked_until > now() from public.auth_throttle
-    where key = 'create-school:f1050401-0000-0000-0000-000000000002'),
+    where key = 'user:createSchool:f1050401-0000-0000-0000-000000000002'),
   'and the block itself was kept (returned, not rolled back)');
-delete from public.auth_throttle where key = 'create-school:f1050401-0000-0000-0000-000000000002';
+delete from public.auth_throttle where key = 'user:createSchool:f1050401-0000-0000-0000-000000000002';
 
 -- One door: no client INSERT on workspaces at all (PR #37 review, HIGH).
 select tests.login('f1050401-0000-0000-0000-000000000002');
