@@ -115,7 +115,8 @@ with allowed as (
     ('public.check_eiin_available(text)'),  -- F-ID-05 Part 3, D-66
     ('public.create_school_workspace(jsonb)'),  -- F-ID-05 Part 4, D-100
     ('public.seed_bd_grade_scale(uuid)'),  -- F-AC-06 Part 1, D-302
-    ('public.save_grade_scale(uuid, text, jsonb)')  -- F-AC-06 Part 1, D-302
+    ('public.save_grade_scale(uuid, text, jsonb)'),  -- F-AC-06 Part 1, D-302
+    ('public.create_exam(jsonb)')  -- F-AC-06 Part 2, D-303
   ) as a(sig)
   union all
   select p.oid
