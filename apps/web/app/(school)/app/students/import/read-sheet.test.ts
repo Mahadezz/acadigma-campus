@@ -13,7 +13,8 @@ const XLSX = fileURLToPath(
 describe("readSheetFile", () => {
   it("reads a CSV with a BOM, a quoted comma and a Bangla name", async () => {
     const csv =
-      '﻿first_name,last_name,full_name_bn\r\nRahim,"Uddin, Jr",রহিম উদ্দিন\r\n'
+      String.fromCharCode(0xfeff) +
+      'first_name,last_name,full_name_bn\r\nRahim,"Uddin, Jr",রহিম উদ্দিন\r\n'
     const rows = await readSheetFile(
       new File([csv], "register.csv", { type: "text/csv" })
     )

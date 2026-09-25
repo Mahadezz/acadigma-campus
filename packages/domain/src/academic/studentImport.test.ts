@@ -1,5 +1,6 @@
-import { STUDENT_IMPORT_COLUMNS } from "@acadigma/contracts"
 import { describe, expect, it } from "vitest"
+
+import { STUDENT_IMPORT_COLUMNS } from "@acadigma/contracts"
 
 import {
   parseImportDate,
@@ -168,7 +169,10 @@ describe("validateStudentImport", () => {
     ).toMatchObject({
       ok: false,
       fileError: "missing_columns",
-      missingColumns: expect.arrayContaining(["date_of_birth", "guardian_phone"]),
+      missingColumns: expect.arrayContaining([
+        "date_of_birth",
+        "guardian_phone",
+      ]),
     })
     const { report } = validate([[...good, "x"]], [...HEADER, "Religion"])
     expect(report.ignoredColumns).toEqual(["Religion"])

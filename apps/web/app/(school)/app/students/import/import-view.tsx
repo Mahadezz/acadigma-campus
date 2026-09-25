@@ -45,7 +45,9 @@ export function importErrorText(t: T, error: ApiError): string {
   const code = error.fieldErrors?.file?.[0]
   if (code && Object.hasOwn(t.fileErrors, code)) {
     const columns = (error.fieldErrors?.columns ?? [])
-      .map((c) => (Object.hasOwn(t.columns, c) ? t.columns[c as keyof T["columns"]] : c))
+      .map((c) =>
+        Object.hasOwn(t.columns, c) ? t.columns[c as keyof T["columns"]] : c
+      )
       .join(", ")
     return fill(t.fileErrors[code as keyof T["fileErrors"]], { columns })
   }

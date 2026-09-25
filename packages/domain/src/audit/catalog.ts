@@ -570,6 +570,8 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // F-AC-03 demo cut (D-104) — 20260925300309_attendance.sql.
   "attendance_sessions",
   "attendance_records",
+  // F-AC-02 §4.7 (D-106) — 20260925300312_student_import_batches.sql.
+  "student_import_batches",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -637,6 +639,10 @@ export const GENERIC_TABLE_NOUNS: Readonly<
   attendance_records: {
     en: "a student's attendance",
     bn: "একজন শিক্ষার্থীর হাজিরা",
+  },
+  student_import_batches: {
+    en: "a student import",
+    bn: "একটি শিক্ষার্থী আমদানি",
   },
 }
 

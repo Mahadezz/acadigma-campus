@@ -83,7 +83,9 @@ describe("ImportView", () => {
       )
     ).toBeTruthy()
     expect(screen.getByText(/Religion/)).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Import 1 students" })).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Import 1 students" })
+    ).toBeTruthy()
   })
 
   it("shows the result and the refused rows after the import, in Bangla too", () => {
@@ -94,7 +96,11 @@ describe("ImportView", () => {
       report: {
         ignoredColumns: [],
         rows: [
-          { ...batch.report.rows[0]!, status: "created", student_code: "STU-2026-00001" },
+          {
+            ...batch.report.rows[0]!,
+            status: "created",
+            student_code: "STU-2026-00001",
+          },
           {
             line: 4,
             status: "failed",
@@ -103,7 +109,9 @@ describe("ImportView", () => {
         ],
       },
     }
-    render(<ImportView t={bn.students.import} batch={done} loadFailed={false} />)
+    render(
+      <ImportView t={bn.students.import} batch={done} loadFailed={false} />
+    )
     expect(screen.getByText("1 জন শিক্ষার্থী আমদানি হয়েছে।")).toBeTruthy()
     expect(
       screen.getByText("এই শাখায় রোল নম্বরটি আগেই নেওয়া হয়েছে।")

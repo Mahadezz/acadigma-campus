@@ -65,22 +65,31 @@ select app.attach_require_writable('public.student_import_batches');
 create trigger created_by_immutable before update on public.student_import_batches
   for each row execute function app.tg_created_by_immutable();
 
-insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
-values
-  ('student_import_batches.insert', 'info',
-    '{actor} uploaded a student register for import',
-    '{actor} ভর্তির জন্য একটি শিক্ষার্থী তালিকা আপলোড করেছেন', true),
-  ('student_import_batches.update', 'notable',
-    '{actor} imported students from a register ({fields})',
-    '{actor} তালিকা থেকে শিক্ষার্থী যোগ করেছেন ({fields})', true),
-  ('student_import_batches.delete', 'critical',
-    '{actor} deleted a student import',
-    '{actor} একটি শিক্ষার্থী আমদানি মুছে ফেলেছেন', true)
-on conflict (action) do update
-  set severity    = excluded.severity,
-      sentence_en = excluded.sentence_en,
-      sentence_bn = excluded.sentence_bn,
-      is_generic  = excluded.is_generic;
+do $$
+declare
+  v_table  text;
+  v_tables text[] := array['student_import_batches'];
+begin
+  foreach v_table in array v_tables loop
+    insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
+    values
+      (v_table || '.insert', 'info',
+        '{actor} created a ' || replace(v_table, '_', ' ') || ' record',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড তৈরি করেছেন', true),
+      (v_table || '.update', 'notable',
+        '{actor} updated a ' || replace(v_table, '_', ' ') || ' record ({fields})',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড হালনাগাদ করেছেন ({fields})', true),
+      (v_table || '.delete', 'critical',
+        '{actor} deleted a ' || replace(v_table, '_', ' ') || ' record',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড মুছে ফেলেছেন', true)
+    on conflict (action) do update
+      set severity    = excluded.severity,
+          sentence_en = excluded.sentence_en,
+          sentence_bn = excluded.sentence_bn,
+          is_generic  = excluded.is_generic;
+  end loop;
+end
+$$;
 
 alter table public.student_import_batches enable row level security;
 

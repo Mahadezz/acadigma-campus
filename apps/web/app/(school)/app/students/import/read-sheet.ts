@@ -8,6 +8,8 @@ import {
   type ImportFileErrorCode,
 } from "@acadigma/contracts"
 
+const BOM = String.fromCharCode(0xfeff)
+
 /**
  * F-AC-02 §4.7 step 2 (D-106): an uploaded register → rows of strings.
  * CSV through papaparse (RFC 4180: quoted commas and line breaks), .xlsx
@@ -21,7 +23,7 @@ export async function readSheetFile(
   const name = file.name.toLowerCase()
   try {
     if (name.endsWith(".csv")) {
-      const text = (await file.text()).replace(/^﻿/, "")
+      const text = (await file.text()).replace(new RegExp(`^${BOM}`), "")
       const parsed = Papa.parse<string[]>(text, { skipEmptyLines: false })
       if (parsed.errors.some((e) => e.type === "Quotes")) {
         return { fileError: "unreadable" }

@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { readFile } from "node:fs/promises"
+
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 /**
@@ -72,6 +74,31 @@ describe("previewStudentImport", () => {
     expect(input.report.rows[0].input.guardian.phone).toBe("+8801000000001")
     expect(input.report.rows[1].errors).toEqual([
       { column: "date_of_birth", code: "invalid_date" },
+    ])
+  })
+
+  it("finds exactly the three bad rows in the e2e register fixture", async () => {
+    const csv = await readFile(
+      new URL(
+        "../../../../../e2e/fixtures/student-import-40.csv",
+        import.meta.url
+      ),
+      "utf8"
+    )
+    await previewStudentImport(form(csv))
+    const input = mockCreate.mock.calls[0]?.[2]
+    expect(input.totals).toEqual({ total: 40, valid: 37, error: 3 })
+    expect(
+      input.report.rows
+        .filter((r: { status: string }) => r.status === "error")
+        .map((r: { line: number; errors: { code: string }[] }) => [
+          r.line,
+          r.errors[0]?.code,
+        ])
+    ).toEqual([
+      [8, "invalid_date"],
+      [20, "unknown_section"],
+      [33, "invalid_phone"],
     ])
   })
 

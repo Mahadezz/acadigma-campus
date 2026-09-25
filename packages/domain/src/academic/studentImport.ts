@@ -52,9 +52,7 @@ function westernDigits(value: string): string {
   return value.replace(BANGLA_DIGITS, (d) => String(d.charCodeAt(0) - 0x09e6))
 }
 
-function lookup<T extends string>(
-  table: Record<T, string[]>
-): Map<string, T> {
+function lookup<T extends string>(table: Record<T, string[]>): Map<string, T> {
   const map = new Map<string, T>()
   for (const [value, words] of Object.entries(table) as [T, string[]][]) {
     for (const word of [value, ...words]) map.set(norm(word), value)
@@ -193,7 +191,9 @@ export function validateStudentImport(
       if (!cell(key)) fail(key, "required")
     }
 
-    const dob = cell("date_of_birth") ? parseImportDate(cell("date_of_birth")) : null
+    const dob = cell("date_of_birth")
+      ? parseImportDate(cell("date_of_birth"))
+      : null
     if (cell("date_of_birth")) {
       if (!dob || dob < "1950-01-01") fail("date_of_birth", "invalid_date")
       else if (dob > today) fail("date_of_birth", "future_date")
