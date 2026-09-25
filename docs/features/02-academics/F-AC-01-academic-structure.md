@@ -208,3 +208,9 @@ Typed read selectors exported for other features: `listSections(ctx, {yearId, gr
 3. **Combined-grade classrooms** in very small schools (Class 1 and 2 taught together). Assumed out of scope: create two sections and one timetable.
 4. **Madrasah ladder** (Ebtedayee → Dakhil) grade names and ordinals. Assumed: the NCTB ladder ships first; the Madrasah seed waits for owner confirmation of the exact class names.
 5. **Section renaming mid-year.** Assumed allowed, since it is a label and history keeps the FK. Printed documents snapshot the section name at publish time (F-AC-06), so renames never alter an issued mark sheet.
+
+### Status / deviations recorded 2026-09-25 (demo cut, D-102)
+
+- **Built:** `sections` and `subjects` (migration `20260925300203_sections_and_subjects.sql`, pgTAP `32_sections_and_subjects.sql`), `/app/classes` with a card per grade (add section with class teacher, room, capacity; archive) and a Subjects tab (add subject; "Use the NCTB starter list"), in English and Bangla. Grade levels and the current academic year come from the create-school wizard (F-ID-05 Part 4, D-100).
+- **Deviations from §3:** `sections.room` is text until `rooms` exists; no `shift`, `stream`, `student_count` or `is_active` yet (archive via `archived_at`); `subjects` has no `counts_in_gpa`, `credit`, `default_full_marks` or `colour` yet. `grade_levels` uses `level_number`/`stage` (D-100), not `code`/`ordinal`. Section names are unique ignoring case.
+- **Not built yet:** terms and `app.current_term()` (Part 1), rooms (Part 3), `grade_level_subjects` (Part 4), section-subjects and teacher assignments (Part 5), the setup wizard (Part 6), the grade detail and section detail routes (the demo cut shows everything on `/app/classes`).

@@ -703,3 +703,22 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 **Why:** Only someone who has already proven they were invited learns the mode. Hashing at seed time is one function call and removes the alert class instead of suppressing it.
 
 **Consequences:** `supabase/tests/51_readonly_join_and_seed.sql` applies the seed inside pgTAP (`\ir ../seed/seed.sql`), so CI now proves the seed runs on the migrated schema — it did not before. Its first run found the seed broken on main since F-OP-06 (#32): the school bootstrap now creates the default labels, and the seed's own `Principal`/`Vice-Principal`/`Senior Teacher` inserts collided on `custom_labels_workspace_name_key`. The seed now picks those labels by name instead of inserting them.
+
+## D-102 — F-AC-01 demo cut: sections and subjects on the current year, tenant-bound foreign keys, rooms as text · ACCEPTED · 2026-09-25
+
+**Context:** The owner needs the Classes screen for sales demos before the full F-AC-01 build (six Parts: years/terms, grades, sections/rooms, subjects/templates, section-subjects, setup wizard). `grade_levels` and `academic_years` already exist (D-100); schools created by the wizard have a current year and grade levels.
+
+**Decision:**
+
+1. **Scope:** `sections` (F-AC-01 Part 3 minus rooms) and `subjects` (Part 4 minus `grade_level_subjects`), plus `/app/classes`: a card per grade with this year's sections (add, archive), and a Subjects tab (add, "Use the NCTB starter list"). Terms, rooms, grade templates, section-subjects and the setup wizard stay in their own Parts.
+2. **Sections always belong to the current academic year**, resolved server-side; the client never names a year.
+3. **Tenant-bound foreign keys:** `academic_years`, `grade_levels` and `workspace_members` gain `unique (id, workspace_id)`, and `sections` references them with composite keys that include `workspace_id`. A section cannot point at another school's grade, year or member even through a SECURITY DEFINER path, not just through RLS.
+4. **Class teacher rules in the database:** a trigger requires an active owner/admin/teacher (`MEMBER_NOT_ELIGIBLE`); a partial unique index keeps one live section per teacher per year (§5 rule 10, `CLASS_TEACHER_TAKEN`; `allow_multi_class_teacher` is not built).
+5. **`room` is free text** until the `rooms` table lands (Part 3); **archive, not delete** (`archived_at`), for both tables.
+6. **The NCTB starter list** lives in `packages/domain/src/academic/structure.ts` and is copied into the school's own rows; running it twice adds nothing.
+7. **Permissions:** `academics.structure.read` (owner, admin, teacher, staff), `academics.section.write` and `academics.subject.write` (owner, admin). Parents read nothing here (T2); their view is F-AC-10.
+8. **Migration timestamps:** `20260925300203` sorts after main's newest (`20260925300201`, #42) and after #45's `20260925300202`.
+
+**Why:** the smallest slice that gives a demo school a real class list, without inventing shapes the later Parts would have to undo.
+
+**Consequences:** `supabase/tests/32_sections_and_subjects.sql`. When `rooms` lands, `sections.room` becomes `room_id` (expand, backfill, contract).

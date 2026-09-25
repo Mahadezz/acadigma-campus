@@ -70,7 +70,7 @@ export function errorText(t: T, error: ApiError): string {
 }
 
 function count(t: T, n: number, locale: Locale): string {
-  const formatted = new Intl.NumberFormat(locale).format(n)
+  const formatted = new Intl.NumberFormat(`${locale}-u-nu-latn`).format(n)
   return n === 1
     ? t.sectionsCountOne
     : t.sectionsCountOther.replace("{count}", formatted)
@@ -502,7 +502,9 @@ function SubjectsPanel({
             ? t.starterNothing
             : t.starterAdded.replace(
                 "{count}",
-                new Intl.NumberFormat(locale).format(result.data.created)
+                new Intl.NumberFormat(`${locale}-u-nu-latn`).format(
+                  result.data.created
+                )
               ),
       })
       router.refresh()

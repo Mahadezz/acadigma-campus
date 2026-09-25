@@ -543,6 +543,9 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // supabase/migrations/20260925300101_create_school_workspace.sql.
   "grade_levels",
   "academic_years",
+  // F-AC-01 demo cut (D-102) — 20260925300203_sections_and_subjects.sql.
+  "sections",
+  "subjects",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =

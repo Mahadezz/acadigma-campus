@@ -798,7 +798,7 @@
       "classes": "শ্রেণি ও শাখা",
       "subjects": "বিষয়"
     },
-    "sectionsCountOne": "১টি শাখা",
+    "sectionsCountOne": "1টি শাখা",
     "sectionsCountOther": "{count}টি শাখা",
     "noSections": "এখনো কোনো শাখা নেই",
     "addSection": "শাখা যোগ করুন",
@@ -845,7 +845,7 @@
       "religion": "ধর্ম",
       "co_curricular": "সহশিক্ষা"
     },
-    "fourthBadge": "৪র্থ বিষয়",
+    "fourthBadge": "চতুর্থ বিষয়",
     "readOnlyNote": "আপনি শ্রেণি ও বিষয় দেখতে পারবেন। শুধু মালিক বা অ্যাডমিন পরিবর্তন করতে পারেন।"
   }
 }
