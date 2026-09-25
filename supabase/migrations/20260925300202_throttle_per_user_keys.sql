@@ -14,6 +14,8 @@
 --   * a key starting with `user:` is rewritten to `user:<bucket>:<auth.uid()>`
 --     — a caller can only ever read, bump or clear their OWN row, and anon
 --     cannot use the namespace at all;
+--   * throttle_reset refuses `user:` keys from clients: a per-user limit
+--     expires, it is never cleared by the person it limits;
 --   * throttle_record_failure ignores p_key for the per-user buckets
 --     (changePassword, eiinCheck, createSchool) and derives it the same way.
 --
@@ -72,14 +74,25 @@ begin
 end;
 $$;
 
+-- A per-user limit is never cleared by its own subject: with a fixed public
+-- key (`user:createSchool`) any signed-in user could otherwise reset their
+-- own createSchool/eiinCheck/changePassword bucket and undo the limit.
+-- Per-user rows expire with their window; only server-side paths
+-- (service_role, postgres) may clear one.
 create or replace function public.throttle_reset(p_key text)
 returns void
-language sql
+language plpgsql
 volatile
 security definer
 set search_path = ''
 as $$
+begin
+  if p_key like 'user:%' and not app.is_privileged_context() then
+    raise exception 'per-user throttle limits are not reset by the caller'
+      using errcode = '42501';
+  end if;
   delete from public.auth_throttle where key = app.throttle_key(p_key);
+end;
 $$;
 
 create or replace function public.throttle_record_failure(

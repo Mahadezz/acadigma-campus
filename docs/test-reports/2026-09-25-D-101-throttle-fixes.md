@@ -20,14 +20,14 @@ Local PostgreSQL 17.10 + pgTAP 1.3.4 (the CI `db` job's steps: bootstrap, every 
 
 ## 3. Unit (Vitest)
 
-`apps/web` suites: 98 passed. New: `login-form.test.tsx` (throttled banner reads "Try again in 15 min." / the Bangla equivalent; the button is a disabled "Sign in"; no "900" anywhere). Updated: `(onboarding)/actions.test.ts` (the key is `user:eiinCheck`; the error carries `retryAfterSeconds: 137` and says "3 min").
+`apps/web` suites: 98 passed. New: `login-form.test.tsx` — the banner reads "Try again in 15 min." and in Bangla "১৫ মিনিট" (native digits via `Intl.NumberFormat`); a 30-second wait reads "1 min."; the banner is announced with `role="alert"`; the button is a disabled "Sign in" and re-enables when the countdown reaches zero (fake timers, ticking on minute boundaries); no "900" anywhere. Updated: `(onboarding)/actions.test.ts` (the key is `user:eiinCheck`; the error carries `retryAfterSeconds: 137` and says "3 min").
 
 ## 4. Database (pgTAP)
 
-All files pass locally. `31_throttle_per_user_keys.sql` **9/9**:
+All files pass locally. `31_throttle_per_user_keys.sql` **11/11**:
 
 - 40 `createSchool` failures recorded by Alice naming the victim's key: zero rows touch the victim; all 40 land on Alice's own row.
-- `throttle_status` / `throttle_reset` with a `user:` key naming someone else read or clear only the caller's own row.
+- `throttle_status` with a `user:` key naming someone else reads only the caller's own row; `throttle_reset` refuses any `user:` key from a client (`42501`), including the caller's own `user:createSchool` (review of PR #45).
 - anon calling `throttle_status('user:…')` → `42501 authentication required`; anon `throttle_status('ci-smoke:post-deploy')` still answers (the D-65 smoke test).
 - A client-keyed bucket (`loginByEmail`) still records under the key it was given.
 

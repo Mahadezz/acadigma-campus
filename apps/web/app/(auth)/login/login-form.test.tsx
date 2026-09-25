@@ -27,12 +27,16 @@ vi.mock("../actions", () => ({
 
 const { LoginForm } = await import("./login-form")
 
-async function submitThrottled(t: typeof en.auth.login) {
+async function submitThrottled(
+  t: typeof en.auth.login,
+  locale: "en" | "bn" = "en",
+  retryAfterSeconds = 900
+) {
   signInWithPassword.mockResolvedValue({
     ok: false,
-    error: { code: "rate_limited", message: "x", retryAfterSeconds: 900 },
+    error: { code: "rate_limited", message: "x", retryAfterSeconds },
   })
-  render(<LoginForm t={t} network={en.auth.network} />)
+  render(<LoginForm t={t} network={en.auth.network} locale={locale} />)
   fireEvent.change(screen.getByLabelText(t.emailLabel), {
     target: { value: "a@b.co" },
   })
@@ -59,11 +63,48 @@ describe("LoginForm when rate-limited", () => {
   })
 
   it("says it in Bangla too", async () => {
-    await submitThrottled(bn.auth.login)
+    await submitThrottled(bn.auth.login, "bn")
     expect(
       screen.getByText(
-        "অনেকবার চেষ্টা করা হয়েছে। 15 মিনিট পর আবার চেষ্টা করুন।"
+        "অনেকবার চেষ্টা করা হয়েছে। ১৫ মিনিট পর আবার চেষ্টা করুন।"
       )
     ).toBeTruthy()
+  })
+
+  it("rounds a short wait up to one minute", async () => {
+    await submitThrottled(en.auth.login, "en", 30)
+    expect(
+      screen.getByText("Too many attempts. Try again in 1 min.")
+    ).toBeTruthy()
+  })
+
+  it("announces the wait as an alert", async () => {
+    await submitThrottled(en.auth.login)
+    expect(screen.getByRole("alert").textContent).toContain("15 min")
+  })
+
+  it("re-enables the button when the wait runs out", async () => {
+    vi.useFakeTimers()
+    try {
+      await submitThrottled(en.auth.login, "en", 90)
+      const button = () =>
+        screen.getByRole("button", { name: en.auth.login.submitButton })
+      expect(button().hasAttribute("disabled")).toBe(true)
+      expect(
+        screen.getByText("Too many attempts. Try again in 2 min.")
+      ).toBeTruthy()
+      await act(async () => {
+        vi.advanceTimersByTime(30_000)
+      })
+      expect(
+        screen.getByText("Too many attempts. Try again in 1 min.")
+      ).toBeTruthy()
+      await act(async () => {
+        vi.advanceTimersByTime(60_000)
+      })
+      expect(button().hasAttribute("disabled")).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

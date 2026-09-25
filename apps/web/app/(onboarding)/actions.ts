@@ -153,11 +153,15 @@ export async function checkEiinAvailability(
   const key = USER_THROTTLE_KEYS.eiinCheck
   const status = await throttleStatus(supabase, key)
   if (status.blocked) {
-    const { t } = await getMessages()
+    const { t, locale } = await getMessages()
     return err(
       apiError(
         "rate_limited",
-        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        throttledMessage(
+          t.auth.login.throttled,
+          status.retryAfterSeconds,
+          locale
+        ),
         { retryAfterSeconds: status.retryAfterSeconds }
       )
     )

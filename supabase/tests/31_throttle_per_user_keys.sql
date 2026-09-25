@@ -1,17 +1,17 @@
 -- =====================================================================
 -- pgTAP · D-101 — per-user throttle keys come from auth.uid(), never the
--- caller (20260925300102_throttle_per_user_keys.sql).
+-- caller (20260925300202_throttle_per_user_keys.sql).
 --
 --   1. A user cannot record a failure against another user's per-user row,
 --      whatever key they pass — for the per-user buckets p_key is ignored.
---   2. `user:` keys passed to throttle_status / throttle_reset resolve to
---      the caller's own row only.
+--   2. `user:` keys passed to throttle_status resolve to the caller's own
+--      row only, and throttle_reset refuses them from clients altogether.
 --   3. anon cannot use the `user:` namespace at all.
 --   4. Client-keyed buckets (sign-in) still take the caller's key, and anon
 --      throttle_status on a plain key still works (the D-65 smoke test).
 -- =====================================================================
 begin;
-select plan(9);
+select plan(11);
 
 create schema if not exists tests;
 
@@ -78,11 +78,20 @@ select is(
 select is(
   (select blocked from public.throttle_status('user:createSchool:f1010100-0000-0000-0000-00000000000a')),
   false, 'naming Alice''s row in throttle_status still reads the caller''s own (empty) row');
-select public.throttle_reset('user:createSchool:f1010100-0000-0000-0000-00000000000a');
+select throws_ok(
+  $$select public.throttle_reset('user:createSchool:f1010100-0000-0000-0000-00000000000a')$$,
+  '42501', 'per-user throttle limits are not reset by the caller',
+  'the victim cannot clear Alice''s row');
+select tests.logout();
+select tests.login('f1010100-0000-0000-0000-00000000000a');
+select throws_ok(
+  $$select public.throttle_reset('user:createSchool')$$,
+  '42501', 'per-user throttle limits are not reset by the caller',
+  'Alice cannot clear her own createSchool limit (it would undo the D-100 limit)');
 select tests.logout();
 select is(
   (select attempts from public.auth_throttle where key = 'user:createSchool:f1010100-0000-0000-0000-00000000000a'),
-  40, 'the victim cannot clear Alice''s row either');
+  40, 'Alice''s row is untouched by either reset attempt');
 
 select tests.login('f1010100-0000-0000-0000-00000000000a');
 select is(

@@ -84,7 +84,7 @@ export async function registerWithPassword(
   }: RegisterWithPasswordInput = parsed.data
   void termsAccepted // literal(true) already enforced by the schema
 
-  const { t } = await getMessages()
+  const { t, locale } = await getMessages()
   const ctx = await getRequestContext()
   const supabase = await createClient()
 
@@ -94,7 +94,11 @@ export async function registerWithPassword(
     return err(
       apiError(
         "rate_limited",
-        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        throttledMessage(
+          t.auth.login.throttled,
+          status.retryAfterSeconds,
+          locale
+        ),
         { retryAfterSeconds: status.retryAfterSeconds }
       )
     )
@@ -170,11 +174,15 @@ export async function requestEmailVerification(
   const key = throttleKey("resend-verify", email)
   const status = await throttleStatus(supabase, key)
   if (status.blocked) {
-    const { t } = await getMessages()
+    const { t, locale } = await getMessages()
     return err(
       apiError(
         "rate_limited",
-        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        throttledMessage(
+          t.auth.login.throttled,
+          status.retryAfterSeconds,
+          locale
+        ),
         { retryAfterSeconds: status.retryAfterSeconds }
       )
     )
@@ -220,7 +228,7 @@ export async function signInWithPassword(
   }
   const { email, password, next }: SignInWithPasswordInput = parsed.data
 
-  const { t } = await getMessages()
+  const { t, locale } = await getMessages()
   const ctx = await getRequestContext()
   const supabase = await createClient()
 
@@ -241,7 +249,11 @@ export async function signInWithPassword(
     return err(
       apiError(
         "rate_limited",
-        throttledMessage(t.auth.login.throttled, blocking.retryAfterSeconds),
+        throttledMessage(
+          t.auth.login.throttled,
+          blocking.retryAfterSeconds,
+          locale
+        ),
         { retryAfterSeconds: blocking.retryAfterSeconds }
       )
     )
@@ -397,11 +409,15 @@ export async function resetPassword(
   const ipKey = throttleKey("reset-submit", ctx.ip ?? "unknown")
   const status = await throttleStatus(supabase, ipKey)
   if (status.blocked) {
-    const { t } = await getMessages()
+    const { t, locale } = await getMessages()
     return err(
       apiError(
         "rate_limited",
-        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        throttledMessage(
+          t.auth.login.throttled,
+          status.retryAfterSeconds,
+          locale
+        ),
         { retryAfterSeconds: status.retryAfterSeconds }
       )
     )
@@ -513,11 +529,15 @@ export async function changePassword(
   const key = USER_THROTTLE_KEYS.changePassword
   const status = await throttleStatus(supabase, key)
   if (status.blocked) {
-    const { t } = await getMessages()
+    const { t, locale } = await getMessages()
     return err(
       apiError(
         "rate_limited",
-        throttledMessage(t.auth.login.throttled, status.retryAfterSeconds),
+        throttledMessage(
+          t.auth.login.throttled,
+          status.retryAfterSeconds,
+          locale
+        ),
         { retryAfterSeconds: status.retryAfterSeconds }
       )
     )
@@ -553,7 +573,8 @@ export async function changePassword(
       )
     )
   }
-  await throttleReset(supabase, key)
+  // No reset: a per-user limit expires with its window; the database refuses
+  // a client reset of `user:` keys (D-101).
 
   let revokedSessions = 0
   if (signOutOthers) {
