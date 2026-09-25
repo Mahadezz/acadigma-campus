@@ -119,7 +119,8 @@ with allowed as (
     ('public.create_exam(jsonb)'),  -- F-AC-06 Part 2, D-303
     ('public.admit_student(uuid, jsonb)'),  -- F-AC-02 demo cut, D-103
     ('public.save_attendance(uuid, jsonb)'),  -- F-AC-03 demo cut, D-104
-    ('public.attendance_day(uuid, date)')  -- F-AC-03 demo cut, D-104
+    ('public.attendance_day(uuid, date)'),  -- F-AC-03 demo cut, D-104
+    ('public.save_marks(uuid, jsonb)')  -- F-AC-06 Part 3, D-304
   ) as a(sig)
   union all
   select p.oid
