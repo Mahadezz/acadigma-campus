@@ -98,12 +98,16 @@ select tests.logout();
 --    clause filters it to zero matching rows before WITH CHECK even runs.
 -- ---------------------------------------------------------------------
 select tests.login('d1040001-0000-0000-0000-00000000000a');   -- Alice
+-- The data-modifying CTE must be part of THIS statement's own top-level
+-- WITH, not nested inside is()'s argument (Postgres: "a WITH clause
+-- containing a data-modifying statement must be at the top level").
+with upd as (
+  update public.user_preferences set ui_mode = 'basic'
+   where user_id = 'd1040001-0000-0000-0000-00000000000b'
+  returning 1
+)
 select is(
-  (with upd as (
-     update public.user_preferences set ui_mode = 'basic'
-      where user_id = 'd1040001-0000-0000-0000-00000000000b'
-     returning 1
-   ) select count(*)::int from upd),
+  (select count(*)::int from upd),
   0, 'Alice''s UPDATE aimed at Bob''s row touches zero rows');
 select tests.logout();
 
@@ -116,12 +120,13 @@ select is(
 -- 4. A user updates their OWN row.
 -- ---------------------------------------------------------------------
 select tests.login('d1040001-0000-0000-0000-00000000000a');   -- Alice
+with upd as (
+  update public.user_preferences set ui_mode = 'basic', text_size = 'xlarge'
+   where user_id = 'd1040001-0000-0000-0000-00000000000a'
+  returning 1
+)
 select is(
-  (with upd as (
-     update public.user_preferences set ui_mode = 'basic', text_size = 'xlarge'
-      where user_id = 'd1040001-0000-0000-0000-00000000000a'
-     returning 1
-   ) select count(*)::int from upd),
+  (select count(*)::int from upd),
   1, 'Alice updates her own row: exactly one row affected');
 select tests.logout();
 
@@ -145,12 +150,13 @@ select is(
   (select count(*)::int from public.user_preferences
     where user_id = 'd1040001-0000-0000-0000-00000000000a'),
   0, 'a platform admin sees zero rows of another user''s preferences — no bypass on this table');
+with upd as (
+  update public.user_preferences set ui_mode = 'basic'
+   where user_id = 'd1040001-0000-0000-0000-00000000000b'
+  returning 1
+)
 select is(
-  (with upd as (
-     update public.user_preferences set ui_mode = 'basic'
-      where user_id = 'd1040001-0000-0000-0000-00000000000b'
-     returning 1
-   ) select count(*)::int from upd),
+  (select count(*)::int from upd),
   0, 'a platform admin cannot write another user''s preferences either');
 select tests.logout();
 
