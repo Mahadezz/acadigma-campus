@@ -33,7 +33,8 @@ $$;
 --    Inserting into auth.users fires app.handle_new_user(), which creates
 --    the profile, the preferences row and exactly one personal workspace
 --    per person (PRODUCT-DECISIONS 1.2).
---    The bcrypt hash below is for the literal string `password123`.
+--    Passwords (`password123`) are hashed here, at seed time, with pgcrypto's
+--    bcrypt — no hash literal lives in the repo (D-301).
 -- ---------------------------------------------------------------------
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -42,24 +43,21 @@ values
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000001',
    'authenticated', 'authenticated', 'owner@acadigma.test',
-   -- nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash -- dev-only fixture hash of the literal string `password123`, never used outside `supabase db reset`; not a leaked real credential.
-   '$2a$10$PZTfVVhZa5rgDwgoJrTVOOuhJ6Dq5Xm0OeHAzAGjCPZocfdMa6wfy',
+   extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Rezaul Karim"}'::jsonb, now(), now()),
 
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000002',
    'authenticated', 'authenticated', 'teacher@acadigma.test',
-   -- nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash -- dev-only fixture hash of the literal string `password123`, never used outside `supabase db reset`; not a leaked real credential.
-   '$2a$10$PZTfVVhZa5rgDwgoJrTVOOuhJ6Dq5Xm0OeHAzAGjCPZocfdMa6wfy',
+   extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Farhana Akter"}'::jsonb, now(), now()),
 
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000003',
    'authenticated', 'authenticated', 'parent@acadigma.test',
-   -- nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash -- dev-only fixture hash of the literal string `password123`, never used outside `supabase db reset`; not a leaked real credential.
-   '$2a$10$PZTfVVhZa5rgDwgoJrTVOOuhJ6Dq5Xm0OeHAzAGjCPZocfdMa6wfy',
+   extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Shahidul Islam"}'::jsonb, now(), now())
 on conflict (id) do nothing;
@@ -232,8 +230,7 @@ values
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000004',
    'authenticated', 'authenticated', 'lapsed@acadigma.test',
-   -- nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash -- dev-only fixture hash of the literal string `password123`, never used outside `supabase db reset`; not a leaked real credential.
-   '$2a$10$PZTfVVhZa5rgDwgoJrTVOOuhJ6Dq5Xm0OeHAzAGjCPZocfdMa6wfy',
+   extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Nasrin Sultana"}'::jsonb, now(), now())
 on conflict (id) do nothing;
