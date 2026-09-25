@@ -111,6 +111,13 @@ declare
   v_block_seconds  integer;
   v_key            text;
 begin
+  -- A `user:<bucket>` key may only be used with that bucket: otherwise a
+  -- caller could bump their own changePassword row with loginByEmail's
+  -- shorter window and cut their own block (review of PR #45).
+  if p_key like 'user:%' and split_part(p_key, ':', 2) <> p_bucket then
+    raise exception 'throttle key does not match bucket' using errcode = '22023';
+  end if;
+
   -- Per-user buckets never trust the caller's key: it is derived here from
   -- auth.uid(), so nobody can fill another user's bucket (D-101).
   v_key := app.throttle_key(
@@ -139,26 +146,39 @@ begin
     raise exception 'unrecognised throttle bucket: %', p_bucket using errcode = '22023';
   end if;
 
+  -- An expired block, or an expired window with no block, starts a fresh
+  -- window: count from 1 and clear the old block. Before this, a block that
+  -- had run out re-blocked on the very next failure (review of PR #45).
   insert into public.auth_throttle (key, window_started_at, attempts)
   values (v_key, now(), 1)
   on conflict (key) do update
     set attempts = case
-          when auth_throttle.blocked_until is null
-               and auth_throttle.window_started_at < now() - make_interval(secs => v_window_seconds)
+          when (auth_throttle.blocked_until is not null and auth_throttle.blocked_until <= now())
+            or (auth_throttle.blocked_until is null
+                and auth_throttle.window_started_at < now() - make_interval(secs => v_window_seconds))
             then 1
           else auth_throttle.attempts + 1
         end,
         window_started_at = case
-          when auth_throttle.blocked_until is null
-               and auth_throttle.window_started_at < now() - make_interval(secs => v_window_seconds)
+          when (auth_throttle.blocked_until is not null and auth_throttle.blocked_until <= now())
+            or (auth_throttle.blocked_until is null
+                and auth_throttle.window_started_at < now() - make_interval(secs => v_window_seconds))
             then now()
           else auth_throttle.window_started_at
+        end,
+        blocked_until = case
+          when auth_throttle.blocked_until is not null and auth_throttle.blocked_until <= now()
+            then null
+          else auth_throttle.blocked_until
         end
   returning * into v_row;
 
+  -- Never shorten a block that is already running: keep the later end.
   if v_row.attempts > v_max_attempts then
     update public.auth_throttle
-       set blocked_until = now() + make_interval(secs => v_block_seconds)
+       set blocked_until = greatest(
+             coalesce(blocked_until, now()),
+             now() + make_interval(secs => v_block_seconds))
      where key = v_key
      returning * into v_row;
   end if;

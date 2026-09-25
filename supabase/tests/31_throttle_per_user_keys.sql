@@ -11,7 +11,7 @@
 --      throttle_status on a plain key still works (the D-65 smoke test).
 -- =====================================================================
 begin;
-select plan(11);
+select plan(16);
 
 create schema if not exists tests;
 
@@ -116,6 +116,43 @@ select public.throttle_record_failure('loginByEmail', 'login-email:abc');
 select is(
   (select attempts from public.auth_throttle where key = 'login-email:abc'),
   1, 'a client-keyed bucket still records under the key it was given');
+
+-- 5. A user: key only works with its own bucket (no shortening a block by
+--    recording into it with a bucket that has a shorter window).
+select tests.login('f1010100-0000-0000-0000-00000000000a');
+select throws_ok(
+  $$select public.throttle_record_failure('loginByEmail', 'user:changePassword')$$,
+  '22023', 'throttle key does not match bucket',
+  'a user: key cannot be recorded under a different bucket');
+select tests.logout();
+
+-- 6. A running block is never shortened.
+update public.auth_throttle set blocked_until = now() + interval '2 hours'
+ where key = 'user:createSchool:f1010100-0000-0000-0000-00000000000a';
+select tests.login('f1010100-0000-0000-0000-00000000000a');
+select public.throttle_record_failure('createSchool', 'ignored');
+select tests.logout();
+select ok(
+  (select blocked_until > now() + interval '119 minutes' from public.auth_throttle
+    where key = 'user:createSchool:f1010100-0000-0000-0000-00000000000a'),
+  'another failure while blocked keeps the later block end');
+
+-- 7. An expired block starts a fresh window: one failure does not re-block,
+--    a full window's worth does.
+update public.auth_throttle
+   set attempts = 6, blocked_until = now() - interval '1 second',
+       window_started_at = now() - interval '20 minutes'
+ where key = 'login-email:abc';
+select is(
+  (select blocked from public.throttle_record_failure('loginByEmail', 'login-email:abc')),
+  false, 'the first failure after a block expires does not re-block');
+select is(
+  (select attempts from public.auth_throttle where key = 'login-email:abc'),
+  1, 'and it counts from 1 in a fresh window');
+select public.throttle_record_failure('loginByEmail', 'login-email:abc') from generate_series(1, 4);
+select is(
+  (select blocked from public.throttle_record_failure('loginByEmail', 'login-email:abc')),
+  true, 'the sixth failure in the new window blocks again');
 
 select * from finish();
 rollback;

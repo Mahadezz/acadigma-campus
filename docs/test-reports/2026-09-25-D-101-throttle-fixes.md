@@ -24,12 +24,14 @@ Local PostgreSQL 17.10 + pgTAP 1.3.4 (the CI `db` job's steps: bootstrap, every 
 
 ## 4. Database (pgTAP)
 
-All files pass locally. `31_throttle_per_user_keys.sql` **11/11**:
+All files pass locally. `31_throttle_per_user_keys.sql` **16/16**:
 
 - 40 `createSchool` failures recorded by Alice naming the victim's key: zero rows touch the victim; all 40 land on Alice's own row.
 - `throttle_status` with a `user:` key naming someone else reads only the caller's own row; `throttle_reset` refuses any `user:` key from a client (`42501`), including the caller's own `user:createSchool` (review of PR #45).
 - anon calling `throttle_status('user:…')` → `42501 authentication required`; anon `throttle_status('ci-smoke:post-deploy')` still answers (the D-65 smoke test).
 - A client-keyed bucket (`loginByEmail`) still records under the key it was given.
+- anon cannot reset a `user:` row; a `user:changePassword` key is refused under `loginByEmail` (no shortening a block); another failure during a 2-hour block keeps the later end.
+- After a block expires, one failure does not re-block and counts from 1; the sixth failure in the new window blocks again.
 
 `30_create_school_workspace.sql` 64/64 with the new key name.
 
