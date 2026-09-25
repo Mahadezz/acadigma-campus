@@ -6,13 +6,15 @@ import {
   ok,
   type ApiError,
   type ComputeResultsSummary,
-  type MarkStatus,
+  type AttendanceStatus,
+  type ReportCardDto,
   type Result,
-  type ResultStatus,
   type SectionResults,
   type StudentResultRow,
 } from "@acadigma/contracts"
 import { sectionDisplayName } from "@acadigma/domain/academic"
+import { attendanceWeight } from "@acadigma/domain/attendance"
+import { roundHalfUp } from "@acadigma/domain/grading"
 
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
@@ -199,56 +201,28 @@ export async function getSectionResults(
 }
 
 /**
- * One student's computed result, shaped for F-OP-03's report card (D-206,
- * PR #63's `ReportCardDto` as the lead revised it on 2026-09-26) minus
- * `attendance`, which the report-card seam adds from F-AC-03. Read through the
- * caller's RLS client. `rankOf` is the number of ranked students in the
- * section; `rankTied` is true when another student shares the rank.
+ * The report card's data (F-OP-03 D-206, `ReportCardDto`): one student's
+ * computed result for one exam, read through the CALLER's RLS client — a
+ * teacher sees only their own class (`app.can_read_results`), so any other
+ * student is `not_found`. Attendance is the student's records from the
+ * year's first day to the exam's last day (or today), weighted by the
+ * school's policy (F-AC-03 §5.4), as a whole percentage; below
+ * `min_attendance_bp` (default 75 %) is a warning line, never a block.
  * `examNameBn` is the exam's name (exams have one name); a subject without a
- * Bangla name uses its English one. `gpa`, `overallLetter` and `rank` are null
- * when the result is incomplete or withheld (or every paper was exempt).
+ * Bangla name uses its English one. A student without a roll number, or
+ * whose every paper was exempt, has no card to print.
  */
-export type ReportCardResult = {
-  studentNameEn: string
-  studentNameBn: string
-  studentCode: string
-  rollNumber: number | null
-  className: string
-  sectionName: string
-  examNameEn: string
-  examNameBn: string
-  subjects: {
-    subjectNameEn: string
-    subjectNameBn: string
-    status: MarkStatus
-    subjectKind: "compulsory" | "optional_fourth"
-    marksObtained: number | null
-    fullMarks: number
-    letter: string | null
-    gradePoint: number | null
-  }[]
-  totalObtained: number
-  totalFull: number
-  percentage: number | null
-  gpa: number | null
-  gpaWithoutOptional: number | null
-  overallLetter: string | null
-  result: ResultStatus
-  rank: number | null
-  rankTied: boolean
-  rankOf: number | null
-}
-
-export async function getReportCardResult(
+export async function getReportCard(
   ctx: WorkspaceContext,
   client: AcadigmaSupabaseClient,
   studentId: string,
   examId: string
-): Promise<Result<ReportCardResult, ApiError>> {
+): Promise<Result<ReportCardDto, ApiError>> {
   const { data, error } = await client
     .from("results")
     .select(
-      RESULT_COLUMNS + ", exams(name), sections(name, grade_levels(name))"
+      RESULT_COLUMNS +
+        ", exams(name, ends_on, academic_years(starts_on)), sections(name, grade_levels(name))"
     )
     .eq("workspace_id", ctx.workspaceId)
     .eq("exam_id", examId)
@@ -258,7 +232,11 @@ export async function getReportCardResult(
   if (!data) return err(NOT_FOUND)
   const parsed = resultRow
     .extend({
-      exams: z.object({ name: z.string() }),
+      exams: z.object({
+        name: z.string(),
+        ends_on: z.string().nullable(),
+        academic_years: z.object({ starts_on: z.string() }),
+      }),
       sections: z.object({
         name: z.string(),
         grade_levels: z.object({ name: z.string() }),
@@ -267,27 +245,72 @@ export async function getReportCardResult(
     .safeParse(data)
   if (!parsed.success) return err(UNAVAILABLE)
   const r = parsed.data
+  const row = toRow(r)
+  if (row.rollNumber === null || row.percentage === null) {
+    return err(
+      apiError(
+        "not_found",
+        "This student has no report card to print: no roll number, or every paper exempt."
+      )
+    )
+  }
 
+  const upTo = r.exams.ends_on ?? new Date().toISOString().slice(0, 10)
   const sectionCount = (rank?: number) => {
-    let query = client
+    const query = client
       .from("results")
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", ctx.workspaceId)
       .eq("exam_id", examId)
       .eq("section_id", r.section_id)
-    query =
-      rank === undefined
-        ? query.not("section_rank", "is", null)
-        : query.eq("section_rank", rank)
-    return query
+    return rank === undefined
+      ? query.not("section_rank", "is", null)
+      : query.eq("section_rank", rank)
   }
-  const [ranked, sameRank] = await Promise.all([
-    r.section_rank === null ? null : sectionCount(),
-    r.section_rank === null ? null : sectionCount(r.section_rank),
+  const [ranked, sameRank, records, policy] = await Promise.all([
+    sectionCount(),
+    row.sectionRank === null ? null : sectionCount(row.sectionRank),
+    client
+      .from("attendance_records")
+      .select("status, attendance_sessions!inner(date)")
+      .eq("workspace_id", ctx.workspaceId)
+      .eq("student_id", studentId)
+      .gte("attendance_sessions.date", r.exams.academic_years.starts_on)
+      .lte("attendance_sessions.date", upTo),
+    client
+      .from("school_profiles")
+      .select("attendance_policy")
+      .eq("workspace_id", ctx.workspaceId)
+      .maybeSingle(),
   ])
-  if (ranked?.error || sameRank?.error) return err(UNAVAILABLE)
+  if (ranked.error || sameRank?.error || records.error || policy.error) {
+    return err(UNAVAILABLE)
+  }
 
-  const row = toRow(r)
+  const rules = z
+    .object({
+      late_counts_present: z.boolean().default(true),
+      half_day_counts_present: z.boolean().default(true),
+      min_attendance_bp: z.number().default(7500),
+    })
+    .catch({
+      late_counts_present: true,
+      half_day_counts_present: true,
+      min_attendance_bp: 7500,
+    })
+    .parse(policy.data?.attendance_policy ?? {})
+  const statuses = (records.data ?? []).map(
+    (rec) => (rec as { status: AttendanceStatus }).status
+  )
+  const presentDays = statuses.reduce(
+    (sum, status) => sum + attendanceWeight(status, rules),
+    0
+  )
+  const percent =
+    statuses.length === 0
+      ? 0
+      : roundHalfUp((100 * presentDays) / statuses.length, 0)
+
   return ok({
     studentNameEn: row.fullName,
     studentNameBn: row.fullNameBn ?? row.fullName,
@@ -301,8 +324,8 @@ export async function getReportCardResult(
       .map((l) => ({
         subjectNameEn: l.subject_name,
         subjectNameBn: l.subject_name_bn ?? l.subject_name,
-        status: l.status,
         subjectKind: l.subject_kind,
+        status: l.status,
         marksObtained: l.obtained,
         fullMarks: l.full_marks,
         letter: l.letter,
@@ -318,6 +341,12 @@ export async function getReportCardResult(
     result: row.status,
     rank: row.sectionRank,
     rankTied: (sameRank?.count ?? 0) > 1,
-    rankOf: ranked?.count ?? null,
+    rankOf: ranked.count || null,
+    attendance: {
+      presentDays,
+      totalDays: statuses.length,
+      percent,
+      belowMinimum: percent * 100 < rules.min_attendance_bp,
+    },
   })
 }

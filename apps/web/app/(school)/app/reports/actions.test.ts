@@ -63,6 +63,12 @@ const mockRenderPdfToBuffer = vi.fn()
 vi.mock("@acadigma/pdf", () => ({
   renderPdfToBuffer: (...args: unknown[]) => mockRenderPdfToBuffer(...args),
   SampleDocument: (props: unknown) => props,
+  ReportCardDocument: (props: unknown) => props,
+}))
+
+const mockGetReportCardData = vi.fn()
+vi.mock("./report-card-data", () => ({
+  getReportCardData: (...args: unknown[]) => mockGetReportCardData(...args),
 }))
 
 const { createReportRun } = await import("./actions")
@@ -75,6 +81,14 @@ const CTX = {
   plan: "starter",
 }
 const VALID_INPUT = { params: { kind: "sample" }, locale: "bn" }
+const VALID_REPORT_CARD_INPUT = {
+  params: {
+    kind: "report_card",
+    studentId: "11111111-1111-1111-1111-111111111111",
+    examId: "22222222-2222-2222-2222-222222222222",
+  },
+  locale: "bn",
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -161,5 +175,93 @@ describe("shape: parse -> context -> can() -> entitlement -> requireWritable -> 
     expect(mockWithServiceRole).toHaveBeenCalledTimes(1)
     expect(mockMarkRendering).toHaveBeenCalledWith(expect.anything(), "run-1")
     expect(mockMarkReady).toHaveBeenCalled()
+  })
+})
+
+describe("report_card kind (D-206)", () => {
+  it("checks report.render.report_card, not report.render.sample", async () => {
+    // An idempotent replay (status already "ready") short-circuits before
+    // the render step — this test only cares which action key can() saw.
+    mockCreateReportRunRepo.mockResolvedValue({
+      ok: true,
+      data: { id: "run-idempotent", status: "ready" },
+    })
+    await createReportRun(VALID_REPORT_CARD_INPUT)
+    expect(mockCan).toHaveBeenCalledWith("teacher", "report.render.report_card")
+  })
+
+  it("denies a role without report.render.report_card", async () => {
+    mockCan.mockReturnValue(false)
+    const result = await createReportRun(VALID_REPORT_CARD_INPUT)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("forbidden")
+    expect(mockCreateReportRunRepo).not.toHaveBeenCalled()
+  })
+
+  it("renders through getReportCardData and ReportCardDocument for a newly queued run", async () => {
+    mockCreateReportRunRepo.mockResolvedValue({
+      ok: true,
+      data: { id: "run-2", status: "queued" },
+    })
+    mockGetSchoolProfile.mockResolvedValue({
+      ok: true,
+      data: {
+        fields: { legal_name: "Test School" },
+        branding: {
+          header_line_1: null,
+          header_line_2: null,
+          accent: null,
+          report_footer: null,
+        },
+      },
+    })
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: { id: "run-2", status: "ready", locale: "bn" },
+    })
+    mockGetReportCardData.mockResolvedValue({
+      ok: true,
+      data: { rollNumber: 1, studentNameEn: "Test Student" },
+    })
+    mockRenderPdfToBuffer.mockResolvedValue(Buffer.from("%PDF"))
+    const callerClient = { caller: true }
+    mockCreateClient.mockImplementationOnce(async () => callerClient)
+
+    const result = await createReportRun(VALID_REPORT_CARD_INPUT)
+    expect(result.ok).toBe(true)
+    // The seam reads through the caller's RLS client, not the service client.
+    expect(mockGetReportCardData).toHaveBeenCalledWith(
+      callerClient,
+      CTX,
+      "11111111-1111-1111-1111-111111111111",
+      "22222222-2222-2222-2222-222222222222"
+    )
+    expect(mockMarkReady).toHaveBeenCalled()
+    expect(mockMarkFailed).not.toHaveBeenCalled()
+  })
+
+  it("marks the run failed with no_data when the seam has no data for this student/exam, never renders", async () => {
+    mockCreateReportRunRepo.mockResolvedValue({
+      ok: true,
+      data: { id: "run-3", status: "queued" },
+    })
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: { id: "run-3", status: "queued", locale: "bn" },
+    })
+    mockGetReportCardData.mockResolvedValue({
+      ok: false,
+      error: { code: "not_found", message: "no fixture data" },
+    })
+
+    const result = await createReportRun(VALID_REPORT_CARD_INPUT)
+    expect(result.ok).toBe(true) // createReportRun itself still succeeds; the RUN is what failed
+    expect(mockMarkFailed).toHaveBeenCalledWith(
+      expect.anything(),
+      "run-3",
+      "no_data",
+      "no fixture data"
+    )
+    expect(mockRenderPdfToBuffer).not.toHaveBeenCalled()
   })
 })

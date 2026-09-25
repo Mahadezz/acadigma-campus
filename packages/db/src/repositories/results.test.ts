@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  computeResults,
-  getReportCardResult,
-  getSectionResults,
-} from "./results"
+import { computeResults, getReportCard, getSectionResults } from "./results"
 
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
@@ -167,42 +163,72 @@ describe("getSectionResults", () => {
   })
 })
 
-describe("getReportCardResult", () => {
-  it("shapes a result for the report card, absent printed as no mark", async () => {
+describe("getReportCard", () => {
+  const card = {
+    ...result("S2", 2, "4.67"),
+    exams: {
+      name: "Half-Yearly",
+      ends_on: "2026-06-30",
+      academic_years: { starts_on: "2026-01-01" },
+    },
+    sections: { name: "ক", grade_levels: { name: "Class 6" } },
+  }
+  const attendance = [
+    ...Array.from({ length: 14 }, () => ({ status: "present" })),
+    { status: "late" },
+    { status: "half_day" },
+    ...Array.from({ length: 4 }, () => ({ status: "absent" })),
+  ]
+
+  it("shapes the report card: absent has no mark, ties and class size, attendance by policy", async () => {
     const { client } = fakeClient({
       results: [
-        {
-          data: {
-            ...result("S2", 2, "4.67"),
-            exams: { name: "Half-Yearly" },
-            sections: { name: "ক", grade_levels: { name: "Class 6" } },
-          },
-          error: null,
-        },
+        { data: card, error: null },
         { data: null, error: null, count: 38 },
         { data: null, error: null, count: 2 },
       ],
+      attendance_records: [{ data: attendance, error: null }],
+      school_profiles: [
+        {
+          data: {
+            attendance_policy: {
+              late_counts_present: true,
+              half_day_counts_present: false,
+              min_attendance_bp: 8000,
+            },
+          },
+          error: null,
+        },
+      ],
     })
-    const r = await getReportCardResult(CTX, client, "id-S2", EXAM)
+    const r = await getReportCard(CTX, client, "id-S2", EXAM)
     if (!r.ok) throw new Error("expected ok")
     expect(r.data).toMatchObject({
       studentNameEn: "Student S2",
       studentNameBn: "Student S2",
+      rollNumber: 2,
       className: "Class 6",
       sectionName: "ক",
       gpa: 4.67,
+      gpaWithoutOptional: null,
       overallLetter: "A",
       result: "pass",
       rank: 2,
       rankTied: true,
       rankOf: 38,
-      gpaWithoutOptional: null,
+      // 14 present + 1 late (counts) + half day (does not) = 15 of 20 = 75 %
+      attendance: {
+        presentDays: 15,
+        totalDays: 20,
+        percent: 75,
+        belowMinimum: true,
+      },
     })
     expect(r.data.subjects[1]).toEqual({
       subjectNameEn: "Science",
       subjectNameBn: "বিজ্ঞান",
-      status: "absent",
       subjectKind: "compulsory",
+      status: "absent",
       marksObtained: null,
       fullMarks: 100,
       letter: "F",
@@ -210,9 +236,19 @@ describe("getReportCardResult", () => {
     })
   })
 
-  it("is not_found when there is no result", async () => {
+  it("is not_found when RLS shows no result (another class, another school)", async () => {
     const { client } = fakeClient({ results: [{ data: null, error: null }] })
-    const r = await getReportCardResult(CTX, client, "x", EXAM)
+    const r = await getReportCard(CTX, client, "x", EXAM)
+    expect(!r.ok && r.error.code).toBe("not_found")
+  })
+
+  it("has no card for a student without a roll number", async () => {
+    const { client } = fakeClient({
+      results: [
+        { data: { ...card, enrollments: { roll_number: null } }, error: null },
+      ],
+    })
+    const r = await getReportCard(CTX, client, "x", EXAM)
     expect(!r.ok && r.error.code).toBe("not_found")
   })
 })

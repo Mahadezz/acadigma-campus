@@ -30,6 +30,10 @@ import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { StatusChip } from "@acadigma/ui/primitives/status-chip"
 
+import {
+  GenerateReportCardButton,
+  type ReportCardCopy,
+} from "@/app/(school)/app/reports/generate-report-card-button"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
@@ -47,12 +51,15 @@ export function ResultsView({
   sections,
   sectionId,
   results,
+  reportCard,
 }: {
   t: T
   locale: Locale
   sections: [string, string][]
   sectionId: string | undefined
   results: Result<SectionResults, ApiError> | null
+  /** Set when the viewer may render report cards (report.render.report_card). */
+  reportCard: ReportCardCopy | null
 }) {
   return (
     <>
@@ -84,7 +91,13 @@ export function ResultsView({
       ) : !results || results.data.rows.length === 0 ? (
         <EmptyState title={r.emptyTitle} description={r.emptyBody} />
       ) : (
-        <ResultList t={r} locale={locale} rows={results.data.rows} />
+        <ResultList
+          t={r}
+          locale={locale}
+          rows={results.data.rows}
+          reportCard={reportCard}
+          examId={results.data.examId}
+        />
       )}
     </>
   )
@@ -99,10 +112,14 @@ function ResultList({
   t,
   locale,
   rows,
+  reportCard,
+  examId,
 }: {
   t: T
   locale: Locale
   rows: StudentResultRow[]
+  reportCard: ReportCardCopy | null
+  examId: string
 }) {
   const rankCounts = new Map<number, number>()
   for (const row of rows) {
@@ -220,6 +237,16 @@ function ResultList({
                   ))}
                 </TableBody>
               </Table>
+              {reportCard ? (
+                <div className="mt-3">
+                  <GenerateReportCardButton
+                    t={reportCard}
+                    studentId={row.studentId}
+                    examId={examId}
+                    locale={locale}
+                  />
+                </div>
+              ) : null}
             </AccordionContent>
           </AccordionItem>
         )

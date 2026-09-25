@@ -16,7 +16,7 @@
 --      results; composite FKs.
 -- =====================================================================
 begin;
-select plan(35);
+select plan(37);
 
 create schema if not exists tests;
 
@@ -116,6 +116,7 @@ select tests.mkuser('55000000-0000-4000-a000-000000000003', 'rs-classt-b@test.lo
 select tests.mkuser('55000000-0000-4000-a000-000000000004', 'rs-staff@test.local', 'Staff A');
 select tests.mkuser('55000000-0000-4000-a000-000000000005', 'rs-parent@test.local', 'Parent A');
 select tests.mkuser('55000000-0000-4000-a000-000000000006', 'rs-owner-b@test.local', 'Owner B');
+select tests.mkuser('55000000-0000-4000-a000-000000000007', 'rs-teacher-b@test.local', 'Teacher B');
 
 insert into public.workspaces (id, type, name, slug, owner_id, created_by, status)
 values
@@ -129,7 +130,8 @@ values
   ('55000000-0000-4000-b000-000000000001', '55000000-0000-4000-a000-000000000002', 'teacher', 'active', now()),
   ('55000000-0000-4000-b000-000000000001', '55000000-0000-4000-a000-000000000003', 'teacher', 'active', now()),
   ('55000000-0000-4000-b000-000000000001', '55000000-0000-4000-a000-000000000004', 'staff',   'active', now()),
-  ('55000000-0000-4000-b000-000000000001', '55000000-0000-4000-a000-000000000005', 'parent',  'active', now());
+  ('55000000-0000-4000-b000-000000000001', '55000000-0000-4000-a000-000000000005', 'parent',  'active', now()),
+  ('55000000-0000-4000-b000-000000000002', '55000000-0000-4000-a000-000000000007', 'teacher', 'active', now());
 
 insert into ids
 select case m.user_id
@@ -303,6 +305,15 @@ select is((select count(*)::int from public.result_subject_lines), 60, 'and thei
 select tests.logout();
 select tests.login('55000000-0000-4000-a000-000000000003');
 select is((select count(*)::int from public.results), 2, 'the class teacher of 6 B reads only 6 B''s');
+select is(
+  (select count(*)::int from public.results r join public.students st on st.id = r.student_id
+    where st.student_code = 'S01'),
+  0, 'so a 6 B teacher cannot read (or print) a 6 A student''s result');
+select tests.logout();
+select tests.login('55000000-0000-4000-a000-000000000007');
+select is(
+  (select count(*)::int from public.results) + (select count(*)::int from public.result_subject_lines),
+  0, 'a teacher of another school reads no results or lines');
 select tests.logout();
 select tests.login('55000000-0000-4000-a000-000000000004');
 select is((select count(*)::int from public.results), 12, 'staff read every result');

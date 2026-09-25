@@ -105,13 +105,16 @@ export const ACTIONS = [
   "modules.visibility.write",
   "workspace.archive",
   "platform.workspace.suspend",
-  // F-OP-03 §2 — Reports and PDF. Only the two keys Parts 1-2 need: opening
-  // the reports area and rendering the pipeline's own internal proof kind
-  // ('sample'). The spec's full per-real-kind matrix (report.render.report_card,
-  // report.comment.*, report.publish, ...) is added when those Parts ship —
-  // none of them exist yet (D-204).
+  // F-OP-03 §2 — Reports and PDF. Parts 1-2 needed only "open the reports
+  // area" and "render the pipeline's own internal proof kind" (D-204). Part 3
+  // (D-206) adds the report card's own key; "own sections¹" row-scoping from
+  // the spec's full matrix waits for real section-teacher data (F-AC-0x) —
+  // a plain role grant is the honest cut while the render source is a
+  // fixture, same reasoning the sample kind already used. The rest of the
+  // matrix (report.comment.*, report.publish, ...) still waits on its Parts.
   "report.view",
   "report.render.sample",
+  "report.render.report_card",
   // Academic structure (F-AC-01 §2, D-102): owner/admin/teacher/staff read,
   // owner/admin write. Parents see structure only through their portal.
   "academics.structure.read",
@@ -175,9 +178,10 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "audit.read",
     "audit.read.self",
     "audit.export",
-    // F-OP-03 §2 — Reports and PDF (D-204)
+    // F-OP-03 §2 — Reports and PDF (D-204, D-206)
     "report.view",
     "report.render.sample",
+    "report.render.report_card",
     "academics.structure.read",
     "academics.section.write",
     "academics.subject.write",
@@ -229,9 +233,10 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // the trail must be able to record what an admin did without that
     // admin curating it.
     "audit.read.self",
-    // F-OP-03 §2 — Reports and PDF (D-204)
+    // F-OP-03 §2 — Reports and PDF (D-204, D-206)
     "report.view",
     "report.render.sample",
+    "report.render.report_card",
     "academics.structure.read",
     "academics.section.write",
     "academics.subject.write",
@@ -256,11 +261,14 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.leave",
     // Audit (F-ID-09 §2)
     "audit.read.self",
-    // F-OP-03 §2 — Reports and PDF (D-204): "own sections" row-scoping for
-    // the real render.* keys is Part 3+; Parts 1-2's 'sample' kind carries
-    // no student data, so a plain role grant is enough.
+    // F-OP-03 §2 — Reports and PDF (D-204, D-206): a teacher may render only
+    // report cards of sections they are class teacher of. Interim: not
+    // enforced yet — the render source is a fixture — so a plain role grant;
+    // the seam (`getReportCardData`) and RLS on `results` enforce it when
+    // real data lands (F-AC-06 Part 5).
     "report.view",
     "report.render.sample",
+    "report.render.report_card",
     "academics.structure.read",
     "exams.read",
     "results.read",
@@ -284,6 +292,11 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "academics.structure.read",
     "exams.read",
     "results.read",
+    // F-OP-03 §2 (D-206, lead decision 2026-09-26): the office prints report
+    // cards, so staff may open reports and render a report card — not the
+    // spec's "—". No 'sample' render: that is the pipeline's own proof.
+    "report.view",
+    "report.render.report_card",
   ],
   // Read-only parent portal (DECISION-LOG D-10), narrowed to their children by RLS.
   parent: [

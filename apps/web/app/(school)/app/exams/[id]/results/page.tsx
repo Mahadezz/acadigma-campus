@@ -98,6 +98,15 @@ export default async function ExamResultsPage({
         sections={sections}
         sectionId={sectionId}
         results={results}
+        reportCard={
+          can(ctx.role, "report.render.report_card")
+            ? {
+                generateReportCard: t.reports.generateReportCard,
+                generating: t.reports.generating,
+                error: t.reports.error,
+              }
+            : null
+        }
       />
     </div>
   )

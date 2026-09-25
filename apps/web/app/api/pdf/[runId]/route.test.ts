@@ -38,6 +38,12 @@ const mockRenderPdfToBuffer = vi.fn()
 vi.mock("@acadigma/pdf", () => ({
   renderPdfToBuffer: (...args: unknown[]) => mockRenderPdfToBuffer(...args),
   SampleDocument: (props: unknown) => props,
+  ReportCardDocument: (props: unknown) => props,
+}))
+
+const mockGetReportCardData = vi.fn()
+vi.mock("@/app/(school)/app/reports/report-card-data", () => ({
+  getReportCardData: (...args: unknown[]) => mockGetReportCardData(...args),
 }))
 
 const { GET } = await import("./route")
@@ -142,6 +148,7 @@ describe("shape: parse -> context -> can() -> fetch -> render", () => {
       ok: true,
       data: {
         id: RUN_ID,
+        kind: "sample",
         status: "ready",
         locale: "bn",
         requestedAt: "2026-09-25T00:00:00.000Z",
@@ -153,8 +160,109 @@ describe("shape: parse -> context -> can() -> fetch -> render", () => {
     expect(response.headers.get("content-type")).toBe("application/pdf")
     expect(response.headers.get("content-disposition")).toContain(RUN_ID)
     expect(mockRenderPdfToBuffer).toHaveBeenCalledTimes(1)
+    expect(mockGetReportCardData).not.toHaveBeenCalled()
 
     const bytes = new Uint8Array(await response.arrayBuffer())
     expect(Buffer.from(bytes).toString()).toBe("%PDF-fake")
+  })
+})
+
+describe("report_card kind (D-206)", () => {
+  const CARD_PARAMS = {
+    kind: "report_card",
+    studentId: "33333333-3333-3333-3333-333333333333",
+    examId: "44444444-4444-4444-4444-444444444444",
+  }
+
+  it("streams a rendered report card via getReportCardData", async () => {
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: {
+        id: RUN_ID,
+        kind: "report_card",
+        status: "ready",
+        locale: "bn",
+        params: CARD_PARAMS,
+        requestedAt: "2026-09-25T00:00:00.000Z",
+        completedAt: "2026-09-25T00:05:00.000Z",
+      },
+    })
+    mockGetReportCardData.mockResolvedValue({
+      ok: true,
+      data: { rollNumber: 1, studentNameEn: "Test Student" },
+    })
+    const response = await callWith(RUN_ID)
+    expect(response.status).toBe(200)
+    expect(mockGetReportCardData).toHaveBeenCalledWith(
+      expect.anything(),
+      CTX,
+      CARD_PARAMS.studentId,
+      CARD_PARAMS.examId
+    )
+    expect(mockRenderPdfToBuffer).toHaveBeenCalledTimes(1)
+  })
+
+  it("maps a seam not_found to the same status code, never renders", async () => {
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: {
+        id: RUN_ID,
+        kind: "report_card",
+        status: "ready",
+        locale: "bn",
+        params: CARD_PARAMS,
+        requestedAt: "2026-09-25T00:00:00.000Z",
+        completedAt: "2026-09-25T00:05:00.000Z",
+      },
+    })
+    mockGetReportCardData.mockResolvedValue({
+      ok: false,
+      error: { code: "not_found", message: "not in fixture" },
+    })
+    const response = await callWith(RUN_ID)
+    expect(response.status).toBe(404)
+    expect(mockRenderPdfToBuffer).not.toHaveBeenCalled()
+  })
+
+  it("403s a role that may open reports but not render report cards, never renders", async () => {
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: {
+        id: RUN_ID,
+        kind: "report_card",
+        status: "ready",
+        locale: "bn",
+        params: CARD_PARAMS,
+        requestedAt: "2026-09-25T00:00:00.000Z",
+        completedAt: "2026-09-25T00:05:00.000Z",
+      },
+    })
+    mockCan.mockImplementation(
+      (_role: string, action: string) => action === "report.view"
+    )
+    const response = await callWith(RUN_ID)
+    expect(response.status).toBe(403)
+    expect(mockCan).toHaveBeenCalledWith(CTX.role, "report.render.report_card")
+    expect(mockGetReportCardData).not.toHaveBeenCalled()
+    expect(mockRenderPdfToBuffer).not.toHaveBeenCalled()
+  })
+
+  it("500s when the stored params do not match ReportCardParams (validated on insert, so this is our bug)", async () => {
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: {
+        id: RUN_ID,
+        kind: "report_card",
+        status: "ready",
+        locale: "bn",
+        params: { kind: "report_card" }, // missing studentId/examId
+        requestedAt: "2026-09-25T00:00:00.000Z",
+        completedAt: "2026-09-25T00:05:00.000Z",
+      },
+    })
+    const response = await callWith(RUN_ID)
+    expect(response.status).toBe(500)
+    expect(mockGetReportCardData).not.toHaveBeenCalled()
+    expect(mockRenderPdfToBuffer).not.toHaveBeenCalled()
   })
 })
