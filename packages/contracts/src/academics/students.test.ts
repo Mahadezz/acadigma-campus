@@ -37,6 +37,10 @@ describe("normalizeBdPhone (§5 rule 8)", () => {
     }
   })
 
+  it("accepts the unassigned 010 range used by demo and test data (D-106)", () => {
+    expect(normalizeBdPhone("01000000001")).toBe("+8801000000001")
+  })
+
   it("leaves anything else for the format check to refuse", () => {
     expect(normalizeBdPhone("01212345678")).toBe("01212345678")
     expect(normalizeBdPhone("12345")).toBe("12345")

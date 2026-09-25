@@ -44,11 +44,13 @@ export type GuardianRelation = z.infer<typeof guardianRelationSchema>
 /**
  * §5 rule 8: a Bangladeshi mobile typed any usual way — `01712345678`,
  * `8801712345678`, `+880 1712-345678` — becomes `+8801712345678`. Anything
- * else is returned unchanged for the format check to refuse.
+ * else is returned unchanged for the format check to refuse. Operator
+ * prefixes are 013-019; 010 is also accepted because it is the unassigned
+ * range demo and test data use (no real family has one; D-106).
  */
 export function normalizeBdPhone(input: string): string {
   const digits = input.replace(/[\s\-()]/g, "")
-  const match = /^(?:\+?88)?(01[3-9]\d{8})$/.exec(digits)
+  const match = /^(?:\+?88)?(01[03-9]\d{8})$/.exec(digits)
   return match ? `+88${match[1]}` : input.trim()
 }
 
@@ -58,7 +60,7 @@ export const guardianPhoneSchema = z
   .pipe(
     z
       .string()
-      .regex(/^\+8801[3-9]\d{8}$/, "Enter a mobile number like 01712345678")
+      .regex(/^\+8801[03-9]\d{8}$/, "Enter a mobile number like 01712345678")
   )
 
 // ---------------------------------------------------------------------------

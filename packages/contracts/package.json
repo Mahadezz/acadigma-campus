@@ -9,6 +9,7 @@
     "./academics/attendance": "./src/academics/attendance.ts",
     "./academics/structure": "./src/academics/structure.ts",
     "./academics/students": "./src/academics/students.ts",
+    "./academics/student-import": "./src/academics/student-import.ts",
     "./errors": "./src/errors.ts",
     "./result": "./src/result.ts",
     "./common": "./src/common.ts",
