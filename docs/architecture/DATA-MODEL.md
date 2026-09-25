@@ -297,11 +297,13 @@ Two properties make them safe. First, the helper joins back to `workspace_member
 
 ### 1.7 `user_preferences` — 1:1 with `profiles`
 
-`user_id` **PK**, `theme_mode` (`light`|`dark`|`system`), `palette`, `density`, `language` (`en`|`bn`), `timezone`, `email_digest` (`off`|`instant`|`daily`|`weekly`), `push_enabled`, `channels jsonb` (per-category in-app/push switches), timestamps.
+`user_id` **PK**, `theme_mode` (`light`|`dark`|`system`), `palette`, `density`, `language` (`en`|`bn`), `timezone`, `email_digest` (`off`|`instant`|`daily`|`weekly`), `push_enabled`, `channels jsonb` (per-category in-app/push switches), `ui_mode` (`full`|`basic`, F-ID-10 §3, D-403/D-404), `text_size` (`normal`|`large`|`xlarge`, F-ID-10 §5.2), timestamps.
 
 Deliberately has **no** `workspace_id`: preferences follow the person across school PC and phone (PRODUCT-DECISIONS 1.10). `localStorage` is a cache only.
 
-**Indexes** — PK only. **RLS** — class **U1**. **Triggers** — `updated_at`. **Soft delete** — no.
+`ui_mode`/`text_size` were added by F-ID-10 Part 1 (`20260925300315_user_preferences_ui.sql`) — the table already existed (this row is unchanged since F-ID-02's earlier demo-cut work), so that migration only adds the two columns, not the table (D-404). `ui_mode` is global to the user, never per workspace; a member whose role is `staff` in the active workspace does not see the basic-mode switch or shell there regardless of this value — enforced in application routing (`(school)/app/page.tsx`), not RLS, because it is a layout choice, never a permission (F-ID-10 §2 note 4).
+
+**Indexes** — PK only. **RLS** — class **U1** (select/insert/update/delete, own row only, no platform read) — `ui_mode`/`text_size` ride this unchanged; F-ID-10 §3's own text says "no delete grant" for this table, which was written before Part 1 discovered the table already shipped with a delete grant (D-404) — this section is the one that wins. **Triggers** — `updated_at`. **Soft delete** — no.
 
 ### 1.7a `onboarding_progress` _(F-ID-05 Part 2, `20260925000300_onboarding_progress.sql`)_
 

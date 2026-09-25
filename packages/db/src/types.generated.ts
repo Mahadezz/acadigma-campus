@@ -2951,8 +2951,10 @@ export type Database = {
           language: string
           palette: string
           push_enabled: boolean
+          text_size: Database["public"]["Enums"]["text_size"]
           theme_mode: string
           timezone: string | null
+          ui_mode: Database["public"]["Enums"]["ui_mode"]
           updated_at: string
           user_id: string
         }
@@ -2964,8 +2966,10 @@ export type Database = {
           language?: string
           palette?: string
           push_enabled?: boolean
+          text_size?: Database["public"]["Enums"]["text_size"]
           theme_mode?: string
           timezone?: string | null
+          ui_mode?: Database["public"]["Enums"]["ui_mode"]
           updated_at?: string
           user_id: string
         }
@@ -2977,8 +2981,10 @@ export type Database = {
           language?: string
           palette?: string
           push_enabled?: boolean
+          text_size?: Database["public"]["Enums"]["text_size"]
           theme_mode?: string
           timezone?: string | null
+          ui_mode?: Database["public"]["Enums"]["ui_mode"]
           updated_at?: string
           user_id?: string
         }
@@ -3734,6 +3740,8 @@ export type Database = {
         | "past_due"
         | "cancelled"
         | "expired"
+      text_size: "normal" | "large" | "xlarge"
+      ui_mode: "full" | "basic"
       workspace_status: "active" | "suspended" | "archived"
       workspace_type: "school" | "personal"
     }
@@ -3981,6 +3989,8 @@ export const Constants = {
         "cancelled",
         "expired",
       ],
+      text_size: ["normal", "large", "xlarge"],
+      ui_mode: ["full", "basic"],
       workspace_status: ["active", "suspended", "archived"],
       workspace_type: ["school", "personal"],
     },
