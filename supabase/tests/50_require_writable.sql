@@ -10,11 +10,16 @@
 --   B. A member's direct writes (the PostgREST path, no server action) are
 --      refused with PLAN_READ_ONLY while the workspace is read_only; reads
 --      still work; a privileged caller still writes.
+--      Removing access still works (member removed, capability deleted,
+--      invitation revoked/declined) while its siblings (role change,
+--      capability grant, invitation edit, accepting an invitation) are
+--      refused; a stranger's write is refused by RLS, not by this trigger,
+--      so the workspace's reason never leaks.
 --   C. After reactivation (app.set_access_mode(..., 'normal')) the same
 --      writes succeed.
 -- =====================================================================
 begin;
-select plan(14);
+select plan(23);
 
 create schema if not exists tests;
 
@@ -103,6 +108,32 @@ insert into public.custom_labels (id, workspace_id, base_role, name, created_by)
 values ('50000000-0000-4000-c000-000000000001', '50000000-0000-4000-b000-000000000001',
         'teacher', 'Coordinator', '50000000-0000-4000-a000-000000000001');
 
+select tests.mkuser('50000000-0000-4000-a000-000000000002', 'ro-teacher@test.local', 'RO Teacher');
+select tests.mkuser('50000000-0000-4000-a000-000000000003', 'ro-decliner@test.local', 'RO Decliner');
+select tests.mkuser('50000000-0000-4000-a000-000000000004', 'ro-joiner@test.local', 'RO Joiner');
+select tests.mkuser('50000000-0000-4000-a000-000000000005', 'ro-stranger@test.local', 'RO Stranger');
+
+insert into public.workspace_members (workspace_id, user_id, role, status, joined_at)
+values ('50000000-0000-4000-b000-000000000001', '50000000-0000-4000-a000-000000000002',
+        'teacher', 'active', now());
+
+insert into public.workspace_member_capabilities (workspace_id, user_id, capability)
+values ('50000000-0000-4000-b000-000000000001', '50000000-0000-4000-a000-000000000002',
+        'fees.cashier');
+
+insert into public.workspace_invitations
+  (id, workspace_id, channel, email, role, token_hash, token_prefix, invited_by, expires_at)
+values
+  ('50000000-0000-4000-d000-000000000001', '50000000-0000-4000-b000-000000000001', 'email',
+   'someone@test.local', 'teacher', app.hash_token('ro-token-revoke'), 'ro-token',
+   '50000000-0000-4000-a000-000000000001', now() + interval '7 days'),
+  ('50000000-0000-4000-d000-000000000002', '50000000-0000-4000-b000-000000000001', 'email',
+   'ro-decliner@test.local', 'teacher', app.hash_token('ro-token-decline'), 'ro-token',
+   '50000000-0000-4000-a000-000000000001', now() + interval '7 days'),
+  ('50000000-0000-4000-d000-000000000003', '50000000-0000-4000-b000-000000000001', 'email',
+   'ro-joiner@test.local', 'teacher', app.hash_token('ro-token-accept'), 'ro-token',
+   '50000000-0000-4000-a000-000000000001', now() + interval '7 days');
+
 select app.set_access_mode('50000000-0000-4000-b000-000000000001', 'read_only',
                            'Your Pro trial has ended.');
 
@@ -146,6 +177,65 @@ select is(
     where id = '50000000-0000-4000-b000-000000000001'),
   'read_only',
   'read_only: the owner still reads the workspace row (banner source)');
+
+-- Removing access still works; the sibling writes do not.
+select throws_ok(
+  $$update public.workspace_members set role = 'admin'
+     where user_id = '50000000-0000-4000-a000-000000000002'$$,
+  '42501', 'PLAN_READ_ONLY',
+  'read_only: changing a member''s role is refused');
+
+select lives_ok(
+  $$update public.workspace_members set status = 'removed'
+     where user_id = '50000000-0000-4000-a000-000000000002'$$,
+  'read_only: the owner can still remove a member');
+
+select throws_ok(
+  $$insert into public.workspace_member_capabilities (workspace_id, user_id, capability)
+    values ('50000000-0000-4000-b000-000000000001', '50000000-0000-4000-a000-000000000002',
+            'fees.refund')$$,
+  '42501', 'PLAN_READ_ONLY',
+  'read_only: granting a capability is refused');
+
+select lives_ok(
+  $$delete from public.workspace_member_capabilities
+     where user_id = '50000000-0000-4000-a000-000000000002'$$,
+  'read_only: the owner can still delete a capability');
+
+select throws_ok(
+  $$update public.workspace_invitations set role = 'admin'
+     where id = '50000000-0000-4000-d000-000000000001'$$,
+  '42501', 'PLAN_READ_ONLY',
+  'read_only: editing an invitation is refused');
+
+select lives_ok(
+  $$update public.workspace_invitations
+       set status = 'revoked', revoked_at = now(),
+           revoked_by = '50000000-0000-4000-a000-000000000001'
+     where id = '50000000-0000-4000-d000-000000000001'$$,
+  'read_only: the owner can still revoke an invitation');
+
+select tests.logout();
+select tests.login('50000000-0000-4000-a000-000000000003');
+select lives_ok(
+  $$select app.decline_invitation('ro-token-decline')$$,
+  'read_only: an invitee can still decline');
+
+select tests.logout();
+select tests.login('50000000-0000-4000-a000-000000000004');
+select throws_ok(
+  $$select app.accept_invitation('ro-token-accept')$$,
+  '42501', 'PLAN_READ_ONLY',
+  'read_only: accepting an invitation is refused (ask the owner to upgrade)');
+
+select tests.logout();
+select tests.login('50000000-0000-4000-a000-000000000005');
+select throws_ok(
+  $$insert into public.custom_labels (workspace_id, base_role, name, created_by)
+    values ('50000000-0000-4000-b000-000000000001', 'staff', 'Spy',
+            '50000000-0000-4000-a000-000000000005')$$,
+  '42501', 'new row violates row-level security policy for table "custom_labels"',
+  'read_only: a stranger is refused by RLS, not PLAN_READ_ONLY (the reason never leaks)');
 
 select tests.logout();
 

@@ -94,9 +94,9 @@ export default async function SchoolLayout({
     >
       {writable.ok ? null : (
         // F-CM-06 Part 4 (D-62): a Pro trial past trial_ends_at (or any other
-        // access_mode=read_only cause) shows here, on every screen — reads,
-        // exports, edits and deletes still work; only creating something new is
-        // blocked (§5.6), which the reason text below explains.
+        // access_mode=read_only cause) shows here, on every screen. D-300: every
+        // write is refused (server action and database); reads, exports, billing,
+        // sign-out and removing access still work.
         <InlineAlert
           tone="error"
           title="This workspace is read-only"
