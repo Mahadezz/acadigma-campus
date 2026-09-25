@@ -41,7 +41,7 @@ Also (coordinator bug hunt, HIGH): the school shell's sidebar and bottom nav lin
 
 ## 3. Unit (Vitest)
 
-Full `pnpm test`: **85 files, 976 tests, all passed (after merging `origin/main` @ `d60d15d`).** New: domain dashboard 6, db dashboard repository 4 (file coverage 92.3 % lines / 86.4 % branches / 100 % functions), dashboard view 7, implemented routes 4.
+Full `pnpm test`: **85 files, 979 tests, all passed** (after merging `origin/main` @ `d60d15d` and the PR #41 review fixes). New: domain dashboard 8 (incl. "academic year needs a current year and classes" and the curated-audit filter), db dashboard repository 5 (file coverage 93.3 % lines / 82.1 % branches / 100 % functions; incl. "a settings read error is an error, not a default"), dashboard view 7, implemented routes 4.
 
 ## 4. Database (pgTAP)
 
@@ -49,7 +49,7 @@ Not applicable — no migration, no new function or grant. Every read goes throu
 
 ## 5. End to end and accessibility
 
-Screenshots and axe (WCAG 2.1 A/AA, `@axe-core/playwright`), signed in once as the demo owner, view-only. The "404s" column lists every 404 response seen while loading the page.
+Screenshots and axe (WCAG 2.1 A/AA, `@axe-core/playwright`), signed in once as the demo owner, view-only. After-shots retaken after the review fixes; the script also checked the page text for raw table names ("a profiles record") — none. The "404s" column lists every 404 response seen while loading the page.
 
 | Screen                  | Viewport | axe violations | 404 responses                                                                                                                                              | UUID on screen |
 | ----------------------- | -------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
@@ -72,7 +72,7 @@ The live Playwright journeys (`school-dashboard.spec.ts`, `school-shell-nav.spec
 
 ## 6. Performance
 
-`check-bundle-budget.mjs` passes. The dashboard runs 8 queries in one `Promise.all` (workspace, school profile, staff count, five role counts) plus the audit page for owners; every count is `head: true`, so no rows are transferred.
+`check-bundle-budget.mjs` passes. The dashboard runs 10 queries in one `Promise.all` (workspace, school profile, staff count, current academic year, grade levels, five role counts) plus the audit page for owners; every count is `head: true`, so no rows are transferred.
 
 ## 7. Security
 
@@ -80,13 +80,13 @@ No write path. Counts run under the caller's RLS; the audit list goes through th
 
 ## 8. Known issues
 
-| #   | Issue                                                                                                                                                                                                                                                                             | Severity | Ship anyway?                                                                  |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------- |
-| 1   | Recent activity is mostly "signed in" events for a quiet school, because sign-ins are audited. Filtering by category is a small follow-up if the owner finds it noisy.                                                                                                            | low      | yes                                                                           |
-| 2   | At 360 px the top bar's "Signed in as owner" subtitle truncates to "Signed…" next to the workspace switcher; the logo is now mark-only on phones. The subtitle is the shell's, not this page's.                                                                                   | low      | yes                                                                           |
-| 3   | The live journeys cannot run until seeded accounts exist in the live project (OQ-27).                                                                                                                                                                                             | medium   | yes — unit and view tests cover the logic; axe was run on the real page above |
-| 4   | Two throwaway accounts from the D-68 Part remain in the live project: `design-shots-d68@acadigma.test`, `design-shots-d68-wizard@acadigma.test`. There is no account-deletion path in the product yet, so they are listed here for the owner to delete in the Supabase dashboard. | low      | yes                                                                           |
-| 5   | The demo login was throttled ("Too many attempts") for about 15 minutes after my first scripted runs (several sign-ins in a row); screenshots were retaken with one sign-in per run.                                                                                              | low      | n/a                                                                           |
+| #   | Issue                                                                                                                                                                                                                                                                                                                                  | Severity | Ship anyway?                                                                  |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------- |
+| 1   | Recent activity shows curated sentences only; for a quiet school that is mostly "signed in". The generic `<table>.<op>` rows (e.g. "updated a profiles record ()") are left to `/app/audit`, where the viewer still renders them with a raw table name and empty "()" — flagged to the F-ID-09 owner.                                  | low      | yes                                                                           |
+| 2   | At 360 px the top bar's subtitle ("Signed in as owner", now translated) truncates next to the workspace switcher; the logo is mark-only on phones. The demo school shows "0 of 5" because it was provisioned before the wizard existed and has no academic year or classes — a school created through the wizard shows that step done. | low      | yes                                                                           |
+| 3   | The live journeys cannot run until seeded accounts exist in the live project (OQ-27).                                                                                                                                                                                                                                                  | medium   | yes — unit and view tests cover the logic; axe was run on the real page above |
+| 4   | Two throwaway accounts from the D-68 Part remain in the live project: `design-shots-d68@acadigma.test`, `design-shots-d68-wizard@acadigma.test`. There is no account-deletion path in the product yet, so they are listed here for the owner to delete in the Supabase dashboard.                                                      | low      | yes                                                                           |
+| 5   | The demo login was throttled ("Too many attempts") for about 15 minutes after my first scripted runs (several sign-ins in a row); screenshots were retaken with one sign-in per run.                                                                                                                                                   | low      | n/a                                                                           |
 
 ## 9. Sign-off
 

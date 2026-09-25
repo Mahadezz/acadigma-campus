@@ -92,7 +92,10 @@ export default async function SchoolLayout({
               className="[&>span]:sr-only sm:[&>span]:not-sr-only"
             />
           }
-          subtitle={`Signed in as ${ctx.role}`}
+          subtitle={t.shell.signedInAs.replace(
+            "{role}",
+            t.shell.roles[ctx.role]
+          )}
           actions={
             <Button variant="ghost" size="icon" aria-label="Notifications">
               <BellIcon />

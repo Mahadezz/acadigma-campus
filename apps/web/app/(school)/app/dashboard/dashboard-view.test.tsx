@@ -33,7 +33,8 @@ const BASE: DashboardViewProps = {
     hasSchoolProfile: true,
     teacherCount: 2,
     staffRecordCount: 0,
-    hasAcademicYear: false,
+    currentAcademicYearCount: 0,
+    gradeLevelCount: 0,
     studentCount: 0,
   }),
   activity: [

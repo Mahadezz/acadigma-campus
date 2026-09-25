@@ -154,12 +154,12 @@
       "successMessage": "Your password was changed."
     },
     "passwordStrength": {
+      "label": "Password strength",
       "0": "Too weak",
       "1": "Weak",
       "2": "Fair",
       "3": "Good",
       "4": "Strong",
-      "label": "Password strength",
       "too_short": "Must be at least 12 characters.",
       "too_long": "That password is too long.",
       "too_common": "This password is too common.",
@@ -279,22 +279,22 @@
         "madrasah": "Madrasah"
       },
       "days": {
+        "6": "Sat",
+        "7": "Sun",
         "1": "Mon",
         "2": "Tue",
         "3": "Wed",
         "4": "Thu",
-        "5": "Fri",
-        "6": "Sat",
-        "7": "Sun"
+        "5": "Fri"
       },
       "daysFull": {
+        "6": "Saturday",
+        "7": "Sunday",
         "1": "Monday",
         "2": "Tuesday",
         "3": "Wednesday",
         "4": "Thursday",
-        "5": "Friday",
-        "6": "Saturday",
-        "7": "Sunday"
+        "5": "Friday"
       }
     }
   },
@@ -801,7 +801,6 @@
       "trialOneDayLeft": "1 day left in your trial",
       "trialLastDay": "Your trial ends today",
       "trialEnded": "Your trial has ended",
-      "noTrial": "No trial running",
       "readOnly": "Read-only",
       "active": "Active",
       "noPlan": "No plan"
@@ -851,5 +850,15 @@
       "empty": "Nothing has changed in this workspace yet."
     },
     "loadError": "The dashboard could not load. Refresh to try again."
+  },
+  "shell": {
+    "signedInAs": "Signed in as {role}",
+    "roles": {
+      "owner": "owner",
+      "admin": "admin",
+      "teacher": "teacher",
+      "staff": "office staff",
+      "parent": "parent"
+    }
   }
 }

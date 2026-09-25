@@ -74,6 +74,8 @@ function happy(call: Call): Result {
       },
     }
   if (call.table === "staff_directory") return { count: 7 }
+  if (call.table === "academic_years") return { count: 1 }
+  if (call.table === "grade_levels") return { count: 12 }
   const role = call.filters.find((f) => f[1] === "role")?.[2] as string
   return { count: ROLE_COUNTS[role] ?? 0 }
 }
@@ -94,6 +96,8 @@ describe("getDashboardSummary", () => {
         accessMode: "full",
         membersByRole: ROLE_COUNTS,
         staffRecordCount: 7,
+        currentAcademicYearCount: 1,
+        gradeLevelCount: 12,
       },
     })
   })
@@ -104,7 +108,7 @@ describe("getDashboardSummary", () => {
     const counts = calls.filter(
       (c) => c.table !== "workspaces" && c.table !== "school_profiles"
     )
-    expect(counts).toHaveLength(6)
+    expect(counts).toHaveLength(8)
     for (const c of counts) {
       expect(c.opts).toEqual({ count: "exact", head: true })
       expect(c.filters).toContainEqual(["eq", "workspace_id", WORKSPACE_ID])
@@ -112,6 +116,8 @@ describe("getDashboardSummary", () => {
     const members = counts.filter((c) => c.table === "workspace_members")
     for (const m of members)
       expect(m.filters).toContainEqual(["eq", "status", "active"])
+    const years = counts.find((c) => c.table === "academic_years")
+    expect(years?.filters).toContainEqual(["eq", "is_current", true])
     const staff = counts.find((c) => c.table === "staff_directory")
     expect(staff?.filters).toContainEqual([
       "in",
@@ -127,6 +133,16 @@ describe("getDashboardSummary", () => {
     const result = await getDashboardSummary(CTX, client)
     expect(result.ok && result.data.headerLine1).toBeNull()
     expect(result.ok && result.data.timezone).toBe("Asia/Dhaka")
+  })
+
+  it("fails closed when the settings read fails for any reason but a missing row", async () => {
+    const { client } = fakeClient((call) =>
+      call.table === "school_profiles"
+        ? { error: { message: "timeout" } }
+        : happy(call)
+    )
+    const result = await getDashboardSummary(CTX, client)
+    expect(!result.ok && result.error.code).toBe("dependency_unavailable")
   })
 
   it("fails closed when any count errors", async () => {

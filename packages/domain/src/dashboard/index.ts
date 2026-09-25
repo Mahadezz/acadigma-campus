@@ -5,6 +5,7 @@
  * invents a number.
  */
 
+import { catalogEntry } from "../audit"
 import { daysBetween, todayIn, type IsoDate } from "../time"
 
 export type SetupFacts = {
@@ -12,8 +13,11 @@ export type SetupFacts = {
   hasSchoolProfile: boolean
   teacherCount: number
   staffRecordCount: number
-  /** No academic-year or student table exists yet — false until those Parts ship. */
-  hasAcademicYear: boolean
+  /** Academic years marked `is_current` (the create-school wizard makes one). */
+  currentAcademicYearCount: number
+  /** `grade_levels` rows — the wizard's classes step. */
+  gradeLevelCount: number
+  /** No student table exists yet — 0 until F-AC-02 ships. */
   studentCount: number
 }
 
@@ -32,11 +36,13 @@ export function buildSetupChecklist(facts: SetupFacts): SetupStep[] {
     {
       key: "school_profile",
       done: facts.hasSchoolProfile,
-      href: "/app/settings",
+      href: "/app/settings/branding",
     },
     {
       key: "academic_year",
-      done: facts.hasAcademicYear,
+      // One step, as the wizard does both on one screen: a current year and
+      // at least one class (grade level).
+      done: facts.currentAcademicYearCount > 0 && facts.gradeLevelCount > 0,
       href: "/app/classes",
     },
     { key: "teachers", done: facts.teacherCount > 0, href: "/app/staff" },
@@ -61,4 +67,14 @@ export function trialDaysLeft(
   if (!trialEndsAt) return null
   const end: IsoDate = todayIn(timeZone, new Date(trialEndsAt))
   return daysBetween(todayIn(timeZone, now), end)
+}
+
+/**
+ * Whether an audit action has a curated sentence. The generic `<table>.<op>`
+ * rows name raw tables ("a profiles record"); the full trail at /app/audit
+ * may show them, the dashboard's short feed does not.
+ */
+export function isCuratedAuditAction(action: string): boolean {
+  const entry = catalogEntry(action)
+  return entry !== undefined && !entry.isGeneric
 }

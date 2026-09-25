@@ -1,7 +1,7 @@
 import type { NavConfig } from "@acadigma/domain/nav"
 
 /**
- * Every nav destination that has a real page today. The nav configs in
+ * Every in-app destination the shell links to that has a real page today. The nav configs in
  * `@acadigma/domain/nav` (DESIGN-SYSTEM §3.2) describe the whole product; this
  * list says which of those links can be followed right now. A nav item whose
  * href is not listed is hidden, so the shell never renders (or prefetches) a
@@ -16,15 +16,15 @@ export const IMPLEMENTED_NAV_ROUTES: ReadonlySet<string> = new Set([
   "/app/dashboard",
   "/app/settings",
   "/app/audit",
+  // Not a nav item; the dashboard's setup checklist links here (D-400).
+  "/app/settings/branding",
   "/personal",
   "/family",
 ])
 
 /** `config` with every unimplemented item removed, and empty groups dropped. */
-export function onlyImplemented(
-  config: NavConfig,
-  routes: ReadonlySet<string> = IMPLEMENTED_NAV_ROUTES
-): NavConfig {
+export function onlyImplemented(config: NavConfig): NavConfig {
+  const routes = IMPLEMENTED_NAV_ROUTES
   return {
     bottom: config.bottom.filter((item) => routes.has(item.href)),
     more: config.more

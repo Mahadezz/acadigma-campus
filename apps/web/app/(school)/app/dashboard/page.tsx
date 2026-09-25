@@ -1,7 +1,11 @@
 import { listAuditEventsInputSchema } from "@acadigma/contracts/audit"
 import { getDashboardSummary, listAuditEvents } from "@acadigma/db/repositories"
 import { renderAuditSentence } from "@acadigma/domain/audit"
-import { buildSetupChecklist, trialDaysLeft } from "@acadigma/domain/dashboard"
+import {
+  buildSetupChecklist,
+  isCuratedAuditAction,
+  trialDaysLeft,
+} from "@acadigma/domain/dashboard"
 import { can } from "@acadigma/domain/permissions"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -43,7 +47,7 @@ export default async function DashboardPage() {
       ? listAuditEvents(
           ctx,
           client,
-          listAuditEventsInputSchema.parse({ limit: 5 })
+          listAuditEventsInputSchema.parse({ limit: 30 })
         )
       : null,
   ])
@@ -88,8 +92,9 @@ export default async function DashboardPage() {
         hasSchoolProfile: Boolean(s.headerLine1) || s.hasLogo,
         teacherCount: s.membersByRole.teacher,
         staffRecordCount: s.staffRecordCount,
-        // No academic-year or student table exists yet (F-AC-01, F-AC-02).
-        hasAcademicYear: false,
+        currentAcademicYearCount: s.currentAcademicYearCount,
+        gradeLevelCount: s.gradeLevelCount,
+        // No student table exists yet (F-AC-02).
         studentCount: 0,
       }).map((step) => ({
         ...step,
@@ -99,14 +104,17 @@ export default async function DashboardPage() {
         // Hidden, not shown empty, when the caller may not read the trail or
         // it failed to load — "nothing has changed" would be a false claim.
         audit?.ok
-          ? audit.data.items.map((event) => ({
-              id: event.id,
-              sentence: renderAuditSentence(event.action, locale, {
-                actor: event.actorName,
-                subject: event.subjectName,
-              }),
-              when: when.format(new Date(event.createdAt)),
-            }))
+          ? audit.data.items
+              .filter((event) => isCuratedAuditAction(event.action))
+              .slice(0, 5)
+              .map((event) => ({
+                id: event.id,
+                sentence: renderAuditSentence(event.action, locale, {
+                  actor: event.actorName,
+                  subject: event.subjectName,
+                }),
+                when: when.format(new Date(event.createdAt)),
+              }))
           : null
       }
     />

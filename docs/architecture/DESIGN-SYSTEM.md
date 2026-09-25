@@ -1608,8 +1608,10 @@ dashboard is built only from data already in the database. Owners and admins
 see: an eyebrow date and the school's letterhead name (F-OP-07 branding, else
 the workspace name); **Today** — attendance and exam-results cards that are
 real `EmptyState` slots, never sample numbers; a **setup checklist**
-(letterhead, academic year, teachers, staff records, students — each links to
-the route the nav already uses, and the card disappears when all are done);
+(letterhead, academic year and classes, teachers, staff records, students —
+a step links only when its page exists, "academic year and classes" is done
+once the school has a current year and at least one grade level, and the card
+disappears when all are done);
 **Plan** (plan code, trial days left on the school's calendar, a Read-only
 chip); **Members** (active members by role, the staff-directory count); and,
 for roles with `audit.read`, the last five **audit** sentences with a link to

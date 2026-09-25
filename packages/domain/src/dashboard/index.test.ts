@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest"
 
-import { buildSetupChecklist, trialDaysLeft } from "./index"
+import { AUDIT_ACTION_CATALOG } from "../audit"
+
+import {
+  buildSetupChecklist,
+  isCuratedAuditAction,
+  trialDaysLeft,
+} from "./index"
 
 const EMPTY = {
   hasSchoolProfile: false,
   teacherCount: 0,
   staffRecordCount: 0,
-  hasAcademicYear: false,
+  currentAcademicYearCount: 0,
+  gradeLevelCount: 0,
   studentCount: 0,
 }
 
@@ -39,12 +46,24 @@ describe("buildSetupChecklist", () => {
     })
   })
 
+  it("needs both a current academic year and classes for the academic-year step", () => {
+    const step = (facts: Partial<typeof EMPTY>) =>
+      buildSetupChecklist({ ...EMPTY, ...facts }).find(
+        (s) => s.key === "academic_year"
+      )?.done
+    expect(step({ currentAcademicYearCount: 1 })).toBe(false)
+    expect(step({ gradeLevelCount: 10 })).toBe(false)
+    expect(step({ currentAcademicYearCount: 1, gradeLevelCount: 10 })).toBe(
+      true
+    )
+  })
+
   it("links each step to the route the school nav uses for it", () => {
     const hrefs = Object.fromEntries(
       buildSetupChecklist(EMPTY).map((s) => [s.key, s.href])
     )
     expect(hrefs).toEqual({
-      school_profile: "/app/settings",
+      school_profile: "/app/settings/branding",
       academic_year: "/app/classes",
       teachers: "/app/staff",
       staff_records: "/app/staff",
@@ -68,5 +87,14 @@ describe("trialDaysLeft", () => {
   it("is 0 on the last day and negative after it", () => {
     expect(trialDaysLeft("2026-09-25T17:00:00Z", "Asia/Dhaka", now)).toBe(0)
     expect(trialDaysLeft("2026-09-23T00:00:00Z", "Asia/Dhaka", now)).toBe(-2)
+  })
+})
+
+describe("isCuratedAuditAction", () => {
+  it("keeps curated sentences and drops generic table rows and unknown actions", () => {
+    const curated = AUDIT_ACTION_CATALOG[0]?.action ?? ""
+    expect(isCuratedAuditAction(curated)).toBe(true)
+    expect(isCuratedAuditAction("profiles.update")).toBe(false)
+    expect(isCuratedAuditAction("not.a.real.action")).toBe(false)
   })
 })

@@ -8,7 +8,7 @@ import {
   ClipboardCheckIcon,
 } from "lucide-react"
 
-import type { MemberRole } from "@acadigma/db/repositories"
+import { MEMBER_ROLES, type MemberRole } from "@acadigma/db/repositories"
 import type { SetupStep } from "@acadigma/domain/dashboard"
 import {
   Card,
@@ -16,7 +16,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@acadigma/ui/components/card"
 import { Progress } from "@acadigma/ui/components/progress"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
@@ -48,6 +47,9 @@ export type DashboardViewProps = {
 }
 
 type ChecklistRow = Omit<SetupStep, "href"> & { href: string | null }
+
+/** Card titles are real headings (h3 under the page's h2), styled like the shared CardTitle. */
+const TITLE = "text-base leading-none font-medium tracking-tight"
 
 const fill = (template: string, values: Record<string, string | number>) =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""))
@@ -116,7 +118,7 @@ function SlotCard(props: {
   return (
     <Card className="gap-0 py-0">
       <CardHeader className="pt-5">
-        <CardTitle className="text-base">{props.title}</CardTitle>
+        <h3 className={TITLE}>{props.title}</h3>
       </CardHeader>
       <CardContent className="px-0">
         <EmptyState
@@ -144,9 +146,9 @@ function Checklist({
       <Card>
         <CardHeader>
           <p className="eyebrow">{t.eyebrowSetup}</p>
-          <CardTitle id="dash-setup" className="text-lg">
+          <h3 id="dash-setup" className={`${TITLE} text-lg`}>
             {t.checklist.title}
-          </CardTitle>
+          </h3>
           <CardDescription className="tabular">
             {fill(t.checklist.progress, { done, total: steps.length })}
           </CardDescription>
@@ -227,7 +229,7 @@ function PlanCard({
   return (
     <Card className="gap-3">
       <CardHeader>
-        <CardTitle className="text-base">{t.plan.title}</CardTitle>
+        <h3 className={TITLE}>{t.plan.title}</h3>
         <CardAction>
           <StatusChip tone={plan.readOnly ? "negative" : "positive"}>
             {plan.readOnly ? t.plan.readOnly : t.plan.active}
@@ -246,14 +248,6 @@ function PlanCard({
   )
 }
 
-const ROLE_ORDER: MemberRole[] = [
-  "owner",
-  "admin",
-  "teacher",
-  "staff",
-  "parent",
-]
-
 function PeopleCard({
   t,
   membersByRole,
@@ -263,15 +257,15 @@ function PeopleCard({
   membersByRole: Record<MemberRole, number>
   staffRecordCount: number
 }) {
-  const total = ROLE_ORDER.reduce((sum, r) => sum + membersByRole[r], 0)
+  const total = MEMBER_ROLES.reduce((sum, r) => sum + membersByRole[r], 0)
   return (
     <section aria-labelledby="dash-people">
       <Card className="gap-4">
         <CardHeader>
           <p className="eyebrow">{t.eyebrowPeople}</p>
-          <CardTitle id="dash-people" className="text-base">
+          <h3 id="dash-people" className={TITLE}>
             {t.people.title}
-          </CardTitle>
+          </h3>
           <CardAction>
             <span className="text-muted-foreground tabular text-sm">
               {fill(t.people.total, { count: total })}
@@ -280,7 +274,7 @@ function PeopleCard({
         </CardHeader>
         <CardContent className="space-y-4">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            {ROLE_ORDER.map((role) => (
+            {MEMBER_ROLES.map((role) => (
               <div key={role} className="flex items-baseline justify-between">
                 <dt className="text-muted-foreground">
                   {t.people.roles[role]}
@@ -315,9 +309,9 @@ function ActivityCard({
       <Card className="gap-4">
         <CardHeader>
           <p className="eyebrow">{t.eyebrowActivity}</p>
-          <CardTitle id="dash-activity" className="text-base">
+          <h3 id="dash-activity" className={TITLE}>
             {t.activity.title}
-          </CardTitle>
+          </h3>
         </CardHeader>
         <CardContent className="space-y-3">
           {items.length === 0 ? (
