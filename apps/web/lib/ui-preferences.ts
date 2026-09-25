@@ -6,7 +6,11 @@ import { cookies } from "next/headers"
 
 import type { UiPreferences } from "@acadigma/contracts"
 import { fetchUiPreferences } from "@acadigma/db/repositories/ui-preferences"
-import { resolveUiPrefs } from "@acadigma/domain/ui-preferences"
+import {
+  isTextSize,
+  isUiMode,
+  resolveUiPrefs,
+} from "@acadigma/domain/ui-preferences"
 
 import { createClient } from "@/lib/supabase/server"
 
@@ -18,6 +22,17 @@ import { createClient } from "@/lib/supabase/server"
  */
 export const UI_MODE_COOKIE = "acadigma_ui_mode"
 export const TEXT_SIZE_COOKIE = "acadigma_text_size"
+
+/** Shared by every place that writes the pair (`updateUiPreferences` and,
+ * after the shared-device review fix below, `signInWithPassword`) — same
+ * options `updateUiPreferences` always used, just named so both call sites
+ * agree instead of copying the literal twice. */
+export const UI_PREFS_COOKIE_OPTS = {
+  path: "/",
+  maxAge: 60 * 60 * 24 * 365,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+}
 
 /**
  * `getUiPreferences` (§7 "server loader"): resolves the pair the current
@@ -35,6 +50,14 @@ export const getUiPreferences = cache(async (): Promise<UiPreferences> => {
   const cookie = {
     uiMode: store.get(UI_MODE_COOKIE)?.value,
     textSize: store.get(TEXT_SIZE_COOKIE)?.value,
+  }
+
+  // Review fix (SHOULD): both cookies are already a complete, valid answer —
+  // skip `auth.getUser()` and the database round trip this function's own
+  // docblock says the cookie exists to avoid paying for. The root layout
+  // calls this on every request, including signed-out ones like `/login`.
+  if (isUiMode(cookie.uiMode) && isTextSize(cookie.textSize)) {
+    return { uiMode: cookie.uiMode, textSize: cookie.textSize }
   }
 
   try {

@@ -37,6 +37,20 @@ async function expectNoHorizontalScroll(page: Page): Promise<void> {
 
 test.afterEach(async ({ page }) => {
   if (!/\/app/.test(page.url())) return
+
+  // Review fix (nit #5): the বাংলা + Extra large test below switches locale
+  // from the shell's own menu; reset it to English FIRST, the same "narrow
+  // the contamination window on shared seeded state" rule this suite already
+  // follows for ui_mode/text_size below (`bn-locale-shell.spec.ts` follows it
+  // for `profiles.locale` too), so the resets after it can rely on English
+  // accessible names.
+  const bnMenuButton = page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" })
+  if (await bnMenuButton.isVisible().catch(() => false)) {
+    await bnMenuButton.click()
+    await page.getByRole("menuitemradio", { name: "English" }).click()
+    await expect(page.locator("html")).toHaveAttribute("lang", "en")
+  }
+
   await page.goto("/app/settings/display")
   const basicSwitch = page.getByRole("switch", { name: "Basic mode" })
   if (await basicSwitch.isChecked().catch(() => false)) {
@@ -106,4 +120,32 @@ test("Switch to full app is one tap, no confirmation (AC2)", async ({
 
   await page.getByRole("button", { name: "Switch to full app" }).click()
   await expect(page).toHaveURL(/\/app\/dashboard$/)
+})
+
+test("বাংলা with Extra large text size overflows neither the dashboard nor the basic-mode home at 360px (AC3)", async ({
+  page,
+}, testInfo) => {
+  await signIn(page, "owner@acadigma.test")
+  await page.goto("/app/settings/display")
+
+  // Set both preferences while the UI is still English -- `Extra large` and
+  // `Basic mode` below are the English accessible names; the বাংলা switch
+  // comes after, from the shell chrome both target screens share.
+  await page.getByRole("radio", { name: /^Extra large/ }).click()
+  await expect(page.locator("html")).toHaveAttribute("data-text-size", "xlarge")
+  await page.getByRole("switch", { name: "Basic mode" }).click()
+  await expect(page).toHaveURL(/\/app\/home$/)
+
+  await page.getByRole("button", { name: "Account menu" }).click()
+  await page.getByRole("menuitemradio", { name: "বাংলা" }).click()
+  await expect(page.locator("html")).toHaveAttribute("lang", "bn")
+  await expect(page.locator("html")).toHaveAttribute("data-text-size", "xlarge")
+  await expectNoHorizontalScroll(page)
+  await expectNoA11yViolations(page, testInfo)
+
+  await page.goto("/app/dashboard")
+  await expect(page.locator("html")).toHaveAttribute("lang", "bn")
+  await expect(page.locator("html")).toHaveAttribute("data-text-size", "xlarge")
+  await expectNoHorizontalScroll(page)
+  await expectNoA11yViolations(page, testInfo)
 })

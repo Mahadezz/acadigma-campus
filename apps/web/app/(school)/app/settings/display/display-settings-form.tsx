@@ -67,7 +67,6 @@ export function DisplaySettingsForm({
           ? { tone: "success", text: t.saved }
           : { tone: "error", text: t.saveError }
       )
-      if (result.ok) router.refresh()
     })
   }
 
@@ -90,8 +89,11 @@ export function DisplaySettingsForm({
       <SaveNotice notice={notice} reloadLabel="" />
 
       <div className="space-y-2">
-        <Label className="text-sm font-medium">{t.textSizeLabel}</Label>
+        <Label id="text-size-label" className="text-sm font-medium">
+          {t.textSizeLabel}
+        </Label>
         <RadioGroup
+          aria-labelledby="text-size-label"
           value={textSize}
           onValueChange={handleTextSizeChange}
           className="grid gap-3 sm:grid-cols-3"

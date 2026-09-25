@@ -25,7 +25,11 @@ import { resolveLandingRoute } from "@acadigma/domain/workspace"
 import { isLocale, type Locale } from "@/lib/locale"
 import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
-import { TEXT_SIZE_COOKIE, UI_MODE_COOKIE } from "@/lib/ui-preferences"
+import {
+  TEXT_SIZE_COOKIE,
+  UI_MODE_COOKIE,
+  UI_PREFS_COOKIE_OPTS,
+} from "@/lib/ui-preferences"
 import { WORKSPACE_COOKIE } from "@/lib/workspace"
 
 /**
@@ -223,13 +227,6 @@ export async function updateLocale(
   }
 
   return ok({ locale })
-}
-
-const UI_PREFS_COOKIE_OPTS = {
-  path: "/",
-  maxAge: 60 * 60 * 24 * 365,
-  sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
 }
 
 /**
