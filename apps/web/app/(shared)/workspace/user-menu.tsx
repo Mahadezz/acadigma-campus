@@ -18,6 +18,8 @@ import {
 
 import { isLocale, setLocaleCookie, type Locale } from "@/lib/locale"
 
+import { updateLocale } from "./actions"
+
 export type UserMenuProps = {
   locale: Locale
   t: {
@@ -41,6 +43,11 @@ export type UserMenuProps = {
  * language" action already reads as an account-level setting and the rest of
  * F-ID-02 (profile, theme, sign out) has a home to grow into without a
  * second component.
+ *
+ * D-401: also persists the choice to `profiles.locale` (`updateLocale`), not
+ * only the cookie, so it follows the user to their next device — the cookie
+ * alone (what `LanguageToggle` on `/login` still does; there is no signed-in
+ * user yet to persist a preference for) only ever covers this browser.
  */
 export function UserMenu({ locale, t }: UserMenuProps) {
   const router = useRouter()
@@ -49,7 +56,13 @@ export function UserMenu({ locale, t }: UserMenuProps) {
   function handleChange(next: string) {
     if (!isLocale(next) || next === locale) return
     setLocaleCookie(next)
-    startTransition(() => router.refresh())
+    startTransition(async () => {
+      // Best-effort: the cookie already made the switch take effect on this
+      // device, the same "optimistic, offline-tolerant" rule F-ID-02 §4.2
+      // uses for every other preference write.
+      await updateLocale(next).catch(() => undefined)
+      router.refresh()
+    })
   }
 
   return (

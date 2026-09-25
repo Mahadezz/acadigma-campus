@@ -2,6 +2,7 @@ import "server-only"
 
 import { cookies } from "next/headers"
 
+import { createClient } from "@/lib/supabase/server"
 import bn from "@/messages/bn.json"
 import en from "@/messages/en.json"
 
@@ -28,13 +29,49 @@ export { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale }
 
 const MESSAGES = { en, bn } as const satisfies Record<Locale, unknown>
 
-/** Reads the locale cookie (falls back to `en`). Signed-in users get a real
- * preference from `user_preferences.language`; that wiring lands with the
- * screens that read it (F-ID-05 onboarding, settings). */
+/**
+ * The one locale resolver for the whole app (D-401): `acadigma_locale` cookie
+ * first (fast, works signed out), then the signed-in user's persisted
+ * `profiles.locale` (so a language switched on another device is honoured
+ * here even before this device's cookie catches up), then `en`.
+ *
+ * Before this, the audit viewer (`(school)/app/audit/actions.ts`,
+ * `getReaderLanguage`) read `profiles.locale` directly and never looked at
+ * the cookie, so switching language from the (cookie-only) `UserMenu` left
+ * the audit page on whatever `profiles.locale` last was. `getReaderLanguage`
+ * now delegates here instead of duplicating the lookup, so there is exactly
+ * one place this precedence is decided. `UserMenu`'s switch
+ * (`(shared)/workspace/actions.ts`, `updateLocale`) writes `profiles.locale`
+ * in addition to the cookie for the same reason, in the other direction.
+ *
+ * The `profiles.locale` lookup only runs when there is no cookie yet (a
+ * fresh session, or a browser that never switched language locally) — every
+ * other request pays only the cookie read, not a database round trip.
+ */
 export async function getLocale(): Promise<Locale> {
   const store = await cookies()
   const raw = store.get(LOCALE_COOKIE)?.value
-  return isLocale(raw) ? raw : DEFAULT_LOCALE
+  if (isLocale(raw)) return raw
+
+  try {
+    const client = await createClient()
+    const {
+      data: { user },
+    } = await client.auth.getUser()
+    if (!user) return DEFAULT_LOCALE
+
+    const { data } = await client
+      .from("profiles")
+      .select("locale")
+      .eq("id", user.id)
+      .maybeSingle()
+    return isLocale(data?.locale) ? data.locale : DEFAULT_LOCALE
+  } catch {
+    // A signed-out visitor or a Supabase hiccup falls back to the default —
+    // the same "never error out over a language pick" rule `getReaderLanguage`
+    // already followed.
+    return DEFAULT_LOCALE
+  }
 }
 
 export type Messages = typeof en

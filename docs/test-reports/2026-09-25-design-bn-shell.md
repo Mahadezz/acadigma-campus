@@ -5,7 +5,7 @@
 | Feature | F-ID-02 — Profiles and preferences                                             |
 | Part    | 4 (demo cut) — বাংলা covers the signed-in app shell                            |
 | Spec    | `docs/features/01-identity/F-ID-02-profiles-and-preferences.md` §8 Part 4, §11 |
-| PR      | #TBD                                                                           |
+| PR      | #51                                                                            |
 | Status  | **PASS WITH KNOWN ISSUES**                                                     |
 | Date    | 2026-09-25                                                                     |
 | Run by  | Claude (design lane, second builder)                                           |
@@ -14,7 +14,7 @@
 
 ## 1. Scope
 
-**What this Part is.** Before this Part, picking বাংলা on the sign-in screen only translated the auth screens (`apps/web/lib/i18n.ts`'s docblock said so explicitly) — the moment a user signed in, the whole school shell (sidebar, bottom nav, top bar, dashboard, settings) reverted to English regardless of the cookie. This is the demo-cut slice of F-ID-02 Part 4: the existing `acadigma_locale` cookie mechanism now reaches the whole signed-in app. It is **not** the full Part 4 — no `user_preferences` table, no theme/palette/density, no Settings → Language screen, no migration. See D-401 and F-ID-02 §11 for the full scope decision.
+**What this Part is.** Before this Part, picking বাংলা on the sign-in screen only translated the auth screens (`apps/web/lib/i18n.ts`'s docblock said so explicitly) — the moment a user signed in, the whole school shell (sidebar, bottom nav, top bar, dashboard, settings) reverted to English regardless of the cookie. Separately, the audit viewer read language from `profiles.locale` directly and never looked at the cookie at all — two disconnected mechanisms in the same signed-in app. This Part is the demo-cut slice of F-ID-02 Part 4: the `acadigma_locale` cookie now reaches the whole signed-in app, `getLocale()` is the one resolver (cookie, then `profiles.locale`, then `en`) both paths go through, and the `UserMenu`'s switch persists to `profiles.locale` too, so it follows a signed-in user across devices. It is **not** the full Part 4 — no `user_preferences` table, no theme/palette/density, no Settings → Language screen, no new migration (`profiles.locale` already existed on `main`). See D-401 and F-ID-02 §11 for the full scope decision.
 
 **Acceptance criteria covered** (spec §9, the ones this slice touches):
 
@@ -28,7 +28,7 @@ OQ-2 (Bengali numerals) is resolved by this Part: **Western digits, confirmed** 
 
 **Out of scope for this Part** — and where it is handled instead:
 
-- `user_preferences` table, theme/palette/density, cross-device sync — full F-ID-02 Part 4.
+- `user_preferences` table, theme/palette/density — full F-ID-02 Part 4. Cross-device _language_ sync is in scope for this Part (via the pre-existing `profiles.locale` column, not `user_preferences`); theme/palette/density sync is not.
 - `/app/dashboard`'s real content (setup checklist, attendance/exam summaries) — D-400, PR #41, in review concurrently. This Part only translates the placeholder debug card currently on `main`.
 - The platform staff console (`(platform)/platform`) — internal, English-only tool, never localised.
 - The audit viewer's own date formatting (`audit-detail-sheet.tsx`, hardcoded `en-GB`) — operations lane's screen, unchanged.
@@ -70,23 +70,26 @@ Full local gate, run from the repo root (`pnpm test`):
 | `packages/db`            | (part of below) |         |        |         |          |
 | `packages/ui`            | (part of below) |         |        |         |          |
 | `apps/web`               | (part of below) |         |        |         |          |
-| **Total (all projects)** | **967**         | **967** | **0**  | **0**   | 20.18s   |
+| **Total (all projects)** | **974**         | **974** | **0**  | **0**   | ~20s     |
 
-**Delta vs `main`:** +4 test files / +14 tests (this Part's new suites — see below). `main`'s own count was not re-measured on this branch in isolation; the total above is this branch's full run.
+**Delta vs `main`:** +5 test files / +21 tests (this Part's new suites — see below). `main`'s own count was not re-measured on this branch in isolation; the total above is this branch's full run.
 
 ### New tests this Part adds
 
-- `apps/web/lib/i18n.test.ts` — `getLocale`/`getMessages` cookie resolution: reads `acadigma_locale`, falls back to `en` on missing or unrecognised values, pairs the resolved locale with the right catalogue.
+- `apps/web/lib/i18n.test.ts` — `getLocale`/`getMessages` resolution precedence: cookie first, then the signed-in user's `profiles.locale`, then `en`; never throws on a tampered cookie, an unknown `profiles.locale` value, a signed-out caller, or a Supabase error.
 - `apps/web/lib/locale.test.ts` — `isLocale`, `toIntlLocale` (Western-digit assertion via a real `Intl.NumberFormat` call), `setLocaleCookie`/`getClientLocale` round-trip and tamper fallback.
 - `apps/web/lib/i18n-parity.test.ts` — flattens `en.json`/`bn.json` to dotted key paths and asserts the sets are identical in both directions. This is the "missing-key lint" `docs/engineering/I18N.md` §3 describes as a future CI script, added here as a unit test per the brief ("extend an existing `scripts/check-*.mjs` or add a unit test").
 - `apps/web/lib/bn-locale-guard.test.ts` — scans `apps/web` and `packages` source for the literal `"bn-BD"` string (which renders Bengali digits by default) outside `MoneyText`/`BnEnText`, the two components allowed to choose the digit script on purpose.
+- `apps/web/app/(shared)/workspace/actions.test.ts` — `updateLocale`: rejects an unknown locale before touching Supabase, refuses when signed out, updates the caller's own `profiles.locale` row, returns an error `Result` (not a throw) on a write failure.
 
 ### Notable cases proven
 
-- `getLocale()` never throws or defaults to anything but `en` on a tampered/unknown cookie value.
+- `getLocale()` never throws or defaults to anything but `en` on a tampered/unknown cookie value, an unknown `profiles.locale` value, or a Supabase failure.
+- `getLocale()` correctly skips the `profiles.locale` lookup entirely when a valid cookie is present (asserted via a mock call-count check), and correctly skips it when signed out (no `.from("profiles")` call).
 - `toIntlLocale("bn")` produces `"bn-BD-u-nu-latn"`, and formatting `1234` through it produces `"1,234"` (Western digits), not `"১,২৩৪"`.
 - The en/bn catalogues have **zero** key drift in either direction as of this PR.
 - No file in `apps/web`/`packages` (outside the two allow-listed components) formats with the bare `bn-BD` locale tag.
+- `updateLocale` writes only the caller's own row (`.eq("id", user.id)`) and returns a `Result`, never throwing, on both the validation and the Supabase-error path.
 
 ---
 
@@ -112,6 +115,8 @@ Per the brief: signed in **once per script run** as the demo owner (`campus.acad
 | ---------------- | ------ | --------- | ---------- | ------------- | ------------------------ |
 | `/app/dashboard` | bn     | PASS      | PASS       | `bn`          | 0                        |
 | `/app/settings`  | bn     | PASS      | PASS       | `bn`          | 0                        |
+
+**Cross-device persistence (`profiles.locale`, D-401 item 9), separate click-through run:** signed in once, clicked the real `UserMenu` (not a cookie injection) to switch to বাংলা (`<html lang>` → `bn`), then cleared only the browser's `acadigma_locale` cookie (simulating a second device that never set it locally) and reloaded — the page still rendered `<html lang>` → `bn`, proving `profiles.locale` was actually written and `getLocale()`'s fallback reads it. Switched back to English via the same menu afterwards, leaving the demo account as found.
 
 ### Accessibility (axe, WCAG 2.1 A/AA — `@axe-core/playwright`, same tag set as `e2e/axe.ts`)
 
@@ -162,23 +167,24 @@ Not measured for this Part — no Lighthouse run, no bundle-size delta beyond th
 | Supabase advisors               | not applicable — no schema change           |
 | Authorized DAST                 | not applicable — no auth/money/files change |
 
-No new attack surface: no new server action, no new table, no new grant. `UserMenu` only writes the same non-httpOnly locale cookie the existing `LanguageToggle` already writes.
+One new server action, `updateLocale` (`(shared)/workspace/actions.ts`): validates the input against the two known locales before touching Supabase, requires a signed-in `auth.getUser()`, and writes only `.eq("id", user.id)` — the same row RLS's pre-existing `profiles_update_self` policy already lets the caller update directly, so this closes no gap and opens none; it exists for the audit trail and testability a plain client-side `.update()` call would not have. No new table, no new grant.
 
 ---
 
 ## 8. Known issues
 
-| #   | Issue                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Severity | Ship anyway?                                                                            | Tracked          |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------- | ---------------- |
-| 1   | The read-only banner's body text (`planReadOnlyApiError(...).message`, `packages/contracts`) is still English-only; only its title is translated.                                                                                                                                                                                                                                                                                                                                                                               | low      | yes — fixing it needs threading locale into `packages/contracts`, a billing-lane change | F-ID-02 §11 note |
-| 2   | `/app/dashboard`'s content is still the developer debug placeholder (now translated, not rebuilt) — D-400/PR #41 replaces it. Whichever of that PR and this one merges second must reconcile the `dashboard` message keys and the nav-locale prop.                                                                                                                                                                                                                                                                              | low      | yes — expected, called out in D-401                                                     | PR #41           |
-| 3   | The committed `bn-locale-shell.spec.ts` did not run locally (no seeded live Supabase project available in this environment) — same gate every other seeded-account journey in this repo is under (OQ-27).                                                                                                                                                                                                                                                                                                                       | low      | yes — established repo convention, not new to this Part                                 | OQ-27            |
-| 4   | Bengali copy added in this Part was written by the builder, not reviewed by a native/professional Bengali speaker. Strings to double-check: `workspace.userMenu.languageLabel` ("ভাষা"), `workspace.readOnly.title` ("এই ওয়ার্কস্পেসটি শুধু পড়ার জন্য"), `errors.appError.*`, `errors.notFoundPage.*`, `errors.forbiddenPage.*`, `dashboard.*`. All follow the existing glossary/tone already in `bn.json` (formal, no informal contractions), but the owner should spot-check them against `docs/product/GLOSSARY-EN-BN.md`. | low      | yes — flagged for owner review, not blocking                                            | this report      |
+| #   | Issue                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Severity | Ship anyway?                                                                                                                                                           | Tracked          |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| 1   | The read-only banner's body text (`planReadOnlyApiError(...).message`, `packages/contracts`) is still English-only; only its title is translated.                                                                                                                                                                                                                                                                                                                                                                               | low      | yes — fixing it needs threading locale into `packages/contracts`, a billing-lane change                                                                                | F-ID-02 §11 note |
+| 2   | `/app/dashboard`'s content is still the developer debug placeholder (now translated, not rebuilt) — D-400/PR #41 replaces it. Whichever of that PR and this one merges second must reconcile the `dashboard` message keys and the nav-locale prop.                                                                                                                                                                                                                                                                              | low      | yes — expected, called out in D-401                                                                                                                                    | PR #41           |
+| 3   | The committed `bn-locale-shell.spec.ts` did not run locally (no seeded live Supabase project available in this environment) — same gate every other seeded-account journey in this repo is under (OQ-27).                                                                                                                                                                                                                                                                                                                       | low      | yes — established repo convention, not new to this Part                                                                                                                | OQ-27            |
+| 4   | Bengali copy added in this Part was written by the builder, not reviewed by a native/professional Bengali speaker. Strings to double-check: `workspace.userMenu.languageLabel` ("ভাষা"), `workspace.readOnly.title` ("এই ওয়ার্কস্পেসটি শুধু পড়ার জন্য"), `errors.appError.*`, `errors.notFoundPage.*`, `errors.forbiddenPage.*`, `dashboard.*`. All follow the existing glossary/tone already in `bn.json` (formal, no informal contractions), but the owner should spot-check them against `docs/product/GLOSSARY-EN-BN.md`. | low      | yes — flagged for owner review, not blocking                                                                                                                           | this report      |
+| 5   | `bn-locale-shell.spec.ts` persists `profiles.locale` on the shared seeded `owner@acadigma.test` account — every other seeded-account journey in this repo assumes that account renders in English. Mitigated with a `test.afterEach` that always switches back to English, but a test in a different spec file running concurrently in another CI worker during the (short) window this suite is mid-বাংলা is not fully race-proof.                                                                                             | low      | yes — same shared-seed-account tradeoff `school-settings.spec.ts` already accepts for its own mutation; a dedicated locale-test account is a follow-up, not built here | OQ-27            |
 
 **Deliberately not tested, and why:**
 
 - The `(account)/account/security` and `(platform)/platform` screens — out of scope (§1).
-- Cross-device sync — no `user_preferences` table exists yet in this Part.
+- Theme/palette/density cross-device sync — no `user_preferences` table exists yet in this Part. (Language cross-device sync _is_ tested — see the manual run above.)
 
 ---
 
@@ -188,7 +194,7 @@ No new attack surface: no new server action, no new table, no new grant. `UserMe
 | -------------------------------------------- | ------------------------------------------------------------ |
 | Spec written and matches the build           | ☑ (F-ID-02 §11 updated, D-401)                               |
 | Migration + pgTAP isolation and escalation   | n/a — no migration                                           |
-| Unit tests + coverage thresholds             | ☑ (967/967 passing; coverage thresholds hold repo-wide)      |
+| Unit tests + coverage thresholds             | ☑ (974/974 passing; coverage thresholds hold repo-wide)      |
 | UI built and verified at both viewports      | ☑                                                            |
 | Playwright journey at both viewports         | ☑ committed, CI-gated (OQ-27); manual axe run passed locally |
 | a11y — zero serious/critical + manual checks | ☑                                                            |

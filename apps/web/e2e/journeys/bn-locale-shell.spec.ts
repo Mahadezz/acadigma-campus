@@ -39,6 +39,23 @@ async function expectNoHorizontalScroll(page: Page): Promise<void> {
   expect(overflow).toBeLessThanOrEqual(0)
 }
 
+// D-401: the switch now persists to `profiles.locale` (`updateLocale`), not
+// only the per-context cookie — on the shared seeded `owner@acadigma.test`
+// account, that is durable, cross-test state every other seeded-account
+// journey in this repo assumes is English. Always leave it English behind
+// this suite, pass or fail, to keep that assumption true for tests running
+// in other workers/files (this narrows the contamination window; it does not
+// eliminate a race with a test that happens to run concurrently while this
+// suite is mid-বাংলা — a dedicated account is the real fix, tracked as a
+// follow-up rather than built here).
+test.afterEach(async ({ page }) => {
+  const bnMenuButton = page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" })
+  if (!(await bnMenuButton.isVisible().catch(() => false))) return
+  await bnMenuButton.click()
+  await page.getByRole("menuitemradio", { name: "English" }).click()
+  await expect(page.locator("html")).toHaveAttribute("lang", "en")
+})
+
 test("switching to বাংলা from the school shell's user menu translates dashboard, nav and settings", async ({
   page,
 }, testInfo) => {
