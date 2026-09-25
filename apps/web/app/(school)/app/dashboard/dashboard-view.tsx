@@ -41,10 +41,13 @@ export type DashboardViewProps = {
   plan: { label: string; trial: string | null; readOnly: boolean }
   membersByRole: Record<MemberRole, number>
   staffRecordCount: number
-  checklist: SetupStep[]
+  /** `href` is null while the step's page does not exist yet. */
+  checklist: ChecklistRow[]
   /** null when the caller may not read the audit trail. */
   activity: { id: string; sentence: string; when: string }[] | null
 }
+
+type ChecklistRow = Omit<SetupStep, "href"> & { href: string | null }
 
 const fill = (template: string, values: Record<string, string | number>) =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""))
@@ -132,7 +135,7 @@ function Checklist({
   steps,
 }: {
   t: Messages["dashboard"]
-  steps: SetupStep[]
+  steps: ChecklistRow[]
 }) {
   const done = steps.filter((s) => s.done).length
   if (done === steps.length) return null
@@ -158,12 +161,9 @@ function Checklist({
         </CardHeader>
         <CardContent className="px-2 sm:px-3">
           <ul className="divide-y">
-            {steps.map((step) => (
-              <li key={step.key}>
-                <Link
-                  href={step.href}
-                  className="hover:bg-muted/60 focus-visible:ring-ring flex min-h-12 items-center gap-3 rounded-md px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
-                >
+            {steps.map((step) => {
+              const row = (
+                <>
                   {step.done ? (
                     <CheckCircle2Icon
                       className="text-success size-5 shrink-0"
@@ -185,13 +185,31 @@ function Checklist({
                     {t.checklist.steps[step.key]}
                     <span className="sr-only">{`, ${step.done ? t.checklist.done : t.checklist.todo}`}</span>
                   </span>
-                  <ChevronRightIcon
-                    className="text-muted-foreground size-4 shrink-0"
-                    aria-hidden="true"
-                  />
-                </Link>
-              </li>
-            ))}
+                </>
+              )
+              return (
+                <li key={step.key}>
+                  {step.href ? (
+                    <Link
+                      href={step.href}
+                      className="hover:bg-muted/60 focus-visible:ring-ring flex min-h-12 items-center gap-3 rounded-md px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      {row}
+                      <ChevronRightIcon
+                        className="text-muted-foreground size-4 shrink-0"
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  ) : (
+                    // The page for this step ships with a later Part; no link
+                    // until it exists, so nothing here can 404.
+                    <div className="flex min-h-12 items-center gap-3 px-3 py-2">
+                      {row}
+                    </div>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         </CardContent>
       </Card>

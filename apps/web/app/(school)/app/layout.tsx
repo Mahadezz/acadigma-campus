@@ -84,7 +84,14 @@ export default async function SchoolLayout({
               t={t.workspace.switcher}
             />
           }
-          title={<Logo product="campus" />}
+          title={
+            // Mark only on a phone, where the switcher and bell share the
+            // bar; the wordmark stays in the accessible name.
+            <Logo
+              product="campus"
+              className="[&>span]:sr-only sm:[&>span]:not-sr-only"
+            />
+          }
           subtitle={`Signed in as ${ctx.role}`}
           actions={
             <Button variant="ghost" size="icon" aria-label="Notifications">

@@ -6,6 +6,7 @@ import { can } from "@acadigma/domain/permissions"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import { getMessages } from "@/lib/i18n"
+import { IMPLEMENTED_NAV_ROUTES } from "@/lib/implemented-routes"
 import type { Messages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
@@ -90,7 +91,10 @@ export default async function DashboardPage() {
         // No academic-year or student table exists yet (F-AC-01, F-AC-02).
         hasAcademicYear: false,
         studentCount: 0,
-      })}
+      }).map((step) => ({
+        ...step,
+        href: IMPLEMENTED_NAV_ROUTES.has(step.href) ? step.href : null,
+      }))}
       activity={
         // Hidden, not shown empty, when the caller may not read the trail or
         // it failed to load — "nothing has changed" would be a false claim.

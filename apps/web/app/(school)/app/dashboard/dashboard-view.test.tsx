@@ -97,6 +97,24 @@ describe("DashboardView", () => {
     expect(screen.getByText("Read-only")).toBeTruthy()
   })
 
+  it("does not link a step whose page does not exist yet", () => {
+    render(
+      <DashboardView
+        {...BASE}
+        checklist={BASE.checklist.map((s) =>
+          s.key === "students" ? { ...s, href: null } : s
+        )}
+      />
+    )
+    const setup = screen.getByRole("region", {
+      name: "Finish setting up your school",
+    })
+    expect(within(setup).getByText("Add students")).toBeTruthy()
+    expect(
+      within(setup).queryByRole("link", { name: "Add students, To do" })
+    ).toBeNull()
+  })
+
   it("hides the checklist once every step is done", () => {
     render(
       <DashboardView
