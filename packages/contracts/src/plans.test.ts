@@ -7,6 +7,7 @@ import {
   limitKeySchema,
   planCodeSchema,
   planLimitSchema,
+  planReadOnlyApiError,
   planReadOnlyErrorSchema,
   planSchema,
   runBillingTickOutput,
@@ -135,6 +136,23 @@ describe("limitExceededErrorSchema", () => {
       current: 340,
     })
     expect(result.success).toBe(true)
+  })
+})
+
+describe("planReadOnlyApiError", () => {
+  it("maps PLAN_READ_ONLY to payment_required, keeping the reason", () => {
+    const error = planReadOnlyApiError({
+      code: "PLAN_READ_ONLY",
+      reason: "Your Pro trial has ended.",
+    })
+    expect(error.code).toBe("payment_required")
+    expect(error.message).toMatch(/^Your Pro trial has ended\. Upgrade/)
+  })
+
+  it("falls back to a generic sentence when there is no reason", () => {
+    expect(
+      planReadOnlyApiError({ code: "PLAN_READ_ONLY", reason: null }).message
+    ).toMatch(/^This workspace is read-only\./)
   })
 })
 
