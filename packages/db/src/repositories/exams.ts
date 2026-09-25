@@ -20,7 +20,7 @@ import type { WorkspaceContext } from "../workspace-context"
 /**
  * F-AC-06 Part 2 (demo cut, D-303). Reads through RLS (owner/admin/teacher/
  * staff); writes are owner/admin by RLS, with the grading snapshot and the
- * §5.12 status chain enforced by triggers in `20260925300303_exams.sql`.
+ * §5.12 status chain enforced by triggers in `20260925300305_exams.sql`.
  */
 
 const UNAVAILABLE = apiError(

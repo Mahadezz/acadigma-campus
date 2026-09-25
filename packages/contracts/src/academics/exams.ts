@@ -4,7 +4,7 @@ import { isoDateSchema, uuidSchema } from "../common"
 
 /**
  * F-AC-06 Part 2 (demo cut, D-303) — exams and papers
- * (`supabase/migrations/20260925300303_exams.sql`). §7 `createExam`,
+ * (`supabase/migrations/20260925300305_exams.sql`). §7 `createExam`,
  * `setExamStatus` and `upsertExamSubject` (here: update an existing paper;
  * papers are created by `createExam`).
  */
