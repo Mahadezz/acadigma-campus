@@ -685,6 +685,7 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 4. A setup checklist (letterhead, academic year, teachers, staff records, students) comes from `buildSetupChecklist` (`packages/domain/dashboard`). Each step links to the route the school nav already uses for that job, so the checklist and nav never disagree; some of those routes land with later Parts, exactly as the nav's own links do. Academic year and students are always "to do" until their tables exist. The card is hidden once every step is done.
 5. Owners and admins get the full view; teachers and office staff get the lighter one (date, school, Today slots, Members).
 6. No migration and no new permission: every read is already allowed by existing RLS.
+7. The school shell shows only nav items whose page exists (`apps/web/lib/implemented-routes.ts`, unit-tested against the `page.tsx` files in both directions). The nav configs stay complete; a Part adds its route to the list when it ships its page. Before this, every signed-in page prefetched up to 14 routes that returned 404. The owner's "School settings" item now points to `/app/settings` (D-201).
 
 **Why:** a demo that shows invented numbers would contradict PRODUCT-DECISIONS 3.9 the first time a school compares it with its register. A page built from real counts and honest empty states is useful today and gets richer as each Part ships, without rework.
 

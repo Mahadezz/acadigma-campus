@@ -6,8 +6,8 @@ import { can } from "@acadigma/domain/permissions"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import { getMessages } from "@/lib/i18n"
-import { IMPLEMENTED_NAV_ROUTES } from "@/lib/implemented-routes"
 import type { Messages } from "@/lib/i18n"
+import { IMPLEMENTED_NAV_ROUTES } from "@/lib/implemented-routes"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
