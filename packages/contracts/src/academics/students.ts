@@ -97,7 +97,13 @@ export const studentPrivateSchema = z.object({
 export type StudentPrivate = z.infer<typeof studentPrivateSchema>
 
 export const studentSearchQuerySchema = z.object({
-  q: z.string().trim().max(60).optional(),
+  // NFC: a Bangla name typed with decomposed vowel signs still matches.
+  q: z
+    .string()
+    .trim()
+    .max(60)
+    .transform((value) => value.normalize("NFC"))
+    .optional(),
   sectionId: uuidSchema.optional(),
   page: z.coerce.number().int().min(1).max(500).default(1),
 })
@@ -110,7 +116,7 @@ const nameBn = z
   .string()
   .trim()
   .max(120)
-  .transform((value) => (value === "" ? null : value))
+  .transform((value) => (value === "" ? null : value.normalize("NFC")))
   .nullable()
   .optional()
 

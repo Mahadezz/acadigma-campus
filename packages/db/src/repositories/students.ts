@@ -64,21 +64,26 @@ function toRosterStudent(row: RosterRow): RosterStudent {
   }
 }
 
-/** PostgREST's `or=(...)` grammar treats these as syntax; a name never needs them. */
+/** PostgREST's `or=(...)` grammar treats these as syntax, and `%`/`_` are
+ * LIKE wildcards; a name or a student code never needs any of them. */
 function searchTerm(q: string): string {
-  return q.replace(/[,()*%\\:"'.]/g, " ").trim()
+  return q.replace(/[,()*%_\\:"'.]/g, " ").trim()
 }
 
 /**
  * §4.9 / §5.13: one server-filtered page of the roster — never the whole
  * table. Search is ILIKE on the English and Bangla names and the student
- * code (trigram-indexed). Ordered by class, section, roll.
+ * code (trigram-indexed). Ordered by class, section, roll. Only students
+ * enrolled in `academicYearId` (the current year), so a student promoted
+ * into next year is listed once; no year means an empty roster.
  */
 export async function listRoster(
   supabase: AcadigmaSupabaseClient,
   ctx: WorkspaceContext,
-  query: StudentSearchQuery
+  query: StudentSearchQuery,
+  academicYearId: string | null
 ): Promise<Result<{ students: RosterStudent[]; hasMore: boolean }, ApiError>> {
+  if (!academicYearId) return ok({ students: [], hasMore: false })
   // ponytail: offset paging; switch to a keyset cursor if a school's roster
   // outgrows a few hundred pages.
   const from = (query.page - 1) * ROSTER_PAGE_SIZE
@@ -86,6 +91,7 @@ export async function listRoster(
     .from("student_roster")
     .select(ROSTER_COLUMNS)
     .eq("workspace_id", ctx.workspaceId)
+    .eq("academic_year_id", academicYearId)
     .is("deleted_at", null)
   if (query.sectionId) request = request.eq("section_id", query.sectionId)
   const term = query.q ? searchTerm(query.q) : ""
@@ -119,6 +125,8 @@ export async function getRosterStudent(
     .eq("workspace_id", ctx.workspaceId)
     .eq("id", studentId)
     .is("deleted_at", null)
+    // Mid-promotion a student has an enrolment in two years: show the higher class.
+    .order("grade_level_number", { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle()
   if (error) return err(UNAVAILABLE)

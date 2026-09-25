@@ -40,10 +40,10 @@ export default async function StudentsPage({
 
   const { t, locale } = await getMessages()
   const supabase = await createClient()
-  const [roster, overview] = await Promise.all([
-    listRoster(supabase, ctx, query),
-    getClassesOverview(supabase, ctx),
-  ])
+  const overview = await getClassesOverview(supabase, ctx)
+  const roster = overview.ok
+    ? await listRoster(supabase, ctx, query, overview.data.year?.id ?? null)
+    : overview
 
   if (!roster.ok || !overview.ok) {
     return (

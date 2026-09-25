@@ -3049,6 +3049,7 @@ export type Database = {
       }
       student_roster: {
         Row: {
+          academic_year_id: string | null
           deleted_at: string | null
           full_name: string | null
           full_name_bn: string | null

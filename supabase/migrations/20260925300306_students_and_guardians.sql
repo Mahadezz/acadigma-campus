@@ -75,14 +75,15 @@ comment on table public.students is
 create unique index if not exists students_workspace_code_key
   on public.students (workspace_id, student_code);
 -- justification: F-AC-02 §3, one code per school; also the exact-code search.
-create index if not exists students_workspace_status_idx
-  on public.students (workspace_id, status) where deleted_at is null;
--- justification: the default roster filter.
 create index if not exists students_full_name_trgm
   on public.students using gin (full_name extensions.gin_trgm_ops);
 create index if not exists students_full_name_bn_trgm
   on public.students using gin (full_name_bn extensions.gin_trgm_ops);
--- justification: §5.13 server-side ILIKE search, in English and Bangla.
+create index if not exists students_student_code_trgm
+  on public.students using gin (student_code extensions.gin_trgm_ops);
+-- justification: §5.13 server-side ILIKE search on both names and the code.
+-- A (workspace_id, status) index and a guardian-phone index wait for the
+-- status filter and the phone search that would use them.
 create index if not exists students_created_by_idx
   on public.students (created_by) where created_by is not null;
 
@@ -142,9 +143,6 @@ create index if not exists guardians_workspace_student_idx
 create unique index if not exists guardians_one_primary
   on public.guardians (student_id) where is_primary;
 -- justification: §5.9, exactly one primary guardian per student.
-create index if not exists guardians_workspace_phone_idx
-  on public.guardians (workspace_id, phone);
--- justification: §5.13 search by guardian phone; siblings by shared phone.
 create index if not exists guardians_created_by_idx
   on public.guardians (created_by) where created_by is not null;
 
@@ -164,6 +162,7 @@ create table if not exists public.enrollments (
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
   created_by       uuid references public.profiles (id) on delete set null,
+  constraint enrollments_id_workspace_key unique (id, workspace_id),
   constraint enrollments_student_fkey
     foreign key (student_id, workspace_id) references public.students (id, workspace_id),
   constraint enrollments_section_fkey
@@ -207,19 +206,24 @@ as $$
            select 1
              from public.enrollments e
              join public.sections s on s.id = e.section_id
+             join public.academic_years y on y.id = e.academic_year_id
              join public.workspace_members m on m.id = s.class_teacher_id
             where e.workspace_id = p_workspace_id
               and e.student_id = p_student_id
               and e.status = 'active'
+              and y.is_current
               and s.archived_at is null
               and m.user_id = auth.uid()
-              and m.status = 'active')
+              and m.status = 'active'
+              and m.role in ('owner', 'admin', 'teacher'))
 $$;
 
 comment on function app.can_read_student_private(uuid, uuid) is
   'F-AC-02 §2 students.read_sensitive (D-103): true for an active owner/admin '
-  'of the workspace, or the active class teacher of the student''s live '
-  'section. Used by the student_private_details and guardians policies.';
+  'of the workspace, or the active owner/admin/teacher who is class teacher of '
+  'the student''s live section in the CURRENT academic year (a past year''s '
+  'class teacher loses access at promotion). Used by the '
+  'student_private_details and guardians policies.';
 
 revoke all on function app.can_read_student_private(uuid, uuid) from public, anon;
 grant execute on function app.can_read_student_private(uuid, uuid) to authenticated, service_role;
@@ -233,7 +237,9 @@ select app.attach_audit('public.students');
 select app.attach_require_writable('public.students');
 select app.attach_freeze_workspace('public.student_private_details');
 select app.attach_updated_at('public.student_private_details');
-select app.attach_audit('public.student_private_details');
+-- date_of_birth is a child's personal data: the audit row keeps that it
+-- changed (changed_fields), never the value (D-103).
+select app.attach_audit('public.student_private_details', '{}', array['date_of_birth']);
 select app.attach_require_writable('public.student_private_details');
 select app.attach_freeze_workspace('public.guardians');
 select app.attach_updated_at('public.guardians');
@@ -369,6 +375,7 @@ select st.id,
        st.status,
        st.deleted_at,
        e.section_id,
+       e.academic_year_id,
        e.roll_number,
        se.name        as section_name,
        g.name         as grade_name,
@@ -407,7 +414,9 @@ declare
   v_guardian   jsonb := p_input -> 'guardian';
   v_section    public.sections;
   v_is_current boolean;
+  v_year_start date;
   v_dob        date;
+  v_enrolled   date;
   v_roll       integer;
   v_student_id uuid := gen_random_uuid();
   v_enroll_id  uuid := gen_random_uuid();
@@ -425,6 +434,7 @@ begin
      or v_key !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
      or (p_input ->> 'section_id') !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
      or (p_input ->> 'date_of_birth') !~ '^\d{4}-\d{2}-\d{2}$'
+     or coalesce(p_input ->> 'enrolled_on', '2000-01-01') !~ '^\d{4}-\d{2}-\d{2}$'
      or (p_input ? 'roll_number' and jsonb_typeof(p_input -> 'roll_number') not in ('number', 'null')) then
     raise exception 'VALIDATION' using errcode = '22023';
   end if;
@@ -461,10 +471,17 @@ begin
   if v_section.archived_at is not null then
     raise exception 'SECTION_ARCHIVED' using errcode = '22023';
   end if;
-  select y.is_current into v_is_current
+  select y.is_current, y.starts_on into v_is_current, v_year_start
     from public.academic_years y where y.id = v_section.academic_year_id;
   if not coalesce(v_is_current, false) then
     raise exception 'YEAR_CLOSED' using errcode = '22023';
+  end if;
+
+  -- Enrolment date: today by default; a back-dated admission (or demo data)
+  -- may go back to the start of the academic year, never into the future.
+  v_enrolled := coalesce((p_input ->> 'enrolled_on')::date, current_date);
+  if v_enrolled < v_year_start or v_enrolled > current_date then
+    raise exception 'VALIDATION' using errcode = '22023';
   end if;
 
   v_roll := (p_input ->> 'roll_number')::integer;
@@ -503,10 +520,10 @@ begin
        v_guardian ->> 'phone', true, v_uid);
 
     insert into public.enrollments
-      (id, workspace_id, student_id, academic_year_id, section_id, roll_number, created_by)
+      (id, workspace_id, student_id, academic_year_id, section_id, roll_number, enrolled_on, created_by)
     values
       (v_enroll_id, p_workspace_id, v_student_id, v_section.academic_year_id,
-       v_section.id, v_roll, v_uid);
+       v_section.id, v_roll, v_enrolled, v_uid);
   exception
     when unique_violation then
       get stacked diagnostics v_constraint = constraint_name;
@@ -537,7 +554,8 @@ comment on function public.admit_student(uuid, jsonb) is
   'F-AC-02 §4.1 quick admit (D-103): owner/admin only. One transaction: the '
   'student (code from app.next_id), private details, primary guardian and '
   'an active enrolment in a live section of the current year, roll number '
-  'given or next free. Idempotent by idempotency_key. Raises FORBIDDEN, '
+  'given or next free, enrolled_on given (not before the year, not in the '
+  'future) or today. Idempotent by idempotency_key. Raises FORBIDDEN, '
   'VALIDATION, IDEMPOTENCY_KEY_REUSED, SECTION_NOT_FOUND, SECTION_ARCHIVED, '
   'YEAR_CLOSED, ROLL_TAKEN; PLAN_READ_ONLY comes from the table guard.';
 

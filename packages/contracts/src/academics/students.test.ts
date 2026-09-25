@@ -78,6 +78,17 @@ describe("studentSearchQuerySchema", () => {
     expect(studentSearchQuerySchema.parse({ page: "3" }).page).toBe(3)
   })
 
+  it("normalises a Bangla query to NFC", () => {
+    const decomposed = "কো" // ক + ে + া, not the composed ো
+    expect(studentSearchQuerySchema.parse({ q: decomposed }).q).toBe(
+      decomposed.normalize("NFC")
+    )
+    expect(
+      quickAdmitInputSchema.parse({ ...valid, fullNameBn: decomposed })
+        .fullNameBn
+    ).toBe("কো")
+  })
+
   it("refuses a section that is not a uuid", () => {
     expect(
       studentSearchQuerySchema.safeParse({ sectionId: "6-ka" }).success

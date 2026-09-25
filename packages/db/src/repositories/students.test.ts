@@ -62,6 +62,8 @@ function fakeClient(
   }
 }
 
+const YEAR = "66666666-6666-4666-8666-666666666666"
+
 const ROW = {
   id: "33333333-3333-4333-8333-333333333333",
   student_code: "STU-2026-00001",
@@ -81,7 +83,7 @@ describe("listRoster", () => {
     const { client, calls } = fakeClient({
       student_roster: [{ data: [ROW], error: null }],
     })
-    const result = await listRoster(client, CTX, { page: 1 })
+    const result = await listRoster(client, CTX, { page: 1 }, YEAR)
     expect(result.ok && result.data.students[0]?.studentCode).toBe(
       "STU-2026-00001"
     )
@@ -92,6 +94,7 @@ describe("listRoster", () => {
       ["workspace_id", CTX.workspaceId],
     ])
     expect(calls[0]?.ops).toContainEqual(["is", ["deleted_at", null]])
+    expect(calls[0]?.ops).toContainEqual(["eq", ["academic_year_id", YEAR]])
     expect(calls[0]?.ops).toContainEqual(["range", [0, ROSTER_PAGE_SIZE]])
   })
 
@@ -99,11 +102,12 @@ describe("listRoster", () => {
     const { client, calls } = fakeClient({
       student_roster: [{ data: [], error: null }],
     })
-    await listRoster(client, CTX, {
-      page: 2,
-      q: "Rah,im)",
-      sectionId: ROW.section_id,
-    })
+    await listRoster(
+      client,
+      CTX,
+      { page: 2, q: "Rah,im)_%", sectionId: ROW.section_id },
+      YEAR
+    )
     expect(calls[0]?.ops).toContainEqual(["eq", ["section_id", ROW.section_id]])
     expect(calls[0]?.ops).toContainEqual([
       "or",
@@ -125,7 +129,7 @@ describe("listRoster", () => {
     const { client } = fakeClient({
       student_roster: [{ data: rows, error: null }],
     })
-    const result = await listRoster(client, CTX, { page: 1 })
+    const result = await listRoster(client, CTX, { page: 1 }, YEAR)
     expect(result.ok && result.data.students).toHaveLength(ROSTER_PAGE_SIZE)
     expect(result.ok && result.data.hasMore).toBe(true)
   })
@@ -134,8 +138,17 @@ describe("listRoster", () => {
     const { client } = fakeClient({
       student_roster: [{ data: null, error: { message: "x" } }],
     })
-    const result = await listRoster(client, CTX, { page: 1 })
+    const result = await listRoster(client, CTX, { page: 1 }, YEAR)
     expect(!result.ok && result.error.code).toBe("dependency_unavailable")
+  })
+})
+
+describe("listRoster without a current year", () => {
+  it("returns an empty roster without querying", async () => {
+    const { client, calls } = fakeClient({})
+    const result = await listRoster(client, CTX, { page: 1 }, null)
+    expect(result).toEqual({ ok: true, data: { students: [], hasMore: false } })
+    expect(calls).toHaveLength(0)
   })
 })
 

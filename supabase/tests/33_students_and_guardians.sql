@@ -11,7 +11,7 @@
 -- (guardian phone masked, one correlation id per admission).
 -- =====================================================================
 begin;
-select plan(55);
+select plan(62);
 
 create schema if not exists tests;
 
@@ -119,7 +119,10 @@ union all
 select 'b_c6', id from public.grade_levels where workspace_id = (select id from ids where label = 'b')
 union all
 select 'classt_m', id from public.workspace_members
- where workspace_id = (select id from ids where label = 'a') and user_id = 'f1030000-0000-0000-0000-000000000002';
+ where workspace_id = (select id from ids where label = 'a') and user_id = 'f1030000-0000-0000-0000-000000000002'
+union all
+select 'subj_m', id from public.workspace_members
+ where workspace_id = (select id from ids where label = 'a') and user_id = 'f1030000-0000-0000-0000-000000000003';
 
 -- Class 6 – ক (class teacher: Class Teacher A), Class 6 – খ, an archived
 -- Class 6 – গ, a section in a closed year, and Class 6 – ক in School B.
@@ -188,7 +191,8 @@ select throws_ok(
   '23505', 'ROLL_TAKEN', 'a roll number is unique among a section''s active enrolments');
 select lives_ok(
   $$select public.admit_student((select id from ids where label = 'a'),
-      tests.admission('b1030000-0000-4000-8000-000000000004', (select id from ids where label = 'kha'), '{"roll_number": 2}'))$$,
+      tests.admission('b1030000-0000-4000-8000-000000000004', (select id from ids where label = 'kha'),
+        '{"roll_number": 2, "enrolled_on": "2026-01-01"}'))$$,
   'the same roll number is fine in another section');
 select throws_ok(
   $$select public.admit_student((select id from ids where label = 'a'),
@@ -211,6 +215,14 @@ select throws_ok(
       tests.admission('b1030000-0000-4000-8000-000000000009', (select id from ids where label = 'ka'),
         '{"guardian": {"relation": "father", "full_name": "X", "phone": "01712345678"}}'))$$,
   '22023', 'VALIDATION', 'a guardian phone must be E.164');
+select throws_ok(
+  $$select public.admit_student((select id from ids where label = 'a'),
+      tests.admission('b1030000-0000-4000-8000-00000000000c', (select id from ids where label = 'ka'), '{"enrolled_on": "2025-12-31"}'))$$,
+  '22023', 'VALIDATION', 'an enrolment date before the academic year is refused');
+select throws_ok(
+  $$select public.admit_student((select id from ids where label = 'a'),
+      tests.admission('b1030000-0000-4000-8000-00000000000d', (select id from ids where label = 'ka'), '{"enrolled_on": "2999-01-01"}'))$$,
+  '22023', 'VALIDATION', 'an enrolment date in the future is refused');
 select throws_ok(
   $$select public.admit_student((select id from ids where label = 'a'),
       tests.admission('b1030000-0000-4000-8000-00000000000a', (select id from ids where label = 'ka'), '{"gender": "robot"}'))$$,
@@ -236,6 +248,10 @@ select is(
 select is(
   (select count(*)::int from public.guardians where workspace_id = (select id from ids where label = 'a') and is_primary),
   3, 'every admitted student has a primary guardian');
+select is(
+  (select enrolled_on from public.enrollments where section_id = (select id from ids where label = 'kha')),
+  date '2026-01-01', 'a given enrolment date is kept');
+insert into ids select 's3', student_id from public.enrollments where section_id = (select id from ids where label = 'kha');
 
 -- =====================================================================
 -- Database rules the RPC cannot bypass
@@ -304,6 +320,10 @@ select is(
      from public.student_roster where workspace_id = (select id from ids where label = 'a')),
   'Class 6 – ক #1, Class 6 – ক #2, Class 6 – খ #2',
   'the roster view gives a subject teacher class, section and roll');
+select is(
+  (select count(*)::int from public.student_roster
+    where workspace_id = (select id from ids where label = 'a') and academic_year_id = (select id from ids where label = 'a_year')),
+  3, 'the roster view carries each enrolment''s academic year');
 update public.students set first_name = 'Hacked' where workspace_id = (select id from ids where label = 'a');
 update public.enrollments set roll_number = 99 where workspace_id = (select id from ids where label = 'a');
 select tests.logout();
@@ -350,6 +370,22 @@ select throws_ok(
   '23503', 'insert or update on table "guardians" violates foreign key constraint "guardians_student_fkey"',
   'isolation: a guardian cannot be attached to another school''s student');
 select tests.logout();
+
+-- =====================================================================
+-- A past year's class teacher reads nothing (only the current year counts)
+-- =====================================================================
+update public.sections set class_teacher_id = (select id from ids where label = 'subj_m')
+ where id = (select id from ids where label = 'old_ka');
+insert into public.enrollments (workspace_id, student_id, academic_year_id, section_id, roll_number)
+values ((select id from ids where label = 'a'), (select id from ids where label = 's3'),
+        (select id from ids where label = 'a_old_year'), (select id from ids where label = 'old_ka'), 1);
+select tests.login('f1030000-0000-0000-0000-000000000003');
+select is((select count(*)::int from public.student_private_details where workspace_id = (select id from ids where label = 'a'))
+        + (select count(*)::int from public.guardians where workspace_id = (select id from ids where label = 'a')),
+  0, 'the class teacher of a past year''s section reads no date of birth and no guardian');
+select tests.logout();
+update public.enrollments set status = 'completed'
+ where section_id = (select id from ids where label = 'old_ka');
 
 -- =====================================================================
 -- Soft delete, class-teacher change, read-only, anon, audit
@@ -399,6 +435,16 @@ select is(
   (select after ->> 'phone' from public.audit_events
     where action = 'guardians.insert' and row_id = (select id from public.guardians where student_id = (select id from ids where label = 's1'))),
   '+8801*****678', 'the guardian''s phone is masked in the audit trail');
+select is(
+  (select after -> 'date_of_birth' from public.audit_events
+    where action = 'student_private_details.insert'
+      and (after ->> 'student_id')::uuid = (select id from ids where label = 's1')),
+  'null'::jsonb, 'a date of birth is never written into the audit trail');
+select ok(
+  (select 'date_of_birth' = any (changed_fields) from public.audit_events
+    where action = 'student_private_details.insert'
+      and (after ->> 'student_id')::uuid = (select id from ids where label = 's1')),
+  'the audit row still names date_of_birth as changed');
 select is(
   (select count(distinct correlation_id)::int from public.audit_events
     where workspace_id = (select id from ids where label = 'a')
