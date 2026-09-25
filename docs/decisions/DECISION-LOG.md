@@ -696,13 +696,13 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 ## D-202 — F-AC-11 Part 1 ships as a demo cut: holidays + overrides + `app.is_school_day` (SECURITY INVOKER), no scopes or academic year yet · ACCEPTED · 2026-09-25
 
-**Context:** F-AC-11 Part 1 specifies `holidays` (with `academic_year_id`), `holiday_scopes` (grade/section), `working_day_overrides`, `app.is_school_day(workspace, date, section?)` as SECURITY DEFINER, a TS mirror with a SQL↔TS parity test, and `GET /api/calendar/school-days`. On `main` there is no `academic_years` table (it arrives with PR #37) and no `grade_levels`/`sections` for scopes to reference. The lead asked for the demo cut the rest of M2 depends on: the tables, `is_school_day`, and a holidays screen under settings.
+**Context:** F-AC-11 Part 1 specifies `holidays` (with `academic_year_id`), `holiday_scopes` (grade/section), `working_day_overrides`, `app.is_school_day(workspace, date, section?)` as SECURITY DEFINER, a TS mirror with a SQL↔TS parity test, and `GET /api/calendar/school-days`. When this Part started, `main` had no `academic_years` table (PR #37 merged while this PR was open), and there is still no `sections` table for scopes to reference. The lead asked for the demo cut the rest of M2 depends on: the tables, `is_school_day`, and a holidays screen under settings.
 
 **Decision:**
 
 1. `20260925300301_school_calendar.sql` adds `holidays` and `working_day_overrides` with RLS (staff read, owner/admin write, parents none), freeze, audit and `attach_require_writable`, plus `app.is_school_day`, `app.school_days` and `app.school_day_count`.
 2. **SECURITY INVOKER, not DEFINER.** The functions read `school_profiles`, `holidays` and `working_day_overrides`, all of which every staff member may already read. The caller's RLS is therefore the right filter, and a non-member learns only the defaults. A definer function would let any signed-in user probe any school's calendar by id.
-3. **Deferred:** `holidays.academic_year_id` (added as a follow-up once #37 merges, with the "inside its year" check); `holiday_scopes` and the `section_id` argument (they need `sections`; adding a defaulted argument later keeps every caller compatible); recurrence (materialised per year, Part 2); the TS mirror + parity test and the school-days route (no TS consumer yet); an override screen.
+3. **Deferred:** `holidays.academic_year_id` (a follow-up now that #37 has merged, together with the "inside its year" check); `holiday_scopes` and the `section_id` argument (they need `sections`; adding a defaulted argument later keeps every caller compatible); recurrence (materialised per year, Part 2); the TS mirror + parity test and the school-days route (no TS consumer yet); an override screen.
 4. The holidays screen is `/app/settings/calendar`, in line with D-201's "settings owns school configuration". `/app/calendar` views remain Part 3.
 
 **Consequences:** attendance, leave and analytics can call `app.school_day_count(workspace_id, from, to)` today. When scopes land, `is_school_day` gains `p_section_id uuid default null` in a new migration.
