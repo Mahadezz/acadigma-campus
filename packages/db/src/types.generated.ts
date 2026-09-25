@@ -1665,11 +1665,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "report_run_items_report_run_id_fkey"
-            columns: ["report_run_id"]
+            foreignKeyName: "report_run_items_run_workspace_fkey"
+            columns: ["report_run_id", "workspace_id"]
             isOneToOne: false
             referencedRelation: "report_runs"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "workspace_id"]
           },
           {
             foreignKeyName: "report_run_items_workspace_id_fkey"
