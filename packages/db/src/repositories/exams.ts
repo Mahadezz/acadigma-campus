@@ -52,6 +52,11 @@ const DB_ERRORS: Record<string, ApiError> = {
     "validation_failed",
     "An exam cannot move to another academic year."
   ),
+  MARKS_INCOMPLETE: apiError(
+    "conflict",
+    "Every student in every paper needs a mark, or Absent or Exempt, before results can be published.",
+    { fieldErrors: { _root: ["MARKS_INCOMPLETE"] } }
+  ),
   REASON_REQUIRED: apiError(
     "validation_failed",
     "Give a reason for going back a step.",
@@ -128,6 +133,7 @@ const detailRow = summaryRow.omit({ exam_subjects: true }).extend({
       full_marks: z.coerce.number(),
       pass_marks: z.coerce.number(),
       status: z.string(),
+      teacher_id: z.string().nullable(),
       subjects: z.object({ name: z.string(), name_bn: z.string().nullable() }),
       sections: z.object({
         name: z.string(),
@@ -146,7 +152,7 @@ export async function getExam(
     .from("exams")
     .select(
       "id, name, exam_type, status, starts_on, ends_on, status_reason, grading_snapshot, " +
-        "exam_subjects(id, section_id, exam_date, full_marks, pass_marks, status, " +
+        "exam_subjects(id, section_id, exam_date, full_marks, pass_marks, status, teacher_id, " +
         "subjects(name, name_bn), sections(name, grade_levels(name, level_number)))"
     )
     .eq("workspace_id", ctx.workspaceId)
@@ -157,6 +163,8 @@ export async function getExam(
   const row = detailRow.safeParse(data)
   if (!row.success) return err(UNAVAILABLE)
   const r = row.data
+  const progress = await marksProgress(ctx, client, r.id)
+  if (!progress.ok) return progress
   const papers = r.exam_subjects
     .map((p) => ({
       id: p.id,
@@ -172,6 +180,9 @@ export async function getExam(
       fullMarks: p.full_marks,
       passMarks: p.pass_marks,
       status: p.status as ExamDetail["papers"][number]["status"],
+      teacherId: p.teacher_id,
+      marksDone: progress.data[p.id]?.marked ?? 0,
+      enrolled: progress.data[p.id]?.enrolled ?? 0,
     }))
     .sort(
       (a, b) =>
@@ -193,6 +204,31 @@ export async function getExam(
     passMarkPercent: r.grading_snapshot.pass_mark_percent ?? null,
     papers,
   })
+}
+
+/**
+ * Per paper: students actively enrolled now, and how many of them have a
+ * mark, absent or exempt — counted in SQL by `public.exam_marks_progress`,
+ * the same definition as the publish gate (D-304).
+ */
+async function marksProgress(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  examId: string
+): Promise<
+  Result<Record<string, { enrolled: number; marked: number }>, ApiError>
+> {
+  const { data, error } = await client.rpc("exam_marks_progress", {
+    p_workspace_id: ctx.workspaceId,
+    p_exam_id: examId,
+  })
+  if (error) return err(UNAVAILABLE)
+  return ok(
+    (data ?? {}) as unknown as Record<
+      string,
+      { enrolled: number; marked: number }
+    >
+  )
 }
 
 /** `public.create_exam` — exam, sections and papers in one transaction. */
@@ -245,6 +281,8 @@ export async function updateExamSubject(
       exam_date: input.examDate,
       full_marks: input.fullMarks,
       pass_marks: input.passMarks,
+      // Omitted = leave the teacher as is; null clears it.
+      ...(input.teacherId !== undefined ? { teacher_id: input.teacherId } : {}),
     })
     .eq("workspace_id", ctx.workspaceId)
     .eq("id", input.id)

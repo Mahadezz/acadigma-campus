@@ -1174,7 +1174,13 @@
     "examDate": "Date",
     "passMarks": "Pass marks",
     "back": "All exams",
-    "error": "Could not save. Try again."
+    "error": "Could not save. Try again.",
+    "teacher": "Teacher",
+    "noTeacher": "Not assigned",
+    "enterMarks": "Enter marks",
+    "viewMarks": "View marks",
+    "marksProgress": "{done}/{total} marked",
+    "publishBlocked": "Every student in every paper needs a mark, or Absent or Exempt, before results can be published."
   },
   "students": {
     "title": "Students",
@@ -1260,6 +1266,46 @@
       "call": "Call {name}",
       "noGuardians": "No guardians yet.",
       "locked": "Only the class teacher and school admins can see date of birth and guardian contacts."
+    }
+  },
+  "marks": {
+    "title": "Enter marks",
+    "back": "Back to the exam",
+    "outOf": "Full marks {full} · pass {pass}",
+    "progress": "{done}/{total}",
+    "progressLabel": "{done} of {total} entered",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "savedSome": "Saved {n}. {m} need a look.",
+    "nothingToSave": "No changes to save.",
+    "unsaved": "{n} unsaved",
+    "absent": "Absent",
+    "exempt": "Exempt",
+    "chipsFor": "For {name}:",
+    "chipsNone": "Tap a student's mark first.",
+    "markLabel": "Mark for {name}, roll {roll}",
+    "keysHint": "Enter or ↓ next · ↑ back · A absent · E exempt · Esc undo · Ctrl+S save",
+    "noStudents": "No students enrolled",
+    "readOnly": {
+      "notAssigned": "Only this paper's teacher, the class teacher or an admin can see and enter these marks.",
+      "viewOnly": "You can view these marks, not change them.",
+      "closed": "Marks entry is not open for this exam.",
+      "locked": "This paper is locked."
+    },
+    "issues": {
+      "NOT_A_NUMBER": "Type a number such as 45 or 32.5.",
+      "MARK_OUT_OF_RANGE": "More than the full marks ({full}).",
+      "CONFLICT": "Someone else changed this mark meanwhile. Save again to keep yours, or press Esc to take theirs.",
+      "CLEARED": "A saved mark cannot be left empty. Type a mark, or choose Absent or Exempt."
+    },
+    "errors": {
+      "NOT_ASSIGNED": "Only this paper's teacher, the class teacher or an admin can enter its marks.",
+      "ENTRY_CLOSED": "Marks entry is not open for this exam.",
+      "SUBJECT_LOCKED": "This paper is locked.",
+      "ROSTER_CHANGED": "The class list changed. Reload the page.",
+      "generic": "Not saved. Your marks are still here — try again.",
+      "readOnly": "The school is view-only right now, so nothing can be changed."
     }
   }
 }

@@ -814,6 +814,7 @@ export type Database = {
           starts_at: string | null
           status: Database["public"]["Enums"]["exam_subject_status"]
           subject_id: string
+          teacher_id: string | null
           updated_at: string
           workspace_id: string
         }
@@ -829,6 +830,7 @@ export type Database = {
           starts_at?: string | null
           status?: Database["public"]["Enums"]["exam_subject_status"]
           subject_id: string
+          teacher_id?: string | null
           updated_at?: string
           workspace_id: string
         }
@@ -844,6 +846,7 @@ export type Database = {
           starts_at?: string | null
           status?: Database["public"]["Enums"]["exam_subject_status"]
           subject_id?: string
+          teacher_id?: string | null
           updated_at?: string
           workspace_id?: string
         }
@@ -863,10 +866,24 @@ export type Database = {
             referencedColumns: ["exam_id", "section_id"]
           },
           {
+            foreignKeyName: "exam_subjects_section_fkey"
+            columns: ["section_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
             foreignKeyName: "exam_subjects_subject_fkey"
             columns: ["subject_id", "workspace_id"]
             isOneToOne: false
             referencedRelation: "subjects"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "exam_subjects_teacher_fkey"
+            columns: ["teacher_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
             referencedColumns: ["id", "workspace_id"]
           },
           {
@@ -1406,6 +1423,98 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: []
+      }
+      marks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enrollment_id: string
+          entered_by: string | null
+          exam_subject_id: string
+          id: string
+          obtained: number | null
+          status: Database["public"]["Enums"]["mark_status"]
+          student_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enrollment_id: string
+          entered_by?: string | null
+          exam_subject_id: string
+          id?: string
+          obtained?: number | null
+          status: Database["public"]["Enums"]["mark_status"]
+          student_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enrollment_id?: string
+          entered_by?: string | null
+          exam_subject_id?: string
+          id?: string
+          obtained?: number | null
+          status?: Database["public"]["Enums"]["mark_status"]
+          student_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marks_enrollment_fkey"
+            columns: ["enrollment_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enrollments"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "marks_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marks_exam_subject_fkey"
+            columns: ["exam_subject_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "exam_subjects"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "marks_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "student_roster"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "marks_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "marks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -3440,6 +3549,10 @@ export type Database = {
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       create_exam: { Args: { p_input: Json }; Returns: string }
       create_school_workspace: { Args: { p_input: Json }; Returns: Json }
+      exam_marks_progress: {
+        Args: { p_exam_id: string; p_workspace_id: string }
+        Returns: Json
+      }
       expire_pro_trials: { Args: never; Returns: number }
       list_my_workspaces: {
         Args: never
@@ -3483,6 +3596,10 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: string
+      }
+      save_marks: {
+        Args: { p_input: Json; p_workspace_id: string }
+        Returns: Json
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
       switch_workspace: {
@@ -3577,6 +3694,7 @@ export type Database = {
         | "declined"
         | "expired"
         | "revoked"
+      mark_status: "entered" | "absent" | "exempt"
       member_role: "owner" | "admin" | "teacher" | "staff" | "parent"
       member_status: "pending" | "active" | "removed"
       onboarding_path: "undecided" | "create_school" | "join_school"
@@ -3819,6 +3937,7 @@ export const Constants = {
         "expired",
         "revoked",
       ],
+      mark_status: ["entered", "absent", "exempt"],
       member_role: ["owner", "admin", "teacher", "staff", "parent"],
       member_status: ["pending", "active", "removed"],
       onboarding_path: ["undecided", "create_school", "join_school"],
