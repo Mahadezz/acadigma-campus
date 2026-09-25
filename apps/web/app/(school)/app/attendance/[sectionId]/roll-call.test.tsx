@@ -74,6 +74,25 @@ describe("RollCall", () => {
     })
   })
 
+  it("does not re-stamp bulk marking on the next save after a successful one", async () => {
+    render(<RollCall {...BASE} />)
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+    await screen.findByRole("button", { name: "Save" })
+    const absent = screen
+      .getByRole("radiogroup", { name: "Student 1" })
+      .querySelector('[aria-label="Absent"]') as HTMLButtonElement
+    fireEvent.click(absent)
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
+    expect(mockSave.mock.calls[0]?.[0]).toMatchObject({ bulkMarked: true })
+    expect(mockSave.mock.calls[1]?.[0]).toMatchObject({
+      bulkMarked: false,
+      expectedUpdatedAt: "t",
+    })
+  })
+
   it("undo returns to unmarked and drops the bulk stamp", () => {
     render(<RollCall {...BASE} />)
     fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
@@ -92,7 +111,7 @@ describe("RollCall", () => {
     expect(save.disabled).toBe(false)
   })
 
-  it("is read-only for someone who is not the class teacher", () => {
+  it("is read-only for someone who may not mark", () => {
     render(<RollCall {...BASE} readOnlyReason="notMine" />)
     expect(screen.getByText(en.attendance.roll.readOnlyNotMine)).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull()

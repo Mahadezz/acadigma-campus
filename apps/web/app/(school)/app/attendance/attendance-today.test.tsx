@@ -60,7 +60,7 @@ describe("AttendanceToday", () => {
         day={DAY}
         dateLabel="25 Sept 2026"
         policy={POLICY}
-        isManager
+        canMark
       />
     )
     expect(
@@ -74,7 +74,7 @@ describe("AttendanceToday", () => {
     ).toBe("/app/attendance/s2")
   })
 
-  it("puts the teacher's own class first and only offers View elsewhere", () => {
+  it("puts the teacher's own class first and lets them cover any other (D-105)", () => {
     render(
       <AttendanceToday
         t={en.attendance}
@@ -82,10 +82,26 @@ describe("AttendanceToday", () => {
         day={DAY}
         dateLabel="25 Sept 2026"
         policy={POLICY}
-        isManager={false}
+        canMark
       />
     )
     expect(screen.getByText("Your class")).toBeTruthy()
+    expect(
+      screen.getByRole("link", { name: "Take attendance — Class 6 – খ" })
+    ).toBeTruthy()
+  })
+
+  it("only offers View to someone who cannot mark", () => {
+    render(
+      <AttendanceToday
+        t={en.attendance}
+        locale="en"
+        day={DAY}
+        dateLabel="25 Sept 2026"
+        policy={POLICY}
+        canMark={false}
+      />
+    )
     expect(
       screen.getByRole("link", { name: "View — Class 6 – খ" })
     ).toBeTruthy()
@@ -99,7 +115,7 @@ describe("AttendanceToday", () => {
         day={{ ...DAY, isSchoolDay: false }}
         dateLabel="২৫"
         policy={POLICY}
-        isManager
+        canMark
       />
     )
     expect(screen.getByText(bn.attendance.today.notSchoolDay)).toBeTruthy()

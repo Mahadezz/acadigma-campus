@@ -939,4 +939,17 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Why:** the smallest slice that makes the demo true end to end, with every rule a pgTAP case can break rather than a UI convention.
 
-**Consequences:** `supabase/tests/34_attendance.sql` (47 assertions). `enrollments (id, workspace_id)` (D-103) and `attendance_sessions (id, workspace_id)` are the targets later tables use. When the offline queue lands it calls `save_attendance` unchanged; when period mode lands, the `(section_id, date)` key widens.
+**Consequences:** `supabase/tests/34_attendance.sql` (47 assertions; 45 after D-105). **Point 1's class-teacher rule (`NOT_ASSIGNED`) is superseded by D-105:** any active teacher of the school may mark any section. `enrollments (id, workspace_id)` (D-103) and `attendance_sessions (id, workspace_id)` are the targets later tables use. When the offline queue lands it calls `save_attendance` unchanged; when period mode lands, the `(section_id, date)` key widens.
+
+## D-105 — F-AC-03: any teacher may take any section's attendance; enrolment on a date by its dates · ACCEPTED · 2026-09-26
+
+**Context:** D-104 let only the section's class teacher (or an owner/admin) save its roll call. On a normal morning the class teacher is sometimes absent, and the teacher covering the class could view the roster but not save it, so the day went unmarked or an admin had to do it. Separately, the expected class list filtered enrolments by `status = 'active'` as well as by date, so a student transferred out today vanished from last week's register.
+
+**Decision (owner, 2026-09-26):**
+
+1. **Any active teacher of the school may view and mark/save the roll call for any section** — substitutes cover. `public.save_attendance`'s role guard (active owner/admin/teacher of this workspace, else `FORBIDDEN`) is the whole rule; the class-teacher check (`NOT_ASSIGNED`, `app.can_mark_attendance`) is removed. Every other guard stays: edit window for teachers, no future date, school day unless confirmed, exactly the enrolled students, idempotency, the `CONFLICT` version check, the read-only guard. The audit already records who saved (`taken_by`, `marked_by`, the audit actor).
+2. **"Enrolled in the section on that date" is `enrolled_on <= date <= ended_on`** (open-ended when `ended_on` is null), plus the student being active and not deleted — not the enrolment's current status. If two enrolments in the same section cover the date, the student counts once (the later enrolment).
+
+**Why:** schools substitute every week; a register that only one person can save is a register that goes unmarked. History must not change when a student moves.
+
+**Consequences:** migration `20260925300311_attendance_any_teacher.sql` (CREATE OR REPLACE of `save_attendance` and `attendance_day`, drops `app.can_mark_attendance`); `supabase/tests/35_attendance_any_teacher.sql` (13 assertions); the two `NOT_ASSIGNED` cases leave `34_attendance.sql`. The UI offers "Take attendance" on every class to anyone with `attendance.write`. A transfer that sets `status` without `ended_on` would keep the student on the old section's register — the future transfer action must set `ended_on` (F-AC-02).

@@ -16,6 +16,7 @@ import { Button } from "@acadigma/ui/components/button"
 import { Checkbox } from "@acadigma/ui/components/checkbox"
 import { Label } from "@acadigma/ui/components/label"
 import { AttendanceToggle } from "@acadigma/ui/primitives/attendance-toggle"
+import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -133,6 +134,7 @@ export function RollCall({
       }
       setVersion(result.data.updatedAt)
       setBeforeBulk(null)
+      setBulkMarked(false)
       setKey(crypto.randomUUID())
       setSaved(
         fill(t.saved, {
@@ -223,7 +225,7 @@ export function RollCall({
                   <span className="text-muted-foreground w-8 shrink-0 text-right text-sm tabular-nums">
                     {s.rollNumber ?? "—"}
                   </span>
-                  <span className="truncate font-medium">{name}</span>
+                  <BnEnText text={name} className="truncate font-medium" />
                 </div>
                 <AttendanceToggle
                   value={marks[s.studentId] ?? "unmarked"}

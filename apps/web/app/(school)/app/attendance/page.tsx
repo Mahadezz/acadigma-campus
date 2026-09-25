@@ -56,7 +56,7 @@ export default async function AttendancePage() {
         late_counts_present: policy.late_counts_present,
         half_day_counts_present: policy.half_day_counts_present,
       }}
-      isManager={ctx.role === "owner" || ctx.role === "admin"}
+      canMark={can(ctx.role, "attendance.write")}
     />
   )
 }
