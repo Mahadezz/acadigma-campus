@@ -66,7 +66,7 @@ describe("LoginForm when rate-limited", () => {
     await submitThrottled(bn.auth.login, "bn")
     expect(
       screen.getByText(
-        "অনেকবার চেষ্টা করা হয়েছে। ১৫ মিনিট পর আবার চেষ্টা করুন।"
+        "অনেকবার চেষ্টা করা হয়েছে। 15 মিনিট পর আবার চেষ্টা করুন।"
       )
     ).toBeTruthy()
   })

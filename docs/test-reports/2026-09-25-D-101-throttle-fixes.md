@@ -20,7 +20,7 @@ Local PostgreSQL 17.10 + pgTAP 1.3.4 (the CI `db` job's steps: bootstrap, every 
 
 ## 3. Unit (Vitest)
 
-`apps/web` suites: 98 passed. New: `login-form.test.tsx` — the banner reads "Try again in 15 min." and in Bangla "১৫ মিনিট" (native digits via `Intl.NumberFormat`); a 30-second wait reads "1 min."; the banner is announced with `role="alert"`; the button is a disabled "Sign in" and re-enables when the countdown reaches zero (fake timers, ticking on minute boundaries); no "900" anywhere. Updated: `(onboarding)/actions.test.ts` (the key is `user:eiinCheck`; the error carries `retryAfterSeconds: 137` and says "3 min").
+`apps/web` suites: 98 passed. New: `login-form.test.tsx` — the banner reads "Try again in 15 min." and in Bangla "15 মিনিট" (Western digits, DESIGN-SYSTEM §1.6); a 30-second wait reads "1 min."; the banner is announced with `role="alert"`; the button is a disabled "Sign in" and re-enables when the countdown reaches zero (fake timers, ticking on minute boundaries); no "900" anywhere. Updated: `(onboarding)/actions.test.ts` (the key is `user:eiinCheck`; the error carries `retryAfterSeconds: 137` and says "3 min").
 
 ## 4. Database (pgTAP)
 
