@@ -2417,6 +2417,7 @@ export type Database = {
         | "preview"
         | "delete"
       file_visibility: "private" | "workspace" | "public"
+      grade_stage: "early" | "primary" | "secondary" | "higher"
       holiday_kind:
         | "public"
         | "religious"
@@ -2426,7 +2427,6 @@ export type Database = {
         | "weather"
         | "emergency"
       holiday_source: "seed" | "manual" | "import"
-      grade_stage: "early" | "primary" | "secondary" | "higher"
       invitation_channel: "email" | "phone"
       invitation_status:
         | "pending"
@@ -2611,6 +2611,7 @@ export const Constants = {
         "delete",
       ],
       file_visibility: ["private", "workspace", "public"],
+      grade_stage: ["early", "primary", "secondary", "higher"],
       holiday_kind: [
         "public",
         "religious",
@@ -2621,7 +2622,6 @@ export const Constants = {
         "emergency",
       ],
       holiday_source: ["seed", "manual", "import"],
-      grade_stage: ["early", "primary", "secondary", "higher"],
       invitation_channel: ["email", "phone"],
       invitation_status: [
         "pending",
