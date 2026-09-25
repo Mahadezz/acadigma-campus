@@ -522,6 +522,14 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn: "{actor} একটি পরীক্ষার পেপারে নম্বর সংরক্ষণ করেছেন ({n})",
     isGeneric: false,
   },
+  // F-AC-06 Part 5 (D-305) — one event per compute_results run.
+  {
+    action: "results.computed",
+    severity: "notable",
+    sentenceEn: "{actor} computed an exam's results ({n})",
+    sentenceBn: "{actor} একটি পরীক্ষার ফলাফল তৈরি করেছেন ({n})",
+    isGeneric: false,
+  },
 ]
 
 /**

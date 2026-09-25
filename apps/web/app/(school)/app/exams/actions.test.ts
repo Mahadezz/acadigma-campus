@@ -25,7 +25,12 @@ vi.mock("@acadigma/db/repositories/exams", () => ({
   updateExamSubject: mockUpdatePaper,
 }))
 
-const { createExam, setExamStatus, updateExamSubject } =
+const mockCompute = vi.fn()
+vi.mock("@acadigma/db/repositories/results", () => ({
+  computeResults: mockCompute,
+}))
+
+const { computeResults, createExam, setExamStatus, updateExamSubject } =
   await import("./actions")
 
 const CTX = {
@@ -112,5 +117,30 @@ describe("exam actions", () => {
     })
     expect(!result.ok && result.error.code).toBe("validation_failed")
     expect(mockUpdatePaper).not.toHaveBeenCalled()
+  })
+
+  it("computeResults: owner computes; teacher forbidden; read-only refused", async () => {
+    const summary = { computed: 40, passed: 38, failed: 2 }
+    mockCompute.mockResolvedValue({ ok: true, data: summary })
+    expect(await computeResults({ examId: ID })).toEqual({
+      ok: true,
+      data: summary,
+    })
+    expect(mockCompute.mock.calls[0]?.[2]).toBe(ID)
+
+    mockRequireWorkspace.mockResolvedValueOnce({ ...CTX, role: "teacher" })
+    const forbidden = await computeResults({ examId: ID })
+    expect(!forbidden.ok && forbidden.error.code).toBe("forbidden")
+
+    mockRequireWritable.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "PLAN_READ_ONLY", reason: "Your Pro trial has ended." },
+    })
+    const readOnly = await computeResults({ examId: ID })
+    expect(!readOnly.ok && readOnly.error.code).toBe("payment_required")
+    expect(mockCompute).toHaveBeenCalledTimes(1)
+
+    const bad = await computeResults({ examId: "nope" })
+    expect(!bad.ok && bad.error.code).toBe("validation_failed")
   })
 })

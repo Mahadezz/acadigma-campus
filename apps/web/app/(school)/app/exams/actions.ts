@@ -11,12 +11,14 @@ import { revalidatePath } from "next/cache"
 import {
   apiError,
   apiErrorFromZod,
+  computeResultsInputSchema,
   createExamInputSchema,
   err,
   planReadOnlyApiError,
   setExamStatusInputSchema,
   updateExamSubjectInputSchema,
   type ApiError,
+  type ComputeResultsSummary,
   type Result,
 } from "@acadigma/contracts"
 import { requireWritable, type WorkspaceContext } from "@acadigma/db"
@@ -26,6 +28,7 @@ import {
   setExamStatus as setExamStatusRepo,
   updateExamSubject as updateExamSubjectRepo,
 } from "@acadigma/db/repositories/exams"
+import { computeResults as computeResultsRepo } from "@acadigma/db/repositories/results"
 import { can } from "@acadigma/domain"
 import { checkExamTransition } from "@acadigma/domain/academic"
 
@@ -125,5 +128,32 @@ export async function updateExamSubject(
     parsed.data
   )
   if (result.ok) revalidatePath(EXAMS_PATH, "layout")
+  return result
+}
+
+/**
+ * F-AC-06 Part 5 (D-305) — §7 `computeResults`: parse -> context -> policy
+ * (`results.compute`) -> requireWritable -> `public.compute_results`, which
+ * refuses unless marks are locked and complete, and replaces the exam's
+ * results in one transaction.
+ */
+export async function computeResults(
+  input: unknown
+): Promise<Result<ComputeResultsSummary, ApiError>> {
+  const parsed = computeResultsInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+
+  const ctx = await requireWorkspace()
+  if (!can(ctx.role, "results.compute")) {
+    return err(
+      apiError("forbidden", "Only an owner or admin can compute results.")
+    )
+  }
+  const supabase = await createClient()
+  const writable = await requireWritable(ctx, supabase)
+  if (!writable.ok) return err(planReadOnlyApiError(writable.error))
+
+  const result = await computeResultsRepo(ctx, supabase, parsed.data.examId)
+  if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`, "layout")
   return result
 }

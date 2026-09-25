@@ -10,17 +10,21 @@ const GOLDEN = "55_results.sql"
 function mark(cell: string, paper: number): PaperMark {
   const fullMarks = paper === 5 ? 50 : 100
   const passMarks = paper === 5 ? 16.5 : 33
-  if (cell === "A") return { fullMarks, passMarks, status: "absent", obtained: null }
-  if (cell === "E") return { fullMarks, passMarks, status: "exempt", obtained: null }
+  if (cell === "A")
+    return { fullMarks, passMarks, status: "absent", obtained: null }
+  if (cell === "E")
+    return { fullMarks, passMarks, status: "exempt", obtained: null }
   return { fullMarks, passMarks, status: "entered", obtained: Number(cell) }
 }
 
 describe("computeResults — the golden fixture (parity with app.compute_results)", () => {
-  const students = parityRows("golden_marks", GOLDEN).map(([code, ...cells]) => ({
-    studentId: code!,
-    sectionId: "6A",
-    papers: cells.map(mark),
-  }))
+  const students = parityRows("golden_marks", GOLDEN).map(
+    ([code, ...cells]) => ({
+      studentId: code!,
+      sectionId: "6A",
+      papers: cells.map(mark),
+    })
+  )
   const results = new Map(
     computeResults(BD_GRADE_BANDS, true, students).map((r) => [r.studentId, r])
   )
@@ -59,21 +63,44 @@ describe("computeResults — the golden fixture (parity with app.compute_results
 
 describe("paperLine", () => {
   it("bands without rounding and flips exactly at the pass mark", () => {
-    expect(paperLine(BD_GRADE_BANDS, mark("79.5", 0))).toMatchObject({ letter: "A", passed: true })
-    expect(paperLine(BD_GRADE_BANDS, mark("32.5", 0))).toMatchObject({ letter: "F", passed: false })
-    expect(paperLine(BD_GRADE_BANDS, mark("16.5", 5))).toMatchObject({ percentage: 33, letter: "D", passed: true })
-    expect(paperLine(BD_GRADE_BANDS, mark("16.49", 5))).toMatchObject({ percentage: 32.98, letter: "F", passed: false })
+    expect(paperLine(BD_GRADE_BANDS, mark("79.5", 0))).toMatchObject({
+      letter: "A",
+      passed: true,
+    })
+    expect(paperLine(BD_GRADE_BANDS, mark("32.5", 0))).toMatchObject({
+      letter: "F",
+      passed: false,
+    })
+    expect(paperLine(BD_GRADE_BANDS, mark("16.5", 5))).toMatchObject({
+      percentage: 33,
+      letter: "D",
+      passed: true,
+    })
+    expect(paperLine(BD_GRADE_BANDS, mark("16.49", 5))).toMatchObject({
+      percentage: 32.98,
+      letter: "F",
+      passed: false,
+    })
   })
 
   it("absent is 0 % and failed; exempt has nothing", () => {
-    expect(paperLine(BD_GRADE_BANDS, mark("A", 0))).toEqual({ percentage: 0, letter: "F", gradePoint: 0, passed: false })
-    expect(paperLine(BD_GRADE_BANDS, mark("E", 0))).toEqual({ percentage: null, letter: null, gradePoint: null, passed: null })
+    expect(paperLine(BD_GRADE_BANDS, mark("A", 0))).toEqual({
+      percentage: 0,
+      letter: "F",
+      gradePoint: 0,
+      passed: false,
+    })
+    expect(paperLine(BD_GRADE_BANDS, mark("E", 0))).toEqual({
+      percentage: null,
+      letter: null,
+      gradePoint: null,
+      passed: null,
+    })
   })
 })
 
 describe("computeResults — rules", () => {
-  const entered = (...values: number[]) =>
-    values.map((v) => mark(String(v), 0))
+  const entered = (...values: number[]) => values.map((v) => mark(String(v), 0))
 
   it("AC-2: grade points 5, 4, 3.5, 4, 5 give GPA 4.30", () => {
     const [r] = computeResults(BD_GRADE_BANDS, true, [
@@ -84,8 +111,16 @@ describe("computeResults — rules", () => {
 
   it("AC-3: an F zeroes the GPA, unless the school turns the rule off", () => {
     const papers = entered(85, 75, 65, 75, 20)
-    expect(computeResults(BD_GRADE_BANDS, true, [{ studentId: "x", sectionId: "s", papers }])[0]).toMatchObject({ gpa: 0, status: "fail", failedSubjects: 1, letter: "F" })
-    expect(computeResults(BD_GRADE_BANDS, false, [{ studentId: "x", sectionId: "s", papers }])[0]).toMatchObject({ gpa: 3.3, status: "fail" })
+    expect(
+      computeResults(BD_GRADE_BANDS, true, [
+        { studentId: "x", sectionId: "s", papers },
+      ])[0]
+    ).toMatchObject({ gpa: 0, status: "fail", failedSubjects: 1, letter: "F" })
+    expect(
+      computeResults(BD_GRADE_BANDS, false, [
+        { studentId: "x", sectionId: "s", papers },
+      ])[0]
+    ).toMatchObject({ gpa: 3.3, status: "fail" })
   })
 
   it("AC-7: GPAs 5.00, 4.50, 4.50, 4.00 rank 1, 2, 2, 4, per section", () => {
@@ -103,7 +138,12 @@ describe("computeResults — rules", () => {
     const [r] = computeResults(BD_GRADE_BANDS, true, [
       { studentId: "x", sectionId: "s", papers: [mark("E", 0)] },
     ])
-    expect(r).toMatchObject({ gpa: null, percentage: null, sectionRank: null, letter: null })
+    expect(r).toMatchObject({
+      gpa: null,
+      percentage: null,
+      sectionRank: null,
+      letter: null,
+    })
   })
 
   it("GPA is never above 5.00 or below 0 (property check)", () => {
@@ -112,7 +152,9 @@ describe("computeResults — rules", () => {
     const students = Array.from({ length: 300 }, (_, i) => ({
       studentId: String(i),
       sectionId: "s",
-      papers: Array.from({ length: 6 }, () => mark(String(Math.floor(rand() * 10001) / 100), 0)),
+      papers: Array.from({ length: 6 }, () =>
+        mark(String(Math.floor(rand() * 10001) / 100), 0)
+      ),
     }))
     for (const r of computeResults(BD_GRADE_BANDS, true, students)) {
       expect(r.gpa).toBeGreaterThanOrEqual(0)

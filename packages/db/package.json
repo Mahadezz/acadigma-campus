@@ -15,7 +15,8 @@
     "./repositories/staff": "./src/repositories/staff.ts",
     "./repositories/grading": "./src/repositories/grading.ts",
     "./repositories/exams": "./src/repositories/exams.ts",
-    "./repositories/marks": "./src/repositories/marks.ts"
+    "./repositories/marks": "./src/repositories/marks.ts",
+    "./repositories/results": "./src/repositories/results.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

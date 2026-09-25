@@ -48,7 +48,10 @@ export type StudentResult = {
 }
 
 /** §5.1 + §5.2 + the pass rule: one paper. */
-export function paperLine(bands: readonly GradeBand[], mark: PaperMark): PaperLine {
+export function paperLine(
+  bands: readonly GradeBand[],
+  mark: PaperMark
+): PaperLine {
   if (mark.status === "exempt") {
     return { percentage: null, letter: null, gradePoint: null, passed: null }
   }
@@ -115,7 +118,9 @@ export function computeResults(
       totalObtained,
       totalFull,
       percentage:
-        totalFull > 0 ? roundHalfUp((100 * totalObtained) / totalFull, 2) : null,
+        totalFull > 0
+          ? roundHalfUp((100 * totalObtained) / totalFull, 2)
+          : null,
       gpa,
       letter: gpaLetter(bands, gpa),
       status: failedSubjects > 0 ? "fail" : "pass",

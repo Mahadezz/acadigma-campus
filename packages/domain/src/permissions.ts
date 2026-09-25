@@ -44,6 +44,10 @@ export const ACTIONS = [
   // F-AC-06 §2: the exam schedule and papers.
   "exams.read",
   "exams.write",
+  // F-AC-06 §2: results — read (RLS narrows teachers to the class teacher),
+  // compute owner/admin.
+  "results.read",
+  "results.compute",
   "timetable.read",
   "timetable.manage",
   // Workspace administration
@@ -144,6 +148,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "settings.grade_scale.write",
     "exams.read",
     "exams.write",
+    "results.read",
+    "results.compute",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -195,6 +201,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "settings.grade_scale.write",
     "exams.read",
     "exams.write",
+    "results.read",
+    "results.compute",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -255,6 +263,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "report.render.sample",
     "academics.structure.read",
     "exams.read",
+    "results.read",
     "students.read_sensitive",
   ],
   // Office staff: sees the school, changes almost nothing.
@@ -274,6 +283,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "audit.read.self",
     "academics.structure.read",
     "exams.read",
+    "results.read",
   ],
   // Read-only parent portal (DECISION-LOG D-10), narrowed to their children by RLS.
   parent: [
