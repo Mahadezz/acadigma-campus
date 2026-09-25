@@ -1,0 +1,14 @@
+-- =====================================================================
+-- F-OP-03 Part 3 (single report card) — adds the 'report_card' value to
+-- report_kind (D-206), additive and forward-only per the run pipeline's
+-- own comment in 20260925300310_report_runs.sql ("later Parts add their
+-- own values with `alter type public.report_kind add value ...`").
+--
+-- No shape change to report_runs/report_run_items: the same columns,
+-- the same RLS, the same service-role-only status transitions already
+-- cover this kind. Marks/exam data (F-AC-06 marks entry) is not on main
+-- yet, so this Part's render source is a fixture (see
+-- apps/web/app/(school)/app/reports/report-card-data.ts) behind a single
+-- seam function — nothing here depends on that.
+-- =====================================================================
+alter type public.report_kind add value if not exists 'report_card';

@@ -245,6 +245,9 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "audit.export": [...rolesWithAction("audit.export")],
     "report.view": [...rolesWithAction("report.view")],
     "report.render.sample": [...rolesWithAction("report.render.sample")],
+    "report.render.report_card": [
+      ...rolesWithAction("report.render.report_card"),
+    ],
     // F-AC-01 §2 (D-102): asserted for real, not against the matrix itself.
     "academics.structure.read": ["owner", "admin", "teacher", "staff"],
     "academics.section.write": ["owner", "admin"],
@@ -311,18 +314,20 @@ describe("can: deny-by-default on inputs the type system says cannot happen", ()
   })
 })
 
-describe("F-OP-03 §2 reports and PDF — Parts 1-2 keys", () => {
-  it("grants report.view and report.render.sample to owner, admin and teacher", () => {
+describe("F-OP-03 §2 reports and PDF — Parts 1-3 keys", () => {
+  it("grants report.view, report.render.sample and report.render.report_card to owner, admin and teacher", () => {
     for (const role of ["owner", "admin", "teacher"] as const) {
       expect(can(role, "report.view")).toBe(true)
       expect(can(role, "report.render.sample")).toBe(true)
+      expect(can(role, "report.render.report_card")).toBe(true)
     }
   })
 
-  it("denies both to staff, parent and platform (spec §2: every one of those rows is '—')", () => {
+  it("denies all three to staff, parent and platform (spec §2: every one of those rows is '—')", () => {
     for (const role of ["staff", "parent", "platform"] as const) {
       expect(can(role, "report.view")).toBe(false)
       expect(can(role, "report.render.sample")).toBe(false)
+      expect(can(role, "report.render.report_card")).toBe(false)
     }
   })
 })
