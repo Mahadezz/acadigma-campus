@@ -4,7 +4,7 @@ import * as React from "react"
 
 import { useRouter } from "next/navigation"
 
-import { LogOutIcon, UserRoundIcon } from "lucide-react"
+import { LayoutGridIcon, LogOutIcon, UserRoundIcon } from "lucide-react"
 
 import { Button } from "@acadigma/ui/components/button"
 import {
@@ -21,7 +21,7 @@ import {
 import { signOut } from "@/app/(auth)/actions"
 import { isLocale, setLocaleCookie, type Locale } from "@/lib/locale"
 
-import { updateLocale } from "./actions"
+import { updateLocale, updateUiPreferences } from "./actions"
 
 export type UserMenuProps = {
   locale: Locale
@@ -33,7 +33,18 @@ export type UserMenuProps = {
     en: string
     /** `t.auth.logout.button` — reserved since F-ID-01, unused until now. */
     signOut: string
+    /** `t.basicMode.userMenu.switchToBasicMode` — only used when `showBasicModeSwitch`. */
+    switchToBasicMode?: string
   }
+  /**
+   * F-ID-10 §4.2 (D-403): "the full app's user menu has 'Switch to basic
+   * mode' so an admin helping a teacher can find it". Only the school shell
+   * passes this (`(school)/app/layout.tsx`), and only when the caller's
+   * role in the active workspace is not `staff` (F-ID-10 §2 note 4) — the
+   * personal/family shells (`GatedShell`) never pass it, so the item simply
+   * does not exist there.
+   */
+  showBasicModeSwitch?: boolean
 }
 
 /**
@@ -60,7 +71,7 @@ export type UserMenuProps = {
  * `/login`) rather than a new one; this menu is simply the first place it is
  * wired into the UI.
  */
-export function UserMenu({ locale, t }: UserMenuProps) {
+export function UserMenu({ locale, t, showBasicModeSwitch }: UserMenuProps) {
   const router = useRouter()
   const [, startTransition] = React.useTransition()
 
@@ -80,6 +91,13 @@ export function UserMenu({ locale, t }: UserMenuProps) {
     startTransition(() => signOut())
   }
 
+  function handleSwitchToBasicMode() {
+    startTransition(async () => {
+      const result = await updateUiPreferences({ uiMode: "basic" })
+      if (result.ok) router.push("/app/home")
+    })
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -93,6 +111,15 @@ export function UserMenu({ locale, t }: UserMenuProps) {
           <DropdownMenuRadioItem value="bn">{t.bn}</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="en">{t.en}</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
+        {showBasicModeSwitch && t.switchToBasicMode ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={handleSwitchToBasicMode}>
+              <LayoutGridIcon aria-hidden="true" />
+              {t.switchToBasicMode}
+            </DropdownMenuItem>
+          </>
+        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
           <LogOutIcon aria-hidden="true" />

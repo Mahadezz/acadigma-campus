@@ -209,7 +209,9 @@ export function AuditViewer({
             cell: (event) => (
               <span className="flex items-center gap-2">
                 <Avatar className="size-6">
-                  <AvatarFallback className="text-[10px]">
+                  {/* rem, not px (F-ID-10 §5.2 rem audit): scales with the
+                      text-size preference like every other type token. */}
+                  <AvatarFallback className="text-[0.625rem]">
                     {(event.actorName ?? "S").slice(0, 1).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>

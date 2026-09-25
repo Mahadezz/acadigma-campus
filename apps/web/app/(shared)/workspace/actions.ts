@@ -12,16 +12,24 @@ import {
   ok,
   switchWorkspaceInputSchema,
   listMyWorkspacesOutputSchema,
+  updateUiPreferencesInputSchema,
   type ApiError,
   type ListMyWorkspacesOutput,
   type Result,
   type SwitchWorkspaceOutput,
+  type UiPreferences,
 } from "@acadigma/contracts"
+import { upsertUiPreferences } from "@acadigma/db/repositories/ui-preferences"
 import { resolveLandingRoute } from "@acadigma/domain/workspace"
 
 import { isLocale, type Locale } from "@/lib/locale"
 import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
+import {
+  TEXT_SIZE_COOKIE,
+  UI_MODE_COOKIE,
+  UI_PREFS_COOKIE_OPTS,
+} from "@/lib/ui-preferences"
 import { WORKSPACE_COOKIE } from "@/lib/workspace"
 
 /**
@@ -219,4 +227,47 @@ export async function updateLocale(
   }
 
   return ok({ locale })
+}
+
+/**
+ * F-ID-10 §7 `updateUiPreferences` (D-403, D-404): `/app/settings/display`'s
+ * text-size radio and basic-mode switch, and `UserMenu`'s "Switch to basic
+ * mode" item, all call this. Same shape as `updateLocale` above and for the
+ * same reason: `user_preferences` carries no `workspace_id` (DATA-MODEL.md
+ * §1.7), so there is no tenant context to resolve and no `requireWritable`
+ * gate — this is never a tenant write. Unlike `updateLocale`'s bare string,
+ * `parsed.data` is a genuine partial patch (`{uiMode?, textSize?}`), so the
+ * repository's `upsertUiPreferences` only writes the keys the caller sent.
+ *
+ * Cookie mirrors are written HERE, server-side, non-httpOnly (§3) — every
+ * request's `getUiPreferences()` (`lib/ui-preferences.ts`) reads them before
+ * touching the database, which is what makes the very next server render
+ * carry the new value with no flash. `revalidatePath("/", "layout")` forces
+ * that render to actually happen without a full page reload, the same
+ * pattern `switchWorkspace` above uses for the workspace cookie.
+ */
+export async function updateUiPreferences(
+  input: unknown
+): Promise<Result<UiPreferences, ApiError>> {
+  const parsed = updateUiPreferencesInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return err(apiError("unauthenticated", "Please sign in to continue."))
+  }
+
+  const result = await upsertUiPreferences(supabase, user.id, parsed.data)
+  if (!result.ok) return result
+
+  const cookieStore = await cookies()
+  cookieStore.set(UI_MODE_COOKIE, result.data.uiMode, UI_PREFS_COOKIE_OPTS)
+  cookieStore.set(TEXT_SIZE_COOKIE, result.data.textSize, UI_PREFS_COOKIE_OPTS)
+
+  revalidatePath("/", "layout")
+
+  return ok(result.data)
 }
