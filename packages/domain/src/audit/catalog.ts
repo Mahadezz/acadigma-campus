@@ -558,6 +558,11 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // F-AC-01 demo cut (D-102) — 20260925300304_sections_and_subjects.sql.
   "sections",
   "subjects",
+  // F-AC-02 demo cut (D-103) — 20260925300306_students_and_guardians.sql.
+  "students",
+  "student_private_details",
+  "guardians",
+  "enrollments",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -608,6 +613,13 @@ export const GENERIC_TABLE_NOUNS: Readonly<
   grade_bands: { en: "a grade band", bn: "একটি গ্রেড ব্যান্ড" },
   sections: { en: "a section", bn: "একটি শাখা" },
   subjects: { en: "a subject", bn: "একটি বিষয়" },
+  students: { en: "a student", bn: "একজন শিক্ষার্থী" },
+  student_private_details: {
+    en: "a student's private details",
+    bn: "একজন শিক্ষার্থীর ব্যক্তিগত তথ্য",
+  },
+  guardians: { en: "a guardian", bn: "একজন অভিভাবক" },
+  enrollments: { en: "an enrolment", bn: "একটি ভর্তি" },
 }
 
 /**
