@@ -1099,6 +1099,300 @@ export type Database = {
           },
         ]
       }
+      staff_compensation: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          hourly_rate_paisa: number | null
+          id: string
+          monthly_salary_paisa: number | null
+          note: string | null
+          staff_record_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from: string
+          effective_to?: string | null
+          hourly_rate_paisa?: number | null
+          id?: string
+          monthly_salary_paisa?: number | null
+          note?: string | null
+          staff_record_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          hourly_rate_paisa?: number | null
+          id?: string
+          monthly_salary_paisa?: number | null
+          note?: string | null
+          staff_record_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_compensation_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_compensation_staff_record_fk"
+            columns: ["workspace_id", "staff_record_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "staff_compensation_staff_record_fk"
+            columns: ["workspace_id", "staff_record_id"]
+            isOneToOne: false
+            referencedRelation: "staff_records"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "staff_compensation_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_documents: {
+        Row: {
+          created_at: string
+          expires_on: string | null
+          file_id: string
+          id: string
+          issued_on: string | null
+          kind: Database["public"]["Enums"]["staff_document_kind"]
+          label: string | null
+          staff_record_id: string
+          updated_at: string
+          uploaded_by: string | null
+          verified_at: string | null
+          verified_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_on?: string | null
+          file_id: string
+          id?: string
+          issued_on?: string | null
+          kind: Database["public"]["Enums"]["staff_document_kind"]
+          label?: string | null
+          staff_record_id: string
+          updated_at?: string
+          uploaded_by?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_on?: string | null
+          file_id?: string
+          id?: string
+          issued_on?: string | null
+          kind?: Database["public"]["Enums"]["staff_document_kind"]
+          label?: string | null
+          staff_record_id?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_documents_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_documents_staff_record_fk"
+            columns: ["workspace_id", "staff_record_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "staff_documents_staff_record_fk"
+            columns: ["workspace_id", "staff_record_id"]
+            isOneToOne: false
+            referencedRelation: "staff_records"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "staff_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_documents_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_documents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_records: {
+        Row: {
+          address: string | null
+          application_id: string | null
+          blood_group: string | null
+          created_at: string
+          created_by: string | null
+          date_of_birth: string | null
+          department: string | null
+          designation_label_id: string | null
+          emergency_contact: Json
+          employment_history: Json
+          employment_status: Database["public"]["Enums"]["staff_status"]
+          employment_type: Database["public"]["Enums"]["staff_employment_type"]
+          full_name: string
+          gender: string | null
+          id: string
+          joined_on: string | null
+          left_on: string | null
+          membership_id: string | null
+          nid_number: string | null
+          notes: string | null
+          personal_phone: string | null
+          qualifications: Json
+          staff_code: string
+          subject_ids: string[]
+          updated_at: string
+          user_id: string | null
+          work_email: string | null
+          work_phone: string | null
+          workspace_id: string
+        }
+        Insert: {
+          address?: string | null
+          application_id?: string | null
+          blood_group?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          department?: string | null
+          designation_label_id?: string | null
+          emergency_contact?: Json
+          employment_history?: Json
+          employment_status?: Database["public"]["Enums"]["staff_status"]
+          employment_type?: Database["public"]["Enums"]["staff_employment_type"]
+          full_name: string
+          gender?: string | null
+          id?: string
+          joined_on?: string | null
+          left_on?: string | null
+          membership_id?: string | null
+          nid_number?: string | null
+          notes?: string | null
+          personal_phone?: string | null
+          qualifications?: Json
+          staff_code: string
+          subject_ids?: string[]
+          updated_at?: string
+          user_id?: string | null
+          work_email?: string | null
+          work_phone?: string | null
+          workspace_id: string
+        }
+        Update: {
+          address?: string | null
+          application_id?: string | null
+          blood_group?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          department?: string | null
+          designation_label_id?: string | null
+          emergency_contact?: Json
+          employment_history?: Json
+          employment_status?: Database["public"]["Enums"]["staff_status"]
+          employment_type?: Database["public"]["Enums"]["staff_employment_type"]
+          full_name?: string
+          gender?: string | null
+          id?: string
+          joined_on?: string | null
+          left_on?: string | null
+          membership_id?: string | null
+          nid_number?: string | null
+          notes?: string | null
+          personal_phone?: string | null
+          qualifications?: Json
+          staff_code?: string
+          subject_ids?: string[]
+          updated_at?: string
+          user_id?: string | null
+          work_email?: string | null
+          work_phone?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_records_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_records_designation_label_id_fkey"
+            columns: ["designation_label_id"]
+            isOneToOne: false
+            referencedRelation: "custom_labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_records_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_events: {
         Row: {
           actor_id: string | null
@@ -1785,6 +2079,48 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_directory: {
+        Row: {
+          avatar_url: string | null
+          base_role: Database["public"]["Enums"]["member_role"] | null
+          department: string | null
+          designation_label: string | null
+          designation_label_id: string | null
+          employment_status: Database["public"]["Enums"]["staff_status"] | null
+          full_name: string | null
+          id: string | null
+          joined_on: string | null
+          staff_code: string | null
+          subject_ids: string[] | null
+          user_id: string | null
+          work_email: string | null
+          work_phone: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_records_designation_label_id_fkey"
+            columns: ["designation_label_id"]
+            isOneToOne: false
+            referencedRelation: "custom_labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
@@ -1874,6 +2210,23 @@ export type Database = {
       member_role: "owner" | "admin" | "teacher" | "staff" | "parent"
       member_status: "pending" | "active" | "removed"
       onboarding_path: "undecided" | "create_school" | "join_school"
+      staff_document_kind:
+        | "nid"
+        | "passport"
+        | "degree"
+        | "certificate"
+        | "contract"
+        | "appointment_letter"
+        | "police_clearance"
+        | "photo"
+        | "other"
+      staff_employment_type:
+        | "full_time"
+        | "part_time"
+        | "contract"
+        | "substitute"
+        | "volunteer"
+      staff_status: "pending_join" | "active" | "on_notice" | "left"
       subscription_status:
         | "trialing"
         | "active"
@@ -2042,6 +2395,25 @@ export const Constants = {
       member_role: ["owner", "admin", "teacher", "staff", "parent"],
       member_status: ["pending", "active", "removed"],
       onboarding_path: ["undecided", "create_school", "join_school"],
+      staff_document_kind: [
+        "nid",
+        "passport",
+        "degree",
+        "certificate",
+        "contract",
+        "appointment_letter",
+        "police_clearance",
+        "photo",
+        "other",
+      ],
+      staff_employment_type: [
+        "full_time",
+        "part_time",
+        "contract",
+        "substitute",
+        "volunteer",
+      ],
+      staff_status: ["pending_join", "active", "on_notice", "left"],
       subscription_status: [
         "trialing",
         "active",
