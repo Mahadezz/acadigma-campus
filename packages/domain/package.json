@@ -9,6 +9,7 @@
     "./academic": "./src/academic/index.ts",
     "./ai/redact": "./src/ai/redact.ts",
     "./audit": "./src/audit/index.ts",
+    "./dashboard": "./src/dashboard/index.ts",
     "./auth": "./src/auth/index.ts",
     "./nav": "./src/nav/index.ts",
     "./onboarding": "./src/onboarding/index.ts",
