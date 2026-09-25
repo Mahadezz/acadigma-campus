@@ -57,6 +57,17 @@ export const THROTTLE_LIMITS = {
 
 export type ThrottleBucket = keyof typeof THROTTLE_LIMITS
 
+/**
+ * Keys for the per-user buckets (D-101). `public.throttle_*` rewrites any
+ * `user:<bucket>` key to `user:<bucket>:<auth.uid()>`, so the caller can only
+ * ever touch their own row — unlike a salted hash of the user id, which the
+ * database could not tie to the session.
+ */
+export const USER_THROTTLE_KEYS = {
+  changePassword: "user:changePassword",
+  eiinCheck: "user:eiinCheck",
+} as const
+
 export type ThrottleState = { blocked: boolean; retryAfterSeconds: number }
 
 /** `unknown` in from PostgREST, parsed rather than cast (HANDBOOK §8: "unknown +

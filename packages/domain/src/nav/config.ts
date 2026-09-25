@@ -275,7 +275,9 @@ export const NAV_CONFIGS: Record<NavConfigKey, NavConfig> = {
           },
           {
             id: "school-settings",
-            href: "/app/settings/workspace",
+            // The settings home (F-OP-07, D-201); /app/settings/workspace is
+            // the lifecycle sub-page it will link to once F-ID-03 Part 8 ships.
+            href: "/app/settings",
             labelEn: "School settings",
             labelBn: "স্কুল সেটিংস",
             icon: "settings",

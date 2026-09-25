@@ -15,6 +15,11 @@ import type {
  * `GENERIC_AUDIT_TABLES` below, mirroring the migration's §4.2 DO block — kept as
  * one generated list rather than 48 more hand-typed rows, for the same reason the
  * SQL side loops instead of repeating itself.
+ *
+ * Sentences are what the UI renders. Since D-402 the generic rows read
+ * "{actor} added a holiday", not "created a holidays record"; the SQL table
+ * keeps its original wording, which no code reads (parity covers actions and
+ * tables, not sentence text).
  */
 export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
   {
@@ -550,6 +555,10 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // supabase/migrations/20260925300302_grade_scales.sql.
   "grade_scales",
   "grade_bands",
+  // F-AC-06 Part 2 (D-303) — 20260925300305_exams.sql.
+  "exams",
+  "exam_sections",
+  "exam_subjects",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -559,8 +568,48 @@ const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
     delete: "critical",
   }
 
-function humanizeTable(table: string): string {
-  return table.replace(/_/g, " ")
+/**
+ * What each generic-audit table holds, in words a school reads (D-402) — never
+ * the table name. A table missing here falls back to "a record", and
+ * `catalog.test.ts` fails, so a new audited table has to add its noun.
+ */
+export const GENERIC_TABLE_NOUNS: Readonly<
+  Record<string, { en: string; bn: string }>
+> = {
+  workspaces: { en: "the workspace", bn: "ওয়ার্কস্পেস" },
+  school_profiles: { en: "a school setting", bn: "স্কুলের একটি সেটিং" },
+  workspace_members: { en: "a member", bn: "একজন সদস্য" },
+  workspace_invitations: { en: "an invitation", bn: "একটি আমন্ত্রণ" },
+  custom_labels: { en: "a custom label", bn: "একটি কাস্টম লেবেল" },
+  files: { en: "a file", bn: "একটি ফাইল" },
+  profiles: { en: "a user profile", bn: "একটি ব্যবহারকারী প্রোফাইল" },
+  data_requests: { en: "a data request", bn: "একটি ডেটা অনুরোধ" },
+  plans: { en: "a plan", bn: "একটি প্ল্যান" },
+  plan_prices: { en: "a plan price", bn: "একটি প্ল্যানের মূল্য" },
+  plan_limits: { en: "a plan limit", bn: "একটি প্ল্যানের সীমা" },
+  plan_modules: { en: "a plan module", bn: "একটি প্ল্যান মডিউল" },
+  subscriptions: { en: "the subscription", bn: "সাবস্ক্রিপশন" },
+  workspace_member_capabilities: {
+    en: "a member's permissions",
+    bn: "একজন সদস্যের অনুমতি",
+  },
+  user_preferences: { en: "their preferences", bn: "নিজের পছন্দসমূহ" },
+  device_registrations: { en: "a device", bn: "একটি ডিভাইস" },
+  staff_records: { en: "a staff record", bn: "একটি স্টাফ রেকর্ড" },
+  staff_compensation: { en: "a staff pay record", bn: "একটি বেতন রেকর্ড" },
+  staff_documents: { en: "a staff document", bn: "একটি স্টাফ নথি" },
+  grade_levels: { en: "a class", bn: "একটি শ্রেণি" },
+  academic_years: { en: "an academic year", bn: "একটি শিক্ষাবর্ষ" },
+  holidays: { en: "a holiday", bn: "একটি ছুটি" },
+  working_day_overrides: {
+    en: "a working-day change",
+    bn: "একটি কর্মদিবস পরিবর্তন",
+  },
+  grade_scales: { en: "a grading scale", bn: "একটি গ্রেডিং স্কেল" },
+  grade_bands: { en: "a grade band", bn: "একটি গ্রেড ব্যান্ড" },
+  exams: { en: "an exam", bn: "একটি পরীক্ষা" },
+  exam_sections: { en: "an exam's section", bn: "পরীক্ষার একটি সেকশন" },
+  exam_subjects: { en: "an exam paper", bn: "একটি পরীক্ষার পেপার" },
 }
 
 /**
@@ -575,22 +624,29 @@ const GENERIC_SEVERITY_OVERRIDES: Readonly<
   grade_bands: { update: "info", delete: "info" },
 }
 
-/** The three `<table>.<op>` rows the trigger writes for one table (migration §4.2). */
+const GENERIC_VERBS = {
+  insert: { en: "added", bn: "যোগ করেছেন" },
+  update: { en: "updated", bn: "হালনাগাদ করেছেন" },
+  delete: { en: "removed", bn: "মুছে ফেলেছেন" },
+} as const
+
+/**
+ * The three `<table>.<op>` rows the trigger writes for one table (migration
+ * §4.2), phrased for a reader: "{actor} added a holiday". The changed columns
+ * are not in the sentence; the detail sheet lists them.
+ */
 export function genericActionsForTable(
   table: string
 ): readonly AuditActionCatalogEntry[] {
-  const label = humanizeTable(table)
+  const noun = GENERIC_TABLE_NOUNS[table] ?? {
+    en: "a record",
+    bn: "একটি রেকর্ড",
+  }
   return (["insert", "update", "delete"] as const).map((op) => ({
     action: `${table}.${op}`,
     severity: GENERIC_SEVERITY_OVERRIDES[table]?.[op] ?? GENERIC_SEVERITY[op],
-    sentenceEn:
-      op === "update"
-        ? `{actor} updated a ${label} record ({fields})`
-        : `{actor} ${op === "insert" ? "created" : "deleted"} a ${label} record`,
-    sentenceBn:
-      op === "update"
-        ? `{actor} একটি ${label} রেকর্ড হালনাগাদ করেছেন ({fields})`
-        : `{actor} একটি ${label} রেকর্ড ${op === "insert" ? "তৈরি করেছেন" : "মুছে ফেলেছেন"}`,
+    sentenceEn: `{actor} ${GENERIC_VERBS[op].en} ${noun.en}`,
+    sentenceBn: `{actor} ${noun.bn} ${GENERIC_VERBS[op].bn}`,
     isGeneric: true,
   }))
 }

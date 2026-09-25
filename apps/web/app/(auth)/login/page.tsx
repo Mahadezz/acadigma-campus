@@ -53,7 +53,12 @@ export default async function LoginPage({
           </InlineAlert>
         </div>
       ) : null}
-      <LoginForm t={t.auth.login} network={t.auth.network} next={next} />
+      <LoginForm
+        t={t.auth.login}
+        network={t.auth.network}
+        locale={locale}
+        next={next}
+      />
     </AuthCard>
   )
 }

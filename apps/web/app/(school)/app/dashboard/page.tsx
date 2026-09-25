@@ -1,13 +1,21 @@
-import { todayIn } from "@acadigma/domain/time"
+import { listAuditEventsInputSchema } from "@acadigma/contracts/audit"
+import { getDashboardSummary, listAuditEvents } from "@acadigma/db/repositories"
+import { renderAuditSentence } from "@acadigma/domain/audit"
 import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@acadigma/ui/components/card"
-import { StatusChip } from "@acadigma/ui/primitives/status-chip"
+  buildSetupChecklist,
+  isCuratedAuditAction,
+  trialDaysLeft,
+} from "@acadigma/domain/dashboard"
+import { can } from "@acadigma/domain/permissions"
+import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { getMessages } from "@/lib/i18n"
+import type { Messages } from "@/lib/i18n"
+import { IMPLEMENTED_NAV_ROUTES } from "@/lib/implemented-routes"
+import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
+
+import { DashboardView } from "./dashboard-view"
 
 import type { Metadata } from "next"
 
@@ -16,40 +24,110 @@ export const metadata: Metadata = {
 }
 
 /**
- * Landing screen for a school workspace.
+ * The school's "today" dashboard (D-400). Every number is a real count from
+ * `getDashboardSummary`; attendance and results are empty slots until the
+ * Parts that record them ship. View-only: this page never writes.
  *
- * It resolves the workspace (and re-runs the shell gate) again rather than
- * reading it from the layout: React de-duplicates the underlying request
- * within a render pass, and a page that states its own requirement cannot be
- * moved out from under its guard by accident, including by a client-side
- * navigation that skips the layout's own re-render (PR #30 review).
+ * It re-runs the shell gate rather than trusting the layout: a page that
+ * states its own requirement cannot be moved out from under its guard by a
+ * client-side navigation that skips the layout (PR #30 review).
  */
 export default async function DashboardPage() {
-  const { role, plan, workspaceId } = await requireShell("school")
-  // "Today" is the workspace's day, not the server's (ARCHITECTURE §4).
-  const today = todayIn()
+  const ctx = await requireShell("school")
+  const { locale, t } = await getMessages()
+  const d = t.dashboard
+  const client = await createClient()
+
+  const isManager = ctx.role === "owner" || ctx.role === "admin"
+  const canReadAudit = can(ctx.role, "audit.read")
+
+  const [summary, audit] = await Promise.all([
+    getDashboardSummary(ctx, client),
+    canReadAudit
+      ? listAuditEvents(
+          ctx,
+          client,
+          listAuditEventsInputSchema.parse({ limit: 30 })
+        )
+      : null,
+  ])
+
+  if (!summary.ok) {
+    return <InlineAlert tone="error">{d.loadError}</InlineAlert>
+  }
+  const s = summary.data
+  // Western digits in both languages (DESIGN-SYSTEM §1.6).
+  const numberLocale = locale === "bn" ? "bn-BD-u-nu-latn" : "en-GB"
+
+  const dateLabel = new Intl.DateTimeFormat(numberLocale, {
+    timeZone: s.timezone,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date())
+
+  const when = new Intl.DateTimeFormat(numberLocale, {
+    timeZone: s.timezone,
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  })
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold tracking-tight">
-          Today · {today}
-        </h2>
-        <StatusChip tone={plan ? "positive" : "neutral"}>
-          {plan ?? "No plan"}
-        </StatusChip>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Workspace resolved</CardTitle>
-          <CardDescription>
-            Membership was verified against <code>workspace_members</code>{" "}
-            before this screen rendered. Role <strong>{role}</strong>, workspace{" "}
-            <code className="break-all">{workspaceId}</code>.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    </div>
+    <DashboardView
+      t={d}
+      dateLabel={dateLabel}
+      schoolName={s.headerLine1 ?? s.schoolName}
+      subtitle={s.headerLine2}
+      isManager={isManager}
+      plan={{
+        label: ctx.plan ?? d.plan.noPlan,
+        trial: trialLabel(d, trialDaysLeft(s.trialEndsAt, s.timezone)),
+        readOnly: s.accessMode === "read_only",
+      }}
+      membersByRole={s.membersByRole}
+      staffRecordCount={s.staffRecordCount}
+      checklist={buildSetupChecklist({
+        hasSchoolProfile: Boolean(s.headerLine1) || s.hasLogo,
+        teacherCount: s.membersByRole.teacher,
+        staffRecordCount: s.staffRecordCount,
+        currentAcademicYearCount: s.currentAcademicYearCount,
+        gradeLevelCount: s.gradeLevelCount,
+        // No student table exists yet (F-AC-02).
+        studentCount: 0,
+      }).map((step) => ({
+        ...step,
+        href: IMPLEMENTED_NAV_ROUTES.has(step.href) ? step.href : null,
+      }))}
+      activity={
+        // Hidden, not shown empty, when the caller may not read the trail or
+        // it failed to load — "nothing has changed" would be a false claim.
+        audit?.ok
+          ? audit.data.items
+              .filter((event) => isCuratedAuditAction(event.action))
+              .slice(0, 5)
+              .map((event) => ({
+                id: event.id,
+                sentence: renderAuditSentence(event.action, locale, {
+                  actor: event.actorName,
+                  subject: event.subjectName,
+                }),
+                when: when.format(new Date(event.createdAt)),
+              }))
+          : null
+      }
+    />
   )
+}
+
+function trialLabel(
+  d: Messages["dashboard"],
+  days: number | null
+): string | null {
+  if (days === null) return null
+  if (days < 0) return d.plan.trialEnded
+  if (days === 0) return d.plan.trialLastDay
+  if (days === 1) return d.plan.trialOneDayLeft
+  return d.plan.trialDaysLeft.replace("{days}", String(days))
 }
