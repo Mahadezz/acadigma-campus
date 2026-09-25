@@ -842,5 +842,30 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "reports": {
+    "title": "Reports",
+    "description": "Rendered PDFs — for now, a test document proving the school's letterhead.",
+    "generate": "Generate sample document",
+    "generating": "Generating…",
+    "generated": "Generated. Ready to download below.",
+    "error": "Could not generate this report. Try again.",
+    "empty": "No reports generated yet.",
+    "recent": "Recent runs",
+    "status": {
+      "queued": "Queued",
+      "rendering": "Rendering…",
+      "ready": "Ready",
+      "failed": "Failed",
+      "expired": "Expired"
+    },
+    "detail": {
+      "title": "Report run",
+      "back": "Back to reports",
+      "download": "Download PDF",
+      "requestedAt": "Requested",
+      "notReady": "This report is not ready yet.",
+      "failedNote": "This report failed to render."
+    }
   }
 }

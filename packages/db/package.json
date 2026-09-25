@@ -10,6 +10,7 @@
     "./repositories": "./src/repositories/index.ts",
     "./workspace-context": "./src/workspace-context.ts",
     "./types": "./src/types.generated.ts",
+    "./repositories/reports": "./src/repositories/reports.ts",
     "./repositories/settings": "./src/repositories/settings.ts",
     "./repositories/staff": "./src/repositories/staff.ts"
   },

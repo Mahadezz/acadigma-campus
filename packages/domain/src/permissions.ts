@@ -96,6 +96,13 @@ export const ACTIONS = [
   "modules.visibility.write",
   "workspace.archive",
   "platform.workspace.suspend",
+  // F-OP-03 §2 — Reports and PDF. Only the two keys Parts 1-2 need: opening
+  // the reports area and rendering the pipeline's own internal proof kind
+  // ('sample'). The spec's full per-real-kind matrix (report.render.report_card,
+  // report.comment.*, report.publish, ...) is added when those Parts ship —
+  // none of them exist yet (D-204).
+  "report.view",
+  "report.render.sample",
 ] as const
 
 export type Action = (typeof ACTIONS)[number]
@@ -146,6 +153,9 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "audit.read",
     "audit.read.self",
     "audit.export",
+    // F-OP-03 §2 — Reports and PDF (D-204)
+    "report.view",
+    "report.render.sample",
   ],
   // Runs the school day to day. Money and owner-only settings (modules, danger
   // zone) stay with the owner; the F-OP-07 policy blobs do not (RLS §3.1).
@@ -188,6 +198,9 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // the trail must be able to record what an admin did without that
     // admin curating it.
     "audit.read.self",
+    // F-OP-03 §2 — Reports and PDF (D-204)
+    "report.view",
+    "report.render.sample",
   ],
   teacher: [
     "attendance.read",
@@ -208,6 +221,11 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.leave",
     // Audit (F-ID-09 §2)
     "audit.read.self",
+    // F-OP-03 §2 — Reports and PDF (D-204): "own sections" row-scoping for
+    // the real render.* keys is Part 3+; Parts 1-2's 'sample' kind carries
+    // no student data, so a plain role grant is enough.
+    "report.view",
+    "report.render.sample",
   ],
   // Office staff: sees the school, changes almost nothing.
   staff: [

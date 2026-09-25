@@ -1,0 +1,17 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SampleDocument — Bengali shaping and per-school letterhead (golden) > matches the committed golden text extraction (layout/content regression) 1`] = `
+"
+
+†‰
+আদশর্ উচ্চ িবদ্যালয়
+Dhaka, Bangladesh
+EIIN 123456
+Sample document
+F-OP-03 Part 1 — PDF foundation demo
+Hello — this page proves the letterhead renders correctly.
+িশক্ষাথীী: রিহমা আক্তার
+ক্ষ ক্ষমতা পরীক্ষা
+Sample number: ১২৩৪
+Generated ২৫/০৯/২০২৬, ০৯:৩০ · School copyপৃষ্ঠা ১ / ১"
+`;
