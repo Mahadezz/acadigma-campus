@@ -18,6 +18,7 @@
     "./identity/auth": "./src/identity/auth.ts",
     "./identity/workspace": "./src/identity/workspace.ts",
     "./identity/school": "./src/identity/school.ts",
+    "./operations/reports": "./src/operations/reports.ts",
     "./operations/staff": "./src/operations/staff.ts",
     "./audit": "./src/audit.ts",
     "./academics/grading": "./src/academics/grading.ts",

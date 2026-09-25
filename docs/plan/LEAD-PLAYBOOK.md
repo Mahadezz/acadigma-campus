@@ -78,8 +78,8 @@ BUILD-LOG.md, HANDOFF-<date>.md) and memory note `acadigma-campus.md`.
   - `react-reviewer` (any .tsx), `typescript-reviewer` (TS logic);
   - `e2e-runner` for Playwright work; `ponytail-review` for bloat;
   - `gstack` for QA/browser flows and live-site bug hunts.
-  Send ALL findings back to the builder as ONE batch; re-verify security
-  fixes with the same security reviewer before merging.
+    Send ALL findings back to the builder as ONE batch; re-verify security
+    fixes with the same security reviewer before merging.
 - **Frontend:** shadcn components only — the ones in `packages/ui`, else
   copy from the local registry `F:\shadcn-ui\apps\v4\registry\new-york-v4`.
   Never hand-roll a replacement. Creative/animated (Aceternity,

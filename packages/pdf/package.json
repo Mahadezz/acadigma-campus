@@ -1,0 +1,28 @@
+{
+  "name": "@acadigma/pdf",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "F-OP-03 Parts 1-2 — the print/PDF rendering engine: document shell (header/footer/watermark/signature block), Bengali + Latin font embedding, locale-aware number/date formatting. No I/O — callers pass in already-resolved branding and data.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@acadigma/domain": "workspace:*",
+    "@react-pdf/renderer": "4.9.0",
+    "react": "^19"
+  },
+  "devDependencies": {
+    "@acadigma/config": "workspace:*",
+    "@react-pdf/types": "2.14.0",
+    "@types/pdf-parse": "1.1.5",
+    "@types/react": "19.3.0",
+    "pdf-parse": "1.1.1",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

@@ -60,7 +60,7 @@ Two mechanics to keep in mind when reading these:
 | commerce   |      15 | —       |
 | billing    |      11 | 7       |
 | fees       |       9 | —       |
-| operations |      22 | —       |
+| operations |      24 | —       |
 | platform   |      11 | 9       |
 | jobs       |       4 | 4       |
 | **total**  | **129** | **33**  |
@@ -692,7 +692,7 @@ The reason is the blast radius. A school's gateway credentials can move that sch
 
 ## 6. Operations
 
-23 tables: hiring, staff records, cover, print, messaging, and the personal workspace.
+25 tables: hiring, staff records, cover, print, messaging, reports (F-OP-03 Parts 1-2), and the personal workspace.
 
 ```mermaid
 erDiagram
@@ -757,6 +757,14 @@ So compensation lives in `staff_compensation`, a separate table whose policies a
 The cover-teacher payroll calculation needs the rate but must not be able to _see_ it. It calls `app.staff_hourly_rate(workspace_id, user_id, on_date)`, a `SECURITY DEFINER` function that returns one number for one date within one named workspace. Three arguments, not two: a person can be staffed at more than one school (PRODUCT-DECISIONS §7); the function filters and authorizes against exactly the workspace the caller names, rather than resolving "the" workspace implicitly and risking a rate from the wrong school for someone staffed at two (D-63 item 9, AC-30). The caller gets the figure the calculation needs and no access to the row it came from. `payroll_impact_logs` then snapshots that number, so re-running a month later against a changed rate cannot rewrite history.
 
 `diary_entries` is the one table whose SELECT policy is **creator-only even for owners** — a private diary that an admin can read is not a diary.
+
+### 6.2 `report_runs` and `report_run_items` (F-OP-03 Parts 1-2, D-204/D-205)
+
+`report_runs` — one row per requested PDF render, `report_kind` (`'sample'` only so far — real kinds land with the Parts that build the exam/marks data they need; additive `alter type ... add value`, no shape change here), `report_status` (`queued -> rendering -> ready|failed`; `expired` is reserved for the 30-day cron this Part does not build), `params jsonb`, `report_locale` (`bn`/`en`), `requested_by`/`requested_at`, `started_at`/`completed_at`/`duration_ms`, `error_code`/`error_detail`, `idempotency_key` (unique per `(workspace_id, idempotency_key)` while the run is `queued|rendering|ready` — a partial index, so a failed/expired run never blocks a fresh attempt), `expires_at` (default +30 days, not yet swept), `file_id -> files` (always `null` in this PR — D-205: no Storage row is created yet).
+
+RLS: SELECT `has_role(workspace_id,{owner,admin,teacher})` **and** (`requested_by = self` **or** `has_role(...,{owner,admin})`) — a teacher sees only their own runs. INSERT the same shape, `with check`ed so a teacher cannot attribute a run to someone else. **No UPDATE or DELETE policy for `authenticated` at all** — `report_runs` has no client-writable status; only the render pipeline, running under `withServiceRole`, moves a run from `queued` to `ready`/`failed`. Freeze, audit and `attach_require_writable` (D-300) all attached, per every tenant table.
+
+`report_run_items` — per-student/staff/section page ranges for a bulk run (Part 5). Ships now (spec's own Part 2 scope) but no code in this PR writes to it; SELECT policy joins back to the parent run's requester the same way. No INSERT grant for `authenticated` — bulk rendering is entirely a Part 5 concern. `report_run_items.report_run_id`/`workspace_id` is a composite FK to `report_runs (id, workspace_id)` (which carries its own `unique (id, workspace_id)`) — an item's `workspace_id` is constrained by Postgres to match its parent run's, not just left to application code, closing the gap a plain single-column `report_run_id -> report_runs(id)` FK would leave open (pgTAP-confirmed, `40_report_runs.sql`).
 
 ---
 

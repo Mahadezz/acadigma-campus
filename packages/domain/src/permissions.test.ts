@@ -243,6 +243,8 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "audit.read.platform": [...rolesWithAction("audit.read.platform")],
     "audit.read.self": [...rolesWithAction("audit.read.self")],
     "audit.export": [...rolesWithAction("audit.export")],
+    "report.view": [...rolesWithAction("report.view")],
+    "report.render.sample": [...rolesWithAction("report.render.sample")],
     // F-AC-01 §2 (D-102): asserted for real, not against the matrix itself.
     "academics.structure.read": ["owner", "admin", "teacher", "staff"],
     "academics.section.write": ["owner", "admin"],
@@ -306,6 +308,22 @@ describe("can: deny-by-default on inputs the type system says cannot happen", ()
     expect(() => assertCan("superuser" as Role, "billing.manage")).toThrow(
       PermissionDeniedError
     )
+  })
+})
+
+describe("F-OP-03 §2 reports and PDF — Parts 1-2 keys", () => {
+  it("grants report.view and report.render.sample to owner, admin and teacher", () => {
+    for (const role of ["owner", "admin", "teacher"] as const) {
+      expect(can(role, "report.view")).toBe(true)
+      expect(can(role, "report.render.sample")).toBe(true)
+    }
+  })
+
+  it("denies both to staff, parent and platform (spec §2: every one of those rows is '—')", () => {
+    for (const role of ["staff", "parent", "platform"] as const) {
+      expect(can(role, "report.view")).toBe(false)
+      expect(can(role, "report.render.sample")).toBe(false)
+    }
   })
 })
 

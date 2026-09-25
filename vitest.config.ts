@@ -73,6 +73,17 @@ export default defineConfig({
       },
       {
         test: {
+          name: "pdf",
+          root: "./packages/pdf",
+          environment: "node",
+          include: ["src/**/*.test.{ts,tsx}"],
+          // @react-pdf/renderer's own font/render pipeline is slower than a
+          // pure-domain unit test; the golden suite renders several PDFs.
+          testTimeout: 20_000,
+        },
+      },
+      {
+        test: {
           name: "contracts",
           root: "./packages/contracts",
           environment: "node",

@@ -1807,6 +1807,164 @@ export type Database = {
           },
         ]
       }
+      report_run_items: {
+        Row: {
+          created_at: string
+          error_detail: string | null
+          file_id: string | null
+          id: string
+          page_from: number | null
+          page_to: number | null
+          report_run_id: string
+          status: Database["public"]["Enums"]["report_status"]
+          subject_id: string
+          subject_type: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_detail?: string | null
+          file_id?: string | null
+          id?: string
+          page_from?: number | null
+          page_to?: number | null
+          report_run_id: string
+          status?: Database["public"]["Enums"]["report_status"]
+          subject_id: string
+          subject_type: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          error_detail?: string | null
+          file_id?: string | null
+          id?: string
+          page_from?: number | null
+          page_to?: number | null
+          report_run_id?: string
+          status?: Database["public"]["Enums"]["report_status"]
+          subject_id?: string
+          subject_type?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_run_items_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_run_items_run_workspace_fkey"
+            columns: ["report_run_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "report_runs"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "report_run_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          error_detail: string | null
+          expires_at: string
+          file_id: string | null
+          id: string
+          idempotency_key: string
+          item_count: number | null
+          kind: Database["public"]["Enums"]["report_kind"]
+          locale: Database["public"]["Enums"]["report_locale"]
+          page_count: number | null
+          params: Json
+          requested_at: string
+          requested_by: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["report_status"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          error_detail?: string | null
+          expires_at?: string
+          file_id?: string | null
+          id?: string
+          idempotency_key: string
+          item_count?: number | null
+          kind: Database["public"]["Enums"]["report_kind"]
+          locale: Database["public"]["Enums"]["report_locale"]
+          page_count?: number | null
+          params?: Json
+          requested_at?: string
+          requested_by?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          error_detail?: string | null
+          expires_at?: string
+          file_id?: string | null
+          id?: string
+          idempotency_key?: string
+          item_count?: number | null
+          kind?: Database["public"]["Enums"]["report_kind"]
+          locale?: Database["public"]["Enums"]["report_locale"]
+          page_count?: number | null
+          params?: Json
+          requested_at?: string
+          requested_by?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_runs_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_profiles: {
         Row: {
           academic_settings: Json
@@ -3422,6 +3580,9 @@ export type Database = {
       member_role: "owner" | "admin" | "teacher" | "staff" | "parent"
       member_status: "pending" | "active" | "removed"
       onboarding_path: "undecided" | "create_school" | "join_school"
+      report_kind: "sample"
+      report_locale: "bn" | "en"
+      report_status: "queued" | "rendering" | "ready" | "failed" | "expired"
       staff_document_kind:
         | "nid"
         | "passport"
@@ -3661,6 +3822,9 @@ export const Constants = {
       member_role: ["owner", "admin", "teacher", "staff", "parent"],
       member_status: ["pending", "active", "removed"],
       onboarding_path: ["undecided", "create_school", "join_school"],
+      report_kind: ["sample"],
+      report_locale: ["bn", "en"],
+      report_status: ["queued", "rendering", "ready", "failed", "expired"],
       staff_document_kind: [
         "nid",
         "passport",
