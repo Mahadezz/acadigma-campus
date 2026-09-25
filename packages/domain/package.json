@@ -1,6 +1,6 @@
 {
   "name": "@acadigma/domain",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Pure business rules: permissions, money, id formatting, workspace time, plans/limits. No I/O.",
@@ -11,6 +11,7 @@
     "./audit": "./src/audit/index.ts",
     "./dashboard": "./src/dashboard/index.ts",
     "./auth": "./src/auth/index.ts",
+    "./grading": "./src/grading/index.ts",
     "./nav": "./src/nav/index.ts",
     "./onboarding": "./src/onboarding/index.ts",
     "./permissions": "./src/permissions.ts",
