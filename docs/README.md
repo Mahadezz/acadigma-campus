@@ -67,18 +67,20 @@ A spec describes _what_; `ARCHITECTURE.md` fixes _how_. Each spec breaks into Pa
 
 ### 01-identity/ — who you are and which workspace you are in
 
-| File                                                                                                  | One line                                                                                     |
-| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| [`F-ID-01-authentication.md`](features/01-identity/F-ID-01-authentication.md)                         | Sign-up, sign-in, sessions, password and OTP flows, verification, and the account lifecycle. |
-| [`F-ID-02-profiles-and-preferences.md`](features/01-identity/F-ID-02-profiles-and-preferences.md)     | The `profiles` record, display data, language and notification preferences.                  |
-| [`F-ID-03-workspaces-and-membership.md`](features/01-identity/F-ID-03-workspaces-and-membership.md)   | Workspaces, `workspace_members`, roles, and the tenancy model the whole app rests on.        |
-| [`F-ID-04-invitations-and-join-codes.md`](features/01-identity/F-ID-04-invitations-and-join-codes.md) | Inviting staff, joining with a code, email binding, expiry and single use.                   |
-| [`F-ID-05-onboarding.md`](features/01-identity/F-ID-05-onboarding.md)                                 | First run: create a school or join one, and where a user lands afterwards.                   |
-| [`F-ID-06-personal-workspace.md`](features/01-identity/F-ID-06-personal-workspace.md)                 | The private space every user gets: tutoring students, files, diary, CV.                      |
-| [`F-ID-07-notifications.md`](features/01-identity/F-ID-07-notifications.md)                           | Notification types, delivery, read state and preferences.                                    |
-| [`F-ID-08-platform-console-shell.md`](features/01-identity/F-ID-08-platform-console-shell.md)         | The `/platform` shell for `is_platform_admin` accounts and the queues it hosts.              |
-| [`F-ID-09-audit-viewer.md`](features/01-identity/F-ID-09-audit-viewer.md)                             | Reading the append-only audit trail: who changed what, when, and under which correlation id. |
-| [`README.md`](features/01-identity/README.md)                                                         | Area overview: how the nine identity features fit together.                                  |
+| File                                                                                                  | One line                                                                                                         |
+| ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [`F-ID-01-authentication.md`](features/01-identity/F-ID-01-authentication.md)                         | Sign-up, sign-in, sessions, password and OTP flows, verification, and the account lifecycle.                     |
+| [`F-ID-02-profiles-and-preferences.md`](features/01-identity/F-ID-02-profiles-and-preferences.md)     | The `profiles` record, display data, language and notification preferences.                                      |
+| [`F-ID-03-workspaces-and-membership.md`](features/01-identity/F-ID-03-workspaces-and-membership.md)   | Workspaces, `workspace_members`, roles, and the tenancy model the whole app rests on.                            |
+| [`F-ID-04-invitations-and-join-codes.md`](features/01-identity/F-ID-04-invitations-and-join-codes.md) | Inviting staff, joining with a code, email binding, expiry and single use.                                       |
+| [`F-ID-05-onboarding.md`](features/01-identity/F-ID-05-onboarding.md)                                 | First run: create a school or join one, and where a user lands afterwards.                                       |
+| [`F-ID-06-personal-workspace.md`](features/01-identity/F-ID-06-personal-workspace.md)                 | The private space every user gets: tutoring students, files, diary, CV.                                          |
+| [`F-ID-07-notifications.md`](features/01-identity/F-ID-07-notifications.md)                           | Notification types, delivery, read state and preferences.                                                        |
+| [`F-ID-08-platform-console-shell.md`](features/01-identity/F-ID-08-platform-console-shell.md)         | The `/platform` shell for `is_platform_admin` accounts and the queues it hosts.                                  |
+| [`F-ID-09-audit-viewer.md`](features/01-identity/F-ID-09-audit-viewer.md)                             | Reading the append-only audit trail: who changed what, when, and under which correlation id.                     |
+| [`F-ID-10-basic-mode.md`](features/01-identity/F-ID-10-basic-mode.md)                                 | Basic mode: a per-user, class-by-class simple layout with bigger text and targets, plain confirmations and help. |
+| [`F-ID-11-offline.md`](features/01-identity/F-ID-11-offline.md)                                       | Offline across the app: read cache, one outbox replaying the same server actions, conflicts and purges.          |
+| [`README.md`](features/01-identity/README.md)                                                         | Area overview: how the eleven identity features fit together.                                                    |
 
 ### 02-academics/ — the school's core records
 
