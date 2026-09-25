@@ -480,6 +480,13 @@ Tests: every override requires a reason and writes an event + audit row; a compe
 
 ## 11. Open questions
 
+**Read-only enforcement on every write path (shipped, D-300):**
+
+- `workspaces.access_mode = 'read_only'` now refuses **every** tenant write — create, update and delete — not only creates that grow a counter. D-62's "allow everything else" and the old banner text ("edits and deletes still work") are superseded. Still allowed: every read, export, billing/upgrade (the billing tables are exempt and the billing path is privileged), sign-out and switching workspace (neither writes a tenant table), and the individual's own records (notifications, consent, data requests).
+- Server: every tenant write server action calls `requireWritable` after the policy check and returns `err(planReadOnlyApiError(...))` — `payment_required` with the reason and the "nothing has been deleted" sentence the shell banner also shows. Today that is `updateSchoolSettings`; `scripts/check-require-writable.mjs` (CI `contracts` job) fails any new write action or `POST/PUT/PATCH/DELETE` route under a workspace context that does not call it.
+- Database: `app.tg_require_writable()` trigger on every guarded tenant table (DATA-MODEL §1.2), with a catalog invariant in `supabase/tests/50_require_writable.sql`.
+- Per-key over-limit semantics (§5.6, `LIMIT_EXCEEDED` via `checkLimit`) are unchanged — that is the separate, finer mechanism for a paid plan over one limit.
+
 **Part 4 status (shipped) and deviations from this spec, per D-62:**
 
 - The `free` school plan this spec's §4.2/§5.1/§8 Part 4 describes trial expiry falling back onto no longer exists — D-42 retired it before Part 4 was built (§3.4's seed only ever had `personal_free`/`starter`/`pro`/`enterprise`). D-62: an expired trial's workspace stays on `plan_id = pro` and is put into `access_mode = 'read_only'` (the mechanism Part 3 already built for §5.6) instead of a plan change. §9 AC1/AC3/AC4's literal "the plan becomes Free" wording does not hold under the current schema; the read-only-over-limit _behaviour_ those ACs actually test for does.

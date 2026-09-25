@@ -6,6 +6,7 @@ import {
   paisaSchema,
   uuidSchema,
 } from "./common"
+import { apiError, type ApiError } from "./errors"
 
 /**
  * Zod schemas for F-CM-06 Parts 1-3 (plans, subscriptions, the limits engine).
@@ -230,6 +231,21 @@ export const planReadOnlyErrorSchema = z.object({
   reason: z.string().nullable(),
 })
 export type PlanReadOnlyErrorPayload = z.infer<typeof planReadOnlyErrorSchema>
+
+/**
+ * The `ApiError` a server action returns for `PLAN_READ_ONLY` (D-300): every
+ * action already returns `Result<T, ApiError>`, so the refusal travels in that
+ * envelope as `payment_required` (402 — paying is what lifts it) with a
+ * user-safe message any form can show as-is.
+ */
+export function planReadOnlyApiError(
+  payload: PlanReadOnlyErrorPayload
+): ApiError {
+  return apiError(
+    "payment_required",
+    `${payload.reason ?? "This workspace is read-only."} Upgrade to make changes — you can still view and export everything, and nothing has been deleted.`
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Trial expiry job (Part 4) — `GET|POST /api/cron/billing/tick`

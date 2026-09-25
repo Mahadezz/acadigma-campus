@@ -18,10 +18,12 @@ import {
   apiError,
   apiErrorFromZod,
   err,
+  planReadOnlyApiError,
   schoolSettingsPatchSchema,
   type ApiError,
   type Result,
 } from "@acadigma/contracts"
+import { requireWritable } from "@acadigma/db/repositories"
 import {
   getSchoolSettings as getSchoolSettingsRepo,
   updateSchoolSettings as updateSchoolSettingsRepo,
@@ -67,6 +69,9 @@ export async function updateSchoolSettings(
   }
 
   const supabase = await createClient()
+  const writable = await requireWritable(ctx, supabase)
+  if (!writable.ok) return err(planReadOnlyApiError(writable.error))
+
   const result = await updateSchoolSettingsRepo(supabase, ctx, parsed.data)
   if (result.ok) revalidatePath(SETTINGS_PATH)
   return result

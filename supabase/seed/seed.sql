@@ -221,6 +221,41 @@ values
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------
+-- 6b. A second school whose trial has ended — access_mode = read_only
+--     (D-62, D-300), for the read-only Playwright journey.
+--     lapsed@acadigma.test owns it.
+-- ---------------------------------------------------------------------
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+values
+  ('00000000-0000-0000-0000-000000000000',
+   '5eed0000-0000-4000-a000-000000000004',
+   'authenticated', 'authenticated', 'lapsed@acadigma.test',
+   -- nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash -- dev-only fixture hash of the literal string `password123`, never used outside `supabase db reset`; not a leaked real credential.
+   '$2a$10$PZTfVVhZa5rgDwgoJrTVOOuhJ6Dq5Xm0OeHAzAGjCPZocfdMa6wfy',
+   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   '{"full_name":"Nasrin Sultana"}'::jsonb, now(), now())
+on conflict (id) do nothing;
+
+insert into public.workspaces (id, type, name, slug, owner_id, created_by, status)
+values ('5eed0000-0000-4000-b000-000000000002', 'school',
+        'Acadigma Lapsed School', 'acadigma-lapsed-school',
+        '5eed0000-0000-4000-a000-000000000004',
+        '5eed0000-0000-4000-a000-000000000004', 'active')
+on conflict (id) do nothing;
+
+update public.profiles
+   set phone = '+8801711000004',
+       onboarding_completed_at = now(),
+       locale = 'en',
+       last_active_workspace_id = '5eed0000-0000-4000-b000-000000000002'
+ where id = '5eed0000-0000-4000-a000-000000000004';
+
+select app.set_access_mode('5eed0000-0000-4000-b000-000000000002', 'read_only',
+                           'Your Pro trial has ended.');
+
+-- ---------------------------------------------------------------------
 -- 7. Preferences worth looking at in the UI
 -- ---------------------------------------------------------------------
 update public.user_preferences
@@ -250,7 +285,8 @@ begin
   raise notice '  plan: %   trial ends: %', v_plan, v_trial;
   raise notice '  invite code: ACD-DEMO-2026';
   raise notice '  owner@acadigma.test / teacher@acadigma.test / parent@acadigma.test';
-  raise notice '  password for all three: password123';
+  raise notice '  lapsed@acadigma.test owns Acadigma Lapsed School (read-only)';
+  raise notice '  password for all four: password123';
   raise notice '--------------------------------------------------------';
 end
 $$;
