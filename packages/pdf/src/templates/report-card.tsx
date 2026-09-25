@@ -37,7 +37,11 @@ const styles = StyleSheet.create({
   studentField: { width: "50%", fontSize: 9 },
   studentFieldLabel: { color: "#6b6b68" },
   table: { marginTop: 10 },
-  tableRow: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#e2e2df" },
+  tableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#e2e2df",
+  },
   tableHeaderRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
@@ -90,13 +94,7 @@ export type ReportCardDocumentProps = ReportCardDto & {
   watermarkText?: string
 }
 
-function Field({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function Field({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.studentField}>
       <ScriptText text={`${label}: `} style={styles.studentFieldLabel} />
@@ -154,10 +152,7 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
       footerNote={props.footerNote}
       generatedAt={props.generatedAt}
       watermarkText={props.watermarkText}
-      signatures={[
-        { label: labels.classTeacher },
-        { label: labels.guardian },
-      ]}
+      signatures={[{ label: labels.classTeacher }, { label: labels.guardian }]}
     >
       <View style={styles.section}>
         <View style={styles.studentGrid}>
@@ -176,11 +171,26 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
 
       <View style={styles.table}>
         <View style={styles.tableHeaderRow}>
-          <ScriptText style={[styles.tableHeaderCell, styles.colSubject]} text={labels.subject} />
-          <ScriptText style={[styles.tableHeaderCell, styles.colMarks]} text={labels.marksObtained} />
-          <ScriptText style={[styles.tableHeaderCell, styles.colFull]} text={labels.fullMarks} />
-          <ScriptText style={[styles.tableHeaderCell, styles.colGrade]} text={labels.grade} />
-          <ScriptText style={[styles.tableHeaderCell, styles.colGp]} text={labels.gp} />
+          <ScriptText
+            style={[styles.tableHeaderCell, styles.colSubject]}
+            text={labels.subject}
+          />
+          <ScriptText
+            style={[styles.tableHeaderCell, styles.colMarks]}
+            text={labels.marksObtained}
+          />
+          <ScriptText
+            style={[styles.tableHeaderCell, styles.colFull]}
+            text={labels.fullMarks}
+          />
+          <ScriptText
+            style={[styles.tableHeaderCell, styles.colGrade]}
+            text={labels.grade}
+          />
+          <ScriptText
+            style={[styles.tableHeaderCell, styles.colGp]}
+            text={labels.gp}
+          />
         </View>
         {props.subjects.map((row, i) => (
           <View key={i} style={styles.tableRow}>
@@ -206,7 +216,11 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
             />
             <ScriptText
               style={[styles.tableCell, styles.colGp]}
-              text={row.gradePoint === null ? "—" : formatNumber(row.gradePoint, locale, 2)}
+              text={
+                row.gradePoint === null
+                  ? "—"
+                  : formatNumber(row.gradePoint, locale, 2)
+              }
             />
           </View>
         ))}
@@ -223,7 +237,10 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
             style={[styles.tableCell, styles.colFull]}
             text={formatNumber(props.totalFull, locale)}
           />
-          <ScriptText style={[styles.tableCell, styles.colGrade]} text={props.overallLetter} />
+          <ScriptText
+            style={[styles.tableCell, styles.colGrade]}
+            text={props.overallLetter}
+          />
           <ScriptText
             style={[styles.tableCell, styles.colGp]}
             text={formatNumber(props.gpa, locale, 2)}

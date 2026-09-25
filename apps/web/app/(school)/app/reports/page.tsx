@@ -14,6 +14,7 @@ import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
+import { GenerateReportCardButton } from "./generate-report-card-button"
 import { GenerateSampleButton } from "./generate-sample-button"
 
 import type { Metadata } from "next"
@@ -53,6 +54,14 @@ export default async function ReportsPage() {
 
       <GenerateSampleButton
         t={{ generate: r.generate, generating: r.generating, error: r.error }}
+      />
+
+      <GenerateReportCardButton
+        t={{
+          generateReportCard: r.generateReportCard,
+          generating: r.generating,
+          error: r.error,
+        }}
       />
 
       <div>

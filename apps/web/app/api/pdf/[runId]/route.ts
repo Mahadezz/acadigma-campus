@@ -1,5 +1,6 @@
 /**
- * F-OP-03 §7 `GET /api/pdf/[runId]` — Parts 1-2: the `'sample'` kind only.
+ * F-OP-03 §7 `GET /api/pdf/[runId]` — Parts 1-3: `'sample'` and
+ * `'report_card'` (D-206).
  *
  * Shape: parse -> resolve context -> policy (`can`) -> fetch the run through
  * the CALLER's own RLS-scoped client (so a cross-tenant `runId` is simply
@@ -15,13 +16,23 @@
  */
 import { NextResponse } from "next/server"
 
-import { apiError, httpStatusForError, uuidSchema } from "@acadigma/contracts"
+import {
+  apiError,
+  httpStatusForError,
+  reportCardParamsSchema,
+  uuidSchema,
+} from "@acadigma/contracts"
 import { getReportRun } from "@acadigma/db/repositories/reports"
 import { getSchoolProfile } from "@acadigma/db/repositories/settings"
 import { can } from "@acadigma/domain"
 import { renderHeaderLine } from "@acadigma/domain/settings"
-import { renderPdfToBuffer, SampleDocument } from "@acadigma/pdf"
+import {
+  renderPdfToBuffer,
+  ReportCardDocument,
+  SampleDocument,
+} from "@acadigma/pdf"
 
+import { getReportCardData } from "@/app/(school)/app/reports/report-card-data"
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
 
@@ -85,22 +96,50 @@ export async function GET(
     : []
   const accentColor = profile.ok ? profile.data.branding.accent : null
   const footerNote = profile.ok ? profile.data.branding.report_footer : null
+  const generatedAt = new Date(run.data.completedAt ?? run.data.requestedAt)
+  const branding = { schoolName, headerLines, accentColor, footerNote }
 
-  const buffer = await renderPdfToBuffer(
-    SampleDocument({
-      locale: run.data.locale,
-      schoolName,
-      headerLines,
-      accentColor,
-      footerNote,
-      generatedAt: new Date(run.data.completedAt ?? run.data.requestedAt),
-    })
-  )
+  let buffer: Buffer
+  if (run.data.kind === "report_card") {
+    const parsedParams = reportCardParamsSchema.safeParse(run.data.params)
+    if (!parsedParams.success) {
+      const error = apiError(
+        "validation_failed",
+        "This report's params are invalid."
+      )
+      return NextResponse.json(
+        { error },
+        { status: httpStatusForError(error.code) }
+      )
+    }
+    const data = await getReportCardData(
+      parsedParams.data.studentId,
+      parsedParams.data.examId
+    )
+    if (!data.ok) {
+      return NextResponse.json(
+        { error: data.error },
+        { status: httpStatusForError(data.error.code) }
+      )
+    }
+    buffer = await renderPdfToBuffer(
+      ReportCardDocument({
+        locale: run.data.locale,
+        ...branding,
+        ...data.data,
+        generatedAt,
+      })
+    )
+  } else {
+    buffer = await renderPdfToBuffer(
+      SampleDocument({ locale: run.data.locale, ...branding, generatedAt })
+    )
+  }
 
   return new Response(new Uint8Array(buffer), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `inline; filename="sample-report-${runId}.pdf"`,
+      "content-disposition": `inline; filename="${run.data.kind}-${runId}.pdf"`,
       "cache-control": "private, no-store",
     },
   })
