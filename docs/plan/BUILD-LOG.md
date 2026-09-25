@@ -4,6 +4,30 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-09-25 — PR #37 — feat(identity): F-ID-05 Part 4 — create-school wizard steps 3-4 + `public.create_school_workspace`
+
+- **Lane:** identity
+- **Shipped:** wizard steps 3 (classes) and 4 (review and create), en/bn; `grade_levels` and `academic_years` tables (T2 RLS, audit catalogue rows, read-only guard); `public.create_school_workspace(jsonb)` — one transaction, idempotent by client key, EIIN uniqueness via the D-66 index, 3 schools per user per day, `createSchool` throttle bucket, named errors; the function is now the only way to create a workspace (direct INSERT revoked). EIIN is set once at creation; the settings form shows it read-only. Fixed on the way: 360px school-type toggle overlap, working days lost on reload.
+- **Decisions:** D-100 (4-step wizard, logo step waits for file uploads, custom-only class names pending OQ-2, throttle lockout follow-up queued for the lead).
+- **Migrations:** `20260925300101_create_school_workspace.sql` — applied to production; smoke test passed.
+- **Review/incidents:** three review rounds (Fable lead, security ×2, database): closed the direct-insert bypass of the daily limit, the EIIN existence oracle via failed create attempts, `created_by` forgery, a missing index on the per-day count, and the audit-catalogue gap; the EIIN guard clashed with #39's settings form (made read-only).
+
+## 2026-09-25 — PR #38 — chore(lead): parallel lanes (D-69) and CI/Vercel usage cuts (D-70)
+
+- **Lane:** lead
+- **Shipped:** `docs/plan/LANES.md`, `BUILDER-BRIEF.md`, this build log; `ci.yml` `changes` job that skips the heavy jobs only for pure-docs changes (fails closed); `scripts/check-migrations-order.mjs`; Vercel builds `main` only (`ignoreCommand`); CI.md/HANDBOOK fixes (types download, re-date procedure).
+- **Decisions:** D-69, D-70. Migration timestamps are real UTC time (the lane-digit format was withdrawn the same day).
+- **Migrations:** none.
+- **Review/incidents:** first version of the skip logic failed open (renames, SIGPIPE, allowlists, `needs` on skipped jobs); rewritten and re-verified by security before merge. Main has no branch protection — owner action.
+
+## 2026-09-25 — PR #39 — feat(ops): F-OP-07 Part 1 remainder — settings shell, school profile, branding
+
+- **Lane:** operations
+- **Shipped:** `/app/settings` (grouped rows, search), `/overview` (read-only "how this school works" for every member), `/school` (profile form, changed-fields patch, optimistic concurrency with reload-on-conflict, owner-only recent changes), `/branding` (header lines with whitelisted `{token}`s and a live preview). Part 2 (academic settings) waits for #37's tables.
+- **Decisions:** D-200 (deferrals: logo upload, public view, F-OP-03 preview), D-201 (`/app/settings/school` owns the profile fields; F-ID-03 Part 8 narrows to lifecycle).
+- **Migrations:** none.
+- **Review/incidents:** history list was always empty (audit table name mismatch) — fixed; `javascript:` websites refused; version must be a timestamp; concurrency proven only against the in-memory fake (noted in the test report).
+
 ## 2026-09-25 — PR #35 — feat(billing): read-only mode refuses every write — server actions + database (D-300)
 
 - **Lane:** billing
