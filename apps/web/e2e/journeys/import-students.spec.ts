@@ -39,7 +39,7 @@ test("owner imports a register: 3 errors previewed, 37 students added", async ({
   )
   // Tag the last name (column 2) of every data line.
   const csv = fixture
-    .split("\r\n")
+    .split(/\r?\n/)
     .map((line, i) =>
       i === 0 || !line
         ? line

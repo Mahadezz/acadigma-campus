@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-02 §4.7 bulk student import, demo cut
--- (20260925300312_student_import_batches.sql, D-106)
+-- (20260925300313_student_import_batches.sql, D-106)
 --
 -- student_import_batches: owner/admin only (isolation and escalation per
 -- role), insert-only for the app, no direct update/delete, the report

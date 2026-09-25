@@ -4,7 +4,7 @@ import { uuidSchema } from "../common"
 
 /**
  * F-AC-02 §4.7 bulk student import, demo cut (D-106). Enum mirrors
- * 20260925300312_student_import_batches.sql.
+ * 20260925300313_student_import_batches.sql.
  */
 
 export const importStatusSchema = z.enum([

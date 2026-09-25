@@ -570,7 +570,7 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // F-AC-03 demo cut (D-104) — 20260925300309_attendance.sql.
   "attendance_sessions",
   "attendance_records",
-  // F-AC-02 §4.7 (D-106) — 20260925300312_student_import_batches.sql.
+  // F-AC-02 §4.7 (D-106) — 20260925300313_student_import_batches.sql.
   "student_import_batches",
 ]
 
