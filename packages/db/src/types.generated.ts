@@ -480,6 +480,209 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_sections: {
+        Row: {
+          created_at: string
+          exam_id: string
+          id: string
+          section_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam_id: string
+          id?: string
+          section_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          exam_id?: string
+          id?: string
+          section_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_sections_exam_fkey"
+            columns: ["exam_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "exam_sections_section_fkey"
+            columns: ["section_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "exam_sections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_subjects: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          exam_date: string | null
+          exam_id: string
+          full_marks: number
+          id: string
+          pass_marks: number
+          section_id: string
+          starts_at: string | null
+          status: Database["public"]["Enums"]["exam_subject_status"]
+          subject_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          exam_date?: string | null
+          exam_id: string
+          full_marks: number
+          id?: string
+          pass_marks: number
+          section_id: string
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["exam_subject_status"]
+          subject_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          exam_date?: string | null
+          exam_id?: string
+          full_marks?: number
+          id?: string
+          pass_marks?: number
+          section_id?: string
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["exam_subject_status"]
+          subject_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_subjects_exam_fkey"
+            columns: ["exam_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "exam_subjects_exam_section_fkey"
+            columns: ["exam_id", "section_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sections"
+            referencedColumns: ["exam_id", "section_id"]
+          },
+          {
+            foreignKeyName: "exam_subjects_subject_fkey"
+            columns: ["subject_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "exam_subjects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exams: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          created_by: string | null
+          ends_on: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          grade_scale_id: string | null
+          grading_snapshot: Json
+          id: string
+          name: string
+          starts_on: string | null
+          status: Database["public"]["Enums"]["exam_status"]
+          status_reason: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string | null
+          exam_type: Database["public"]["Enums"]["exam_type"]
+          grade_scale_id?: string | null
+          grading_snapshot?: Json
+          id?: string
+          name: string
+          starts_on?: string | null
+          status?: Database["public"]["Enums"]["exam_status"]
+          status_reason?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string | null
+          exam_type?: Database["public"]["Enums"]["exam_type"]
+          grade_scale_id?: string | null
+          grading_snapshot?: Json
+          id?: string
+          name?: string
+          starts_on?: string | null
+          status?: Database["public"]["Enums"]["exam_status"]
+          status_reason?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_academic_year_fkey"
+            columns: ["academic_year_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "exams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exams_grade_scale_fkey"
+            columns: ["grade_scale_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "grade_scales"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "exams_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       file_access_log: {
         Row: {
           action: Database["public"]["Enums"]["file_access_action"]
@@ -2734,6 +2937,7 @@ export type Database = {
     }
     Functions: {
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
+      create_exam: { Args: { p_input: Json }; Returns: string }
       create_school_workspace: { Args: { p_input: Json }; Returns: Json }
       expire_pro_trials: { Args: never; Returns: number }
       list_my_workspaces: {
@@ -2814,6 +3018,23 @@ export type Database = {
         | "bounced"
         | "complained"
         | "failed"
+      exam_status:
+        | "draft"
+        | "scheduled"
+        | "in_progress"
+        | "marks_entry"
+        | "marks_locked"
+        | "published"
+        | "archived"
+      exam_subject_status: "pending" | "entering" | "submitted" | "locked"
+      exam_type:
+        | "class_test"
+        | "midterm"
+        | "term_final"
+        | "annual"
+        | "model_test"
+        | "practical"
+        | "other"
       file_access_action:
         | "upload"
         | "signed_url"
@@ -3011,6 +3232,25 @@ export const Constants = {
         "bounced",
         "complained",
         "failed",
+      ],
+      exam_status: [
+        "draft",
+        "scheduled",
+        "in_progress",
+        "marks_entry",
+        "marks_locked",
+        "published",
+        "archived",
+      ],
+      exam_subject_status: ["pending", "entering", "submitted", "locked"],
+      exam_type: [
+        "class_test",
+        "midterm",
+        "term_final",
+        "annual",
+        "model_test",
+        "practical",
+        "other",
       ],
       file_access_action: [
         "upload",
