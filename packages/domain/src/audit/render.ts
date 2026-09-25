@@ -34,16 +34,27 @@ const FALLBACK_ACTOR: Record<SupportedLanguage, string> = {
   bn: "কেউ একজন",
 }
 
+/** An action the catalogue does not know yet: readable, never the raw code (D-402). */
 const UNKNOWN_ACTION_SENTENCE: Record<SupportedLanguage, string> = {
-  en: "{actor} performed an unrecognised action ({action})",
-  bn: "{actor} একটি অজানা কার্যক্রম সম্পন্ন করেছেন ({action})",
+  en: "{actor} made a change",
+  bn: "{actor} একটি পরিবর্তন করেছেন",
+}
+
+/**
+ * Stand-ins for the nouns a sentence cannot do without when the caller has no
+ * value for them ("{actor} removed {subject} from {workspace}").
+ */
+const MISSING_NOUN: Record<SupportedLanguage, Record<string, string>> = {
+  en: { subject: "a member", workspace: "the school" },
+  bn: { subject: "একজন সদস্য", workspace: "স্কুল" },
 }
 
 /**
  * Renders the catalogue's sentence template for `action` in `language`,
- * substituting every `{token}` the caller supplied. An unmatched token (the
- * placeholder was not relevant to this event) is left blank rather than showing
- * literal `{curly braces}` to a reader.
+ * substituting every `{token}` the caller supplied. A token with no value
+ * never shows as `{braces}`, an empty "()" or a double space (D-402): a
+ * missing subject or workspace gets a plain stand-in, a parenthetical whose
+ * value is missing is dropped, and anything else is left out.
  */
 export function renderAuditSentence(
   action: string,
@@ -59,7 +70,7 @@ export function renderAuditSentence(
 
   const values: Record<string, string> = {
     actor: FALLBACK_ACTOR[language],
-    action,
+    ...MISSING_NOUN[language],
     ...Object.fromEntries(
       Object.entries(placeholders)
         .filter(([, value]) => value !== undefined && value !== null)
@@ -67,7 +78,11 @@ export function renderAuditSentence(
     ),
   }
 
-  return template.replace(/\{(\w+)\}/g, (_match, token: string) =>
-    token in values ? (values[token] ?? "") : ""
-  )
+  return template
+    .replace(/\s*\(\{(\w+)\}\)/g, (match, token: string) =>
+      values[token] ? match : ""
+    )
+    .replace(/\{(\w+)\}/g, (_match, token: string) => values[token] ?? "")
+    .replace(/\s{2,}/g, " ")
+    .trim()
 }
