@@ -1,5 +1,6 @@
 export * from "./audit"
 export * from "./billing-jobs"
+export * from "./dashboard"
 export * from "./onboarding"
 export * from "./plans"
 export * from "./school"
