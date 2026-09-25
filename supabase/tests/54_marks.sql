@@ -16,7 +16,7 @@
 --      a mark or is absent/exempt (MARKS_INCOMPLETE).
 -- =====================================================================
 begin;
-select plan(39);
+select plan(38);
 
 create schema if not exists tests;
 
@@ -111,10 +111,17 @@ values
   ('54000000-0000-4000-b000-000000000001', '54000000-0000-4000-a000-000000000006', 'parent',  'active', now());
 
 insert into ids
-select 'maths_m', id from public.workspace_members where user_id = '54000000-0000-4000-a000-000000000002'
-union all select 'classt_m', id from public.workspace_members where user_id = '54000000-0000-4000-a000-000000000003'
-union all select 'science_m', id from public.workspace_members where user_id = '54000000-0000-4000-a000-000000000004'
-union all select 'owner_b_m', id from public.workspace_members where user_id = '54000000-0000-4000-a000-000000000007';
+select case m.user_id
+         when '54000000-0000-4000-a000-000000000002' then 'maths_m'
+         when '54000000-0000-4000-a000-000000000003' then 'classt_m'
+         when '54000000-0000-4000-a000-000000000004' then 'science_m'
+         else 'owner_b_m' end, m.id
+  from public.workspace_members m
+ where (m.workspace_id = '54000000-0000-4000-b000-000000000001'
+        and m.user_id in ('54000000-0000-4000-a000-000000000002', '54000000-0000-4000-a000-000000000003',
+                          '54000000-0000-4000-a000-000000000004'))
+    or (m.workspace_id = '54000000-0000-4000-b000-000000000002'
+        and m.user_id = '54000000-0000-4000-a000-000000000007');
 
 insert into public.academic_years (id, workspace_id, name, starts_on, ends_on)
 values ('54000000-0000-4000-c000-000000000001', '54000000-0000-4000-b000-000000000001', '2026', '2026-01-01', '2026-12-31');

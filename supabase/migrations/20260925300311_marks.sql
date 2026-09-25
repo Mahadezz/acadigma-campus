@@ -46,6 +46,16 @@ create index if not exists exam_subjects_teacher_idx
   on public.exam_subjects (teacher_id) where teacher_id is not null;
 -- justification: FK column; a teacher's own papers.
 
+-- A paper's section as a direct, tenant-bound FK. Its (exam_id, section_id)
+-- FK to exam_sections already guarantees the section exists; this one gives
+-- PostgREST the exam_subjects -> sections relationship that getExam and the
+-- marks screen embed (without it the embed has no path).
+alter table public.exam_subjects
+  add constraint exam_subjects_section_fkey
+  foreign key (section_id, workspace_id) references public.sections (id, workspace_id);
+create index if not exists exam_subjects_section_idx on public.exam_subjects (section_id);
+-- justification: FK column.
+
 comment on column public.exam_subjects.teacher_id is
   'F-AC-06 Part 3 (D-304): the paper''s subject teacher, set by an owner/admin. '
   'Stands in for section_subjects.teacher_id until F-AC-01 ships it.';
