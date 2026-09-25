@@ -22,4 +22,6 @@ regexes = [
   # (a request dedupe id, not a credential) — the key name trips
   # generic-api-key.
   '''0b6f4a8e-3c1d-4e2a-9f7b-5d8c6e4a2b10''',
+  # F-AC-02 tests: the same kind of fixed idempotency key (quick admit).
+  '''5f0c2a1e-8b7d-4c3a-9e6f-1a2b3c4d5e6f''',
 ]
