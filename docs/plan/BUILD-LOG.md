@@ -4,6 +4,94 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-09-25 — PR #63 — feat(operations): F-OP-03 Part 3 — report card template on the PDF engine (D-206)
+
+- **Lane:** operations
+- **Shipped:** `report_kind` gains `'report_card'`; `ReportCardDto`/`ReportCardParams` in `packages/contracts` (academic data only, no branding or grade-band logic); one A4, bilingual `ReportCardDocument` template (subject table, totals, incomplete-marks banner, attendance summary, signatures); grade letters/GPA reused from #46/D-302, never re-derived. Marks entry (F-AC-06) is still on the billing lane's branch, so the render source is a 40-student fixture behind one seam function (`getReportCardData`) that already takes real `studentId`/`examId` — only that function's body changes once marks entry lands. New `report.render.report_card` permission (owner/admin/teacher). Also carries #62's PDF font fix, already merged to main.
+- **Decisions:** D-206.
+- **Migrations:** `20260925300313_report_card_kind.sql` (renamed once, from `...300312`, after main's newest migration moved past it) — applied to production; db workflow run 36198352726 succeeded.
+- **Review/incidents:** pgTAP `42_report_card_kind.sql` (6 assertions) was CI-pending, not run locally (no Docker that session). The fixture never serves in production — the seam returns `not_found` and `/app/reports` hides the button — so a fixture student can never print under a real school's letterhead. Deferred: Playwright journey (same scope cut as Parts 1-2).
+
+## 2026-09-25 — PR #67 — fix(operations): danda in Hind Siliguri + PDF stream integrity test
+
+- **Lane:** lead (production hotfix — one of the two bugs a QA pass caught, see D-72)
+- **Shipped:** Cleared main of suspected PDF renderer corruption: the bad sample files on disk turned out to be a UTF-8/latin1 round trip done outside the render path, not a real bug — reproduced and ruled out byte-for-byte. Fixed the actual defect found along the way: the danda (U+0964/U+0965) sits in Unicode's Devanagari block, so the script-splitter routed it into the Inter run, which has no glyph for it, drawing a tofu box; it now routes to Hind Siliguri. Added a permanent regression test that inflates every PDF stream with `node:zlib` and asserts the Bengali text and danda are really there.
+- **Decisions:** none (PR states no decision entry was needed).
+- **Migrations:** none.
+- **Review/incidents:** root cause was mistaken renderer-corruption reports against stale/mishandled sample files, not the renderer; the real, smaller bug (danda glyph) is fixed and now has a standing test so it can't silently regress.
+
+## 2026-09-25 — PR #65 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets "version packages" release PR, merged — bumps package versions and `CHANGELOG`s for the changesets accumulated up to and including PR #61 (marks entry D-304, attendance follow-ups D-105, the classes-embed hotfix).
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-25 — PR #60 — feat(academics): F-AC-06 Part 3 — marks entry and the publish completeness gate
+
+- **Lane:** billing
+- **Shipped:** `marks` table and `public.save_marks` as the only writer (the paper's teacher, the section's class teacher, or an owner/admin; only while the exam is in marks entry and the paper isn't locked; idempotent; a per-row version check and range check so one bad row never blocks the rest); `exam_subjects.teacher_id`; `app.tg_exams_publish_gate` refuses publish until every enrolled student in every paper has a mark or is marked absent/exempt. `/app/marks/[examSubjectId]` is the phone-first entry screen (72 px rows, big numeric input, Enter to the next student, Absent/Exempt chips, sticky "24/40 · Save"; ↑/↓, Esc, A, E, Ctrl+S on desktop). Exam papers get a subject-teacher picker and an "n/m marked" count.
+- **Decisions:** D-304 (confirms D-302's rounding stands — 2 decimals, no rounding before banding — and records the offline per-cell rule, "later edit wins," for when the outbox is built).
+- **Migrations:** `20260925300312_marks.sql` — applied to production; db workflow run 36195106470 succeeded.
+- **Review/incidents:** review fixed a modifier-key conflict (Ctrl/Cmd/Alt+A or +E now keep their browser meaning; only a bare A or E marks Absent/Exempt), made a dropped connection during Save keep every typed mark and its idempotency key so a retry replays safely, made a `CONFLICT` row adopt the server's value and version while keeping what was typed (Save again keeps mine, Esc takes theirs), clarified the Absent/Exempt chip labelling, and collapsed marks-entry auditing to one paper-level `marks.entered` event per save instead of one per student. Declined: splitting the two new `exam_subjects` foreign keys into `NOT VALID` + `VALIDATE` (the migration is one transaction and the table is tiny). Deferred: the entry-date window, submit/lock/unlock with reasons, the progress screen, the offline queue and autosave, paste-a-column and the distribution histogram, `withheld`, remarks, a teacher's "my papers" list.
+
+## 2026-09-25 — PR #62 — fix(operations): externalize @react-pdf/renderer/pdfkit so #standard-fonts resolves in prod
+
+- **Lane:** lead (production hotfix — the second of the two bugs a QA pass caught, see D-72)
+- **Shipped:** Fixed every PDF download 500ing in production: pdfkit resolves its bundled standard fonts through `createRequire(import.meta.url)`, and webpack was inlining pdfkit into the Next.js server bundle, baking in the *build machine's* absolute path — the same failure class D-204 had already fixed for the embedded Bengali fonts, this time inside pdfkit's own code. Fixed by marking `@react-pdf/renderer`, `pdfkit` and `fontkit` as `serverExternalPackages` (so they're `require()`'d for real at runtime) plus pinning them as direct `apps/web` dependencies (pnpm's isolated `node_modules` doesn't otherwise expose them there) and adding `outputFileTracingIncludes` so Vercel's file tracer picks up pdfkit's standard-fonts files, which its dynamic `require('#standard-fonts/...')` calls don't trace on their own.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** verified by inspecting the compiled output directly — before the fix, the built route had pdfkit's source inlined with a baked-in local file path; after, it externally imports the package and `route.js.nft.json` lists all 30 standard-fonts files.
+
+## 2026-09-25 — PR #61 — fix(academics): disambiguate profiles embed through workspace_members
+
+- **Lane:** lead (production hotfix — one of the two bugs a QA pass caught, see D-72)
+- **Shipped:** Fixed `/app/classes` showing a generic error for every real user: `workspace_members` has four foreign keys to `profiles` (`user_id`, `invited_by`, `removed_by`, `created_by`), so PostgREST rejected the un-hinted `profiles(full_name)` embeds in `getClassesOverview` and `listClassTeacherOptions` as ambiguous (`PGRST201`). Disambiguated both embeds by naming the exact foreign key. Grepped the repo for any other embed through the same table; these were the only two.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** root cause recorded in the F-AC-01 spec: the unit-test suite mocks the Supabase client, so it never exercises real PostgREST relationship resolution, and the one e2e journey that opens `/app/classes` as an owner is skip-gated on `E2E_LIVE_SUPABASE` + OQ-27, which CI never sets — a gap this PR closes with an opt-in integration test against a real local PostgREST (`DB_LOCAL_SUPABASE=1`), verified to fail before the fix and pass after. This gap is the reason D-72 puts a real-PostgREST CI job on the lead queue.
+
+## 2026-09-25 — PR #58 — feat(academics): F-AC-03 follow-ups — any teacher marks any section (D-105)
+
+- **Lane:** identity
+- **Shipped:** Any active owner/admin/teacher may now view and save any section's roll call, so a substitute can cover a class (`save_attendance`'s role guard is the whole rule; the old class-teacher-only check and `app.can_mark_attendance` are removed — edit window, future-date, school-day, class-list, idempotency, `CONFLICT` and read-only guards are unchanged). "Enrolled on that date" now follows `enrolled_on`/`ended_on`, not the enrolment's current status, so a later transfer can't erase an earlier day's register. UI: Today offers "Take attendance" on every class to anyone with `attendance.write`; a successful save no longer re-stamps "Mark all present".
+- **Decisions:** D-105.
+- **Migrations:** `20260925300311_attendance_any_teacher.sql` — applied to production; db workflow run 36192946464 succeeded.
+- **Review/incidents:** none noted beyond the fixes already described above. Local gate: 127 test files / 1254 tests, all check scripts, web build, full pgTAP — all green.
+
+## 2026-09-25 — PR #59 — docs(specs): F-ID-10 basic mode + F-ID-11 offline (D-403, D-71)
+
+- **Lane:** lead
+- **Shipped:** Docs-only. Two new feature specs from the owner's 2026-09-26 answers: F-ID-10 Basic mode (per-user synced `ui_mode`, class-by-class home, 56 px targets, text sizes, plain confirmations, undo — 4 Parts) and F-ID-11 Offline (read cache + one IndexedDB outbox replaying the same server actions, everything except generating/sending, attendance conflict sheet, marks per-cell "later edit wins," session-expiry and revocation purge — 5 Parts, platform-wide). Also: identity README rows, docs/README listing, a new `Offline` row in `_TEMPLATE.md`, absorption notes on F-AC-03 Part 7 / F-AC-06 Part 4, a ROADMAP note.
+- **Decisions:** D-403, D-71.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-25 — PR #52 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets "version packages" release PR, merged — bumps package versions and `CHANGELOG`s for the changesets accumulated up to and including PR #53 (F-AC-03 attendance D-104, F-AC-01 classes/sections D-102, F-AC-06 Part 2 exams D-303, F-AC-02 students/guardians D-103, Bengali app-shell coverage, F-OP-03 Parts 1-2 PDF pipeline).
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-25 — PR #53 — feat(operations): F-OP-03 Parts 1-2 — PDF foundation + report run pipeline
+
+- **Lane:** operations
+- **Shipped:** `@acadigma/pdf`, a new package: a `@react-pdf/renderer` document shell (letterhead, footer with real page numbers, watermark, signature block), Inter + Hind Siliguri embedded as base64 `data:` URLs, locale-aware number/date formatting, a golden test proving Bengali conjuncts and two schools' letterheads render from real PDF bytes. Then the run pipeline: `report_runs`/`report_run_items` (migration + RLS + pgTAP), `createReportRun` (parse → context → `can()` → plan entitlement → `requireWritable` → repository → render) and `GET /api/pdf/[runId]`, both with auth tests. `report_kind` ships with one value, `'sample'` — the pipeline's own proof, since no real report kind exists yet. Minimal `/app/reports` pages behind the existing `reports` plan-module entitlement.
+- **Decisions:** D-204 (library and font choice, no build-time font-subsetting toolchain), D-205 (one `report_kind` value this Part; synchronous in-request rendering instead of a cron drainer; no Storage row created yet).
+- **Migrations:** `20260925300310_report_runs.sql` (renamed twice during review as main's newest migration moved) — applied to production; db workflow run 36140876654 succeeded.
+- **Review/incidents:** lead review caught two blocking bugs before merge — fonts resolved via `import.meta.url` baked a build-machine absolute path into the Vercel bundle, so every render would 500 in production (fixed by embedding fonts as base64 `data:` URLs, no file read at all); and a Bengali school-name monogram rendered as mojibake because it went through a plain `Text` node instead of the existing `ScriptText` helper. Also fixed in review: `report_run_items.workspace_id` widened to a composite FK tied to its parent run's workspace (a row could otherwise carry a mismatched `workspace_id`), and hardcoded English strings in the document shell translated to follow the document's locale.
+
+## 2026-09-25 — PR #55 — feat(academics): F-AC-03 demo cut — daily roll call and today view
+
+- **Lane:** identity
+- **Shipped:** `attendance_sessions` and `attendance_records` (one writer, `public.save_attendance`: class teacher or owner/admin, teacher only inside the edit window, admin beyond it; no future date; non-school day refused unless confirmed; exactly the enrolled students, each explicitly marked; idempotent; a re-save must name the loaded version or is refused as a `CONFLICT`). `/app/attendance` (Today overview, every class marked/not marked, who marked it, the school's rate) → `/app/attendance/[sectionId]` (one-thumb roll call: "Mark all present" with Undo, then flip absentees). The dashboard's attendance slot shows the same rate.
+- **Decisions:** D-104.
+- **Migrations:** `20260925300309_attendance.sql` — applied to production; db workflow run 36139669162 succeeded.
+- **Review/incidents:** none noted. Deferred (spec status, D-104): offline queue and conflict sheet, locking/correction requests, register and rollup, alerts, reminders and guardian notifications, copy-yesterday, notes, period mode, policy screen, parent view.
+
 ## 2026-09-25 — PR #51 — feat(design): Bengali covers the signed-in app shell (D-401)
 
 - **Lane:** design
