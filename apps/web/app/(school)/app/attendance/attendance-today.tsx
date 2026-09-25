@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@acadigma/ui/components/card"
+import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -56,14 +57,14 @@ export function AttendanceToday({
   day,
   dateLabel,
   policy,
-  isManager,
+  canMark,
 }: {
   t: T
   locale: Locale
   day: AttendanceDay
   dateLabel: string
   policy: AttendanceWeightsPolicy
-  isManager: boolean
+  canMark: boolean
 }) {
   const marked = day.sections.filter((s) => s.session)
   const rate = schoolDayRate(
@@ -137,7 +138,7 @@ export function AttendanceToday({
                 t={t}
                 locale={locale}
                 s={s}
-                canTake={isManager || s.isMine}
+                canTake={canMark}
               />
             ))}
           </ul>
@@ -163,30 +164,34 @@ function SectionRow({
     <li className="flex min-h-16 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2">
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 font-medium">
-          {label}
+          <BnEnText text={label} />
           <Badge variant={s.session ? "secondary" : "outline"}>
             {s.session ? t.today.taken : t.today.notTaken}
           </Badge>
         </p>
         <p className="text-muted-foreground truncate text-xs tabular-nums">
-          {s.session
-            ? [
-                countsLabel(t, s.session),
-                s.session.takenByName
-                  ? fill(t.today.takenBy, {
-                      name: s.session.takenByName,
-                      time: timeLabel(locale, s.session.takenAt),
-                    })
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")
-            : [
-                s.classTeacherName
-                  ? fill(t.today.classTeacher, { name: s.classTeacherName })
-                  : t.today.noClassTeacher,
-                fill(t.today.enrolled, { count: s.enrolled }),
-              ].join(" · ")}
+          <BnEnText
+            text={
+              s.session
+                ? [
+                    countsLabel(t, s.session),
+                    s.session.takenByName
+                      ? fill(t.today.takenBy, {
+                          name: s.session.takenByName,
+                          time: timeLabel(locale, s.session.takenAt),
+                        })
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                : [
+                    s.classTeacherName
+                      ? fill(t.today.classTeacher, { name: s.classTeacherName })
+                      : t.today.noClassTeacher,
+                    fill(t.today.enrolled, { count: s.enrolled }),
+                  ].join(" · ")
+            }
+          />
         </p>
       </div>
       <Button
