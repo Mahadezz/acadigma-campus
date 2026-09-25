@@ -1,11 +1,10 @@
 import Link from "next/link"
 import { forbidden, notFound } from "next/navigation"
 
-import { uuidSchema } from "@acadigma/contracts"
 import type { ReportStatus } from "@acadigma/contracts"
+import { uuidSchema } from "@acadigma/contracts/common"
 import { getReportRun } from "@acadigma/db/repositories/reports"
 import { can } from "@acadigma/domain"
-import { Button } from "@acadigma/ui/components/button"
 import {
   StatusChip,
   type ToneStatusChipProps,
@@ -26,6 +25,18 @@ const STATUS_TONE: Record<ReportStatus, ToneStatusChipProps["tone"]> = {
   failed: "negative",
   expired: "neutral",
 }
+
+/**
+ * Default-variant `Button` classes, inlined rather than imported from
+ * `@acadigma/ui/components/button`: that module imports `Slot` from the
+ * `radix-ui` package for `asChild`, which is not needed for one plain
+ * external link and pulled ~80 kB of unrelated Radix primitives into this
+ * route's first-load JS (`scripts/check-bundle-budget.mjs`, 250 kB budget) —
+ * `Button`/`buttonVariants` themselves are otherwise untouched (design-lane
+ * owned, DESIGN-SYSTEM/LANES.md).
+ */
+const DOWNLOAD_LINK_CLASSNAME =
+  "bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 
 /** F-OP-03 Parts 1-2 — `/app/reports/runs/[id]` (spec §6 "Run detail", trimmed). */
 export default async function ReportRunPage({
@@ -69,11 +80,14 @@ export default async function ReportRunPage({
       </p>
 
       {run.data.status === "ready" && (
-        <Button asChild>
-          <a href={`/api/pdf/${run.data.id}`} target="_blank" rel="noreferrer">
-            {r.detail.download}
-          </a>
-        </Button>
+        <a
+          href={`/api/pdf/${run.data.id}`}
+          target="_blank"
+          rel="noreferrer"
+          className={DOWNLOAD_LINK_CLASSNAME}
+        >
+          {r.detail.download}
+        </a>
       )}
 
       {run.data.status === "failed" && (

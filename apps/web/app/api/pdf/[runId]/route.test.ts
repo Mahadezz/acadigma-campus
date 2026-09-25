@@ -16,7 +16,7 @@ vi.mock("@/lib/workspace", () => ({
 
 const mockCreateClient = vi.fn(async () => ({}))
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: (...args: unknown[]) => mockCreateClient(...args),
+  createClient: () => mockCreateClient(),
 }))
 
 const mockCan = vi.fn()

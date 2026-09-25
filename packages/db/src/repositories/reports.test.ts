@@ -259,10 +259,7 @@ describe("createReportRun", () => {
     })
     expect(result.ok && result.data.id).toBe(ROW.id)
     const inClause = calls.find((c) => c.op === "in")
-    expect(inClause?.args).toEqual([
-      "status",
-      ["queued", "rendering", "ready"],
-    ])
+    expect(inClause?.args).toEqual(["status", ["queued", "rendering", "ready"]])
   })
 
   it("maps any other insert error to dependency_unavailable", async () => {

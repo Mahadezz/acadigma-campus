@@ -26,6 +26,7 @@ import {
 } from "@acadigma/contracts"
 
 import type { AcadigmaSupabaseClient } from "../client"
+import type { Json } from "../types.generated"
 import type { WorkspaceContext } from "../workspace-context"
 
 const UNAVAILABLE: ApiError = apiError(
@@ -122,7 +123,7 @@ export async function createReportRun(
     .insert({
       workspace_id: ctx.workspaceId,
       kind: input.kind,
-      params: input.params,
+      params: input.params as Json,
       locale: input.locale,
       requested_by: ctx.userId,
       idempotency_key: idempotencyKey,
