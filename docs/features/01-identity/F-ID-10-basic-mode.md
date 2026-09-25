@@ -22,16 +22,17 @@ Each user turns basic mode on or off **for themselves**; the choice is a per-use
 
 No new permission keys. Basic mode is a layout; each tab calls the existing actions and their existing checks.
 
-| Action                                         | owner    | admin    | teacher  | staff     | parent | platform |
-| ---------------------------------------------- | -------- | -------- | -------- | --------- | ------ | -------- |
-| Turn basic mode on/off for themselves          | yes      | yes      | yes      | no (OQ-2) | no     | no       |
-| Set text size (both modes)                     | yes      | yes      | yes      | yes       | yes    | yes      |
-| See a class block / open a class hub           | yes¹     | yes¹     | own²     | —         | —      | —        |
-| Use a hub tab (attendance, marks, students, …) | per tab³ | per tab³ | per tab³ | —         | —      | —        |
-| Call school office from Help                   | yes      | yes      | yes      | —         | —      | —        |
+| Action                                         | owner    | admin    | teacher  | staff | parent | platform |
+| ---------------------------------------------- | -------- | -------- | -------- | ----- | ------ | -------- |
+| Turn basic mode on/off for themselves          | yes      | yes      | yes      | no⁴   | no     | no       |
+| Set text size (both modes)                     | yes      | yes      | yes      | yes   | yes    | yes      |
+| See a class block / open a class hub           | yes¹     | yes¹     | own²     | —     | —      | —        |
+| Use a hub tab (attendance, marks, students, …) | per tab³ | per tab³ | per tab³ | —     | —      | —        |
+| Call school office from Help                   | yes      | yes      | yes      | —     | —      | —        |
 
-¹ Owners/admins see the classes they are assigned to first, then an **All classes** block that opens a large, searchable list of every live section (OQ-3).
-² A teacher's classes are: sections where they are the active `class_teacher_id` (D-102), plus — once F-AC-01's `section_subjects` ships — every (section, subject) they teach. Opening a hub for any other section returns `NOT_ASSIGNED` and shows "This class is not on your list" with a Home button.
+¹ Owners/admins see the classes they are assigned to first, then an **All classes** block that opens a large, searchable list of every live section.
+² A teacher's classes are: sections where they are the active `class_teacher_id` (D-102), plus — once F-AC-01's `section_subjects` ships — every (section, subject) they teach. **Prerequisite:** F-AC-01 Part 5 (`section_subjects`) ships before the basic-mode demo; without it a subject-only teacher sees the "no classes yet" state, which would be most teachers. Opening a hub for any other section returns `NOT_ASSIGNED` and shows "This class is not on your list" with a Home button.
+⁴ Hidden for `staff`: they have no classes, so a class-by-class home has nothing to show them (D-403, lead decision under owner authorization 2026-09-26).
 ³ Each tab keeps its feature's own permission key and checks (`attendance.write`, `marks.write`, `students.read`, …); basic mode adds none and relaxes none.
 
 ## 3. Data
@@ -88,7 +89,7 @@ The registry is one typed list (`CLASS_HUB_TABS` in `packages/domain`) filtered 
 
 **4.7 Help.** A **Help** button (icon + "Help") in the top bar of every basic screen opens a HelpSheet: two to four short plain-language sentences for _this_ screen (catalogue key per route, en and bn), then **Call school office** — a `tel:` link to `school_profiles.phone`, labelled with the number. No phone on the school profile → the button is replaced by "Your school office has not added a phone number yet", and owners/admins see a link to Settings → School to add it. Voice hints (4.8) appear here once Part 4 ships.
 
-**4.8 Voice hints (Part 4).** A **Read aloud** button in the HelpSheet speaks the same help text with the browser's Web Speech `speechSynthesis`, in the user's language. It is shown **only** when `speechSynthesis.getVoices()` has a voice for that language (`bn-BD`/`bn-IN` for Bangla, `en-*` for English); otherwise the button is absent, not broken. **Quality risk:** many older Android phones ship no Bangla voice, or a robotic one, and some WebViews expose none at all; the voice list also loads asynchronously. Part 4 includes a device check on at least one old Android (Android 8–10) and records what it heard in the test report. No cloud TTS (it would need internet and a paid provider).
+**4.8 Voice hints (Part 4).** A **Read aloud** button in the HelpSheet speaks the same help text with the browser's Web Speech `speechSynthesis`, in the user's language. It is shown **only** when `speechSynthesis.getVoices()` has a voice for that language (`bn-BD`/`bn-IN` for Bangla, `en-*` for English); otherwise the button is absent, not broken. **Quality risk:** many older Android phones ship no Bangla voice, or a robotic one, and some WebViews expose none at all; the voice list also loads asynchronously. Part 4 has a **go/no-go gate**: it ships only if a Bangla voice is available and understandable on a 2019-era Android test phone; otherwise the Part is dropped and the reason recorded in D-403 and the test report. No cloud TTS (it would need internet and a paid provider).
 
 **4.9 Language.** Basic mode uses the user's own language choice (English by default, D-401 resolver). It never forces Bangla. Every basic string exists in `en` and `bn`; Western digits as everywhere (D-401).
 
@@ -108,9 +109,9 @@ The registry is one typed list (`CLASS_HUB_TABS` in `packages/domain`) filtered 
 
 **5.2 Text size** (Normal / Large / Extra large), in **both** modes: sets the root font size to 100 % / 112.5 % / 125 % via `<html data-text-size>` from the cookie on the server render (no flash). Every type and spacing token is `rem`-based so the whole layout scales; Part 1 audits and converts any `px` font size it finds. Basic mode's own sizes multiply with it (basic body at Extra large = 22.5 px). Rule: no screen may overflow horizontally at 360 px wide at Extra large in Bangla — the acceptance tests run that combination.
 
-**5.3 Undo.** Before saving: every change on a screen can be undone ("Undo last change" button while the screen is dirty; "Mark all present" keeps its existing Undo, F-AC-03). After saving: attendance and marks show an **Undo** toast for 10 s that re-saves the previous values through the same action (it is a normal edit, audited as one) — available only while inside the edit window and only when the save was an edit of existing values; a first save has nothing to go back to, so its guard is the ConfirmSheet. Anything else has no undo and therefore always confirms.
+**5.3 Undo.** Before saving: every change on a screen can be undone ("Undo last change" button while the screen is dirty; "Mark all present" keeps its existing Undo, F-AC-03). After saving: attendance and marks show an **Undo** toast — **30 s in basic mode** (older users read slowly), 10 s in the full app (DESIGN-SYSTEM §5.4) — that re-saves the previous values through the same action (it is a normal edit, audited as one) — available only while inside the edit window and only when the save was an edit of existing values; a first save has nothing to go back to, so its guard is the ConfirmSheet. Anything else has no undo and therefore always confirms.
 
-**5.4 What basic mode hides.** Anything not tied to a class a teacher teaches: audit trail, reports hub, exam setup, school settings, grade scales, calendar setup, staff directory, billing, invitations. Owners/admins keep an **All classes** block (OQ-3) and reach everything else with **Switch to full app**. Features that are class-shaped move into hub tabs instead of being hidden (routine, printing for that class, handouts, lesson plan, homework).
+**5.4 What basic mode hides.** Anything not tied to a class a teacher teaches: audit trail, reports hub, exam setup, school settings, grade scales, calendar setup, staff directory, billing, invitations. Owners/admins keep an **All classes** block and reach everything else with **Switch to full app**. Features that are class-shaped move into hub tabs instead of being hidden (routine, printing for that class, handouts, lesson plan, homework).
 
 **5.5 Performance budget (old Android).** Reference device: Android 8+, 2 GB RAM, 4-core entry CPU, Chrome/WebView 90+, "Slow 4G" (≈ 400 kbps down, 400 ms RTT) — CI runs Lighthouse on the basic home and a class hub with 4× CPU throttling.
 
@@ -159,7 +160,7 @@ Every tab reuses its feature's existing actions (`saveAttendanceSession`, `saveM
 
 **Part 3 — Class hub with the built tabs, plain confirmations and undo** · `/app/classes/[sectionId]`, `CLASS_HUB_TABS` registry + implemented-routes test, Attendance tab (existing roll call in basic sizes, row "More" button instead of long-press, `ConfirmSheet` "Save attendance for 6-ক? 38 present, 2 absent", post-save Undo), Students tab (section roster), Marks tab if F-AC-06 P3 is merged (else it lands in that Part), `NOT_ASSIGNED` screen · tests: e2e "take the roll in basic mode" (open → block → mark → confirm → saved, home block flips to a tick), confirm text unit tests (en/bn, counts), undo re-save produces one audited edit, a teacher opening another teacher's section gets `NOT_ASSIGNED`, Lighthouse budget on a hub · **Demo:** from home, open Class 6 – ক, take the roll with one "Mark all present" and two absentees, confirm the plain sentence, undo, redo — and never see a menu.
 
-**Part 4 — Voice hints** · "Read aloud" in HelpSheet via `speechSynthesis`, shown only when a matching voice exists, stops on sheet close, respects the language · tests: unit for voice selection (bn-BD → bn-IN → none), e2e with a stubbed `speechSynthesis` (button absent without a voice), a manual device check on one Android 8–10 phone and one iPhone recorded in the test report · **Demo:** on a phone with a Bangla voice, Help → Read aloud speaks the screen's help in Bangla; on one without, the button is not shown.
+**Part 4 — Voice hints** · "Read aloud" in HelpSheet via `speechSynthesis`, shown only when a matching voice exists, stops on sheet close, respects the language · tests: unit for voice selection (bn-BD → bn-IN → none), e2e with a stubbed `speechSynthesis` (button absent without a voice), a manual device check on one iPhone, and the **go/no-go gate**: ship only if a Bangla voice is available and understandable on a 2019-era Android test phone, otherwise drop the Part and record why · **Demo:** on a phone with a Bangla voice, Help → Read aloud speaks the screen's help in Bangla; on one without, the button is not shown.
 
 After Part 4, new tabs are not F-ID-10 Parts: each feature Part that ships a class-shaped screen (routine, print, handouts, lesson plan, homework) adds its registry entry and its basic-mode e2e step in its own PR.
 
@@ -172,7 +173,7 @@ After Part 4, new tabs are not F-ID-10 Parts: each feature Part that ships a cla
 5. **Given** no timetable exists, **when** the home renders, **then** no "Next period" line or empty slot is shown.
 6. **Given** a class hub, **when** it renders, **then** it shows only tabs whose pages exist (Attendance and Students today; Marks once F-AC-06 P3 is merged) and no "coming soon" tab.
 7. **Given** the Attendance tab with 38 present and 2 absent, **when** the teacher taps Save, **then** a sheet reads "Save attendance for 6-ক? 38 present, 2 absent" with **Yes, save** and **Go back**, and nothing is written until **Yes, save**.
-8. **Given** an edited, saved session inside the edit window, **when** the teacher taps **Undo** within 10 s, **then** the previous statuses are saved back through `saveAttendanceSession` as one audited edit.
+8. **Given** an edited, saved session inside the edit window, **when** the teacher taps **Undo** within 30 s (basic mode), **then** the previous statuses are saved back through `saveAttendanceSession` as one audited edit.
 9. **Given** any basic screen at 360×800, **when** measured, **then** every interactive element is ≥ 56 × 56 px, has a visible text label, and no action needs a swipe or a long-press.
 10. **Given** `school_profiles.phone` is set, **when** Help is opened on any basic screen, **then** a **Call school office** link with `href="tel:<phone>"` is present; **given** it is not set, **then** the link is absent and the "not added yet" line shows.
 11. **Given** a teacher not assigned to 9 – খ, **when** they open `/app/classes/<9-খ id>`, **then** they see "This class is not on your list" and no student data is sent to the browser.
@@ -191,8 +192,3 @@ After Part 4, new tabs are not F-ID-10 Parts: each feature Part that ships a cla
 ## 11. Open questions
 
 - **OQ-1 — Prompting basic mode.** Default assumed: no automatic switch; a one-time dismissible card on the full dashboard for teachers ("Prefer bigger buttons? Try basic mode"). Should admins be able to switch it on _for_ a teacher (e.g. while helping them)? Default: no — each user decides for themselves, as the owner said.
-- **OQ-2 — Office staff.** Staff have no classes, so the class-by-class home has nothing to show them. Default: the switch is hidden for `staff` until a staff-shaped basic home is asked for.
-- **OQ-3 — Owners/admins with no classes.** Default: an **All classes** block that opens a big searchable list of every live section, each opening the same hub. Confirm, or should admins' basic home show the attendance "who has not marked" list instead?
-- **OQ-4 — Subject teachers.** Until F-AC-01's `section_subjects` ships, only class teachers get blocks. A subject-only teacher sees the "no classes yet" state. Confirm that is acceptable for the demos, or pull `section_subjects` forward.
-- **OQ-5 — Undo window.** 10 s after a save (matches DESIGN-SYSTEM §5.4 undo toasts). Older users may need longer; 30 s is the alternative.
-- **OQ-6 — Voice quality.** If the device check in Part 4 finds Bangla voices unusable on most old Androids, is English-only read-aloud (or dropping Part 4) acceptable, or should a recorded-audio help set be considered later?
