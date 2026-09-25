@@ -9,7 +9,8 @@
  * §5.1) — every letter, grade point, GPA and rank on the DTO already came
  * from the caller (today: a fixture using `@acadigma/domain`'s `bandFor` /
  * `BD_GRADE_BANDS`, the #46/D-302 grade scale; later: the real
- * `app.compute_exam_result`). This file only lays the numbers out.
+ * `results` rows written by F-AC-06's `app.compute_results`). This file only
+ * lays the numbers out.
  *
  * Bengali numerals: DESIGN-SYSTEM §1.6 opts printed report cards in to
  * Bengali digits when `locale === 'bn'` — the same `formatNumber` every
@@ -75,6 +76,12 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     color: "#8a1a12",
   },
+  withheldLine: {
+    marginTop: 12,
+    fontSize: 10,
+    fontWeight: 600,
+    color: "#8a1a12",
+  },
   attendanceLine: { marginTop: 8, fontSize: 9 },
   attendanceWarning: { color: "#8a1a12" },
 })
@@ -107,13 +114,16 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
   const { locale } = props
   const bn = locale === "bn"
 
-  const title = bn ? "প্রতিবেদন পত্র" : "Report Card"
+  const title = bn ? "প্রগতিপত্র" : "Progress Report"
   const examName = bn ? props.examNameBn : props.examNameEn
   const studentName = bn ? props.studentNameBn : props.studentNameEn
   const scopeLine = `${props.className} – ${props.sectionName} · ${examName}`
   const incompleteSubjectNames = props.subjects
-    .filter((row) => row.marksObtained === null)
+    .filter((row) => row.status === "entered" && row.marksObtained === null)
     .map((row) => (bn ? row.subjectNameBn : row.subjectNameEn))
+  // F-AC-06 §5.10: no totals, percentage, GPA, grade, pass/fail or rank.
+  const resultWithheld =
+    props.result === "incomplete" || props.result === "withheld"
 
   const labels = {
     studentName: bn ? "শিক্ষার্থীর নাম" : "Student name",
@@ -131,6 +141,17 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
     result: bn ? "ফলাফল" : "Result",
     pass: bn ? "উত্তীর্ণ" : "Pass",
     fail: bn ? "অনুত্তীর্ণ" : "Fail",
+    incompleteResult: bn
+      ? "অসম্পূর্ণ — ফলাফল স্থগিত"
+      : "Incomplete — result withheld",
+    withheldResult: bn ? "ফলাফল স্থগিত" : "Result withheld",
+    gpaWithoutOptional: bn
+      ? "৪র্থ বিষয় ছাড়া জিপিএ"
+      : "GPA without 4th subject",
+    fourthSubject: bn ? "(৪র্থ বিষয়)" : "(4th subject)",
+    absent: bn ? "অনুপস্থিত" : "Absent",
+    exempt: bn ? "অব্যাহতি" : "Exempt",
+    tied: bn ? "(সমান)" : "(tied)",
     rank: bn ? "মেধাক্রম" : "Rank",
     attendance: bn ? "উপস্থিতি" : "Attendance",
     incomplete: bn
@@ -196,14 +217,18 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
           <View key={i} style={styles.tableRow}>
             <ScriptText
               style={[styles.tableCell, styles.colSubject]}
-              text={bn ? row.subjectNameBn : row.subjectNameEn}
+              text={`${bn ? row.subjectNameBn : row.subjectNameEn}${row.subjectKind === "optional_fourth" ? ` ${labels.fourthSubject}` : ""}`}
             />
             <ScriptText
               style={[styles.tableCell, styles.colMarks]}
               text={
-                row.marksObtained === null
-                  ? "—"
-                  : formatNumber(row.marksObtained, locale)
+                row.status === "absent"
+                  ? labels.absent
+                  : row.status === "exempt"
+                    ? labels.exempt
+                    : row.marksObtained === null
+                      ? "—"
+                      : formatNumber(row.marksObtained, locale)
               }
             />
             <ScriptText
@@ -224,28 +249,32 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
             />
           </View>
         ))}
-        <View style={styles.totalsRow}>
-          <ScriptText
-            style={[styles.tableCell, styles.colSubject]}
-            text={labels.total}
-          />
-          <ScriptText
-            style={[styles.tableCell, styles.colMarks]}
-            text={formatNumber(props.totalObtained, locale)}
-          />
-          <ScriptText
-            style={[styles.tableCell, styles.colFull]}
-            text={formatNumber(props.totalFull, locale)}
-          />
-          <ScriptText
-            style={[styles.tableCell, styles.colGrade]}
-            text={props.overallLetter}
-          />
-          <ScriptText
-            style={[styles.tableCell, styles.colGp]}
-            text={formatNumber(props.gpa, locale, 2)}
-          />
-        </View>
+        {!resultWithheld && (
+          <View style={styles.totalsRow}>
+            <ScriptText
+              style={[styles.tableCell, styles.colSubject]}
+              text={labels.total}
+            />
+            <ScriptText
+              style={[styles.tableCell, styles.colMarks]}
+              text={formatNumber(props.totalObtained, locale)}
+            />
+            <ScriptText
+              style={[styles.tableCell, styles.colFull]}
+              text={formatNumber(props.totalFull, locale)}
+            />
+            <ScriptText
+              style={[styles.tableCell, styles.colGrade]}
+              text={props.overallLetter ?? "—"}
+            />
+            <ScriptText
+              style={[styles.tableCell, styles.colGp]}
+              text={
+                props.gpa === null ? "—" : formatNumber(props.gpa, locale, 2)
+              }
+            />
+          </View>
+        )}
       </View>
 
       {incompleteSubjectNames.length > 0 && (
@@ -255,23 +284,41 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
         />
       )}
 
-      <View style={styles.summaryGrid}>
-        <Field
-          label={labels.percentage}
-          value={`${formatNumber(props.percentage, locale)}%`}
+      {resultWithheld ? (
+        <ScriptText
+          style={styles.withheldLine}
+          text={`${labels.result}: ${props.result === "incomplete" ? labels.incompleteResult : labels.withheldResult}`}
         />
-        <Field label={labels.gpa} value={formatNumber(props.gpa, locale, 2)} />
-        <Field
-          label={labels.result}
-          value={props.result === "pass" ? labels.pass : labels.fail}
-        />
-        {props.rank !== null && props.rankOf !== null && (
+      ) : (
+        <View style={styles.summaryGrid}>
           <Field
-            label={labels.rank}
-            value={`${formatNumber(props.rank, locale)} / ${formatNumber(props.rankOf, locale)}`}
+            label={labels.percentage}
+            value={`${formatNumber(props.percentage, locale)}%`}
           />
-        )}
-      </View>
+          {props.gpa !== null && (
+            <Field
+              label={labels.gpa}
+              value={formatNumber(props.gpa, locale, 2)}
+            />
+          )}
+          {props.gpaWithoutOptional !== null && (
+            <Field
+              label={labels.gpaWithoutOptional}
+              value={formatNumber(props.gpaWithoutOptional, locale, 2)}
+            />
+          )}
+          <Field
+            label={labels.result}
+            value={props.result === "pass" ? labels.pass : labels.fail}
+          />
+          {props.rank !== null && props.rankOf !== null && (
+            <Field
+              label={labels.rank}
+              value={`${formatNumber(props.rank, locale)}${props.rankTied ? ` ${labels.tied}` : ""} / ${formatNumber(props.rankOf, locale)}`}
+            />
+          )}
+        </View>
+      )}
 
       <ScriptText
         style={

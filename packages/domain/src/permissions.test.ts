@@ -323,8 +323,14 @@ describe("F-OP-03 §2 reports and PDF — Parts 1-3 keys", () => {
     }
   })
 
-  it("denies all three to staff, parent and platform (spec §2: every one of those rows is '—')", () => {
-    for (const role of ["staff", "parent", "platform"] as const) {
+  it("grants staff report.view and report.render.report_card, not the sample kind (D-206)", () => {
+    expect(can("staff", "report.view")).toBe(true)
+    expect(can("staff", "report.render.report_card")).toBe(true)
+    expect(can("staff", "report.render.sample")).toBe(false)
+  })
+
+  it("denies all three to parent and platform", () => {
+    for (const role of ["parent", "platform"] as const) {
       expect(can(role, "report.view")).toBe(false)
       expect(can(role, "report.render.sample")).toBe(false)
       expect(can(role, "report.render.report_card")).toBe(false)

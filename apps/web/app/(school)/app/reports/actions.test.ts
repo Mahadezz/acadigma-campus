@@ -224,10 +224,15 @@ describe("report_card kind (D-206)", () => {
       data: { rollNumber: 1, studentNameEn: "Test Student" },
     })
     mockRenderPdfToBuffer.mockResolvedValue(Buffer.from("%PDF"))
+    const callerClient = { caller: true }
+    mockCreateClient.mockImplementationOnce(async () => callerClient)
 
     const result = await createReportRun(VALID_REPORT_CARD_INPUT)
     expect(result.ok).toBe(true)
+    // The seam reads through the caller's RLS client, not the service client.
     expect(mockGetReportCardData).toHaveBeenCalledWith(
+      callerClient,
+      CTX,
       "11111111-1111-1111-1111-111111111111",
       "22222222-2222-2222-2222-222222222222"
     )

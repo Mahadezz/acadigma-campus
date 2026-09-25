@@ -33,6 +33,7 @@ import {
 } from "@acadigma/pdf"
 
 import { getReportCardData } from "@/app/(school)/app/reports/report-card-data"
+import { ACTION_FOR_KIND } from "@/app/(school)/app/reports/report-kind-action"
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
 
@@ -74,6 +75,16 @@ export async function GET(
     )
   }
 
+  // Opening the reports area is not enough: the caller must also be allowed
+  // to render this run's kind (a report card carries a student's marks).
+  if (!can(ctx.role, ACTION_FOR_KIND[run.data.kind])) {
+    const error = apiError("forbidden", "You cannot open this report.")
+    return NextResponse.json(
+      { error },
+      { status: httpStatusForError(error.code) }
+    )
+  }
+
   if (run.data.status !== "ready") {
     const error = apiError(
       "conflict",
@@ -103,16 +114,16 @@ export async function GET(
   if (run.data.kind === "report_card") {
     const parsedParams = reportCardParamsSchema.safeParse(run.data.params)
     if (!parsedParams.success) {
-      const error = apiError(
-        "validation_failed",
-        "This report's params are invalid."
-      )
+      // Stored params were validated on insert; bad ones here are our bug.
+      const error = apiError("internal", "This report's params are invalid.")
       return NextResponse.json(
         { error },
         { status: httpStatusForError(error.code) }
       )
     }
     const data = await getReportCardData(
+      supabase,
+      ctx,
       parsedParams.data.studentId,
       parsedParams.data.examId
     )

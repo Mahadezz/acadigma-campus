@@ -130,6 +130,8 @@ function buildSubjectRow(
     return {
       subjectNameEn: subject.en,
       subjectNameBn: subject.bn,
+      subjectKind: "compulsory",
+      status: "entered", // entered, but no mark yet: prints "—"
       marksObtained: null,
       fullMarks: subject.fullMarks,
       letter: null,
@@ -142,6 +144,8 @@ function buildSubjectRow(
   return {
     subjectNameEn: subject.en,
     subjectNameBn: subject.bn,
+    subjectKind: "compulsory",
+    status: "entered",
     marksObtained,
     fullMarks: subject.fullMarks,
     letter: band?.letter ?? null,
@@ -179,7 +183,14 @@ function buildStudent(roll: number): ReportCardDto {
       : 0
   const overallBand = anyFail ? null : bandFor(BD_GRADE_BANDS, percentage)
   const overallLetter = anyFail ? "F" : (overallBand?.letter ?? "—")
-  const result: ReportCardDto["result"] = anyFail ? "fail" : "pass"
+  // F-AC-06 §5.10: a missing mark makes the result incomplete — no GPA,
+  // grade or rank, rather than a silent zero.
+  const incomplete = markedSubjects.length < subjects.length
+  const result: ReportCardDto["result"] = incomplete
+    ? "incomplete"
+    : anyFail
+      ? "fail"
+      : "pass"
 
   const rng = mulberry32(roll * 31 + 7)
   const presentDays =
@@ -207,10 +218,12 @@ function buildStudent(roll: number): ReportCardDto {
     totalObtained,
     totalFull,
     percentage,
-    gpa,
-    overallLetter,
+    gpa: incomplete ? null : gpa,
+    gpaWithoutOptional: null, // no 4th subject in Class 6
+    overallLetter: incomplete ? null : overallLetter,
     result,
     rank: null, // filled in by rankClass6Ka() below, once every GPA is known
+    rankTied: false,
     rankOf: FIXTURE_STUDENT_IDS.length,
     attendance: {
       presentDays,
@@ -221,18 +234,25 @@ function buildStudent(roll: number): ReportCardDto {
   }
 }
 
-/** Ranks by GPA desc, total obtained desc (§5.1) — computed once, over the
- * whole class, so an individual student's card carries a real rank. */
+/** Ranks by GPA desc, total obtained desc (§5.1) with standard competition
+ * ranking (1, 2, 2, 4); incomplete/withheld students get no rank (F-AC-06
+ * §5.10). Computed once over the whole class. */
 function rankClass6Ka(students: ReportCardDto[]): ReportCardDto[] {
-  const order = [...students].sort(
-    (a, b) => b.gpa - a.gpa || b.totalObtained - a.totalObtained
-  )
-  const rankByRoll = new Map<number, number>()
-  order.forEach((student, i) => rankByRoll.set(student.rollNumber, i + 1))
-  return students.map((student) => ({
-    ...student,
-    rank: rankByRoll.get(student.rollNumber) ?? null,
-  }))
+  const ranked = students
+    .filter((s) => s.gpa !== null)
+    .sort((a, b) => b.gpa! - a.gpa! || b.totalObtained - a.totalObtained)
+  const sameKey = (a: ReportCardDto, b: ReportCardDto) =>
+    a.gpa === b.gpa && a.totalObtained === b.totalObtained
+  const rankByRoll = new Map<number, { rank: number; tied: boolean }>()
+  ranked.forEach((student) => {
+    const first = ranked.findIndex((other) => sameKey(other, student))
+    const tied = ranked.filter((other) => sameKey(other, student)).length > 1
+    rankByRoll.set(student.rollNumber, { rank: first + 1, tied })
+  })
+  return students.map((student) => {
+    const r = rankByRoll.get(student.rollNumber)
+    return { ...student, rank: r?.rank ?? null, rankTied: r?.tied ?? false }
+  })
 }
 
 let cached: readonly ReportCardDto[] | null = null

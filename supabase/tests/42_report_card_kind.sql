@@ -1,16 +1,14 @@
 -- =====================================================================
 -- pgTAP · F-OP-03 Part 3 (D-206) — the 'report_card' report_kind value.
 --
--- No new table, no new policy: report_runs/report_run_items' existing RLS
--- (proved in 40_report_runs.sql) already covers every kind column-for-
--- column. This file's only job is to prove the new enum value actually
--- participates in that same RLS rather than silently bypassing it —
--- a teacher's own report_card run is visible to them and to their
--- school's owner, invisible to another school, and still not directly
--- UPDATE-able by any authenticated role.
+-- Proves the new enum value participates in report_runs' RLS rather than
+-- bypassing it — a teacher's own report_card run is visible to them and to
+-- their school's owner, invisible to another school, and still not directly
+-- UPDATE-able — and that staff (D-206) may request and read their own
+-- report_card run but never a 'sample' run or a colleague's run.
 -- =====================================================================
 begin;
-select plan(6);
+select plan(10);
 
 create schema if not exists tests;
 
@@ -52,6 +50,7 @@ $fn$;
 -- ---------------------------------------------------------------------
 select tests.mkuser('cccccccc-0000-0000-0000-000000000001', 'owner.c@test.local',   'Owner C');
 select tests.mkuser('cccccccc-0000-0000-0000-000000000002', 'teacher.c@test.local', 'Teacher C');
+select tests.mkuser('cccccccc-0000-0000-0000-000000000003', 'staff.c@test.local',   'Staff C');
 select tests.mkuser('dddddddd-0000-0000-0000-000000000001', 'owner.d@test.local',   'Owner D');
 
 insert into public.workspaces (id, type, name, slug, owner_id, created_by)
@@ -62,7 +61,9 @@ values ('33333333-3333-3333-3333-333333333333', 'school', 'School C', 'school-c-
 
 insert into public.workspace_members (id, workspace_id, user_id, role, status, joined_at)
 values ('eeee0001-0000-0000-0000-000000000001', '33333333-3333-3333-3333-333333333333',
-        'cccccccc-0000-0000-0000-000000000002', 'teacher', 'active', now());
+        'cccccccc-0000-0000-0000-000000000002', 'teacher', 'active', now()),
+       ('eeee0001-0000-0000-0000-000000000003', '33333333-3333-3333-3333-333333333333',
+        'cccccccc-0000-0000-0000-000000000003', 'staff', 'active', now());
 
 -- =====================================================================
 -- 1. the enum value exists (would fail to even reach RLS otherwise)
@@ -143,6 +144,47 @@ select throws_ok(
   '23505', null,
   'a second live report_card run with the same (workspace, idempotency_key) is refused'
 );
+
+-- =====================================================================
+-- 6. staff (D-206): may request a report_card run, never a sample run,
+--    and sees only their own runs
+-- =====================================================================
+select tests.login('cccccccc-0000-0000-0000-000000000003');
+
+select lives_ok(
+  $$insert into public.report_runs
+      (id, workspace_id, kind, params, locale, requested_by, idempotency_key)
+    values ('a0000004-0000-0000-0000-000000000004', '33333333-3333-3333-3333-333333333333',
+            'report_card', '{"kind":"report_card"}'::jsonb, 'bn',
+            'cccccccc-0000-0000-0000-000000000003', 'key-report-card-staff-c')$$,
+  'staff can request a report_card run attributed to themselves'
+);
+
+select throws_ok(
+  $$insert into public.report_runs
+      (id, workspace_id, kind, params, locale, requested_by, idempotency_key)
+    values ('a0000005-0000-0000-0000-000000000005', '33333333-3333-3333-3333-333333333333',
+            'sample', '{"kind":"sample"}'::jsonb, 'bn',
+            'cccccccc-0000-0000-0000-000000000003', 'key-sample-staff-c')$$,
+  '42501', 'new row violates row-level security policy for table "report_runs"',
+  'staff cannot request a sample run'
+);
+
+select results_eq(
+  $$select id from public.report_runs order by id$$,
+  $$values ('a0000004-0000-0000-0000-000000000004'::uuid)$$,
+  'staff sees only their own run, not the teacher''s'
+);
+
+select tests.logout();
+
+select tests.login('cccccccc-0000-0000-0000-000000000001');
+select is(
+  (select count(*)::int from public.report_runs),
+  2,
+  'the owner sees both the teacher''s and the staff member''s runs'
+);
+select tests.logout();
 
 select * from finish();
 rollback;

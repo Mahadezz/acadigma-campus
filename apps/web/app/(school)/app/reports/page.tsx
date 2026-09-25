@@ -56,13 +56,19 @@ export default async function ReportsPage() {
         t={{ generate: r.generate, generating: r.generating, error: r.error }}
       />
 
-      <GenerateReportCardButton
-        t={{
-          generateReportCard: r.generateReportCard,
-          generating: r.generating,
-          error: r.error,
-        }}
-      />
+      {/* D-206: the only report card data is a fixture student, who must never
+          appear under a real school — no button in production until the
+          seam (`report-card-data.ts`) reads real results. */}
+      {process.env.NODE_ENV !== "production" &&
+        can(ctx.role, "report.render.report_card") && (
+          <GenerateReportCardButton
+            t={{
+              generateReportCard: r.generateReportCard,
+              generating: r.generating,
+              error: r.error,
+            }}
+          />
+        )}
 
       <div>
         <h3 className="mb-2 text-sm font-semibold">{r.recent}</h3>

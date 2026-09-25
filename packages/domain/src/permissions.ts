@@ -253,10 +253,11 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.leave",
     // Audit (F-ID-09 §2)
     "audit.read.self",
-    // F-OP-03 §2 — Reports and PDF (D-204, D-206): the spec's "own sections"
-    // row-scoping for report.render.report_card is not enforced yet — the
-    // render source is a fixture, not real section-teacher data (F-AC-0x) —
-    // so a plain role grant is the honest cut, same as 'sample' before it.
+    // F-OP-03 §2 — Reports and PDF (D-204, D-206): a teacher may render only
+    // report cards of sections they are class teacher of. Interim: not
+    // enforced yet — the render source is a fixture — so a plain role grant;
+    // the seam (`getReportCardData`) and RLS on `results` enforce it when
+    // real data lands (F-AC-06 Part 5).
     "report.view",
     "report.render.sample",
     "report.render.report_card",
@@ -281,6 +282,11 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "audit.read.self",
     "academics.structure.read",
     "exams.read",
+    // F-OP-03 §2 (D-206, lead decision 2026-09-26): the office prints report
+    // cards, so staff may open reports and render a report card — not the
+    // spec's "—". No 'sample' render: that is the pipeline's own proof.
+    "report.view",
+    "report.render.report_card",
   ],
   // Read-only parent portal (DECISION-LOG D-10), narrowed to their children by RLS.
   parent: [

@@ -28,13 +28,13 @@ import {
   reportRunInputSchema,
   type ApiError,
   type ReportCardParams,
-  type ReportKind,
   type ReportRun,
   type Result,
 } from "@acadigma/contracts"
 import {
   requireWritable,
   withServiceRole,
+  type AcadigmaSupabaseClient,
   type WorkspaceContext,
 } from "@acadigma/db"
 import {
@@ -45,7 +45,7 @@ import {
   markReportRunRendering,
 } from "@acadigma/db/repositories/reports"
 import { getSchoolProfile } from "@acadigma/db/repositories/settings"
-import { can, type Action } from "@acadigma/domain"
+import { can } from "@acadigma/domain"
 import { renderHeaderLine } from "@acadigma/domain/settings"
 import {
   renderPdfToBuffer,
@@ -58,14 +58,9 @@ import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
 
 import { getReportCardData } from "./report-card-data"
+import { ACTION_FOR_KIND } from "./report-kind-action"
 
 const REPORTS_PATH = "/app/reports"
-
-/** One `can()` action per report kind (spec §2). Extend as new kinds ship. */
-const ACTION_FOR_KIND: Record<ReportKind, Action> = {
-  sample: "report.render.sample",
-  report_card: "report.render.report_card",
-}
 
 /** Branding fields every template takes as plain props (`document-shell.tsx`'s
  * file header: this package never fetches its own data). Shared by every
@@ -149,12 +144,14 @@ async function renderSampleRun(
  * Renders one report card and moves the run to ready/failed. Same shape as
  * `renderSampleRun`, plus the one extra step this kind needs: resolving the
  * student's academic data through `getReportCardData` (the seam — see that
- * file's header comment) before the template can render at all.
+ * file's header comment) before the template can render at all. The seam
+ * reads through the caller's own RLS client (`supabase`), never `service`.
  */
 async function renderReportCardRun(
   runId: string,
   ctx: WorkspaceContext,
-  params: ReportCardParams
+  params: ReportCardParams,
+  supabase: AcadigmaSupabaseClient
 ): Promise<void> {
   const startedAt = Date.now()
   await withServiceRole(
@@ -174,7 +171,13 @@ async function renderReportCardRun(
         return
       }
 
-      const data = await getReportCardData(params.studentId, params.examId)
+      // Academic data through the CALLER's RLS client, not service role.
+      const data = await getReportCardData(
+        supabase,
+        ctx,
+        params.studentId,
+        params.examId
+      )
       if (!data.ok) {
         await markReportRunFailed(service, runId, "no_data", data.error.message)
         return
@@ -245,7 +248,12 @@ export async function createReportRun(
     if (parsed.data.params.kind === "sample") {
       await renderSampleRun(created.data.id, ctx)
     } else {
-      await renderReportCardRun(created.data.id, ctx, parsed.data.params)
+      await renderReportCardRun(
+        created.data.id,
+        ctx,
+        parsed.data.params,
+        supabase
+      )
     }
     const refreshed = await getReportRun(supabase, ctx, created.data.id)
     revalidatePath(REPORTS_PATH)

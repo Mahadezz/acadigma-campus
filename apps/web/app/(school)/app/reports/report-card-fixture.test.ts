@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
 
+import { reportCardDtoSchema } from "@acadigma/contracts"
+
 import {
   buildClass6KaReportCards,
   FIXTURE_EXAM_ID,
@@ -10,8 +12,8 @@ import {
  * F-OP-03 Part 3 (D-206) — proves the fixture is internally consistent
  * before anything renders it: 40 students, deterministic (no `Math.random`),
  * the BD grade-scale rule (§5.1: an F in any subject zeroes the GPA) holds,
- * an empty mark never becomes a false zero (§5.7(8)), and rank is a real
- * permutation of 1..40.
+ * an empty mark never becomes a false zero (§5.7(8)) but makes the result
+ * incomplete, and ranks follow competition ranking.
  */
 describe("buildClass6KaReportCards", () => {
   it("builds exactly 40 students, one per FIXTURE_STUDENT_IDS entry", () => {
@@ -27,12 +29,24 @@ describe("buildClass6KaReportCards", () => {
     expect(JSON.parse(JSON.stringify(a))).toEqual(JSON.parse(JSON.stringify(b)))
   })
 
-  it("every roll number appears exactly once as rank 1..40 (a real permutation)", () => {
+  it("ranks the 39 complete students with competition ranking; the incomplete one is unranked", () => {
     const students = buildClass6KaReportCards()
-    const ranks = students
-      .map((s) => s.rank)
-      .sort((a, b) => (a ?? 0) - (b ?? 0))
-    expect(ranks).toEqual(Array.from({ length: 40 }, (_, i) => i + 1))
+    const ranked = students.filter((s) => s.rank !== null)
+    expect(ranked).toHaveLength(39)
+    // Competition ranking: a rank r is shared by k students, then r + k follows.
+    const ranks = ranked.map((s) => s.rank!).sort((a, b) => a - b)
+    ranks.forEach((rank, i) => expect(rank).toBeLessThanOrEqual(i + 1))
+    expect(ranks[0]).toBe(1)
+    for (const s of ranked) {
+      const shared = ranked.filter((o) => o.rank === s.rank).length
+      expect(s.rankTied).toBe(shared > 1)
+    }
+  })
+
+  it("every fixture card satisfies the contract (incl. incomplete => no GPA, grade or rank)", () => {
+    for (const student of buildClass6KaReportCards()) {
+      expect(reportCardDtoSchema.safeParse(student).success).toBe(true)
+    }
   })
 
   it("a student with an F in any subject has GPA 0.00 and result fail (§5.1 BD rule)", () => {
@@ -56,6 +70,10 @@ describe("buildClass6KaReportCards", () => {
     )
     expect(missingRow?.letter).toBeNull()
     expect(missingRow?.gradePoint).toBeNull()
+    expect(incomplete?.result).toBe("incomplete")
+    expect(incomplete?.gpa).toBeNull()
+    expect(incomplete?.overallLetter).toBeNull()
+    expect(incomplete?.rank).toBeNull()
   })
 
   it("at least one student is below the attendance minimum (warning-line case, §5.2)", () => {

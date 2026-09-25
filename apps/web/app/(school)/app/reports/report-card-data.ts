@@ -6,6 +6,7 @@ import {
   type Result,
   type ReportCardDto,
 } from "@acadigma/contracts"
+import type { AcadigmaSupabaseClient, WorkspaceContext } from "@acadigma/db"
 
 import {
   buildClass6KaReportCards,
@@ -16,26 +17,30 @@ import {
 /**
  * F-OP-03 Part 3 (D-206) — THE SEAM.
  *
- * This is the one function the report-card render path calls for academic
- * data. Today it looks a student up in the Class 6-ক fixture
- * (`report-card-fixture.ts`) because F-AC-06's marks entry (Part 3, being
- * built in the billing lane right now) is not on `main` — there is no
- * `marks`/`results` table to query yet.
+ * The one function the report-card render path calls for academic data.
+ * Today it looks a student up in the Class 6-ক fixture
+ * (`report-card-fixture.ts`): the `results` / `result_subject_lines` rows
+ * that F-AC-06's `app.compute_results(exam_id)` writes are not on `main`
+ * yet. The billing lane is building that as F-AC-06 Part 5
+ * (`feat/academics-results`) and will implement this seam there.
  *
- * When that Part merges, replace this function's body with the real query
- * (`app.compute_exam_result(studentId, examId)` per spec §5.1) and delete
- * `report-card-fixture.ts`. The signature — `(studentId, examId) =>
- * Result<ReportCardDto, ApiError>` — does not need to change: `ReportCardDto`
- * already carries only computed academic data (no grade-band logic, §5.1),
- * and `ReportCardParams` (`packages/contracts`) already takes real uuids.
- * Every caller (`actions.ts`'s render step, `/api/pdf/[runId]`) goes through
- * this one function, so the swap is a one-file change.
+ * The real body reads `results` + `result_subject_lines` for
+ * (studentId, examId) through `supabase` — the CALLER's own RLS-scoped
+ * client, never service role — scoped to `ctx.workspaceId`, so a teacher
+ * only ever sees what RLS lets them read (class teacher of the section,
+ * D-206). It maps one `results` row onto `ReportCardDto` and deletes
+ * `report-card-fixture.ts`. Every caller (`actions.ts`, `/api/pdf/[runId]`)
+ * goes through here, so the swap is a one-file change.
  */
 export async function getReportCardData(
+  // Unused by the fixture; the real query reads through them.
+  _supabase: AcadigmaSupabaseClient,
+  _ctx: WorkspaceContext,
   studentId: string,
   examId: string
 ): Promise<Result<ReportCardDto, ApiError>> {
-  if (examId !== FIXTURE_EXAM_ID) {
+  // The fixture student must never print under a real school (D-206).
+  if (process.env.NODE_ENV === "production" || examId !== FIXTURE_EXAM_ID) {
     return err(
       apiError(
         "not_found",
@@ -44,10 +49,7 @@ export async function getReportCardData(
     )
   }
   const index = FIXTURE_STUDENT_IDS.indexOf(studentId)
-  if (index === -1) {
-    return err(apiError("not_found", "This student is not in the fixture."))
-  }
-  const dto = buildClass6KaReportCards()[index]
+  const dto = index === -1 ? undefined : buildClass6KaReportCards()[index]
   if (!dto)
     return err(apiError("not_found", "This student is not in the fixture."))
   return ok(dto)

@@ -15,6 +15,7 @@ import { renderPdfToBuffer } from "../render"
 
 import { ReportCardDocument, type ReportCardDocumentProps } from "./report-card"
 
+/** A complete, ranked card: a 4th subject, a tied rank. */
 const BASE: Omit<ReportCardDocumentProps, "locale"> = {
   schoolName: "আদর্শ উচ্চ বিদ্যালয়",
   headerLines: ["Dhaka, Bangladesh", "EIIN 123456"],
@@ -33,6 +34,8 @@ const BASE: Omit<ReportCardDocumentProps, "locale"> = {
     {
       subjectNameEn: "Bangla",
       subjectNameBn: "বাংলা",
+      subjectKind: "compulsory",
+      status: "entered",
       marksObtained: 88,
       fullMarks: 100,
       letter: "A+",
@@ -41,19 +44,33 @@ const BASE: Omit<ReportCardDocumentProps, "locale"> = {
     {
       subjectNameEn: "Mathematics",
       subjectNameBn: "গণিত",
-      marksObtained: null,
+      subjectKind: "compulsory",
+      status: "entered",
+      marksObtained: 72,
       fullMarks: 100,
-      letter: null,
-      gradePoint: null,
+      letter: "A",
+      gradePoint: 4,
+    },
+    {
+      subjectNameEn: "Agriculture",
+      subjectNameBn: "কৃষি শিক্ষা",
+      subjectKind: "optional_fourth",
+      status: "entered",
+      marksObtained: 65,
+      fullMarks: 100,
+      letter: "A-",
+      gradePoint: 3.5,
     },
   ],
-  totalObtained: 88,
-  totalFull: 200,
-  percentage: 44,
-  gpa: 5,
-  overallLetter: "A+",
+  totalObtained: 225,
+  totalFull: 300,
+  percentage: 75,
+  gpa: 4.75,
+  gpaWithoutOptional: 4.5,
+  overallLetter: "A",
   result: "pass",
-  rank: 1,
+  rank: 2,
+  rankTied: true,
   rankOf: 40,
   attendance: {
     presentDays: 15,
@@ -61,6 +78,48 @@ const BASE: Omit<ReportCardDocumentProps, "locale"> = {
     percent: 68,
     belowMinimum: true,
   },
+}
+
+/** Mathematics not marked yet, English absent: F-AC-06 §5.10 incomplete. */
+const INCOMPLETE: Omit<ReportCardDocumentProps, "locale"> = {
+  ...BASE,
+  subjects: [
+    BASE.subjects[0]!,
+    {
+      ...BASE.subjects[1]!,
+      marksObtained: null,
+      letter: null,
+      gradePoint: null,
+    },
+    {
+      subjectNameEn: "English",
+      subjectNameBn: "ইংরেজি",
+      subjectKind: "compulsory",
+      status: "absent",
+      marksObtained: null,
+      fullMarks: 100,
+      letter: null,
+      gradePoint: null,
+    },
+  ],
+  totalObtained: 88,
+  percentage: 29,
+  gpa: null,
+  gpaWithoutOptional: null,
+  overallLetter: null,
+  result: "incomplete",
+  rank: null,
+  rankTied: false,
+}
+
+async function textOf(
+  props: Omit<ReportCardDocumentProps, "locale">,
+  locale: "bn" | "en"
+): Promise<string> {
+  const buffer = await renderPdfToBuffer(
+    ReportCardDocument({ locale, ...props })
+  )
+  return (await pdfParse(buffer)).text
 }
 
 function bengaliCharMultiset(text: string): string {
@@ -90,29 +149,19 @@ describe("ReportCardDocument — Bengali render (golden)", () => {
   })
 
   it("prints Bengali digits for the roll number and the attendance percentage", async () => {
-    const buffer = await renderPdfToBuffer(
-      ReportCardDocument({ locale: "bn", ...BASE })
-    )
-    const text = (await pdfParse(buffer)).text
-    expect(text).toContain("৭") // roll number
+    const text = await textOf(BASE, "bn")
+    // "রোল" can extract as "েরাল" (pre-base vowel order, golden.test.ts header).
+    expect(text).toMatch(/(রোল|েরাল):\s*৭(?![০-৯])/)
     expect(text).toContain("৬৮") // attendance percent
   })
 
-  it("prints an em dash, never a false zero, for a subject with no mark yet (§5.7(8))", async () => {
-    const buffer = await renderPdfToBuffer(
-      ReportCardDocument({ locale: "bn", ...BASE })
-    )
-    const text = (await pdfParse(buffer)).text
-    expect(text).toContain("—")
-  })
-
-  it("names the incomplete subject in the banner (§4 W1)", async () => {
-    const buffer = await renderPdfToBuffer(
-      ReportCardDocument({ locale: "en", ...BASE })
-    )
-    const text = (await pdfParse(buffer)).text
-    expect(text).toContain("Mathematics")
-    expect(text).toContain("not yet marked")
+  it("titles the card প্রগতিপত্র and marks the 4th subject and a tied rank", async () => {
+    const text = await textOf(BASE, "bn")
+    expectSameBengaliGlyphs(text, "প্রগতিপত্র")
+    expectSameBengaliGlyphs(text, "৪র্থ বিষয়")
+    expect(text).toMatch(/২\s*\(সমান\)/)
+    expect(text).toContain("৪.৭৫") // GPA
+    expect(text).toContain("৪.৫০") // GPA without the 4th subject
   })
 
   it("prints the below-minimum attendance warning as a line, not a block (§5.2)", async () => {
@@ -133,6 +182,36 @@ describe("ReportCardDocument — Bengali render (golden)", () => {
   })
 })
 
+describe("ReportCardDocument — incomplete result (F-AC-06 §5.10)", () => {
+  it("prints the withheld line and hides totals, percentage, GPA, grade, pass/fail and rank (en)", async () => {
+    const text = await textOf(INCOMPLETE, "en")
+    expect(text).toContain("Incomplete — result withheld")
+    expect(text).toContain("Absent")
+    expect(text).toContain("Subjects not yet marked: Mathematics")
+    for (const hidden of [
+      "Total",
+      "Percentage",
+      "GPA",
+      "Pass",
+      "Fail",
+      "Rank",
+      "29%",
+    ]) {
+      expect(text).not.toContain(hidden)
+    }
+  })
+
+  it("prints অসম্পূর্ণ — ফলাফল স্থগিত and অনুপস্থিত, no GPA or rank (bn)", async () => {
+    const text = await textOf(INCOMPLETE, "bn")
+    expectSameBengaliGlyphs(text, "অসম্পূর্ণ ফলাফল স্থগিত")
+    expectSameBengaliGlyphs(text, "অনুপস্থিত")
+    expect(text).toContain("—") // not-yet-marked cell, never a false zero
+    expect(text).not.toContain("মেধাক্রম")
+    expect(text).not.toContain("জিপিএ")
+    expect(text).not.toContain("শতকরা")
+  })
+})
+
 describe("ReportCardDocument — English render", () => {
   it("falls back to the Latin name/subject fields and Western digits", async () => {
     const buffer = await renderPdfToBuffer(
@@ -142,6 +221,9 @@ describe("ReportCardDocument — English render", () => {
     expect(text).toContain("Rahima Akter")
     expect(text).toContain("Bangla")
     expect(text).toContain("Mathematics")
+    expect(text).toContain("Progress Report")
+    expect(text).toContain("Agriculture (4th subject)")
+    expect(text).toContain("2 (tied) / 40")
     expect(text).toContain("68%")
     expect(text).not.toContain("৬৮")
   })

@@ -31,11 +31,16 @@ import { uuidSchema } from "../common"
 // The render DTO
 // ---------------------------------------------------------------------------
 
-/** One subject's row on the printed card (§5.7 rule 8: a missing mark is
- * `null`, never `0` — the template prints "—", not a false zero). */
+/** One subject's row on the printed card, shaped like F-AC-06's
+ * `result_subject_lines` (§5.7 rule 8: a missing mark is `null`, never `0`).
+ * `status` is the line's `entered|absent|exempt`; an `entered` line with a
+ * `null` mark is not marked yet and prints "—", an `absent` line prints
+ * "অনুপস্থিত"/"Absent". */
 export const reportCardSubjectRowSchema = z.object({
   subjectNameEn: z.string().min(1),
   subjectNameBn: z.string().min(1),
+  subjectKind: z.enum(["compulsory", "optional_fourth"]),
+  status: z.enum(["entered", "absent", "exempt"]),
   marksObtained: z.number().min(0).nullable(),
   fullMarks: z.number().positive(),
   /** From `app.band_for`/`bandFor` (#46, D-302) — null only when `marksObtained` is null. */
@@ -55,30 +60,53 @@ export const reportCardAttendanceSchema = z.object({
 })
 export type ReportCardAttendance = z.infer<typeof reportCardAttendanceSchema>
 
-export const reportCardDtoSchema = z.object({
-  studentNameEn: z.string().min(1),
-  studentNameBn: z.string().min(1),
-  studentCode: z.string().min(1),
-  rollNumber: z.number().int().positive(),
-  className: z.string().min(1),
-  sectionName: z.string().min(1),
+/** F-AC-06 `results.result_status`. */
+export const reportCardResultSchema = z.enum([
+  "pass",
+  "fail",
+  "incomplete",
+  "withheld",
+])
+export type ReportCardResult = z.infer<typeof reportCardResultSchema>
 
-  examNameEn: z.string().min(1),
-  examNameBn: z.string().min(1),
+export const reportCardDtoSchema = z
+  .object({
+    studentNameEn: z.string().min(1),
+    studentNameBn: z.string().min(1),
+    studentCode: z.string().min(1),
+    rollNumber: z.number().int().positive(),
+    className: z.string().min(1),
+    sectionName: z.string().min(1),
 
-  subjects: z.array(reportCardSubjectRowSchema).min(1),
+    examNameEn: z.string().min(1),
+    examNameBn: z.string().min(1),
 
-  totalObtained: z.number().min(0),
-  totalFull: z.number().positive(),
-  percentage: z.number().min(0).max(100),
-  gpa: z.number().min(0),
-  overallLetter: z.string().min(1),
-  result: z.enum(["pass", "fail"]),
-  rank: z.number().int().positive().nullable(),
-  rankOf: z.number().int().positive().nullable(),
+    subjects: z.array(reportCardSubjectRowSchema).min(1),
 
-  attendance: reportCardAttendanceSchema,
-})
+    totalObtained: z.number().min(0),
+    totalFull: z.number().positive(),
+    percentage: z.number().min(0).max(100),
+    gpa: z.number().min(0).nullable(),
+    /** GPA without the 4th subject's bonus; null when there is no 4th subject. */
+    gpaWithoutOptional: z.number().min(0).nullable(),
+    overallLetter: z.string().min(1).nullable(),
+    result: reportCardResultSchema,
+    rank: z.number().int().positive().nullable(),
+    /** Shares its rank with another student: prints "২ (সমান)" / "2 (tied)". */
+    rankTied: z.boolean(),
+    rankOf: z.number().int().positive().nullable(),
+
+    attendance: reportCardAttendanceSchema,
+  })
+  .refine(
+    (dto) =>
+      (dto.result !== "incomplete" && dto.result !== "withheld") ||
+      (dto.gpa === null && dto.overallLetter === null && dto.rank === null),
+    {
+      message: "An incomplete or withheld result has no GPA, grade or rank.",
+      path: ["result"],
+    }
+  )
 export type ReportCardDto = z.infer<typeof reportCardDtoSchema>
 
 // ---------------------------------------------------------------------------

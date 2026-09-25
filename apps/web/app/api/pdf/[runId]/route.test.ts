@@ -194,6 +194,8 @@ describe("report_card kind (D-206)", () => {
     const response = await callWith(RUN_ID)
     expect(response.status).toBe(200)
     expect(mockGetReportCardData).toHaveBeenCalledWith(
+      expect.anything(),
+      CTX,
       CARD_PARAMS.studentId,
       CARD_PARAMS.examId
     )
@@ -222,7 +224,30 @@ describe("report_card kind (D-206)", () => {
     expect(mockRenderPdfToBuffer).not.toHaveBeenCalled()
   })
 
-  it("422s when the stored params do not match ReportCardParams", async () => {
+  it("403s a role that may open reports but not render report cards, never renders", async () => {
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: {
+        id: RUN_ID,
+        kind: "report_card",
+        status: "ready",
+        locale: "bn",
+        params: CARD_PARAMS,
+        requestedAt: "2026-09-25T00:00:00.000Z",
+        completedAt: "2026-09-25T00:05:00.000Z",
+      },
+    })
+    mockCan.mockImplementation(
+      (_role: string, action: string) => action === "report.view"
+    )
+    const response = await callWith(RUN_ID)
+    expect(response.status).toBe(403)
+    expect(mockCan).toHaveBeenCalledWith(CTX.role, "report.render.report_card")
+    expect(mockGetReportCardData).not.toHaveBeenCalled()
+    expect(mockRenderPdfToBuffer).not.toHaveBeenCalled()
+  })
+
+  it("500s when the stored params do not match ReportCardParams (validated on insert, so this is our bug)", async () => {
     mockGetReportRun.mockResolvedValue({
       ok: true,
       data: {
@@ -236,7 +261,7 @@ describe("report_card kind (D-206)", () => {
       },
     })
     const response = await callWith(RUN_ID)
-    expect(response.status).toBe(422)
+    expect(response.status).toBe(500)
     expect(mockGetReportCardData).not.toHaveBeenCalled()
     expect(mockRenderPdfToBuffer).not.toHaveBeenCalled()
   })
