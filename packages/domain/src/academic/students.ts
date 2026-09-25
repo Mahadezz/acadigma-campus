@@ -8,7 +8,11 @@ export function ageOn(
   dateOfBirth: string,
   on: string
 ): { years: number; months: number } {
-  const [by, bm, bd] = dateOfBirth.split("-").map(Number) as [number, number, number]
+  const [by, bm, bd] = dateOfBirth.split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ]
   const [oy, om, od] = on.split("-").map(Number) as [number, number, number]
   let months = (oy - by) * 12 + (om - bm)
   if (od < bd) months -= 1

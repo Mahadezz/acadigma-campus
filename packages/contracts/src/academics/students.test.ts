@@ -17,7 +17,11 @@ const valid = {
   gender: "male",
   dateOfBirth: "2014-03-09",
   sectionId: SECTION,
-  guardian: { relation: "father", fullName: "Karim Uddin", phone: "01712345678" },
+  guardian: {
+    relation: "father",
+    fullName: "Karim Uddin",
+    phone: "01712345678",
+  },
 }
 
 describe("normalizeBdPhone (§5 rule 8)", () => {

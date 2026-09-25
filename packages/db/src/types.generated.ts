@@ -542,6 +542,13 @@ export type Database = {
             foreignKeyName: "enrollments_student_fkey"
             columns: ["student_id", "workspace_id"]
             isOneToOne: false
+            referencedRelation: "student_roster"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "enrollments_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id", "workspace_id"]
           },
@@ -880,6 +887,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardians_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "student_roster"
+            referencedColumns: ["id", "workspace_id"]
           },
           {
             foreignKeyName: "guardians_student_fkey"
@@ -1915,6 +1929,13 @@ export type Database = {
             foreignKeyName: "student_private_details_student_fkey"
             columns: ["student_id", "workspace_id"]
             isOneToOne: false
+            referencedRelation: "student_roster"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "student_private_details_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id", "workspace_id"]
           },
@@ -2816,6 +2837,33 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_roster: {
+        Row: {
+          deleted_at: string | null
+          full_name: string | null
+          full_name_bn: string | null
+          gender: Database["public"]["Enums"]["student_gender"] | null
+          grade_level_number: number | null
+          grade_name: string | null
+          grade_name_bn: string | null
+          id: string | null
+          roll_number: number | null
+          section_id: string | null
+          section_name: string | null
+          status: Database["public"]["Enums"]["student_status"] | null
+          student_code: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
