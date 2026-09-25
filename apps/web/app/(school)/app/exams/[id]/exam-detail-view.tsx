@@ -8,7 +8,11 @@ import { useRouter } from "next/navigation"
 import { ChevronLeftIcon } from "lucide-react"
 
 import type { ExamDetail, ExamPaper } from "@acadigma/contracts"
-import { nextExamStatus, reversalFrom } from "@acadigma/domain/academic"
+import {
+  nextExamStatus,
+  papersLocked,
+  reversalFrom,
+} from "@acadigma/domain/academic"
 import { Badge } from "@acadigma/ui/components/badge"
 import { Button } from "@acadigma/ui/components/button"
 import { Input } from "@acadigma/ui/components/input"
@@ -18,8 +22,10 @@ import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
+import type { Locale } from "@/lib/locale"
 
 import { setExamStatus, updateExamSubject } from "../actions"
+import { dateRange, examDateFormatter } from "../format"
 
 type T = Messages["exams"]
 
@@ -29,10 +35,12 @@ type T = Messages["exams"]
  */
 export function ExamDetailView({
   t,
+  locale,
   exam,
   canWrite,
 }: {
   t: T
+  locale: Locale
   exam: ExamDetail
   canWrite: boolean
 }) {
@@ -42,6 +50,8 @@ export function ExamDetailView({
   const [reversing, setReversing] = useState(false)
   const next = nextExamStatus(exam.status)
   const back = reversalFrom(exam.status)
+  const fmt = examDateFormatter(locale)
+  const locked = papersLocked(exam.status)
 
   function move(status: string, reason?: string) {
     setError(null)
@@ -73,9 +83,9 @@ export function ExamDetailView({
           <Badge variant="outline">{t.statuses[exam.status]}</Badge>
         </div>
         <p className="text-muted-foreground text-sm">
-          {t.types[exam.examType]}
-          {exam.startsOn ? ` · ${exam.startsOn}` : ""}
-          {exam.endsOn ? ` – ${exam.endsOn}` : ""}
+          {[t.types[exam.examType], dateRange(fmt, exam.startsOn, exam.endsOn)]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
         {exam.gradeScaleName ? (
           <p className="text-muted-foreground text-sm">
@@ -140,6 +150,13 @@ export function ExamDetailView({
                   t={t}
                   paper={paper}
                   canWrite={canWrite}
+                  locked={locked}
+                  subjectName={
+                    locale === "bn" && paper.subjectNameBn
+                      ? paper.subjectNameBn
+                      : paper.subjectName
+                  }
+                  fmt={fmt}
                 />
               ))}
           </ul>
@@ -209,10 +226,17 @@ function PaperRow({
   t,
   paper,
   canWrite,
+  locked,
+  subjectName,
+  fmt,
 }: {
   t: T
   paper: ExamPaper
   canWrite: boolean
+  /** From marks_entry on, full/pass marks are locked; the date still moves. */
+  locked: boolean
+  subjectName: string
+  fmt: (iso: string) => string
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -229,9 +253,10 @@ function PaperRow({
   if (!canWrite) {
     return (
       <li className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm">
-        <span className="font-medium">{paper.subjectName}</span>
+        <span className="font-medium">{subjectName}</span>
         <span className="text-muted-foreground">
-          {paper.examDate ?? "—"} · {paper.passMarks}/{paper.fullMarks}
+          {paper.examDate ? fmt(paper.examDate) : "—"} · {paper.passMarks}/
+          {paper.fullMarks}
         </span>
       </li>
     )
@@ -239,7 +264,7 @@ function PaperRow({
 
   return (
     <li className="space-y-2 px-4 py-3">
-      <p className="font-medium">{paper.subjectName}</p>
+      <p className="font-medium">{subjectName}</p>
       <form
         className="grid grid-cols-3 items-end gap-2 sm:grid-cols-[1fr_6rem_6rem_auto]"
         onSubmit={(event) => {
@@ -274,6 +299,7 @@ function PaperRow({
             inputMode="decimal"
             value={full}
             onChange={(e) => setFull(e.target.value)}
+            disabled={locked}
             className="h-11"
           />
         </div>
@@ -284,6 +310,7 @@ function PaperRow({
             inputMode="decimal"
             value={pass}
             onChange={(e) => setPass(e.target.value)}
+            disabled={locked}
             className="h-11"
           />
         </div>

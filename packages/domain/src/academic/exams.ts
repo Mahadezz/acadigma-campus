@@ -25,16 +25,23 @@ export type TransitionCheck =
   | { ok: true; reversal: boolean }
   | { ok: false; code: "INVALID_TRANSITION" | "REASON_REQUIRED" }
 
+/**
+ * `currentReason` is the exam's stored `status_reason`: the database refuses
+ * a reversal whose reason is missing or unchanged from it (a reversal must
+ * carry its own reason), and so does this.
+ */
 export function checkExamTransition(
   from: ExamStatus,
   to: ExamStatus,
-  reason?: string | null
+  reason?: string | null,
+  currentReason?: string | null
 ): TransitionCheck {
   if (EXAM_STATUSES.indexOf(to) === EXAM_STATUSES.indexOf(from) + 1) {
     return { ok: true, reversal: false }
   }
   if (REVERSALS.some(([f, t]) => f === from && t === to)) {
-    return reason?.trim()
+    const given = reason?.trim()
+    return given && given !== currentReason?.trim()
       ? { ok: true, reversal: true }
       : { ok: false, code: "REASON_REQUIRED" }
   }
@@ -51,8 +58,15 @@ export function reversalFrom(status: ExamStatus): ExamStatus | null {
   return REVERSALS.find(([f]) => f === status)?.[1] ?? null
 }
 
-/** §5.6: pass marks default to round-half-up(full x pass mark %), whole marks
- * — the same default `public.create_exam` writes. */
+/** §5.6: pass marks default to full x pass mark %, NOT rounded to whole marks
+ * (D-302) — kept at the 2 decimals numeric(6,2) stores, the same default
+ * `public.create_exam` writes (33 % of 50 = 16.50). */
 export function defaultPassMarks(fullMarks: number, passMarkPercent: number) {
-  return roundHalfUp((fullMarks * passMarkPercent) / 100, 0)
+  return roundHalfUp((fullMarks * passMarkPercent) / 100, 2)
+}
+
+/** From `marks_entry` on, papers' marks and membership are locked (the
+ * database's app.tg_exam_papers_lock). */
+export function papersLocked(status: ExamStatus): boolean {
+  return EXAM_STATUSES.indexOf(status) >= EXAM_STATUSES.indexOf("marks_entry")
 }

@@ -12,7 +12,7 @@
 --   F. read_only refuses create_exam (PLAN_READ_ONLY).
 -- =====================================================================
 begin;
-select plan(30);
+select plan(38);
 
 create schema if not exists tests;
 
@@ -136,13 +136,53 @@ select is(
   (select grading_snapshot ->> 'grade_scale_code' || ' '
           || jsonb_array_length(grading_snapshot -> 'bands')::text || ' '
           || (grading_snapshot ->> 'pass_mark_percent') || ' '
-          || (grading_snapshot ->> 'fail_any_subject_zero_gpa')
+          || (grading_snapshot ->> 'fail_any_subject_zero_gpa') || ' '
+          || (grading_snapshot ->> 'rank_by')
      from public.exams where id = current_setting('tests.exam')::uuid),
-  'BD_GPA5 7 33 true', 'the grading policy is snapshotted at creation');
+  'BD_GPA5 7 33 true gpa_then_total', 'the grading policy (incl. rank_by) is snapshotted at creation');
 
 select is(
   (select created_by from public.exams where id = current_setting('tests.exam')::uuid),
   '53000000-0000-4000-a000-000000000001'::uuid, 'created_by is the caller');
+
+-- Draft-phase guards (owner A, then a stranger)
+select tests.login('53000000-0000-4000-a000-000000000001');
+
+select throws_ok(
+  format($$insert into public.exam_sections (workspace_id, exam_id, section_id)
+           values ('53000000-0000-4000-b000-000000000001', %L,
+                   '53000000-0000-4000-c000-000000000023')$$, current_setting('tests.exam')),
+  '22023', 'SECTION_WRONG_YEAR', 'a 2025 section cannot sit a 2026 exam');
+
+select throws_ok(
+  format($$update public.exam_subjects set pass_marks = 150 where exam_id = %L$$,
+         current_setting('tests.exam')),
+  '23514', null, 'pass marks above full marks are refused');
+
+select throws_ok(
+  format($$update public.exams set academic_year_id = '53000000-0000-4000-c000-000000000002'
+           where id = %L$$, current_setting('tests.exam')),
+  '42501', 'EXAM_YEAR_IMMUTABLE', 'an exam cannot move to another academic year');
+
+select tests.logout();
+select tests.login('53000000-0000-4000-a000-000000000004');   -- owner B
+
+select throws_ok(
+  format($$insert into public.exam_subjects
+           (workspace_id, exam_id, section_id, subject_id, full_marks, pass_marks)
+           values ('53000000-0000-4000-b000-000000000002', %L,
+                   '53000000-0000-4000-c000-000000000021',
+                   '53000000-0000-4000-c000-000000000033', 100, 33)$$, current_setting('tests.exam')),
+  '23503', null, 'a paper cannot point at another school''s exam (composite FK)');
+
+select throws_ok(
+  $$insert into public.exams (workspace_id, academic_year_id, name, exam_type, created_by)
+    values ('53000000-0000-4000-b000-000000000001', '53000000-0000-4000-c000-000000000001',
+            'Stranger exam', 'other', '53000000-0000-4000-a000-000000000004')$$,
+  '42501', 'new row violates row-level security policy for table "exams"',
+  'a stranger gets only the RLS refusal, never the snapshot trigger''s errors');
+
+select tests.logout();
 
 -- ---------------------------------------------------------------------
 -- B. Snapshot is immutable and does not follow the scale
@@ -213,16 +253,40 @@ select is(
 -- ---------------------------------------------------------------------
 -- D. Guards
 -- ---------------------------------------------------------------------
+-- Papers are locked from marks_entry on (the exam is marks_locked here).
 select throws_ok(
-  format($$insert into public.exam_sections (workspace_id, exam_id, section_id)
-           values ('53000000-0000-4000-b000-000000000001', %L,
-                   '53000000-0000-4000-c000-000000000023')$$, current_setting('tests.exam')),
-  '22023', 'SECTION_WRONG_YEAR', 'a 2025 section cannot sit a 2026 exam');
+  format($$update public.exam_subjects set full_marks = 50 where exam_id = %L$$,
+         current_setting('tests.exam')),
+  '22023', 'EXAM_LOCKED', 'locked: full marks cannot change');
+
+select lives_ok(
+  format($$update public.exam_subjects set exam_date = '2026-06-03' where exam_id = %L$$,
+         current_setting('tests.exam')),
+  'locked: a paper''s date can still move');
 
 select throws_ok(
-  format($$update public.exam_subjects set pass_marks = 150 where exam_id = %L$$,
-         current_setting('tests.exam')),
-  '23514', null, 'pass marks above full marks are refused');
+  format($$insert into public.exam_subjects
+           (workspace_id, exam_id, section_id, subject_id, full_marks, pass_marks)
+           values ('53000000-0000-4000-b000-000000000001', %L,
+                   '53000000-0000-4000-c000-000000000021',
+                   '53000000-0000-4000-c000-000000000033', 100, 33)$$, current_setting('tests.exam')),
+  '22023', 'EXAM_LOCKED', 'locked: no new paper');
+
+select throws_ok(
+  format($$delete from public.exam_subjects where exam_id = %L$$, current_setting('tests.exam')),
+  '22023', 'EXAM_NOT_DRAFT', 'after draft, papers are never deleted');
+
+select throws_ok(
+  format($$update public.exam_subjects set status = 'submitted'
+           where exam_id = %L and section_id = '53000000-0000-4000-c000-000000000021'
+             and subject_id = '53000000-0000-4000-c000-000000000031'$$, current_setting('tests.exam')),
+  '22023', 'INVALID_TRANSITION', 'a paper cannot skip from pending to submitted');
+
+select lives_ok(
+  format($$update public.exam_subjects set status = 'entering'
+           where exam_id = %L and section_id = '53000000-0000-4000-c000-000000000021'
+             and subject_id = '53000000-0000-4000-c000-000000000031'$$, current_setting('tests.exam')),
+  'a paper moves one step: pending -> entering');
 
 select tests.logout();
 select tests.login('53000000-0000-4000-a000-000000000004');   -- owner B, no grade scale
@@ -247,13 +311,6 @@ with attempted as (
    where exam_id = current_setting('tests.exam')::uuid returning 1)
 select is((select count(*)::int from attempted), 0, 'another school''s paper update affects zero rows');
 
-select throws_ok(
-  format($$insert into public.exam_subjects
-           (workspace_id, exam_id, section_id, subject_id, full_marks, pass_marks)
-           values ('53000000-0000-4000-b000-000000000002', %L,
-                   '53000000-0000-4000-c000-000000000021',
-                   '53000000-0000-4000-c000-000000000033', 100, 33)$$, current_setting('tests.exam')),
-  '23503', null, 'a paper cannot point at another school''s exam (composite FK)');
 
 select tests.logout();
 select tests.login('53000000-0000-4000-a000-000000000002');   -- teacher A

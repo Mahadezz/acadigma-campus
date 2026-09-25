@@ -2,7 +2,7 @@
 -- F-AC-06 Part 2 (demo cut) — exams and papers (D-303)
 -- ---------------------------------------------------------------------
 -- Builds on grade_scales (20260925300302, D-302) and sections/subjects
--- (20260925300203, D-102). Demo-cut shape, recorded in D-303:
+-- (20260925300304, D-102). Demo-cut shape, recorded in D-303:
 --   - No `terms` table exists yet, so an exam has no term_id; `exam_type`
 --     (midterm, term_final, annual, ...) says which part of the year it is.
 --   - No `section_subjects` exists yet, so papers are created for the
@@ -15,6 +15,13 @@
 --     March's exam (§5.2). This is the snapshot D-302 deferred to Part 2.
 --   - Status moves only along §5.12's chain, one step at a time; the two
 --     admin reversals need a reason. Enforced here and in the domain.
+--   - Papers are locked once marks entry opens: from `marks_entry` on,
+--     sections and papers cannot be added or changed (except a paper's date
+--     and its own status), and after `draft` nothing is deleted
+--     (app.tg_exam_papers_lock). A paper's own status moves one step at a
+--     time: pending -> entering -> submitted -> locked (§5.12).
+--   - Result computation (Part 5) reads grading_snapshot.bands — never
+--     app.band_for on the live scale.
 --   - Components (Written/MCQ split), exam dates on a calendar and the
 --     question-paper upload are later Parts.
 -- Every FK into another tenant table is composite with workspace_id.
@@ -139,6 +146,7 @@ create table if not exists public.exam_subjects (
   updated_at       timestamptz not null default now(),
   constraint exam_subjects_pass_le_full check (pass_marks <= full_marks),
   constraint exam_subjects_exam_section_subject_key unique (exam_id, section_id, subject_id),
+  constraint exam_subjects_id_workspace_key unique (id, workspace_id),   -- target of marks' composite FK
   constraint exam_subjects_exam_fkey
     foreign key (exam_id, workspace_id) references public.exams (id, workspace_id) on delete cascade,
   constraint exam_subjects_exam_section_fkey
@@ -156,8 +164,7 @@ create index if not exists exam_subjects_workspace_exam_section_idx
   on public.exam_subjects (workspace_id, exam_id, section_id);
 -- justification: spec §3 — an exam's papers by section.
 create index if not exists exam_subjects_subject_idx on public.exam_subjects (subject_id);
-create index if not exists exam_subjects_section_idx on public.exam_subjects (exam_id, section_id);
--- justification: FK columns.
+-- justification: FK column. (exam_id, section_id) is served by the unique key's prefix.
 
 -- ---------------------------------------------------------------------
 -- Grading snapshot (D-302 -> D-303): set at insert from the school's
@@ -174,11 +181,23 @@ declare
   v_scale    public.grade_scales;
 begin
   if tg_op = 'UPDATE' then
+    if new.academic_year_id is distinct from old.academic_year_id
+       and not app.is_privileged_context() then
+      raise exception 'EXAM_YEAR_IMMUTABLE' using errcode = '42501';
+    end if;
     if (new.grade_scale_id is distinct from old.grade_scale_id
         or new.grading_snapshot is distinct from old.grading_snapshot)
        and not app.is_privileged_context() then
       raise exception 'GRADING_SNAPSHOT_IMMUTABLE' using errcode = '42501';
     end if;
+    return new;
+  end if;
+
+  -- Only an owner/admin of the school (or a privileged caller) gets a
+  -- snapshot or a NO_GRADE_SCALE; anyone else falls through to RLS, which
+  -- refuses the insert, so a stranger never learns whether a school has a
+  -- grade scale (review of PR #48).
+  if not (app.is_privileged_context() or app.has_role(new.workspace_id, array['owner', 'admin'])) then
     return new;
   end if;
 
@@ -202,6 +221,7 @@ begin
     'grade_scale_name', v_scale.name,
     'pass_mark_percent', coalesce((v_settings ->> 'pass_mark_percent')::numeric, 33),
     'fail_any_subject_zero_gpa', coalesce((v_settings ->> 'fail_any_subject_zero_gpa')::boolean, true),
+    'rank_by', coalesce(v_settings ->> 'rank_by', 'gpa_then_total'),
     'fourth_subject_bonus_threshold_gp',
       (select y.fourth_subject_bonus_threshold_gp from public.academic_years y
         where y.id = new.academic_year_id),
@@ -262,6 +282,79 @@ create trigger exams_status_guard
   for each row execute function app.tg_exams_status_guard();
 
 -- ---------------------------------------------------------------------
+-- Papers lock once marks entry opens (review of PR #48): from marks_entry
+-- on, no section or paper is added, no full/pass marks or membership
+-- change; after draft, nothing is deleted. A paper's date may still move.
+-- A paper's own status moves one step forward (§5.12 exam_subjects chain);
+-- Part 4's unlock adds its reversal.
+-- ---------------------------------------------------------------------
+create or replace function app.tg_exam_papers_lock()
+returns trigger
+language plpgsql
+security definer   -- reads the exam's status whatever the caller's RLS
+set search_path = ''
+as $$
+declare
+  v_status public.exam_status;
+  v_locked boolean;
+  v_chain  text[] := array['pending', 'entering', 'submitted', 'locked'];
+begin
+  if app.is_privileged_context() then
+    return case when tg_op = 'DELETE' then old else new end;
+  end if;
+
+  select e.status into v_status from public.exams e
+   where e.id = case when tg_op = 'DELETE' then old.exam_id else new.exam_id end;
+  if not found then   -- the exam itself is being deleted (a draft): cascade
+    return case when tg_op = 'DELETE' then old else new end;
+  end if;
+  v_locked := v_status::text in ('marks_entry', 'marks_locked', 'published', 'archived');
+
+  if tg_op = 'DELETE' then
+    if v_status <> 'draft' then
+      raise exception 'EXAM_NOT_DRAFT' using errcode = '22023';
+    end if;
+    return old;
+  end if;
+
+  if tg_op = 'INSERT' then
+    if v_locked then
+      raise exception 'EXAM_LOCKED' using errcode = '22023';
+    end if;
+    return new;
+  end if;
+
+  if tg_table_name = 'exam_sections' then
+    if v_locked and (new.exam_id, new.section_id) is distinct from (old.exam_id, old.section_id) then
+      raise exception 'EXAM_LOCKED' using errcode = '22023';
+    end if;
+    return new;
+  end if;
+
+  -- exam_subjects
+  if v_locked and (new.exam_id, new.section_id, new.subject_id, new.full_marks, new.pass_marks)
+                  is distinct from (old.exam_id, old.section_id, old.subject_id, old.full_marks, old.pass_marks) then
+    raise exception 'EXAM_LOCKED' using errcode = '22023';
+  end if;
+  if new.status is distinct from old.status
+     and array_position(v_chain, new.status::text) <> array_position(v_chain, old.status::text) + 1 then
+    raise exception 'INVALID_TRANSITION' using errcode = '22023',
+      detail = format('%s -> %s', old.status, new.status);
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function app.tg_exam_papers_lock() from public, anon, authenticated;
+
+create trigger exam_sections_lock
+  before insert or update or delete on public.exam_sections
+  for each row execute function app.tg_exam_papers_lock();
+create trigger exam_subjects_lock
+  before insert or update or delete on public.exam_subjects
+  for each row execute function app.tg_exam_papers_lock();
+
+-- ---------------------------------------------------------------------
 -- createExam (§7): the exam, its sections and one paper per section x
 -- picked subject, in one transaction. SECURITY INVOKER — RLS, the
 -- snapshot trigger and require_writable decide.
@@ -290,9 +383,9 @@ begin
 
   insert into public.exam_subjects (workspace_id, exam_id, section_id, subject_id, full_marks, pass_marks)
   select v_ws, v_exam.id, s::uuid, sub::uuid, v_full,
-         -- round(numeric) is half-up for these non-negative values — the same
-         -- rule as app.round_half_up, which is not granted to authenticated.
-         round(v_full * (v_exam.grading_snapshot ->> 'pass_mark_percent')::numeric / 100, 0)
+         -- Not rounded to whole marks (D-302): 33 % of 50 is 16.50, which
+         -- numeric(6,2) holds exactly.
+         v_full * (v_exam.grading_snapshot ->> 'pass_mark_percent')::numeric / 100
     from jsonb_array_elements_text(p_input -> 'section_ids') as s
    cross join jsonb_array_elements_text(p_input -> 'subject_ids') as sub;
 
@@ -302,7 +395,7 @@ $$;
 
 comment on function public.create_exam(jsonb) is
   'F-AC-06 Part 2 createExam (demo cut, D-303). SECURITY INVOKER. Pass marks '
-  'default to round(full_marks x the snapshotted pass mark %, 0), half up.';
+  'default to full_marks x the snapshotted pass mark % (not rounded, D-302).';
 
 revoke all on function public.create_exam(jsonb) from public, anon;
 grant execute on function public.create_exam(jsonb) to authenticated;

@@ -613,7 +613,7 @@ export const GENERIC_TABLE_NOUNS: Readonly<
   sections: { en: "a section", bn: "একটি শাখা" },
   subjects: { en: "a subject", bn: "একটি বিষয়" },
   exams: { en: "an exam", bn: "একটি পরীক্ষা" },
-  exam_sections: { en: "an exam's section", bn: "পরীক্ষার একটি সেকশন" },
+  exam_sections: { en: "an exam's section", bn: "পরীক্ষার একটি শাখা" },
   exam_subjects: { en: "an exam paper", bn: "একটি পরীক্ষার পেপার" },
 }
 

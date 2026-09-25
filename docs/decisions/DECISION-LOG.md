@@ -838,3 +838,15 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 **Why:** It builds only on tables that exist, and it keeps grading history fixed by construction.
 
 **Consequences:** Components, aggregate exams, calendar events, question-paper upload, idempotency keys and rate limits on `createExam` are later Parts. Parents read exams only through Part 7's published view.
+
+**Review of PR #48 (2026-09-25):**
+
+- **Result computation reads `grading_snapshot.bands`, never `app.band_for` on the live scale.** The snapshot also carries `rank_by`. A snapshot-reading helper is added in Part 5, the first Part that computes a result.
+- **Pass marks are not rounded to whole marks (D-302):** `full × pass_mark_percent / 100`, stored at 2 decimals (33 % of 50 = 16.50). This supersedes item 4's `round_half_up(…, 0)`.
+- **Papers lock when marks entry opens.** From `marks_entry` on, no section or paper is added and no full marks, pass marks or membership change; a paper's date can still move. After `draft`, sections and papers are never deleted (`app.tg_exam_papers_lock`). A paper's own status moves one step at a time: pending → entering → submitted → locked. Part 4 adds unlock.
+- **Other rules:**
+  - `exams.academic_year_id` is immutable.
+  - `exam_subjects` has `unique (id, workspace_id)` for marks' composite FK.
+  - The snapshot trigger returns early unless the caller is owner/admin of the school or privileged, so a stranger only ever sees RLS's refusal, never `NO_GRADE_SCALE`.
+  - A reversal needs its own reason, one that is not blank and not the stored one, in both the database and `checkExamTransition`.
+- **Known gap:** Publish has no marks-completeness gate yet. Part 4 (submit and lock) must add one before results can be published for real.

@@ -5,6 +5,7 @@ import {
   checkExamTransition,
   defaultPassMarks,
   nextExamStatus,
+  papersLocked,
   reversalFrom,
 } from "./exams"
 
@@ -42,6 +43,15 @@ describe("checkExamTransition (§5.12)", () => {
     expect(
       checkExamTransition("published", "marks_locked", "Wrong marks")
     ).toEqual({ ok: true, reversal: true })
+    // Same rule as the database: a reversal cannot reuse the stored reason.
+    expect(
+      checkExamTransition(
+        "marks_locked",
+        "marks_entry",
+        "Wrong marks",
+        "Wrong marks"
+      )
+    ).toEqual({ ok: false, code: "REASON_REQUIRED" })
   })
 })
 
@@ -54,10 +64,18 @@ describe("nextExamStatus / reversalFrom", () => {
   })
 })
 
+describe("papersLocked", () => {
+  it("locks from marks_entry on", () => {
+    expect(papersLocked("in_progress")).toBe(false)
+    expect(papersLocked("marks_entry")).toBe(true)
+    expect(papersLocked("archived")).toBe(true)
+  })
+})
+
 describe("defaultPassMarks (§5.6)", () => {
-  it("is 33 of 100 at 33 %, rounded half up", () => {
+  it("is full x pass mark %, not rounded to whole marks (D-302)", () => {
     expect(defaultPassMarks(100, 33)).toBe(33)
-    expect(defaultPassMarks(50, 33)).toBe(17) // 16.5 -> 17
-    expect(defaultPassMarks(75, 33)).toBe(25) // 24.75 -> 25
+    expect(defaultPassMarks(50, 33)).toBe(16.5) // not rounded to 17
+    expect(defaultPassMarks(75, 33)).toBe(24.75)
   })
 })

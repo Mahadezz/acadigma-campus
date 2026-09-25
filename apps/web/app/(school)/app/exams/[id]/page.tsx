@@ -25,7 +25,7 @@ export default async function ExamPage({
   const { id } = await params
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound()
 
-  const { t } = await getMessages()
+  const { t, locale } = await getMessages()
   const exam = await getExam(ctx, await createClient(), id)
   if (!exam.ok) {
     if (exam.error.code === "not_found") notFound()
@@ -39,6 +39,7 @@ export default async function ExamPage({
   return (
     <ExamDetailView
       t={t.exams}
+      locale={locale}
       exam={exam.data}
       canWrite={can(ctx.role, "exams.write")}
     />

@@ -44,6 +44,14 @@ const DB_ERRORS: Record<string, ApiError> = {
     "conflict",
     "That status change is not allowed from the exam's current status."
   ),
+  EXAM_LOCKED: apiError(
+    "conflict",
+    "Marks entry has opened: papers' marks and sections can no longer change."
+  ),
+  EXAM_YEAR_IMMUTABLE: apiError(
+    "validation_failed",
+    "An exam cannot move to another academic year."
+  ),
   REASON_REQUIRED: apiError(
     "validation_failed",
     "Give a reason for going back a step.",
@@ -120,7 +128,7 @@ const detailRow = summaryRow.omit({ exam_subjects: true }).extend({
       full_marks: z.coerce.number(),
       pass_marks: z.coerce.number(),
       status: z.string(),
-      subjects: z.object({ name: z.string() }),
+      subjects: z.object({ name: z.string(), name_bn: z.string().nullable() }),
       sections: z.object({
         name: z.string(),
         grade_levels: z.object({ name: z.string(), level_number: z.number() }),
@@ -139,7 +147,7 @@ export async function getExam(
     .select(
       "id, name, exam_type, status, starts_on, ends_on, status_reason, grading_snapshot, " +
         "exam_subjects(id, section_id, exam_date, full_marks, pass_marks, status, " +
-        "subjects(name), sections(name, grade_levels(name, level_number)))"
+        "subjects(name, name_bn), sections(name, grade_levels(name, level_number)))"
     )
     .eq("workspace_id", ctx.workspaceId)
     .eq("id", examId)
@@ -159,6 +167,7 @@ export async function getExam(
       ),
       level: p.sections.grade_levels.level_number,
       subjectName: p.subjects.name,
+      subjectNameBn: p.subjects.name_bn,
       examDate: p.exam_date,
       fullMarks: p.full_marks,
       passMarks: p.pass_marks,

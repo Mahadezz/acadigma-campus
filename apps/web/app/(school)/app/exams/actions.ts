@@ -85,7 +85,8 @@ export async function setExamStatus(
   const check = checkExamTransition(
     exam.data.status,
     parsed.data.status,
-    parsed.data.reason
+    parsed.data.reason,
+    exam.data.statusReason
   )
   if (!check.ok) {
     return err(

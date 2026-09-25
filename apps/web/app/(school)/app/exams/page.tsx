@@ -20,7 +20,7 @@ export default async function ExamsPage() {
   const ctx = await requireShell("school")
   if (!can(ctx.role, "exams.read")) forbidden()
 
-  const { t } = await getMessages()
+  const { t, locale } = await getMessages()
   const supabase = await createClient()
   const [overview, subjects] = await Promise.all([
     getClassesOverview(supabase, ctx),
@@ -46,6 +46,7 @@ export default async function ExamsPage() {
   return (
     <ExamsView
       t={t.exams}
+      locale={locale}
       year={year}
       grades={overview.data.grades}
       subjects={subjects.data}

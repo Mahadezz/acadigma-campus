@@ -95,6 +95,7 @@ export const examPaperSchema = z.object({
   sectionId: uuidSchema,
   sectionLabel: z.string(),
   subjectName: z.string(),
+  subjectNameBn: z.string().nullable(),
   examDate: isoDateSchema.nullable(),
   fullMarks: z.number(),
   passMarks: z.number(),

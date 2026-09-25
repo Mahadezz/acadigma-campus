@@ -28,8 +28,10 @@ import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
+import type { Locale } from "@/lib/locale"
 
 import { createExam } from "./actions"
+import { dateRange, examDateFormatter } from "./format"
 
 type T = Messages["exams"]
 
@@ -45,6 +47,7 @@ const EXAM_TYPES: ExamType[] = [
 
 export function ExamsView({
   t,
+  locale,
   year,
   grades,
   subjects,
@@ -52,6 +55,7 @@ export function ExamsView({
   canWrite,
 }: {
   t: T
+  locale: Locale
   year: { id: string; name: string } | null
   grades: GradeWithSections[]
   subjects: Subject[]
@@ -59,6 +63,7 @@ export function ExamsView({
   canWrite: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const fmt = examDateFormatter(locale)
 
   if (!year) {
     return (
@@ -104,11 +109,13 @@ export function ExamsView({
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">{exam.name}</span>
                   <span className="text-muted-foreground block text-sm">
-                    {t.types[exam.examType]}
-                    {exam.startsOn ? ` · ${exam.startsOn}` : ""}
-                    {exam.endsOn ? ` – ${exam.endsOn}` : ""}
-                    {" · "}
-                    {t.papers.replace("{n}", String(exam.paperCount))}
+                    {[
+                      t.types[exam.examType],
+                      dateRange(fmt, exam.startsOn, exam.endsOn),
+                      t.papers.replace("{n}", String(exam.paperCount)),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                 </span>
                 <Badge variant="outline">{t.statuses[exam.status]}</Badge>
@@ -125,6 +132,7 @@ export function ExamsView({
       {canWrite ? (
         <NewExamSheet
           t={t}
+          locale={locale}
           open={open}
           onOpenChange={setOpen}
           yearId={year.id}
@@ -138,6 +146,7 @@ export function ExamsView({
 
 function NewExamSheet({
   t,
+  locale,
   open,
   onOpenChange,
   yearId,
@@ -145,6 +154,7 @@ function NewExamSheet({
   subjects,
 }: {
   t: T
+  locale: Locale
   open: boolean
   onOpenChange: (open: boolean) => void
   yearId: string
@@ -291,7 +301,9 @@ function NewExamSheet({
               className="flex min-h-11 items-center gap-3"
             >
               <Checkbox name="subjectIds" value={subject.id} />
-              {subject.name}
+              {locale === "bn" && subject.nameBn
+                ? subject.nameBn
+                : subject.name}
             </label>
           ))}
         </fieldset>
