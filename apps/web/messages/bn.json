@@ -675,5 +675,119 @@
         }
       }
     }
+  },
+  "settings": {
+    "title": "সেটিংস",
+    "back": "সেটিংসে ফিরুন",
+    "searchLabel": "সেটিংস খুঁজুন",
+    "searchPlaceholder": "খুঁজুন, যেমন EIIN, লোগো, গ্রেড",
+    "searchEmpty": "এই খোঁজের সাথে কোনো সেটিং মেলেনি।",
+    "rows": {
+      "school": {
+        "title": "স্কুলের প্রোফাইল",
+        "description": "নাম, EIIN, বোর্ড, ঠিকানা ও যোগাযোগ",
+        "keywords": "নাম ঠিকানা ফোন ইমেইল বোর্ড name eiin board medium address phone email website bin vat motto"
+      },
+      "branding": {
+        "title": "ব্র্যান্ডিং",
+        "description": "রিপোর্ট কার্ড ও সনদে ছাপা হেডার",
+        "keywords": "লোগো হেডার logo header footer colour color pdf report print"
+      },
+      "overview": {
+        "title": "এই স্কুল কীভাবে চলে",
+        "description": "গ্রেডিং, উপস্থিতি ও স্কুল সপ্তাহ — শুধু দেখার জন্য",
+        "keywords": "গ্রেড উপস্থিতি ছুটি grade pass mark attendance late working days weekend friday timezone"
+      }
+    },
+    "notSet": "সেট করা নেই",
+    "save": "সংরক্ষণ",
+    "saving": "সংরক্ষণ হচ্ছে…",
+    "discard": "বাতিল",
+    "unsaved": "অসংরক্ষিত পরিবর্তন আছে",
+    "saved": "সংরক্ষিত হয়েছে।",
+    "saveError": "সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।",
+    "reload": "আবার লোড করুন",
+    "history": {
+      "title": "সাম্প্রতিক পরিবর্তন",
+      "empty": "এখনো কোনো পরিবর্তন নেই।",
+      "line": "{fields} পরিবর্তন করেছেন {name}, {date}",
+      "someone": "কেউ একজন"
+    },
+    "profile": {
+      "title": "স্কুলের প্রোফাইল",
+      "description": "আইনি নাম সনদ ও রিপোর্ট কার্ডে ছাপা হয়।",
+      "identity": "পরিচয়",
+      "address": "ঠিকানা",
+      "contact": "যোগাযোগ",
+      "finance": "চালান",
+      "boardPlaceholder": "বোর্ড বাছাই করুন",
+      "mediumPlaceholder": "মাধ্যম বাছাই করুন",
+      "schoolTypePlaceholder": "ধরন বাছাই করুন",
+      "eiinHelp": "৬ সংখ্যা। না থাকলে ফাঁকা রাখুন।",
+      "cityDefault": "ডিফল্ট: ঢাকা",
+      "cityRequired": "শহর আবশ্যক।",
+      "fields": {
+        "legal_name": "আইনি নাম",
+        "eiin": "EIIN",
+        "board": "শিক্ষা বোর্ড",
+        "school_type": "স্কুলের ধরন",
+        "medium": "মাধ্যম",
+        "motto": "মূলমন্ত্র",
+        "address_line1": "ঠিকানা লাইন ১",
+        "address_line2": "ঠিকানা লাইন ২",
+        "city": "শহর",
+        "district": "জেলা",
+        "postal_code": "পোস্টকোড",
+        "contact_email": "ইমেইল",
+        "contact_phone": "ফোন",
+        "website": "ওয়েবসাইট",
+        "bin_number": "BIN",
+        "vat_number": "ভ্যাট নিবন্ধন নং"
+      },
+      "schoolTypes": {
+        "government": "সরকারি",
+        "private": "বেসরকারি",
+        "mpo": "এমপিও",
+        "international": "আন্তর্জাতিক",
+        "madrasa": "মাদ্রাসা",
+        "kindergarten": "কিন্ডারগার্টেন",
+        "other": "অন্যান্য"
+      }
+    },
+    "branding": {
+      "title": "ব্র্যান্ডিং",
+      "description": "প্রতিটি ছাপা নথি এই হেডার পড়ে। কোনো টেমপ্লেটে স্কুলের নাম লেখা থাকে না।",
+      "fields": {
+        "header_line_1": "হেডার লাইন ১",
+        "header_line_2": "হেডার লাইন ২",
+        "accent": "অ্যাকসেন্ট রং",
+        "report_footer": "ফুটার নোট"
+      },
+      "tokensHelp": "{address_line1}, {city}, {eiin}, {contact_phone} এর মতো টোকেন ব্যবহার করতে পারেন।",
+      "accentHelp": "হেক্স রং, যেমন #1F4E79। ডিফল্ট: নেই (কালি)।",
+      "footerDefault": "ডিফল্ট: নেই",
+      "preview": "প্রিভিউ",
+      "previewNote": "রিপোর্ট কার্ডে হেডার যেমন দেখাবে।",
+      "unknownTokens": "অজানা টোকেন ফাঁকা ছাপা হবে: {tokens}",
+      "logoLater": "লোগো আপলোড শীঘ্রই আসছে; আপাতত প্রিভিউতে আদ্যক্ষর দেখানো হচ্ছে।",
+      "legalNameMissing": "স্কুলের প্রোফাইলে আইনি নাম যোগ করুন"
+    },
+    "overview": {
+      "title": "এই স্কুল কীভাবে চলে",
+      "description": "এই স্কুল যে নিয়মে চলে। পরিবর্তনের জন্য মালিক বা অ্যাডমিনকে বলুন।",
+      "week": "স্কুল সপ্তাহ",
+      "workingDays": "কর্মদিবস",
+      "timezone": "সময় অঞ্চল",
+      "grading": "গ্রেডিং",
+      "passMark": "পাস নম্বর",
+      "gradeScale": "গ্রেড স্কেল",
+      "failRule": "কোনো বিষয়ে ফেল করলে জিপিএ শূন্য",
+      "attendance": "উপস্থিতি",
+      "lateCounts": "দেরিতে আসা উপস্থিত গণ্য",
+      "halfDayCounts": "অর্ধদিবস উপস্থিত গণ্য",
+      "minAttendance": "ন্যূনতম উপস্থিতি (শুধু সতর্কতা)",
+      "yes": "হ্যাঁ",
+      "no": "না"
+    }
   }
 }
