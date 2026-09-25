@@ -593,3 +593,20 @@ Admins see **scheduled periods only**; workload variance is teacher-private by d
 **Why:** the owner picked it. Rings instead of shadows and a smaller radius make the calm working screens flatter and denser without changing a single colour, so every D-57 contrast measurement still holds. A static port keeps one source of geometry for all products without adding the website's animation library to a phone-first app.
 
 **Consequences:** there is no product switcher in Campus yet; when one is built it uses `GridMark` with `PRODUCT_NAMES` rather than new artwork. Screens that use a `Card` lose the `border` class; one that needs a stronger edge uses `shadow-raised`. The eyebrow is available for the design passes on shipped screens (next in the design lane's queue, dashboard first).
+
+## D-400 — The school dashboard ships now, built only from data that exists, with empty slots for what does not · ACCEPTED · 2026-09-25
+
+**Context:** `/app/dashboard` was a developer placeholder ("Workspace resolved … Role owner, workspace <uuid>"). The owner approved a demo cut: replace it with a real owner/admin "today" dashboard before timetable, attendance and marks exist. F-TE-07's analytics views, and DESIGN-SYSTEM §8.2's teacher wireframe (the "NOW" period card), both depend on tables that are not built yet.
+
+**Decision:**
+
+1. Show only what the database already holds: the workspace name and F-OP-07 letterhead, plan code and `trial_ends_at` (days left counted on the school's calendar, `trialDaysLeft`), `access_mode` (a Read-only chip), active members by role, the staff-directory count, and — for roles with `audit.read` — the last five audit events rendered with the existing `renderAuditSentence`.
+2. Counts are `head: true` count queries under the caller's RLS (`getDashboardSummary`, `packages/db`). No member or staff row reaches the page; a parent never reaches the shell.
+3. Attendance and exam results are real `EmptyState` cards with copy that says what fills them. No sample number appears anywhere on the page (PRODUCT-DECISIONS 3.9, F-TE-07's anti-mock rule).
+4. A setup checklist (letterhead, academic year, teachers, staff records, students) comes from `buildSetupChecklist` (`packages/domain/dashboard`). Each step links to the route the school nav already uses for that job, so the checklist and nav never disagree; some of those routes land with later Parts, exactly as the nav's own links do. Academic year and students are always "to do" until their tables exist. The card is hidden once every step is done.
+5. Owners and admins get the full view; teachers and office staff get the lighter one (date, school, Today slots, Members).
+6. No migration and no new permission: every read is already allowed by existing RLS.
+
+**Why:** a demo that shows invented numbers would contradict PRODUCT-DECISIONS 3.9 the first time a school compares it with its register. A page built from real counts and honest empty states is useful today and gets richer as each Part ships, without rework.
+
+**Consequences:** F-TE-07 Part 1's `analytics.overview` replaces the Members/Today cards' data source when it ships. F-AC-03 fills the attendance slot, F-AC-05 adds the "NOW" card, and the exams Part fills the results slot. When the academic-year and student tables land, `page.tsx` passes real facts to `buildSetupChecklist` in place of the two constants.

@@ -1603,6 +1603,21 @@ Bengali-first user looks for and it must be in the thumb zone. Autofocus is
 Four cards on the whole screen, and only one of them is amber. Rows carry the
 lists. No greeting emoji, no stagger animation, no decorative chart.
 
+**What ships first (D-400).** Until timetable and attendance exist, the
+dashboard is built only from data already in the database. Owners and admins
+see: an eyebrow date and the school's letterhead name (F-OP-07 branding, else
+the workspace name); **Today** — attendance and exam-results cards that are
+real `EmptyState` slots, never sample numbers; a **setup checklist**
+(letterhead, academic year, teachers, staff records, students — each links to
+the route the nav already uses, and the card disappears when all are done);
+**Plan** (plan code, trial days left on the school's calendar, a Read-only
+chip); **Members** (active members by role, the staff-directory count); and,
+for roles with `audit.read`, the last five **audit** sentences with a link to
+the trail. Teachers and office staff get the lighter view: date, school,
+the two Today slots and Members. At 1280 the Today slots and checklist take
+two columns and Plan/Members/Activity stack in the third. The "NOW" period
+card above replaces the empty attendance slot once F-AC-05 lands.
+
 ---
 
 #### 3. Attendance roll-call — `/app/attendance`
