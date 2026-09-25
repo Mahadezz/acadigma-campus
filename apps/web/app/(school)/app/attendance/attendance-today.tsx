@@ -21,8 +21,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@acadigma/ui/components/card"
-import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
+import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
