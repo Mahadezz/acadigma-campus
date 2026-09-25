@@ -691,6 +691,7 @@
       "schoolTypePlaceholder": "Select a type",
       "eiinHelp": "6 digits. Leave blank if you don't have one yet.",
       "cityDefault": "Default: Dhaka",
+      "cityRequired": "City is required.",
       "fields": {
         "legal_name": "Legal name",
         "eiin": "EIIN",

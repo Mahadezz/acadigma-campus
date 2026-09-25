@@ -3,6 +3,8 @@ import { can } from "@acadigma/domain"
 
 import { createClient } from "@/lib/supabase/server"
 
+import { historyLine } from "./history-line"
+
 type HistoryMessages = {
   title: string
   empty: string
@@ -31,7 +33,8 @@ export async function SettingsHistory({
 
   const client = await createClient()
   const result = await listAuditEvents(ctx, client, {
-    tableName: "school_profiles",
+    // The generic audit trigger stores `schema.table` (tg_table_schema || '.' || tg_table_name).
+    tableName: "public.school_profiles",
     limit: 5,
   })
   const events = result.ok ? result.data.items : []
@@ -55,28 +58,10 @@ export async function SettingsHistory({
       ) : (
         <ul className="text-muted-foreground space-y-1 text-sm">
           {events.map((event) => {
-            const fields = (event.changedFields ?? [])
-              .filter((f) => f in fieldLabels)
-              .map((f) => {
-                const before = event.before?.[f]
-                const after = event.after?.[f]
-                const label = fieldLabels[f] ?? f
-                return typeof after === "string" || typeof before === "string"
-                  ? `${label} (${String(before ?? "—")} → ${String(after ?? "—")})`
-                  : label
-              })
-            if (fields.length === 0) return null
-            return (
-              <li key={event.id}>
-                {t.line
-                  .replace("{fields}", fields.join(", "))
-                  .replace("{name}", event.actorName ?? t.someone)
-                  .replace(
-                    "{date}",
-                    dateFormat.format(new Date(event.createdAt))
-                  )}
-              </li>
+            const line = historyLine(event, fieldLabels, t, (iso) =>
+              dateFormat.format(new Date(iso))
             )
+            return line ? <li key={event.id}>{line}</li> : null
           })}
         </ul>
       )}

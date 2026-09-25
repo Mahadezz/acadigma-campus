@@ -111,6 +111,12 @@ export function ProfileForm({
     for (const key of Object.keys(form.formState.dirtyFields) as FieldKey[]) {
       patch[key] = values[key].trim() === "" ? null : values[key]
     }
+    // City is required (NOT NULL column): say so in the reader's language
+    // instead of letting a null reach Zod's generic type error.
+    if (patch["city"] === null) {
+      form.setError("city", { message: p.cityRequired })
+      return
+    }
     const local = schoolProfileFieldsSchema.partial().safeParse(patch)
     if (!local.success) {
       for (const issue of local.error.issues) {

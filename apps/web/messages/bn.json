@@ -691,6 +691,7 @@
       "schoolTypePlaceholder": "ধরন বাছাই করুন",
       "eiinHelp": "৬ সংখ্যা। না থাকলে ফাঁকা রাখুন।",
       "cityDefault": "ডিফল্ট: ঢাকা",
+      "cityRequired": "শহর আবশ্যক।",
       "fields": {
         "legal_name": "আইনি নাম",
         "eiin": "EIIN",

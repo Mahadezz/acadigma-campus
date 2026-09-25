@@ -143,12 +143,19 @@ export const schoolProfileFieldsSchema = z.object({
   motto: optionalText(200),
   address_line1: optionalText(200),
   address_line2: optionalText(200),
-  city: z.string().trim().min(1).max(100),
+  city: z.string().trim().min(1, "City is required").max(100),
   district: optionalText(100),
   postal_code: optionalText(20),
   contact_email: z.string().trim().toLowerCase().email().max(200).nullable(),
   contact_phone: optionalText(30),
-  website: z.string().trim().url().max(200).nullable(),
+  // `.url()` alone accepts `javascript:` — only http(s) links are stored.
+  website: z
+    .string()
+    .trim()
+    .url()
+    .regex(/^https?:\/\//i, "Use a link starting with http:// or https://")
+    .max(200)
+    .nullable(),
   bin_number: optionalText(50),
   vat_number: optionalText(50),
 })
@@ -158,7 +165,7 @@ export type SchoolProfileFields = z.infer<typeof schoolProfileFieldsSchema>
  * `updated_at` of the row the editor loaded — the optimistic-concurrency
  * version (§7: "a conflict returns stale_version with the current value").
  */
-const versionSchema = z.string().min(1)
+const versionSchema = z.string().datetime({ offset: true })
 
 /** Only the changed fields travel; `.strict()` rejects unknown columns. */
 export const updateSchoolProfileInputSchema = z

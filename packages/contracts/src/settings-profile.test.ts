@@ -39,6 +39,25 @@ describe("updateSchoolProfileInputSchema", () => {
     }
   })
 
+  it("rejects a javascript: website but accepts https", () => {
+    const parse = (website: string) =>
+      updateSchoolProfileInputSchema.safeParse({
+        version,
+        profile: { website },
+      }).success
+    expect(parse("javascript:alert(1)")).toBe(false)
+    expect(parse("https://school.edu.bd")).toBe(true)
+  })
+
+  it("rejects a malformed version as a validation error", () => {
+    expect(
+      updateSchoolProfileInputSchema.safeParse({
+        version: "not-a-timestamp",
+        profile: {},
+      }).success
+    ).toBe(false)
+  })
+
   it("rejects an unknown column and a missing version", () => {
     expect(
       updateSchoolProfileInputSchema.safeParse({

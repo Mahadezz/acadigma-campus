@@ -610,3 +610,13 @@ Admins see **scheduled periods only**; workload variance is teacher-private by d
 **Why:** each deferred piece would otherwise mean building another lane's or another feature's foundation inside a settings PR. The screens that shipped are complete on their own and use only tables that exist.
 
 **Consequences:** F-OP-07 §11 records the deviations. F-ID-03 Part 8 (`/app/settings/workspace`, identity lane) overlaps with this profile form (name, EIIN, address, contacts): the lead should decide which screen owns those fields before either is extended. The new actions live in `profile-actions.ts`, not `actions.ts`, so the billing lane's `requireWritable` edits to the M0 actions do not conflict.
+
+## D-201 — `/app/settings/school` owns the school profile fields; F-ID-03 Part 8 is narrowed to workspace lifecycle · ACCEPTED · 2026-09-25
+
+**Context:** F-OP-07 Part 1 (PR #39) built `/app/settings/school`, which edits `school_profiles`' identity, address, contact and BIN/VAT columns. F-ID-03 Part 8 (identity lane) specified `/app/settings/workspace` with the same fields plus logo upload, ownership transfer, module visibility and the suspended/archived states. Two screens editing the same columns would give two sources of truth for one record. The lead decided in review of PR #39.
+
+**Decision:** `/app/settings/school` (F-OP-07) owns the school profile fields. F-ID-03 Part 8's `/app/settings/workspace` is narrowed to lifecycle: ownership transfer, module visibility, and suspended/archived. It links to `/app/settings/school` for profile edits. Logo upload lands as `branding.logo_file_id` through `updateBranding` once a files pipeline exists (D-200).
+
+**Why:** one screen per record keeps validation, optimistic concurrency and audit history in one place.
+
+**Consequences:** F-ID-03 §8 Part 8 carries a one-line pointer to this entry. When the identity lane builds Part 8, it must not add profile inputs.
