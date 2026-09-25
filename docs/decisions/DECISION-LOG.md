@@ -606,6 +606,33 @@ Admins see **scheduled periods only**; workload variance is teacher-private by d
 
 **Owner's answers (2026-09-25):** leaving a read-only school — **allowed**; the leave RPC does not exist yet, and when it lands the trigger gains its exception (self status → `removed`). Accepting an invitation to a read-only school — **refused**, "ask the owner to upgrade". §5.6 delete-to-get-under-a-limit — **not** for read_only; that is the `LIMIT_EXCEEDED` path only.
 
+## D-200 — F-OP-07 Part 1 ships without logo upload or the `school_public_settings` view; Part 2 waits for the academics tables · ACCEPTED · 2026-09-25
+
+**Context:** F-OP-07 Part 1's remainder (after M0 landed `resolve()`, the defaults and the policy-blob read/patch) lists the settings shell, the profile form, logo upload with server-side variants, a live PDF header preview "rendered by the real F-OP-03 renderer", and a `school_public_settings` view through which teachers read. Part 2 (academic years, terms, exam weighting) was assigned in the same Part. Four of those depend on things that do not exist on `main`: there is no file-upload pipeline (no storage bucket wiring, no `/api/files/[id]`, no image processing), there is no F-OP-03 renderer, and there are no `academic_years`, `terms` or exam tables (DATA-MODEL §2 names them; no migration creates them, and F-ID-05 Part 4 in the identity lane is about to create the first academic year).
+
+**Decision:**
+
+1. This PR (#39) is **Part 1 remainder only**: settings home (grouped rows + search), the read-only "How this school works" page, the school profile form (typed `school_profiles` columns), and branding with a live header preview. No migration.
+2. **Logo upload is deferred** until a files pipeline exists (CLAUDE.md rule 10 makes it a security surface of its own). `updateBrandingInputSchema` omits `logo_file_id`; the preview shows the school's initials.
+3. **No `school_public_settings` view.** DATA-MODEL §1.3 (binding over the spec) widens `school_profiles` SELECT to every active member, and no owner-only column lives on this table (module visibility is `workspaces.hidden_modules`). A view would add a second read path with nothing to hide. Revisit if a column that teachers must not see is ever added.
+4. **The header preview is HTML**, built from a new pure `renderHeaderLine()` / `unknownHeaderTokens()` (`packages/domain/settings/header.ts`), which F-OP-03 should reuse so that what the preview shows is what prints. Unknown `{tokens}` are flagged live and refused by `updateBranding`.
+5. **Optimistic concurrency uses `updated_at` as the version** and returns the existing `conflict` error code (the envelope has no `stale_version` code). The UI offers a reload instead of the current value inline.
+6. **Part 2 is not started.** It needs `academic_years`/`terms` (academics area, and F-ID-05 Part 4's `create_school_workspace`) and an exams table for weighting.
+
+**Why:** each deferred piece would otherwise mean building another lane's or another feature's foundation inside a settings PR. The screens that shipped are complete on their own and use only tables that exist.
+
+**Consequences:** F-OP-07 §11 records the deviations. F-ID-03 Part 8 (`/app/settings/workspace`, identity lane) overlaps with this profile form (name, EIIN, address, contacts): the lead should decide which screen owns those fields before either is extended. The new actions live in `profile-actions.ts`, not `actions.ts`, so the billing lane's `requireWritable` edits to the M0 actions do not conflict.
+
+## D-201 — `/app/settings/school` owns the school profile fields; F-ID-03 Part 8 is narrowed to workspace lifecycle · ACCEPTED · 2026-09-25
+
+**Context:** F-OP-07 Part 1 (PR #39) built `/app/settings/school`, which edits `school_profiles`' identity, address, contact and BIN/VAT columns. F-ID-03 Part 8 (identity lane) specified `/app/settings/workspace` with the same fields plus logo upload, ownership transfer, module visibility and the suspended/archived states. Two screens editing the same columns would give two sources of truth for one record. The lead decided in review of PR #39.
+
+**Decision:** `/app/settings/school` (F-OP-07) owns the school profile fields. F-ID-03 Part 8's `/app/settings/workspace` is narrowed to lifecycle: ownership transfer, module visibility, and suspended/archived. It links to `/app/settings/school` for profile edits. Logo upload lands as `branding.logo_file_id` through `updateBranding` once a files pipeline exists (D-200).
+
+**Why:** one screen per record keeps validation, optimistic concurrency and audit history in one place.
+
+**Consequences:** F-ID-03 §8 Part 8 carries a one-line pointer to this entry. When the identity lane builds Part 8, it must not add profile inputs.
+
 ## D-301 — Joining a read-only school is refused by the join functions; seed passwords are hashed at seed time · ACCEPTED · 2026-09-25
 
 **Context:** PR #35's security re-check (low): D-300's trigger refused a non-member's `workspace_members` INSERT with `PLAN_READ_ONLY` on a read-only school and RLS refused it otherwise, so anyone holding a workspace uuid could learn its access mode. Separately, Semgrep flagged the bcrypt literal of the fourth seed account (`supabase/seed/seed.sql`); the other three were suppressed with `nosemgrep`.
