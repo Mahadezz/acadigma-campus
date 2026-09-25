@@ -1207,6 +1207,87 @@ export type Database = {
           },
         ]
       }
+      sections: {
+        Row: {
+          academic_year_id: string
+          archived_at: string | null
+          capacity: number | null
+          class_teacher_id: string | null
+          created_at: string
+          created_by: string | null
+          grade_level_id: string
+          id: string
+          name: string
+          room: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          archived_at?: string | null
+          capacity?: number | null
+          class_teacher_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          grade_level_id: string
+          id?: string
+          name: string
+          room?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          archived_at?: string | null
+          capacity?: number | null
+          class_teacher_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          grade_level_id?: string
+          id?: string
+          name?: string
+          room?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sections_academic_year_fkey"
+            columns: ["academic_year_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "sections_class_teacher_fkey"
+            columns: ["class_teacher_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "sections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sections_grade_level_fkey"
+            columns: ["grade_level_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "grade_levels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "sections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_compensation: {
         Row: {
           created_at: string
@@ -1494,6 +1575,63 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subjects: {
+        Row: {
+          archived_at: string | null
+          category: Database["public"]["Enums"]["subject_category"]
+          code: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          name_bn: string | null
+          subject_kind: Database["public"]["Enums"]["subject_kind"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          category?: Database["public"]["Enums"]["subject_category"]
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          name_bn?: string | null
+          subject_kind?: Database["public"]["Enums"]["subject_kind"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          category?: Database["public"]["Enums"]["subject_category"]
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          name_bn?: string | null
+          subject_kind?: Database["public"]["Enums"]["subject_kind"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subjects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subjects_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -2337,6 +2475,8 @@ export type Database = {
         | "substitute"
         | "volunteer"
       staff_status: "pending_join" | "active" | "on_notice" | "left"
+      subject_category: "core" | "optional" | "religion" | "co_curricular"
+      subject_kind: "compulsory" | "optional_fourth"
       subscription_status:
         | "trialing"
         | "active"
@@ -2525,6 +2665,8 @@ export const Constants = {
         "volunteer",
       ],
       staff_status: ["pending_join", "active", "on_notice", "left"],
+      subject_category: ["core", "optional", "religion", "co_curricular"],
+      subject_kind: ["compulsory", "optional_fourth"],
       subscription_status: [
         "trialing",
         "active",
