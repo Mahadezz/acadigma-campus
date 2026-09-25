@@ -121,7 +121,6 @@ export async function getRollCall(
       .select("roll_number, students!inner(id, full_name, full_name_bn)")
       .eq("workspace_id", ctx.workspaceId)
       .eq("section_id", sectionId)
-      .eq("status", "active")
       .lte("enrolled_on", date)
       .or(`ended_on.is.null,ended_on.gte.${date}`)
       .eq("students.status", "active")
@@ -152,13 +151,8 @@ export async function getRollCall(
 
 const SAVE_ERRORS: Record<string, ApiError> = {
   FORBIDDEN: apiError("forbidden", "You cannot take attendance here.", {
-    fieldErrors: { _root: ["NOT_ASSIGNED"] },
+    fieldErrors: { _root: ["FORBIDDEN"] },
   }),
-  NOT_ASSIGNED: apiError(
-    "forbidden",
-    "Only this class's class teacher or an admin can take its attendance.",
-    { fieldErrors: { _root: ["NOT_ASSIGNED"] } }
-  ),
   OUTSIDE_EDIT_WINDOW: apiError(
     "forbidden",
     "This day is past the correction window. Ask an admin.",

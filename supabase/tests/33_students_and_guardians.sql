@@ -384,7 +384,7 @@ select is((select count(*)::int from public.student_private_details where worksp
         + (select count(*)::int from public.guardians where workspace_id = (select id from ids where label = 'a')),
   0, 'the class teacher of a past year''s section reads no date of birth and no guardian');
 select tests.logout();
-update public.enrollments set status = 'completed'
+update public.enrollments set status = 'completed', ended_on = enrolled_on
  where section_id = (select id from ids where label = 'old_ka');
 
 -- =====================================================================

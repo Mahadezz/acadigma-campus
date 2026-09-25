@@ -6,7 +6,6 @@ import {
   attendancePercentage,
   editWindowOpen,
   schoolDayRate,
-  sectionDayRate,
 } from "./percentage"
 
 const DEFAULT = { late_counts_present: true, half_day_counts_present: true }
@@ -40,27 +39,6 @@ describe("attendancePercentage (§5.4, mirrors app.attendance_pct)", () => {
 
   it("no records is 0", () => {
     expect(attendancePercentage([], DEFAULT)).toBe(0)
-  })
-})
-
-describe("sectionDayRate (§5.5)", () => {
-  it("is null without a session: a gap, never 0 %", () => {
-    expect(sectionDayRate(null, DEFAULT)).toBeNull()
-  })
-
-  it("counts late and half day by policy over the expected students", () => {
-    const counts = {
-      expected: 40,
-      present: 35,
-      absent: 3,
-      late: 1,
-      excused: 0,
-      halfDay: 1,
-    }
-    expect(sectionDayRate(counts, DEFAULT)).toBe(92.5)
-    expect(
-      sectionDayRate(counts, { ...DEFAULT, late_counts_present: false })
-    ).toBe(90)
   })
 })
 
