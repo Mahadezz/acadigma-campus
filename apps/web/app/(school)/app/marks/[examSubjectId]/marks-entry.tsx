@@ -21,9 +21,9 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@acadigma/ui/components/toggle-group"
+import { cn } from "@acadigma/ui/lib/utils"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
-import { cn } from "@acadigma/ui/lib/utils"
 
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
@@ -178,7 +178,7 @@ export function MarksEntry({
     if (!el) return
     el.focus()
     el.select()
-    el.scrollIntoView({ block: "center" })
+    el.scrollIntoView?.({ block: "center" })
   }
 
   function save() {
