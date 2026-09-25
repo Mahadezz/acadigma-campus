@@ -20,9 +20,9 @@ export const metadata: Metadata = { title: "Take attendance" }
 
 /**
  * F-AC-03 §6 "Roll call" — demo cut (D-104). Every enrolled student starts
- * unmarked unless the day is already saved (D-22). Editable for the class
- * teacher inside the edit window and for owner/admin; read-only for
- * everyone else. `public.save_attendance` enforces the same rules.
+ * unmarked unless the day is already saved (D-22). Editable for any
+ * teacher inside the edit window (substitutes cover, D-105) and for
+ * owner/admin; read-only for everyone else. `public.save_attendance` enforces the same rules.
  */
 export default async function RollCallPage({
   params,
@@ -70,8 +70,7 @@ export default async function RollCallPage({
   }
 
   const isManager = ctx.role === "owner" || ctx.role === "admin"
-  const mayMark =
-    can(ctx.role, "attendance.write") && (isManager || section.isMine)
+  const mayMark = can(ctx.role, "attendance.write")
   const inWindow =
     day.data.date <= day.data.today &&
     (isManager ||
@@ -91,7 +90,7 @@ export default async function RollCallPage({
       isSchoolDay={day.data.isSchoolDay}
       students={students.data}
       sessionUpdatedAt={section.session?.updatedAt ?? null}
-      readOnlyReason={!mayMark ? "notMine" : !inWindow ? "window" : null}
+      readOnlyReason={!mayMark ? "cannotMark" : !inWindow ? "window" : null}
     />
   )
 }

@@ -44,22 +44,6 @@ export function attendancePercentage(
   return round2((100 * present) / statuses.length)
 }
 
-/**
- * §5.5: a section's rate for one day from its session counts. `null` when
- * there is no session — an untaken day or a holiday is a gap, never 0 %.
- */
-export function sectionDayRate(
-  counts: SessionCounts | null,
-  policy: AttendanceWeightsPolicy
-): number | null {
-  if (!counts || counts.expected === 0) return null
-  const present =
-    counts.present +
-    (policy.late_counts_present ? counts.late : 0) +
-    (policy.half_day_counts_present ? counts.halfDay : 0)
-  return round2((100 * present) / counts.expected)
-}
-
 /** The school's rate so far today: every marked section's weighted present
  * over their expected students. `null` until one section is marked. */
 export function schoolDayRate(
