@@ -1,3 +1,4 @@
+export * from "./academics"
 export * from "./audit"
 export * from "./billing-jobs"
 export * from "./onboarding"

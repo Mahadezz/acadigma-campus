@@ -96,6 +96,11 @@ export const ACTIONS = [
   "modules.visibility.write",
   "workspace.archive",
   "platform.workspace.suspend",
+  // Academic structure (F-AC-01 §2, D-102): owner/admin/teacher/staff read,
+  // owner/admin write. Parents see structure only through their portal.
+  "academics.structure.read",
+  "academics.section.write",
+  "academics.subject.write",
 ] as const
 
 export type Action = (typeof ACTIONS)[number]
@@ -146,6 +151,9 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "audit.read",
     "audit.read.self",
     "audit.export",
+    "academics.structure.read",
+    "academics.section.write",
+    "academics.subject.write",
   ],
   // Runs the school day to day. Money and owner-only settings (modules, danger
   // zone) stay with the owner; the F-OP-07 policy blobs do not (RLS §3.1).
@@ -188,6 +196,9 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // the trail must be able to record what an admin did without that
     // admin curating it.
     "audit.read.self",
+    "academics.structure.read",
+    "academics.section.write",
+    "academics.subject.write",
   ],
   teacher: [
     "attendance.read",
@@ -208,6 +219,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.leave",
     // Audit (F-ID-09 §2)
     "audit.read.self",
+    "academics.structure.read",
   ],
   // Office staff: sees the school, changes almost nothing.
   staff: [
@@ -224,6 +236,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.leave",
     // Audit (F-ID-09 §2)
     "audit.read.self",
+    "academics.structure.read",
   ],
   // Read-only parent portal (DECISION-LOG D-10), narrowed to their children by RLS.
   parent: [
