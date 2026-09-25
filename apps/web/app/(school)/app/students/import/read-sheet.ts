@@ -1,6 +1,6 @@
 import "server-only"
 
-import { unzipSync } from "fflate"
+import { unzipSync, zipSync } from "fflate"
 import Papa from "papaparse"
 import { readSheet as readXlsx } from "read-excel-file/node"
 
@@ -14,15 +14,20 @@ const BOM = String.fromCharCode(0xfeff)
 /** Zip-bomb guard: a 1 MB .xlsx may not unpack past these. */
 const MAX_ENTRY_BYTES = 10_000_000
 const MAX_TOTAL_BYTES = 20_000_000
-const KEEP = /^xl\/(workbook|styles|sharedStrings|worksheets\/[^/]+)\.xml$/
+const KEEP =
+  /^(\[Content_Types\]\.xml|_rels\/\.rels|xl\/_rels\/workbook\.xml\.rels|xl\/(workbook|styles|sharedStrings|worksheets\/[^/]+)\.xml)$/
 
 class TooLarge extends Error {}
 
-/** Reads every entry's declared unpacked size before anything else touches
- * the zip, and unpacks only the parts a sheet needs. Throws TooLarge. */
-function checkUnpackedSize(bytes: Uint8Array): void {
+/** Zip-bomb guard: unpacks only the parts a sheet needs, from the central
+ * directory, each into a buffer of its declared size (fflate never writes
+ * past it, so a lying size truncates rather than expands), refusing
+ * declared sizes over the caps. Returns a fresh zip of just those parts:
+ * read-excel-file never sees the uploaded bytes, so an entry hidden from the
+ * central directory is simply gone. Throws TooLarge. */
+function safeXlsx(bytes: Uint8Array): Buffer {
   let total = 0
-  unzipSync(bytes, {
+  const entries = unzipSync(bytes, {
     filter(entry) {
       total += entry.originalSize
       if (entry.originalSize > MAX_ENTRY_BYTES || total > MAX_TOTAL_BYTES) {
@@ -31,6 +36,7 @@ function checkUnpackedSize(bytes: Uint8Array): void {
       return KEEP.test(entry.name)
     },
   })
+  return Buffer.from(zipSync(entries))
 }
 
 /**
@@ -54,8 +60,7 @@ export async function readSheetFile(
       return parsed.data
     }
     if (name.endsWith(".xlsx")) {
-      const bytes = Buffer.from(await file.arrayBuffer())
-      checkUnpackedSize(bytes)
+      const bytes = safeXlsx(new Uint8Array(await file.arrayBuffer()))
       // A Buffer, never a string: read-excel-file treats a string as a path.
       const rows = await readXlsx(bytes)
       return rows.map((row) =>
