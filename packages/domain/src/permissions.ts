@@ -41,6 +41,9 @@ export const ACTIONS = [
   "marks.write",
   // F-AC-06 §2: grade scales, pass mark, GPA rules — owner/admin.
   "grading.policy.write",
+  // F-AC-06 §2: the exam schedule and papers.
+  "exams.read",
+  "exams.write",
   "timetable.read",
   "timetable.manage",
   // Workspace administration
@@ -127,6 +130,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "settings.manage",
     "policies.manage",
     "grading.policy.write",
+    "exams.read",
+    "exams.write",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -171,6 +176,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "billing.read",
     "policies.manage",
     "grading.policy.write",
+    "exams.read",
+    "exams.write",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -220,6 +227,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // Audit (F-ID-09 §2)
     "audit.read.self",
     "academics.structure.read",
+    "exams.read",
   ],
   // Office staff: sees the school, changes almost nothing.
   staff: [
@@ -237,6 +245,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // Audit (F-ID-09 §2)
     "audit.read.self",
     "academics.structure.read",
+    "exams.read",
   ],
   // Read-only parent portal (DECISION-LOG D-10), narrowed to their children by RLS.
   parent: [

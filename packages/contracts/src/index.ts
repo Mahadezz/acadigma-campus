@@ -1,5 +1,6 @@
 export * from "./academics"
 export * from "./academics/grading"
+export * from "./academics/exams"
 export * from "./audit"
 export * from "./common"
 export * from "./errors"
