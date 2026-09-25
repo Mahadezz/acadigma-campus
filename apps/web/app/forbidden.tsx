@@ -5,13 +5,18 @@ import { ShieldXIcon } from "lucide-react"
 import { Button } from "@acadigma/ui/components/button"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 
+import { getMessages } from "@/lib/i18n"
+
 /**
  * Rendered with an HTTP 403 whenever `forbidden()` is called — a signed-in user who
  * is not an active member of the workspace they asked for, or whose role does not
  * cover the action. It never says *which* of those it was: that distinction would
  * confirm the workspace exists.
  */
-export default function Forbidden() {
+export default async function Forbidden() {
+  const { t } = await getMessages()
+  const s = t.errors.forbiddenPage
+
   return (
     <main
       id="main"
@@ -19,11 +24,11 @@ export default function Forbidden() {
     >
       <EmptyState
         icon={<ShieldXIcon />}
-        title="You do not have access"
-        description="Your account is not an active member of this workspace. Ask an owner or admin to invite you, then sign in again."
+        title={s.title}
+        description={s.description}
         action={
           <Button asChild variant="outline">
-            <Link href="/">Back to the home page</Link>
+            <Link href="/">{s.action}</Link>
           </Button>
         }
       />
