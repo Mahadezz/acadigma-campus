@@ -32,6 +32,11 @@ const calendarDateSchema = isoDateSchema.refine((d) => {
   return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === d
 }, "Not a real date")
 
+/** Stable messages the UI maps to its own en/bn text. */
+export const HOLIDAY_ENDS_BEFORE_STARTS =
+  "The last day must be on or after the first day."
+export const HOLIDAY_TOO_LONG = "A holiday can be at most one year long."
+
 export const createHolidayInputSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
@@ -44,13 +49,13 @@ export const createHolidayInputSchema = z
   .strict()
   .refine((v) => v.endsOn >= v.startsOn, {
     path: ["endsOn"],
-    message: "The last day must be on or after the first day.",
+    message: HOLIDAY_ENDS_BEFORE_STARTS,
   })
   .refine(
     (v) => dayNumber(v.endsOn) - dayNumber(v.startsOn) < HOLIDAY_MAX_DAYS,
     {
       path: ["endsOn"],
-      message: "A holiday can be at most one year long.",
+      message: HOLIDAY_TOO_LONG,
     }
   )
 export type CreateHolidayInput = z.infer<typeof createHolidayInputSchema>

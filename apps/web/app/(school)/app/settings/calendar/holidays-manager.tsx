@@ -11,6 +11,8 @@ import { z } from "zod"
 
 import {
   createHolidayInputSchema,
+  HOLIDAY_ENDS_BEFORE_STARTS,
+  HOLIDAY_TOO_LONG,
   holidayKindSchema,
   type Holiday,
 } from "@acadigma/contracts/calendar"
@@ -65,6 +67,31 @@ const EMPTY: FormValues = {
   startsOn: "",
   endsOn: "",
   note: "",
+}
+
+/** Shared-schema messages are English; show the reader's language instead. */
+function fieldMessage(field: string, message: string, t: T): string {
+  if (field === "name") return t.errors.nameRequired
+  if (field !== "startsOn" && field !== "endsOn") return t.error
+  if (message === HOLIDAY_ENDS_BEFORE_STARTS) return t.errors.endsBeforeStarts
+  if (message === HOLIDAY_TOO_LONG) return t.errors.tooLong
+  return t.errors.invalidDate
+}
+
+/** Server error codes -> the reader's language. */
+function codeMessage(code: string, t: T): string {
+  switch (code) {
+    case "forbidden":
+      return t.errors.forbidden
+    case "payment_required":
+      return t.errors.readOnly
+    case "conflict":
+      return t.errors.duplicate
+    case "not_found":
+      return t.errors.notFound
+    default:
+      return t.error
+  }
 }
 
 function dayCount(h: Pick<Holiday, "startsOn" | "endsOn">): number {
@@ -126,8 +153,9 @@ export function HolidaysManager({
     const local = createHolidayInputSchema.safeParse(input)
     if (!local.success) {
       for (const issue of local.error.issues) {
-        form.setError(issue.path[0] as keyof FormValues, {
-          message: issue.message,
+        const field = String(issue.path[0])
+        form.setError(field as keyof FormValues, {
+          message: fieldMessage(field, issue.message, t),
         })
       }
       return
@@ -145,10 +173,12 @@ export function HolidaysManager({
         result.error.fieldErrors ?? {}
       )) {
         if (Object.hasOwn(EMPTY, path)) {
-          form.setError(path as keyof FormValues, { message: messages[0] })
+          form.setError(path as keyof FormValues, {
+            message: fieldMessage(path, messages[0] ?? "", t),
+          })
         }
       }
-      form.setError("root", { message: result.error.message || t.error })
+      form.setError("root", { message: codeMessage(result.error.code, t) })
     })
   }
 
@@ -161,7 +191,7 @@ export function HolidaysManager({
       setNotice(
         result.ok
           ? { tone: "success", text: t.removed }
-          : { tone: "error", text: result.error.message || t.error }
+          : { tone: "error", text: codeMessage(result.error.code, t) }
       )
       if (result.ok) router.refresh()
     })
@@ -380,7 +410,8 @@ export function HolidaysManager({
             <DialogDescription>
               {t.deleteDescription.replace(
                 "{name}",
-                () => removing?.name ?? ""
+                () =>
+                  (locale === "bn" && removing?.nameBn) || removing?.name || ""
               )}
             </DialogDescription>
           </DialogHeader>

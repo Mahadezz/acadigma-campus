@@ -456,7 +456,7 @@ Notes that matter:
 
 **RLS** — SELECT for active owner/admin/teacher/staff and platform admin; parents have no direct policy (they will read through `parent_calendar_v`, F-AC-10). INSERT/UPDATE/DELETE owner/admin. **Triggers** — `updated_at`, tenant freeze, generic audit, `app.tg_require_writable` (D-300).
 
-**Functions** — `app.is_school_day(workspace_id, date)`: override → weekly pattern (`school_profiles.working_days`, default Sat–Thu) → holiday → true. `app.school_days(workspace_id, from, to)` (at most two years) and `app.school_day_count(...)`. All `STABLE`, **SECURITY INVOKER** (D-202: they read only tables every staff member may already read, so the caller's RLS is the filter), executable by `authenticated` and `service_role`.
+**Functions** — `app.is_school_day(workspace_id, date)`: override → weekly pattern (`school_profiles.working_days`, default Sat–Thu) → holiday → true. `app.school_days(workspace_id, from, to)` (at most two years) and `app.school_day_count(...)`. All `STABLE`, **SECURITY DEFINER** behind `app.can_read_school_calendar(workspace_id)` (D-203): any active member, parents included, gets the school's real answer; anyone else gets NULL / `FORBIDDEN`. Executable by `authenticated` and `service_role`. `holidays` has `unique (workspace_id, name, starts_on)`; `created_by` is immutable on both tables (`app.tg_created_by_immutable`).
 
 ---
 

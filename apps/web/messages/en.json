@@ -709,6 +709,16 @@
         "endsOn": "Last day",
         "note": "Note (optional)"
       },
+      "errors": {
+        "nameRequired": "Enter a name.",
+        "invalidDate": "Choose a date.",
+        "endsBeforeStarts": "The last day must be on or after the first day.",
+        "tooLong": "A holiday can be at most one year long.",
+        "forbidden": "Only an owner or admin can change holidays.",
+        "readOnly": "This workspace is read-only. Upgrade to make changes; nothing has been deleted.",
+        "duplicate": "A holiday with this name already starts on that day.",
+        "notFound": "That holiday no longer exists."
+      },
       "endsOnHelp": "Same as the first day for a one-day holiday.",
       "kinds": {
         "public": "Public",

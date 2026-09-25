@@ -1,5 +1,5 @@
 -- =====================================================================
--- F-AC-11 Part 1 (demo cut, D-202) — the school-day calendar.
+-- F-AC-11 Part 1 (demo cut, D-202; functions per D-203) — the school-day calendar.
 --
 --   1. enums holiday_kind, holiday_source
 --   2. public.holidays               — days the school is closed
@@ -41,7 +41,11 @@ create table if not exists public.holidays (
   -- inclusive range; a single day has starts_on = ends_on. One year max:
   -- a longer "holiday" is a data-entry mistake that would empty a term.
   constraint holidays_range_valid
-    check (ends_on >= starts_on and ends_on - starts_on < 366)
+    check (ends_on >= starts_on and ends_on - starts_on < 366),
+  -- The same holiday entered twice (a double tap, a re-seed) is refused;
+  -- overlapping holidays with different names are allowed (HOLIDAY_OVERLAP
+  -- warning is deferred, D-203).
+  constraint holidays_workspace_name_start_key unique (workspace_id, name, starts_on)
 );
 
 comment on table public.holidays is
@@ -90,6 +94,10 @@ select app.attach_updated_at('public.holidays');
 select app.attach_freeze_workspace('public.holidays');
 select app.attach_audit('public.holidays');
 select app.attach_require_writable('public.holidays');
+-- created_by stays who declared it (PR #43 security review, same trigger as #37).
+drop trigger if exists created_by_immutable on public.holidays;
+create trigger created_by_immutable before update on public.holidays
+  for each row execute function app.tg_created_by_immutable();
 
 -- ---------------------------------------------------------------------
 -- 3. working_day_overrides
@@ -144,6 +152,10 @@ select app.attach_updated_at('public.working_day_overrides');
 select app.attach_freeze_workspace('public.working_day_overrides');
 select app.attach_audit('public.working_day_overrides');
 select app.attach_require_writable('public.working_day_overrides');
+-- created_by stays who declared it (PR #43 security review, same trigger as #37).
+drop trigger if exists created_by_immutable on public.working_day_overrides;
+create trigger created_by_immutable before update on public.working_day_overrides
+  for each row execute function app.tg_created_by_immutable();
 
 -- ---------------------------------------------------------------------
 -- 4. app.is_school_day — F-AC-11 §5.1 precedence:
@@ -152,18 +164,36 @@ select app.attach_require_writable('public.working_day_overrides');
 --      3. a holiday covers d           -> false
 --      4. otherwise                    -> true
 --
--- SECURITY INVOKER (D-202, a deviation from the spec's DEFINER): it reads
--- only tables every staff member may already read, so the caller's RLS is
--- the right filter and a non-member learns nothing but the defaults.
+-- SECURITY DEFINER with a caller guard (D-203, superseding D-202 point 2):
+-- a parent may not read holidays/overrides directly, but their child's
+-- attendance % and their leave counts still need the school's real answer.
+-- Only a member of the workspace, platform staff or a privileged (service)
+-- context gets an answer; anyone else gets NULL (is_school_day) or
+-- FORBIDDEN (school_days / school_day_count), never another school's days.
 -- ---------------------------------------------------------------------
+create or replace function app.can_read_school_calendar(p_workspace_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select app.is_privileged_context()
+      or app.member_role(p_workspace_id) is not null
+      or app.is_platform_admin()
+$$;
+
+comment on function app.can_read_school_calendar(uuid) is
+  'F-AC-11 (D-203): the guard every school-day function checks first.';
+
 create or replace function app.is_school_day(p_workspace_id uuid, p_day date)
 returns boolean
 language sql
 stable
-security invoker
+security definer
 set search_path = ''
 as $$
-  select coalesce(
+  select case when app.can_read_school_calendar(p_workspace_id) then coalesce(
     (select o.is_working
        from public.working_day_overrides o
       where o.workspace_id = p_workspace_id and o.date = p_day),
@@ -176,7 +206,7 @@ as $$
       select 1 from public.holidays h
        where h.workspace_id = p_workspace_id
          and daterange(h.starts_on, h.ends_on, '[]') @> p_day)
-  )
+  ) end
 $$;
 
 comment on function app.is_school_day(uuid, date) is
@@ -188,11 +218,16 @@ create or replace function app.school_days(p_workspace_id uuid, p_from date, p_t
 returns setof date
 language plpgsql
 stable
-security invoker
+security definer
 set search_path = ''
 as $$
 begin
-  if p_to < p_from or p_to - p_from > 731 then
+  if not app.can_read_school_calendar(p_workspace_id) then
+    raise exception 'FORBIDDEN' using errcode = '42501',
+      detail = 'Only a member of this school can read its calendar.';
+  end if;
+  -- At most 731 dates (two years, one of them a leap year).
+  if p_to < p_from or p_to - p_from > 730 then
     raise exception 'INVALID_RANGE' using errcode = '22023',
       detail = 'to must be on or after from, and at most two years later.';
   end if;
@@ -211,12 +246,14 @@ create or replace function app.school_day_count(p_workspace_id uuid, p_from date
 returns integer
 language sql
 stable
-security invoker
+security definer
 set search_path = ''
 as $$
   select count(*)::int from app.school_days(p_workspace_id, p_from, p_to)
 $$;
 
+revoke all on function app.can_read_school_calendar(uuid) from public, anon;
+grant execute on function app.can_read_school_calendar(uuid) to authenticated, service_role;
 revoke all on function app.is_school_day(uuid, date) from public, anon;
 revoke all on function app.school_days(uuid, date, date) from public, anon;
 revoke all on function app.school_day_count(uuid, date, date) from public, anon;

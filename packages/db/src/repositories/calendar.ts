@@ -4,6 +4,7 @@ import {
   apiError,
   err,
   ok,
+  planReadOnlyApiError,
   type ApiError,
   type CreateHolidayInput,
   type Holiday,
@@ -29,6 +30,34 @@ const UNAVAILABLE: ApiError = apiError(
   "dependency_unavailable",
   "Could not reach the calendar. Please try again."
 )
+
+/**
+ * Database refusals a caller can act on: the read-only trigger (`42501`
+ * PLAN_READ_ONLY, D-300), an RLS refusal (`42501`), and the duplicate
+ * (name, first day) key (`23505`). Anything else is "try again".
+ */
+function mapWriteError(error: {
+  code?: string
+  message?: string
+  details?: string | null
+}): ApiError {
+  if (error.code === "42501" && error.message === "PLAN_READ_ONLY") {
+    return planReadOnlyApiError({
+      code: "PLAN_READ_ONLY",
+      reason: error.details ?? null,
+    })
+  }
+  if (error.code === "42501") {
+    return apiError("forbidden", "You cannot change this calendar.")
+  }
+  if (error.code === "23505") {
+    return apiError(
+      "conflict",
+      "A holiday with this name already starts on that day."
+    )
+  }
+  return UNAVAILABLE
+}
 
 const rowSchema = z.object({
   id: z.string(),
@@ -91,12 +120,7 @@ export async function createHoliday(
     })
     .select(COLUMNS)
     .single()
-  if (error) {
-    if (error.code === "42501") {
-      return err(apiError("forbidden", "You cannot change this calendar."))
-    }
-    return err(UNAVAILABLE)
-  }
+  if (error) return err(mapWriteError(error))
   return ok(toHoliday(data))
 }
 
@@ -111,7 +135,7 @@ export async function deleteHoliday(
     .eq("workspace_id", ctx.workspaceId)
     .eq("id", holidayId)
     .select("id")
-  if (error) return err(UNAVAILABLE)
+  if (error) return err(mapWriteError(error))
   if (!data || data.length === 0) {
     return err(apiError("not_found", "That holiday no longer exists."))
   }

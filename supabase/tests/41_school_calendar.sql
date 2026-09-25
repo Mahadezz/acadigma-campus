@@ -13,7 +13,7 @@
 -- With the Sat-Thu default week, April has 30 - 4 = 26 school days.
 -- =====================================================================
 begin;
-select plan(31);
+select plan(52);
 
 create schema if not exists tests;
 
@@ -199,11 +199,93 @@ select is(app.is_school_day('41000000-0000-4000-b000-00000000000a', '2026-04-20'
 select is(app.school_day_count('41000000-0000-4000-b000-00000000000a', '2026-04-01', '2026-04-30'), 24,
   'April = 23 + Friday opened + 14th reopened - 20th closed = 24');
 
--- A teacher (RLS-filtered) gets the same answer as postgres.
+-- A teacher gets the same answer as postgres.
 select tests.login('41000000-0000-4000-a000-000000000003');
 select is(app.school_day_count('41000000-0000-4000-b000-00000000000a', '2026-04-01', '2026-04-30'), 24,
   'a teacher computes the same school-day count');
+
+-- D-203: a parent cannot read holidays/overrides directly, yet gets the
+-- school's real answer (their child's attendance % and leave depend on it).
+select tests.login('41000000-0000-4000-a000-000000000004');
+select is(app.is_school_day('41000000-0000-4000-b000-00000000000a', '2026-04-13'), false,
+  'a parent sees a holiday as closed (same as postgres)');
+select is(app.is_school_day('41000000-0000-4000-b000-00000000000a', '2026-04-10'), true,
+  'a parent sees an override-opened Friday as open (same as postgres)');
+select is(app.school_day_count('41000000-0000-4000-b000-00000000000a', '2026-04-01', '2026-04-30'), 24,
+  'a parent computes the same April count as postgres');
+
+-- A member of another school learns nothing about School A's calendar.
+select tests.login('41000000-0000-4000-a000-000000000009');
+select is(app.is_school_day('41000000-0000-4000-b000-00000000000a', '2026-04-13'), null::boolean,
+  'a stranger gets NULL from is_school_day for another school');
+select throws_ok(
+  $$select app.school_day_count('41000000-0000-4000-b000-00000000000a', '2026-04-01', '2026-04-30')$$,
+  '42501', 'FORBIDDEN',
+  'a stranger cannot count another school''s days');
+select is((select count(*)::int from public.working_day_overrides
+            where workspace_id = '41000000-0000-4000-b000-00000000000a'), 0,
+  'School B cannot read School A''s overrides');
+select is(tests.affected($$update public.working_day_overrides set reason = 'hijacked'
+                            where workspace_id = '41000000-0000-4000-b000-00000000000a'$$), 0,
+  'School B''s UPDATE of School A''s overrides affects zero rows');
+select is(tests.affected($$delete from public.working_day_overrides
+                            where workspace_id = '41000000-0000-4000-b000-00000000000a'$$), 0,
+  'School B''s DELETE of School A''s overrides affects zero rows');
+
+select tests.login('41000000-0000-4000-a000-000000000003');
+select is(tests.affected($$update public.working_day_overrides set reason = 'teacher edit'
+                            where workspace_id = '41000000-0000-4000-b000-00000000000a'$$), 0,
+  'a teacher''s UPDATE of an override affects zero rows');
+select is(tests.affected($$delete from public.working_day_overrides
+                            where workspace_id = '41000000-0000-4000-b000-00000000000a'$$), 0,
+  'a teacher''s DELETE of an override affects zero rows');
+
+select tests.login('41000000-0000-4000-a000-000000000002');
+select throws_ok(
+  $$update public.holidays set created_by = '41000000-0000-4000-a000-000000000001'
+     where id = '41000000-0000-4000-c000-000000000001'$$,
+  '42501', 'created_by is immutable',
+  'an admin cannot rewrite who declared a holiday');
+select throws_ok(
+  $$update public.working_day_overrides set created_by = '41000000-0000-4000-a000-000000000002'
+     where workspace_id = '41000000-0000-4000-b000-00000000000a' and date = '2026-04-10'$$,
+  '42501', 'created_by is immutable',
+  'an admin cannot rewrite who created an override');
+select throws_ok(
+  $$insert into public.holidays (workspace_id, name, starts_on, ends_on)
+    values ('41000000-0000-4000-b000-00000000000a', 'Pohela Boishakh break', '2026-04-13', '2026-04-13')$$,
+  '23505', 'duplicate key value violates unique constraint "holidays_workspace_name_start_key"',
+  'the same holiday (name + first day) cannot be entered twice');
 select tests.logout();
+
+-- A holiday across the year end, and two overlapping holidays.
+insert into public.holidays (workspace_id, name, starts_on, ends_on)
+values ('41000000-0000-4000-b000-00000000000a', 'Winter break',  '2026-12-30', '2027-01-02'),
+       ('41000000-0000-4000-b000-00000000000a', 'Flood closure', '2026-05-03', '2026-05-05'),
+       ('41000000-0000-4000-b000-00000000000a', 'Board exams',   '2026-05-04', '2026-05-06');
+select is(app.school_day_count('41000000-0000-4000-b000-00000000000a', '2026-12-28', '2027-01-03'), 3,
+  'a holiday across the year end: 28, 29 Dec and 3 Jan remain (1 Jan is a Friday)');
+select is(app.school_day_count('41000000-0000-4000-b000-00000000000a', '2026-05-03', '2026-05-07'), 1,
+  'overlapping holidays (3-5 and 4-6 May) close 3-6 May once; only Thursday the 7th remains');
+
+-- The one-year cap, on School B so School A's counts stay readable.
+select lives_ok(
+  $$insert into public.holidays (workspace_id, name, starts_on, ends_on)
+    values ('41000000-0000-4000-b000-00000000000b', 'Longest', '2030-01-01', '2030-12-31')$$,
+  'a 365-day holiday is accepted');
+select throws_ok(
+  $$insert into public.holidays (workspace_id, name, starts_on, ends_on)
+    values ('41000000-0000-4000-b000-00000000000b', 'Too long', '2030-01-01', '2031-01-02')$$,
+  '23514', 'new row for relation "holidays" violates check constraint "holidays_range_valid"',
+  'a holiday of 366 days or more is refused');
+
+-- school_days accepts at most 731 dates (two years, one a leap year).
+select is(app.school_day_count('41000000-0000-4000-b000-00000000000b', '2027-01-01', '2028-12-31') > 0, true,
+  'a 731-date range is accepted');
+select throws_ok(
+  $$select app.school_day_count('41000000-0000-4000-b000-00000000000b', '2027-01-01', '2029-01-01')$$,
+  '22023', 'INVALID_RANGE',
+  'a 732-date range is refused');
 
 select throws_ok(
   $$select app.school_day_count('41000000-0000-4000-b000-00000000000a', '2026-04-30', '2026-04-01')$$,
@@ -216,8 +298,20 @@ select is(
   'school_days lists the dates themselves, override-opened Friday included');
 
 -- =====================================================================
--- 5. Audit and the read-only guard.
+-- 5. Catalogue, policies, audit and the read-only guard.
 -- =====================================================================
+select is(
+  (select count(*)::int from public.audit_action_catalog
+    where action in ('holidays.insert', 'holidays.update', 'holidays.delete',
+                     'working_day_overrides.insert', 'working_day_overrides.update',
+                     'working_day_overrides.delete')),
+  6, 'both tables have their three generic audit catalogue rows');
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'public'
+      and tablename in ('holidays', 'working_day_overrides')
+      and (coalesce(qual, '') ilike '%parent%' or coalesce(with_check, '') ilike '%parent%')),
+  0, 'no policy on holidays or working_day_overrides names the parent role');
 select ok(
   exists (select 1 from public.audit_events
            where workspace_id = '41000000-0000-4000-b000-00000000000a'

@@ -29,7 +29,7 @@ type Recorded = { op: string; args: unknown[] }[]
 /** A chainable stand-in for the supabase-js builder that records every call. */
 function fakeClient(result: {
   data: unknown
-  error: { code?: string; message: string } | null
+  error: { code?: string; message: string; details?: string } | null
 }): { client: AcadigmaSupabaseClient; calls: Recorded } {
   const calls: Recorded = []
   const builder: Record<string, unknown> = {}
@@ -105,6 +105,29 @@ describe("createHoliday", () => {
     })
   })
 
+  it("maps the read-only trigger to payment_required, not forbidden", async () => {
+    const { client } = fakeClient({
+      data: null,
+      error: {
+        code: "42501",
+        message: "PLAN_READ_ONLY",
+        details: "Your Pro trial has ended.",
+      },
+    })
+    const result = await createHoliday(CTX, client, input)
+    expect(!result.ok && result.error.code).toBe("payment_required")
+    expect(!result.ok && result.error.message).toContain("Pro trial")
+  })
+
+  it("maps a duplicate (name, first day) to conflict", async () => {
+    const { client } = fakeClient({
+      data: null,
+      error: { code: "23505", message: "dup" },
+    })
+    const result = await createHoliday(CTX, client, input)
+    expect(!result.ok && result.error.code).toBe("conflict")
+  })
+
   it("maps an RLS refusal to forbidden", async () => {
     const { client } = fakeClient({
       data: null,
@@ -128,6 +151,15 @@ describe("deleteHoliday", () => {
       op: "eq",
       args: ["workspace_id", CTX.workspaceId],
     })
+  })
+
+  it("maps the read-only trigger on delete to payment_required", async () => {
+    const { client } = fakeClient({
+      data: null,
+      error: { code: "42501", message: "PLAN_READ_ONLY" },
+    })
+    const result = await deleteHoliday(CTX, client, ROW.id)
+    expect(!result.ok && result.error.code).toBe("payment_required")
   })
 
   it("returns not_found when nothing was deleted (another school's id, or gone)", async () => {
