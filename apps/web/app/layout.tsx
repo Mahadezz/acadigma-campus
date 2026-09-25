@@ -1,6 +1,7 @@
 import { SkipToContent } from "@acadigma/ui/primitives/app-shell"
 
 import { getLocale } from "@/lib/i18n"
+import { getUiPreferences } from "@/lib/ui-preferences"
 
 import { hindSiliguri, inter, jetbrainsMono } from "./fonts"
 import { Providers } from "./providers"
@@ -50,11 +51,20 @@ export default async function RootLayout({
   // own `lang`.
   const locale = await getLocale()
 
+  // F-ID-10 §5.2/§3 (D-403): `data-text-size` drives the root font-size scale
+  // (tokens.css) from the very first server render — the same "cookie/row on
+  // <html>, no client measurement" trick the line above uses for language.
+  // `data-ui-mode` is read by Parts 2-3's basic shell; carried here so it is
+  // never missing on the first paint of any page, this Part or later ones.
+  const { uiMode, textSize } = await getUiPreferences()
+
   return (
     // suppressHydrationWarning is required by next-themes, which sets the theme
     // class on <html> from an inline script before React hydrates.
     <html
       lang={locale}
+      data-text-size={textSize}
+      data-ui-mode={uiMode}
       className={`${inter.variable} ${hindSiliguri.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >

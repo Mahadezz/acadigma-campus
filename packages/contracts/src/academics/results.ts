@@ -6,7 +6,7 @@ import type { MarkStatus } from "./marks"
 
 /**
  * F-AC-06 Part 5 (demo cut, D-305) — results
- * (`supabase/migrations/20260925300314_results.sql`), §7 `computeResults`.
+ * (`supabase/migrations/20260925300318_results.sql`), §7 `computeResults`.
  */
 
 export const computeResultsInputSchema = z

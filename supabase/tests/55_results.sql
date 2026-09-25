@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-06 Part 5 (demo cut) — results and rank in SQL
--- (20260925300314_results.sql, D-305)
+-- (20260925300318_results.sql, D-305)
 --
 --   A. Guards: MARKS_NOT_LOCKED, MARKS_INCOMPLETE (the publish gate's
 --      count), FORBIDDEN for teachers, staff and another school.
