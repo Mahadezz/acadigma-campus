@@ -234,7 +234,7 @@
       "nameLabel": "School name",
       "eiinLabel": "EIIN (optional)",
       "eiinHelperTitle": "What's this?",
-      "eiinHelperBody": "EIIN is the government's school identifier. You can add it later if you don't have it handy.",
+      "eiinHelperBody": "EIIN is the government's school identifier. You can leave it blank; to add it later, write to support@acadigma.com.",
       "eiinChecking": "Checking…",
       "eiinTaken": "This EIIN is already registered to another school.",
       "eiinTakenContact": "This is my school — contact support",
@@ -723,7 +723,7 @@
       "boardPlaceholder": "Select a board",
       "mediumPlaceholder": "Select a medium",
       "schoolTypePlaceholder": "Select a type",
-      "eiinHelp": "6 digits. Leave blank if you don't have one yet.",
+      "eiinHelp": "Set when the school was created. To change it, write to support@acadigma.com.",
       "cityDefault": "Default: Dhaka",
       "cityRequired": "City is required.",
       "fields": {

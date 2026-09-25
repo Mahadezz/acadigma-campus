@@ -19,6 +19,7 @@ import {
   type ApiError,
   type Result,
   type SchoolProfileFields,
+  type SchoolProfilePatch,
   type SchoolSettingsPatch,
 } from "@acadigma/contracts"
 import {
@@ -222,7 +223,7 @@ export async function updateSchoolProfile(
   ctx: WorkspaceContext,
   input: {
     version: string
-    profile?: Partial<SchoolProfileFields>
+    profile?: SchoolProfilePatch
     branding?: Partial<Branding>
   }
 ): Promise<Result<SchoolProfile, ApiError>> {
@@ -245,22 +246,9 @@ export async function updateSchoolProfile(
     .select(PROFILE_COLUMNS)
     .maybeSingle()
 
-  if (error) {
-    if (error.code === "23505") {
-      return err(
-        apiError(
-          "conflict",
-          "This EIIN is already registered to another school.",
-          {
-            fieldErrors: {
-              eiin: ["This EIIN is already registered to another school."],
-            },
-          }
-        )
-      )
-    }
-    return err(UNAVAILABLE)
-  }
+  // No 23505 branch: `eiin` is not in the patch (D-100), so no unique
+  // index this UPDATE can trip.
+  if (error) return err(UNAVAILABLE)
   if (!data) return err(STALE_VERSION)
   return ok(toProfile(data as unknown as Record<string, unknown>))
 }

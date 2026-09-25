@@ -234,7 +234,7 @@
       "nameLabel": "স্কুলের নাম",
       "eiinLabel": "EIIN (ঐচ্ছিক)",
       "eiinHelperTitle": "এটা কী?",
-      "eiinHelperBody": "EIIN হলো সরকারের স্কুল শনাক্তকারী নম্বর। হাতের কাছে না থাকলে পরে যোগ করতে পারবেন।",
+      "eiinHelperBody": "EIIN হলো সরকারের স্কুল শনাক্তকারী নম্বর। ফাঁকা রাখতে পারেন; পরে যোগ করতে support@acadigma.com-এ লিখুন।",
       "eiinChecking": "যাচাই করা হচ্ছে…",
       "eiinTaken": "এই EIIN ইতিমধ্যে অন্য একটি স্কুলের নামে নিবন্ধিত।",
       "eiinTakenContact": "এটা আমার স্কুল — সাপোর্টে যোগাযোগ করুন",
@@ -723,7 +723,7 @@
       "boardPlaceholder": "বোর্ড বাছাই করুন",
       "mediumPlaceholder": "মাধ্যম বাছাই করুন",
       "schoolTypePlaceholder": "ধরন বাছাই করুন",
-      "eiinHelp": "৬ সংখ্যা। না থাকলে ফাঁকা রাখুন।",
+      "eiinHelp": "স্কুল তৈরির সময় দেওয়া হয়েছে। পরিবর্তন করতে support@acadigma.com-এ লিখুন।",
       "cityDefault": "ডিফল্ট: ঢাকা",
       "cityRequired": "শহর আবশ্যক।",
       "fields": {

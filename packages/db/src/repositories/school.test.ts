@@ -108,6 +108,7 @@ describe("createSchoolWorkspace", () => {
     ["EIIN_TAKEN", "conflict"],
     ["RATE_LIMITED", "rate_limited"],
     ["WORKSPACE_LIMIT_REACHED", "forbidden"],
+    ["CONFLICT", "dependency_unavailable"],
   ])("maps a returned {error: %s} to %s", async (code, expected) => {
     const result = await createSchoolWorkspace(
       fakeClient({ data: { error: code }, error: null }),

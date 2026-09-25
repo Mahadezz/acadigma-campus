@@ -14,3 +14,4 @@ F-ID-05 Onboarding, Part 4: the create-school wizard's classes and review steps,
 - `packages/db`: `createSchoolWorkspace` repository with the error mapping.
 - `apps/web`: `createSchoolWorkspace` action (sets the active-workspace cookie, lands on `/app`); wizard step 3 (classes) and step 4 (review and create), en + bn; 44 px inputs on steps 1-2.
 - `packages/ui`: `OnboardingShell` takes a localised `progressLabel`.
+- Settings: the EIIN is read-only in the school profile form (set at creation; support changes it), matching the database guard.

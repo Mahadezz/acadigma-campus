@@ -393,6 +393,7 @@ declare
   v_levels   jsonb := p_input -> 'grade_levels';
   v_ws       uuid := gen_random_uuid();
   v_blocked  boolean;
+  v_constraint text;
   v_result   jsonb;
 begin
   if v_uid is null then
@@ -572,9 +573,13 @@ begin
       ('create_school_workspace', v_key, v_ws, v_uid, v_hash, 'succeeded', v_result, now());
   exception when unique_violation then
     -- Every write above is undone; the attempt counted in (3) is kept.
-    -- The inputs were validated, so the one unique index left to trip is
-    -- the EIIN's.
-    return jsonb_build_object('error', 'EIIN_TAKEN');
+    get stacked diagnostics v_constraint = constraint_name;
+    if v_constraint = 'school_profiles_eiin_unique' then
+      return jsonb_build_object('error', 'EIIN_TAKEN');
+    end if;
+    -- Anything else (a slug collision, a concurrent reuse of the same
+    -- idempotency key by another user) is not about the EIIN.
+    return jsonb_build_object('error', 'CONFLICT');
   end;
 
   return v_result || jsonb_build_object('replayed', false);
@@ -588,7 +593,7 @@ comment on function public.create_school_workspace(jsonb) is
   'academic year, grade levels, onboarding completion and an idempotency '
   'record. Raises VALIDATION, INVALID_TIMEZONE, INVALID_ACADEMIC_YEAR, '
   'IDEMPOTENCY_KEY_REUSED, ACCOUNT_SUSPENDED; returns {"error": ...} for '
-  'EIIN_TAKEN, RATE_LIMITED and WORKSPACE_LIMIT_REACHED, which come after '
+  'EIIN_TAKEN, CONFLICT, RATE_LIMITED and WORKSPACE_LIMIT_REACHED, which come after '
   'the attempt is counted in the createSchool throttle bucket.';
 
 revoke all on function public.create_school_workspace(jsonb) from public;

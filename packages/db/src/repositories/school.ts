@@ -74,6 +74,12 @@ const CREATE_SCHOOL_ERRORS: Record<string, ApiError> = {
     "validation_failed",
     "Some of the details you entered are not valid."
   ),
+  // Another unique index than the EIIN's (e.g. a slug collision): a retry
+  // is the right answer.
+  CONFLICT: apiError(
+    "dependency_unavailable",
+    "Could not create the school right now. Your details are saved — try again."
+  ),
   IDEMPOTENCY_KEY_REUSED: apiError(
     "conflict",
     "This request was already used for different details. Reload and try again."
