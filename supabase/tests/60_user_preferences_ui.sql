@@ -13,9 +13,9 @@
 --      a stranger's row is invisible, count 0.
 --   3. Isolation (write) — a direct UPDATE aimed at another user's row
 --      touches zero rows; the target's values are unchanged.
---   4. A user updates their OWN ui_mode/text_size; the row's updated_at
---      moves (existing app.attach_updated_at trigger, unaffected by this
---      migration).
+--   4. A user updates their OWN ui_mode/text_size; the existing
+--      app.attach_updated_at trigger is still attached (catalog check, not
+--      a now() comparison — the whole file runs in one transaction).
 --   5. Escalation — a platform admin gets zero rows from another user's
 --      preferences: this table has no platform-admin branch (unlike
 --      onboarding_progress's documented deviation), so is_platform_admin
@@ -135,12 +135,22 @@ select results_eq(
      where user_id = 'd1040001-0000-0000-0000-00000000000a'$$,
   $$values ('basic', 'xlarge')$$,
   'Alice''s own ui_mode/text_size are now basic/xlarge (read as postgres)');
-select cmp_ok(
-  (select updated_at from public.user_preferences
-    where user_id = 'd1040001-0000-0000-0000-00000000000a'),
-  '>', (select created_at from public.user_preferences
-    where user_id = 'd1040001-0000-0000-0000-00000000000a'),
-  'updated_at moved past created_at after the edit (existing attach_updated_at trigger)');
+
+-- Catalog check, not a `now()` comparison: the whole file runs inside one
+-- begin;/rollback; transaction, so `now()` returns the SAME value
+-- everywhere in it (17_onboarding_progress.sql's note 6) — `updated_at`
+-- and `created_at` would be indistinguishable by timestamp alone here.
+select ok(
+  exists (
+    select 1
+      from pg_trigger t
+      join pg_class c on c.oid = t.tgrelid
+      join pg_proc p on p.oid = t.tgfoid
+     where c.relname = 'user_preferences'
+       and p.proname = 'tg_set_updated_at'
+       and not t.tgisinternal
+  ),
+  'app.attach_updated_at attached app.tg_set_updated_at as a trigger on user_preferences (pre-existing, unaffected by this migration)');
 
 -- ---------------------------------------------------------------------
 -- 5. Escalation — no platform-admin branch on this table.
@@ -167,12 +177,12 @@ select tests.login('d1040001-0000-0000-0000-00000000000a');   -- Alice
 select throws_ok(
   $$update public.user_preferences set ui_mode = 'bogus'
      where user_id = 'd1040001-0000-0000-0000-00000000000a'$$,
-  '22P02', 'invalid input value for enum public.ui_mode: "bogus"',
+  '22P02', 'invalid input value for enum ui_mode: "bogus"',
   'an out-of-range ui_mode value is rejected by the enum type');
 select throws_ok(
   $$update public.user_preferences set text_size = 'huge'
      where user_id = 'd1040001-0000-0000-0000-00000000000a'$$,
-  '22P02', 'invalid input value for enum public.text_size: "huge"',
+  '22P02', 'invalid input value for enum text_size: "huge"',
   'an out-of-range text_size value is rejected by the enum type');
 select tests.logout();
 
