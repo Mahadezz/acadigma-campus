@@ -762,7 +762,7 @@ The cover-teacher payroll calculation needs the rate but must not be able to _se
 
 RLS: SELECT `has_role(workspace_id,{owner,admin,teacher})` **and** (`requested_by = self` **or** `has_role(...,{owner,admin})`) — a teacher sees only their own runs. INSERT the same shape, `with check`ed so a teacher cannot attribute a run to someone else. **No UPDATE or DELETE policy for `authenticated` at all** — `report_runs` has no client-writable status; only the render pipeline, running under `withServiceRole`, moves a run from `queued` to `ready`/`failed`. Freeze, audit and `attach_require_writable` (D-300) all attached, per every tenant table.
 
-`report_run_items` — per-student/staff/section page ranges for a bulk run (Part 5). Ships now (spec's own Part 2 scope) but no code in this PR writes to it; SELECT policy joins back to the parent run's requester the same way. No INSERT grant for `authenticated` — bulk rendering is entirely a Part 5 concern.
+`report_run_items` — per-student/staff/section page ranges for a bulk run (Part 5). Ships now (spec's own Part 2 scope) but no code in this PR writes to it; SELECT policy joins back to the parent run's requester the same way. No INSERT grant for `authenticated` — bulk rendering is entirely a Part 5 concern. `report_run_items.report_run_id`/`workspace_id` is a composite FK to `report_runs (id, workspace_id)` (which carries its own `unique (id, workspace_id)`) — an item's `workspace_id` is constrained by Postgres to match its parent run's, not just left to application code, closing the gap a plain single-column `report_run_id -> report_runs(id)` FK would leave open (pgTAP-confirmed, `40_report_runs.sql`).
 
 ---
 

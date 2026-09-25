@@ -10,7 +10,7 @@
 -- directly (status/file_id transitions are service-role only).
 -- =====================================================================
 begin;
-select plan(19);
+select plan(20);
 
 create schema if not exists tests;
 
@@ -231,6 +231,19 @@ values ('f0000001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-1111111
         'e0000001-0000-0000-0000-000000000001', 'student', gen_random_uuid(), 'queued'),
        ('f0000002-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111',
         'e0000003-0000-0000-0000-000000000003', 'student', gen_random_uuid(), 'queued');
+
+-- The composite FK (report_run_id, workspace_id) -> report_runs (id,
+-- workspace_id) rejects an item whose workspace_id doesn't match its parent
+-- run's — School A's run 'e0000001...' with School B's workspace_id — as a
+-- foreign key violation, not just an RLS-invisible row.
+select throws_ok(
+  $$insert into public.report_run_items
+      (id, workspace_id, report_run_id, subject_type, subject_id)
+    values (gen_random_uuid(), '22222222-2222-2222-2222-222222222222',
+            'e0000001-0000-0000-0000-000000000001', 'student', gen_random_uuid())$$,
+  '23503', null,
+  'an item''s workspace_id must match its parent run''s (composite FK), not just any real run id'
+);
 
 select tests.login('aaaaaaaa-0000-0000-0000-000000000003');
 

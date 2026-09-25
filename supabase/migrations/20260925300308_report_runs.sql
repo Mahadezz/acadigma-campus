@@ -61,7 +61,11 @@ create table if not exists public.report_runs (
   expires_at       timestamptz not null default (now() + interval '30 days'),
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
-  constraint report_runs_params_is_object check (jsonb_typeof(params) = 'object')
+  constraint report_runs_params_is_object check (jsonb_typeof(params) = 'object'),
+  -- Lets report_run_items reference (id, workspace_id) together below, so a
+  -- child row's workspace_id is constrained by Postgres to equal its parent
+  -- run's, not just left to application code to keep in sync.
+  constraint report_runs_id_workspace_id_key unique (id, workspace_id)
 );
 
 comment on table public.report_runs is
@@ -133,7 +137,7 @@ select app.attach_require_writable('public.report_runs');
 create table if not exists public.report_run_items (
   id               uuid primary key default gen_random_uuid(),
   workspace_id     uuid not null references public.workspaces (id) on delete cascade,
-  report_run_id    uuid not null references public.report_runs (id) on delete cascade,
+  report_run_id    uuid not null,
   subject_type     text not null check (subject_type in ('student', 'staff', 'section')),
   subject_id       uuid not null,
   file_id          uuid references public.files (id) on delete set null,
@@ -142,7 +146,16 @@ create table if not exists public.report_run_items (
   status           public.report_status not null default 'queued',
   error_detail     text,
   created_at       timestamptz not null default now(),
-  updated_at       timestamptz not null default now()
+  updated_at       timestamptz not null default now(),
+  -- Composite FK, not a plain report_run_id -> report_runs(id) reference:
+  -- Postgres itself now refuses a row whose workspace_id doesn't match its
+  -- parent run's, closing the gap a single-column FK leaves (an item could
+  -- otherwise carry any workspace_id as long as report_run_id pointed at a
+  -- real run in a *different* workspace).
+  constraint report_run_items_run_workspace_fkey
+    foreign key (report_run_id, workspace_id)
+    references public.report_runs (id, workspace_id)
+    on delete cascade
 );
 
 comment on table public.report_run_items is

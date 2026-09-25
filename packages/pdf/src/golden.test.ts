@@ -119,6 +119,19 @@ describe("SampleDocument — Bengali shaping and per-school letterhead (golden)"
     expect(textB).not.toContain("EIIN 123456")
   })
 
+  it("renders the logo-placeholder initials through the script-aware font, not mojibake (regression)", async () => {
+    // No `logoImage` is ever passed for this fixture, so the header always
+    // falls back to the initials monogram. Before this fix, `document-shell.tsx`
+    // rendered `initials(schoolName)` in a plain `<Text>`, which uses the
+    // page's default Latin-only Inter font — the two Bengali initials of
+    // "আদর্শ উচ্চ বিদ্যালয়" ("আ" + "উ") came out as "†‰" (see the golden
+    // snapshot before this fix). Routing them through `ScriptText` fixes it.
+    const text = await renderSampleText(SCHOOL_A, "bn")
+    expect(text).toContain("আউ")
+    expect(text).not.toContain("†")
+    expect(text).not.toContain("‰")
+  })
+
   it("never contains a banned placeholder school name (§9 AC1)", async () => {
     const text = await renderSampleText(SCHOOL_A, "bn")
     expect(text).not.toContain("TeachFlow")

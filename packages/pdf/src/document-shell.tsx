@@ -200,9 +200,10 @@ export function ReportShell({
               <Image style={styles.logo} src={logoImage} />
             ) : (
               <View style={styles.logoPlaceholder}>
-                <Text style={styles.logoPlaceholderText}>
-                  {initials(schoolName)}
-                </Text>
+                <ScriptText
+                  text={initials(schoolName)}
+                  style={styles.logoPlaceholderText}
+                />
               </View>
             )}
             <View>
@@ -242,7 +243,7 @@ export function ReportShell({
 
         <View style={styles.footer} fixed>
           <ScriptText
-            text={`Generated ${formatDateTime(generatedAt, locale)}${footerNote ? ` · ${footerNote}` : ""}`}
+            text={`${locale === "bn" ? "তৈরি হয়েছে" : "Generated"} ${formatDateTime(generatedAt, locale)}${footerNote ? ` · ${footerNote}` : ""}`}
           />
           <Text
             render={({ pageNumber, totalPages }) => (

@@ -59,7 +59,7 @@ export function SampleDocument({
       headerLines={headerLines}
       accentColor={accentColor}
       logoImage={logoImage}
-      title="Sample document"
+      title={locale === "bn" ? "নমুনা নথি" : "Sample document"}
       scopeLine="F-OP-03 Part 1 — PDF foundation demo"
       footerNote={footerNote}
       generatedAt={generatedAt}
@@ -67,13 +67,17 @@ export function SampleDocument({
       <View style={styles.body}>
         <ScriptText
           style={styles.line}
-          text="Hello — this page proves the letterhead renders correctly."
+          text={
+            locale === "bn"
+              ? "হ্যালো — এই পাতাটি প্রমাণ করে যে লেটারহেড সঠিকভাবে দেখাচ্ছে।"
+              : "Hello — this page proves the letterhead renders correctly."
+          }
         />
         <ScriptText style={styles.line} text="শিক্ষার্থী: রহিমা আক্তার" />
         <ScriptText style={styles.conjunctTest} text="ক্ষ ক্ষমতা পরীক্ষা" />
         <ScriptText
           style={styles.line}
-          text={`Sample number: ${formatNumber(1234, locale)}`}
+          text={`${locale === "bn" ? "নমুনা নম্বর" : "Sample number"}: ${formatNumber(1234, locale)}`}
         />
       </View>
     </ReportShell>

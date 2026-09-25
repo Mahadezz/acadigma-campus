@@ -15,30 +15,34 @@
  * Hyphenation is disabled: `@react-pdf/renderer`'s default Latin hyphenation
  * breaks Bengali conjuncts (যুক্তাক্ষর) apart mid-word.
  */
-import { fileURLToPath } from "node:url"
-
 import { Font } from "@react-pdf/renderer"
 
+import {
+  HIND_SILIGURI_REGULAR_TTF_BASE64,
+  HIND_SILIGURI_SEMIBOLD_TTF_BASE64,
+  INTER_REGULAR_TTF_BASE64,
+  INTER_SEMIBOLD_TTF_BASE64,
+} from "./fonts.generated"
+
 /**
- * `Font.register`'s `src` wants a file path (or a data/remote URL) — it hands
- * unrecognised strings straight to `fontkit.open(path)`, which reads the file
- * itself. Resolved as an absolute path rather than imported as a bundler
- * asset module: this package is loaded from plain Node (vitest) and from a
- * Next.js Node runtime route (F-OP-03 §7 — deliberately not Edge), never
- * from client webpack, so there is no asset loader to depend on in either
- * case. The literal, static `new URL('../assets/...')` shape is what Next's
- * file tracer needs to see to bundle these fonts into the deployed function.
+ * `Font.register`'s `src` also accepts a `data:` URL — `@react-pdf/font`
+ * decodes it in memory (`fontkit.create`), no file read at all. Passed as a
+ * base64-embedded constant rather than a file path: a path resolved from
+ * `import.meta.url` (even one Next's file tracer is told to include) bakes
+ * the *build machine's* absolute path into the compiled route, which does
+ * not exist on Vercel's filesystem at request time — this is what actually
+ * failed in production (every `/api/pdf/[runId]` render 500ing). A data URL
+ * has no path to get wrong in the first place, and works identically in
+ * vitest, `next build`, and on Vercel.
  */
-function fontPath(relativePath: string): string {
-  return fileURLToPath(new URL(relativePath, import.meta.url))
+function fontDataUrl(base64: string): string {
+  return `data:font/ttf;base64,${base64}`
 }
 
-const interRegular = fontPath("../assets/fonts/Inter-Regular.ttf")
-const interSemiBold = fontPath("../assets/fonts/Inter-SemiBold.ttf")
-const hindSiliguriRegular = fontPath("../assets/fonts/HindSiliguri-Regular.ttf")
-const hindSiliguriSemiBold = fontPath(
-  "../assets/fonts/HindSiliguri-SemiBold.ttf"
-)
+const interRegular = fontDataUrl(INTER_REGULAR_TTF_BASE64)
+const interSemiBold = fontDataUrl(INTER_SEMIBOLD_TTF_BASE64)
+const hindSiliguriRegular = fontDataUrl(HIND_SILIGURI_REGULAR_TTF_BASE64)
+const hindSiliguriSemiBold = fontDataUrl(HIND_SILIGURI_SEMIBOLD_TTF_BASE64)
 
 export const FONT_INTER = "Inter"
 export const FONT_HIND_SILIGURI = "HindSiliguri"
