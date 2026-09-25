@@ -66,7 +66,7 @@ describe("onlyImplemented", () => {
     icon: "circle",
   })
   const config: NavConfig = {
-    bottom: [item("/app/dashboard"), item("/app/students")],
+    bottom: [item("/app/dashboard"), item("/app/attendance")],
     more: [
       { id: "a", labelEn: "A", labelBn: "A", items: [item("/app/timetable")] },
       {
