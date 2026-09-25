@@ -823,6 +823,34 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Consequences:** `supabase/tests/32_sections_and_subjects.sql`. When `rooms` lands, `sections.room` becomes `room_id` (expand, backfill, contract).
 
+## D-303 — Exams demo cut: no terms, papers from picked subjects, grading snapshotted on the exam · ACCEPTED · 2026-09-25
+
+**Context:** F-AC-06 Part 2 assumes `terms` and `section_subjects` (F-AC-01), and neither exists; F-AC-01's demo cut (#47, D-102) ships sections and a subject catalogue only. D-302 deferred scale versioning and the pass boundary to this Part.
+
+**Decision:**
+
+1. `exams` has no `term_id`; `exam_type` (midterm, term_final, annual, ...) says which part of the year it is. `term_id` is added, nullable, when `terms` lands.
+2. `exam_subjects` is exam × section × subject. `createExam` takes the subjects the admin picks and creates one paper per section × subject. When `section_subjects` lands, the default subject list comes from it. `section_subject_id` is then added and the paper keeps `section_id`/`subject_id` (the spec's denormalised columns).
+3. The grading policy is snapshotted on the exam at insert by a trigger: the scale's bands, the pass mark, F-zeroes-GPA and the year's 4th-subject threshold. It is never client-supplied and never changed afterwards. That snapshot is the "versioning" D-302 deferred: editing a scale cannot change an existing exam, so no draft/active/retired scale lifecycle is needed yet.
+4. The pass mark reaches papers as `pass_marks = round_half_up(full × pass_mark_percent / 100, 0)`. "The pass flag flips exactly at the pass mark" is enforced when results are computed (Part 5).
+5. Status moves only along §5.12's chain, in the database (`app.tg_exams_status_guard`) and in the domain (`checkExamTransition`). Every status button in the UI names its step.
+
+**Why:** It builds only on tables that exist, and it keeps grading history fixed by construction.
+
+**Consequences:** Components, aggregate exams, calendar events, question-paper upload, idempotency keys and rate limits on `createExam` are later Parts. Parents read exams only through Part 7's published view.
+
+**Review of PR #48 (2026-09-25):**
+
+- **Result computation reads `grading_snapshot.bands`, never `app.band_for` on the live scale.** The snapshot also carries `rank_by`. A snapshot-reading helper is added in Part 5, the first Part that computes a result.
+- **Pass marks are not rounded to whole marks (D-302):** `full × pass_mark_percent / 100`, stored at 2 decimals (33 % of 50 = 16.50). This supersedes item 4's `round_half_up(…, 0)`.
+- **Papers lock when marks entry opens.** From `marks_entry` on, no section or paper is added and no full marks, pass marks or membership change; a paper's date can still move. After `draft`, sections and papers are never deleted (`app.tg_exam_papers_lock`). A paper's own status moves one step at a time: pending → entering → submitted → locked. Part 4 adds unlock.
+- **Other rules:**
+  - `exams.academic_year_id` is immutable.
+  - `exam_subjects` has `unique (id, workspace_id)` for marks' composite FK.
+  - The snapshot trigger returns early unless the caller is owner/admin of the school or privileged, so a stranger only ever sees RLS's refusal, never `NO_GRADE_SCALE`.
+  - A reversal needs its own reason, one that is not blank and not the stored one, in both the database and `checkExamTransition`.
+- **Known gap:** Publish has no marks-completeness gate yet. Part 4 (submit and lock) must add one before results can be published for real.
+
 ## D-103 — F-AC-02 demo cut: students with a private-details split table, one admission function, guardians as private contact rows · ACCEPTED · 2026-09-25
 
 **Context:** The sales demo needs a class list for Class 6 – ক with about 40 students, search, quick admission and a student profile. F-AC-02 is nine Parts; the demo needs Parts 1 and 2 and the guardian contact half of Part 4. The spec (§3 "RLS in words") protects sensitive fields with two repository projections over one `students` table, which leaves every column readable to any teacher or staff member through PostgREST — the database would not be the boundary (CLAUDE.md rule 1). The lead asked for date of birth, guardian phone and address to be readable only by the roles the spec allows.

@@ -558,6 +558,10 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // F-AC-01 demo cut (D-102) — 20260925300304_sections_and_subjects.sql.
   "sections",
   "subjects",
+  // F-AC-06 Part 2 (D-303) — 20260925300305_exams.sql.
+  "exams",
+  "exam_sections",
+  "exam_subjects",
   // F-AC-02 demo cut (D-103) — 20260925300306_students_and_guardians.sql.
   "students",
   "student_private_details",
@@ -613,6 +617,9 @@ export const GENERIC_TABLE_NOUNS: Readonly<
   grade_bands: { en: "a grade band", bn: "একটি গ্রেড ব্যান্ড" },
   sections: { en: "a section", bn: "একটি শাখা" },
   subjects: { en: "a subject", bn: "একটি বিষয়" },
+  exams: { en: "an exam", bn: "একটি পরীক্ষা" },
+  exam_sections: { en: "an exam's section", bn: "পরীক্ষার একটি শাখা" },
+  exam_subjects: { en: "an exam paper", bn: "একটি পরীক্ষার পেপার" },
   students: { en: "a student", bn: "একজন শিক্ষার্থী" },
   student_private_details: {
     en: "a student's private details",
