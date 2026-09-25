@@ -395,6 +395,59 @@
     "summary": {
       "presentCount": "{count, plural, one {# student present} other {# students present}}",
       "absentCount": "{count, plural, one {# student absent} other {# students absent}}"
+    },
+    "today": {
+      "heading": "Attendance today",
+      "marked": "{done} of {total} classes marked",
+      "rate": "Today's rate {rate}%",
+      "noRate": "No rate yet",
+      "notSchoolDay": "Today is not a school day.",
+      "yourClass": "Your class",
+      "allClasses": "All classes",
+      "noSections": "No classes this year yet. Add sections on the Classes page.",
+      "noOwnSections": "You are not class teacher of any class this year.",
+      "taken": "Marked",
+      "notTaken": "Not marked",
+      "takenBy": "by {name} at {time}",
+      "counts": "P {present} · A {absent} · L {late}",
+      "classTeacher": "Class teacher: {name}",
+      "noClassTeacher": "No class teacher",
+      "take": "Take attendance",
+      "open": "Open",
+      "view": "View",
+      "enrolled": "{count} students"
+    },
+    "roll": {
+      "back": "Attendance today",
+      "markAllPresent": "Mark all present",
+      "undo": "Undo",
+      "unmarked": "{count} unmarked",
+      "allMarked": "All marked",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved: {present} present, {absent} absent.",
+      "notSchoolDay": "This is not a school day (a holiday or a day off).",
+      "takeAnyway": "Take attendance anyway",
+      "readOnlyNotMine": "Only this class's class teacher or an admin can change this register.",
+      "readOnlyWindow": "This day is past the correction window. Ask an admin to change it.",
+      "noStudents": "No students are enrolled in this class.",
+      "roll": "Roll {roll}",
+      "unmarkedHint": "Mark every student, or use Mark all present.",
+      "errors": {
+        "NOT_ASSIGNED": "Only this class's class teacher or an admin can take its attendance.",
+        "OUTSIDE_EDIT_WINDOW": "This day is past the correction window. Ask an admin.",
+        "NOT_SCHOOL_DAY": "This is not a school day. Confirm to take attendance anyway.",
+        "UNMARKED_STUDENTS": "Mark every student before saving.",
+        "ROSTER_CHANGED": "The class list changed. Reload the page.",
+        "NO_STUDENTS": "No students are enrolled in this class.",
+        "CONFLICT": "Someone else saved this class meanwhile. Reload to see their marks.",
+        "SESSION_LOCKED": "This day is locked.",
+        "FUTURE_DATE": "That day has not come yet.",
+        "OUTSIDE_YEAR": "That day is outside the academic year.",
+        "generic": "Could not save. Your marks are still here — try again.",
+        "readOnly": "This school is read-only right now, so nothing can be changed."
+      },
+      "counts": "P {present} · A {absent} · L {late}"
     }
   },
   "errors": {
@@ -972,7 +1025,11 @@
     "attendance": {
       "title": "Today's attendance",
       "emptyTitle": "No attendance taken yet",
-      "emptyDescription": "When teachers take today's register, present, absent and late counts show here."
+      "emptyDescription": "When teachers take today's register, present, absent and late counts show here.",
+      "marked": "{done} of {total} classes marked",
+      "rate": "{rate}% present so far",
+      "open": "Open attendance",
+      "none": "No classes yet"
     },
     "results": {
       "title": "Exam results",

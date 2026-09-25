@@ -567,6 +567,9 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "student_private_details",
   "guardians",
   "enrollments",
+  // F-AC-03 demo cut (D-104) — 20260925300309_attendance.sql.
+  "attendance_sessions",
+  "attendance_records",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -627,6 +630,14 @@ export const GENERIC_TABLE_NOUNS: Readonly<
   },
   guardians: { en: "a guardian", bn: "একজন অভিভাবক" },
   enrollments: { en: "an enrolment", bn: "একটি ভর্তি" },
+  attendance_sessions: {
+    en: "a class's attendance",
+    bn: "একটি শ্রেণির হাজিরা",
+  },
+  attendance_records: {
+    en: "a student's attendance",
+    bn: "একজন শিক্ষার্থীর হাজিরা",
+  },
 }
 
 /**
@@ -639,6 +650,8 @@ const GENERIC_SEVERITY_OVERRIDES: Readonly<
   Record<string, Partial<Record<"insert" | "update" | "delete", AuditSeverity>>>
 > = {
   grade_bands: { update: "info", delete: "info" },
+  // A re-save touches the session every morning (20260925300309_attendance.sql).
+  attendance_sessions: { update: "info" },
 }
 
 const GENERIC_VERBS = {

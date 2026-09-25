@@ -1,5 +1,6 @@
 export * from "./academics/grading"
 export * from "./academics/structure"
+export * from "./academics/attendance"
 export * from "./academics/exams"
 export * from "./academics/students"
 export * from "./audit"
