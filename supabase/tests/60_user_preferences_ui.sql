@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-ID-10 Part 1 — user_preferences.ui_mode / text_size (D-403,
--- 20260925300312_user_preferences_ui.sql)
+-- 20260925300313_user_preferences_ui.sql)
 --
 -- The two new columns ride the table's existing `class U1` RLS (own row
 -- only, full CRUD, no platform-admin bypass — DATA-MODEL.md §1.7): this file

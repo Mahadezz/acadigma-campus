@@ -2,7 +2,7 @@ import { z } from "zod"
 
 /**
  * F-ID-10 Part 1 (D-403, D-404): `user_preferences.ui_mode`/`text_size`
- * (`20260925300312_user_preferences_ui.sql`). Enum parity with the Postgres
+ * (`20260925300313_user_preferences_ui.sql`). Enum parity with the Postgres
  * types `public.ui_mode` / `public.text_size` is asserted in
  * `ui-preferences.test.ts`, the same pattern `plans.test.ts` uses for
  * `subscription_status`/`access_mode` — kept in sync by hand, not generated,
