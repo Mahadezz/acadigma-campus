@@ -109,6 +109,43 @@ const nextConfig: NextConfig = {
     authInterrupts: true,
   },
 
+  /**
+   * PDF hotfix (F-OP-03, D-204/D-205 render pipeline): `pdfkit` (via
+   * `@react-pdf/renderer`) resolves its built-in Helvetica/Times/Courier
+   * glyph data through Node's own package `imports` map
+   * (`require('#standard-fonts/Helvetica')`, resolved against pdfkit's own
+   * `package.json`). Webpack's default resolver does not honour that map
+   * when it bundles the package into the Next.js server chunk — the require
+   * survives as a literal string but loses pdfkit's package.json as its
+   * resolution root once bundled, so it 404s at runtime with "Cannot find
+   * module '#standard-fonts/Helvetica'" (production-only: `next dev`/`next
+   * start` against an unbundled `.next` do not hit this bundling path the
+   * same way `next build`'s Vercel output does).
+   *
+   * `serverExternalPackages` takes the whole `@react-pdf/renderer` ->
+   * `pdfkit`/`fontkit` subtree out of the webpack graph entirely — Node
+   * `require()`s it directly from `node_modules` at request time, where
+   * pdfkit's own `package.json` is intact and `#standard-fonts/*` resolves
+   * normally at runtime.
+   *
+   * Output file tracing (`@vercel/nft`) still has to know to COPY those
+   * font files into the deployed function in the first place. Verified by
+   * building and inspecting `route.js.nft.json`: nft follows the ordinary
+   * `require`/`import` calls pdfkit makes (and includes `pdfkit.node.mjs`
+   * itself) but does not walk the *dynamic* per-glyph `require('#standard-
+   * fonts/Helvetica')` calls pdfkit issues through its own `createRequire`
+   * — those come back as "cannot resolve" during nft's own trace, so they
+   * never make it into the file list on their own. `outputFileTracingIncludes`
+   * force-includes the directory those calls read from, for both places
+   * this route in `@acadigma/pdf` renders a PDF (the download route and the
+   * server actions that kick a render right after `createReportRun`).
+   */
+  serverExternalPackages: ["@react-pdf/renderer", "pdfkit", "fontkit"],
+  outputFileTracingIncludes: {
+    "/api/pdf/[runId]": ["./node_modules/pdfkit/js/standard-fonts/**"],
+    "/app/reports": ["./node_modules/pdfkit/js/standard-fonts/**"],
+  },
+
   async headers() {
     return [
       // More specific first: Next applies every matching entry, and the later
