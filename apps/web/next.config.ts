@@ -109,6 +109,29 @@ const nextConfig: NextConfig = {
     authInterrupts: true,
   },
 
+  /**
+   * PDF hotfix (F-OP-03, D-204/D-205 render pipeline): `pdfkit` (via
+   * `@react-pdf/renderer`) resolves its built-in Helvetica/Times/Courier
+   * glyph data through Node's own package `imports` map
+   * (`require('#standard-fonts/Helvetica')`, resolved against pdfkit's own
+   * `package.json`). Webpack's default resolver does not honour that map
+   * when it bundles the package into the Next.js server chunk — the require
+   * survives as a literal string but loses pdfkit's package.json as its
+   * resolution root once bundled, so it 404s at runtime with "Cannot find
+   * module '#standard-fonts/Helvetica'" (production-only: `next dev`/`next
+   * start` against an unbundled `.next` do not hit this bundling path the
+   * same way `next build`'s Vercel output does).
+   *
+   * `serverExternalPackages` takes the whole `@react-pdf/renderer` ->
+   * `pdfkit`/`fontkit` subtree out of the webpack graph entirely — Node
+   * `require()`s it directly from `node_modules` at request time, where
+   * pdfkit's own `package.json` is intact and `#standard-fonts/*` resolves
+   * normally. Output file tracing (`@vercel/nft`) then includes the actual
+   * files a real Node resolution would touch, `#imports` included, because
+   * it is no longer working from a bundled chunk with no package context.
+   */
+  serverExternalPackages: ["@react-pdf/renderer", "pdfkit", "fontkit"],
+
   async headers() {
     return [
       // More specific first: Next applies every matching entry, and the later
