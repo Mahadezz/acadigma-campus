@@ -14,6 +14,8 @@
 - `app.accept_invitation()` and `app.join_workspace_by_code()` refuse a read-only school with `PLAN_READ_ONLY` ("Ask the owner to upgrade."), after verifying the token or code.
 - The seed hashes all four account passwords at seed time (`extensions.crypt`), removing the Semgrep bcrypt findings.
 
+- Found by the new test: the seed was broken on main since #32 (its label inserts collided with the labels the school bootstrap now creates); it now picks the bootstrap's labels by name.
+
 ## 2. Environment
 
 Migration head `20260925300200_readonly_join_check.sql`. pgTAP is CI-only (no local Docker).

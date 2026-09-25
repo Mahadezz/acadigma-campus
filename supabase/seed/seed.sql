@@ -149,18 +149,13 @@ update public.school_profiles
 -- ---------------------------------------------------------------------
 -- 4. Labels (PRODUCT-DECISIONS 1.4 — a title, not a role)
 -- ---------------------------------------------------------------------
-insert into public.custom_labels (id, workspace_id, base_role, name, color, sort_order, created_by)
-values ('5eed0000-0000-4000-c000-000000000001', '5eed0000-0000-4000-b000-000000000001',
-        'admin',   'Principal',      '#7C3AED', 10, '5eed0000-0000-4000-a000-000000000001'),
-       ('5eed0000-0000-4000-c000-000000000002', '5eed0000-0000-4000-b000-000000000001',
-        'admin',   'Vice-Principal', '#2563EB', 20, '5eed0000-0000-4000-a000-000000000001'),
-       ('5eed0000-0000-4000-c000-000000000003', '5eed0000-0000-4000-b000-000000000001',
-        'teacher', 'Senior Teacher', '#059669', 30, '5eed0000-0000-4000-a000-000000000001')
-on conflict (id) do nothing;
+-- The school's labels are created by app.tg_workspace_bootstrap() with the
+-- workspace (F-OP-06 §3.4: Principal, Vice-Principal, Senior Teacher, ...);
+-- the seed only picks from them (D-301 — re-inserting them collided).
 
 -- The owner is the Principal.
 update public.workspace_members
-   set label_id = '5eed0000-0000-4000-c000-000000000001',
+   set label_id = (select l.id from public.custom_labels l where l.workspace_id = '5eed0000-0000-4000-b000-000000000001' and l.name = 'Principal'),
        employee_code = coalesce(employee_code,
                                 app.next_id('5eed0000-0000-4000-b000-000000000001', 'staff')),
        department = 'Administration'
@@ -178,7 +173,7 @@ insert into public.workspace_members
   (workspace_id, user_id, role, status, label_id, department, subjects, phone, joined_at, created_by)
 values
   ('5eed0000-0000-4000-b000-000000000001', '5eed0000-0000-4000-a000-000000000002',
-   'teacher', 'active', '5eed0000-0000-4000-c000-000000000003',
+   'teacher', 'active', (select l.id from public.custom_labels l where l.workspace_id = '5eed0000-0000-4000-b000-000000000001' and l.name = 'Senior Teacher'),
    'Science', array['Physics', 'General Science'], '+8801711000002', now(),
    '5eed0000-0000-4000-a000-000000000001'),
 
@@ -211,7 +206,7 @@ insert into public.workspace_invitations
 values
   ('5eed0000-0000-4000-d000-000000000001', '5eed0000-0000-4000-b000-000000000001',
    'email', 'newteacher@acadigma.test', 'teacher',
-   '5eed0000-0000-4000-c000-000000000003',
+   (select l.id from public.custom_labels l where l.workspace_id = '5eed0000-0000-4000-b000-000000000001' and l.name = 'Senior Teacher'),
    app.hash_token('acadigma-demo-invitation-token'), 'acadigma',
    'Welcome to Acadigma Model School.',
    '5eed0000-0000-4000-a000-000000000001',

@@ -614,4 +614,4 @@ Admins see **scheduled periods only**; workload variance is teacher-private by d
 
 **Why:** Only someone who has already proven they were invited learns the mode. Hashing at seed time is one function call and removes the alert class instead of suppressing it.
 
-**Consequences:** `supabase/tests/51_readonly_join_and_seed.sql` applies the seed inside pgTAP (`\ir ../seed/seed.sql`), so CI now proves the seed runs on the migrated schema — it did not before.
+**Consequences:** `supabase/tests/51_readonly_join_and_seed.sql` applies the seed inside pgTAP (`\ir ../seed/seed.sql`), so CI now proves the seed runs on the migrated schema — it did not before. Its first run found the seed broken on main since F-OP-06 (#32): the school bootstrap now creates the default labels, and the seed's own `Principal`/`Vice-Principal`/`Senior Teacher` inserts collided on `custom_labels_workspace_name_key`. The seed now picks those labels by name instead of inserting them.
