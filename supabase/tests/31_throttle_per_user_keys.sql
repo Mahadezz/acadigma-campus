@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · D-101 — per-user throttle keys come from auth.uid(), never the
--- caller (20260925300202_throttle_per_user_keys.sql).
+-- caller (20260925300302_throttle_per_user_keys.sql).
 --
 --   1. A user cannot record a failure against another user's per-user row,
 --      whatever key they pass — for the per-user buckets p_key is ignored.
