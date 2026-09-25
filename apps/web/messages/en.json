@@ -789,5 +789,63 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "classes": {
+    "title": "Classes",
+    "yearLabel": "Academic year {year}",
+    "noYear": "This school has no current academic year yet.",
+    "tabs": {
+      "classes": "Classes & sections",
+      "subjects": "Subjects"
+    },
+    "sectionsCountOne": "1 section",
+    "sectionsCountOther": "{count} sections",
+    "noSections": "No sections yet",
+    "addSection": "Add section",
+    "addSectionTo": "Add a section to {grade}",
+    "addSectionDescription": "It is added to this academic year. You can archive it later.",
+    "sectionName": "Section name",
+    "classTeacher": "Class teacher",
+    "noClassTeacher": "No class teacher yet",
+    "room": "Room",
+    "capacity": "Capacity",
+    "optional": "optional",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "archive": "Archive",
+    "archiveSection": "Archive {section}?",
+    "archiveDescription": "It disappears from lists. Its history is kept. You cannot undo this here.",
+    "archiving": "Archiving…",
+    "classTeacherShort": "Class teacher: {name}",
+    "roomShort": "Room {room}",
+    "errors": {
+      "SECTION_NAME_TAKEN": "This class already has a section with that name.",
+      "CLASS_TEACHER_TAKEN": "That teacher is already a class teacher this year.",
+      "MEMBER_NOT_ELIGIBLE": "Pick an active teacher of this school.",
+      "SUBJECT_TAKEN": "The school already has a subject with that name or code.",
+      "generic": "Something went wrong. Try again.",
+      "readOnly": "This school is read-only right now, so nothing can be changed."
+    },
+    "subjectsEmpty": "No subjects yet.",
+    "useStarter": "Use the NCTB starter list",
+    "addingStarter": "Adding…",
+    "starterAdded": "{count} subjects added.",
+    "starterNothing": "All starter subjects are already in your list.",
+    "addSubject": "Add subject",
+    "addSubjectDescription": "Subjects are shared by every class in the school.",
+    "subjectName": "Subject name",
+    "subjectNameBn": "Name in Bangla",
+    "subjectCode": "Code",
+    "category": "Category",
+    "fourthSubject": "Can be taken as the 4th subject",
+    "categories": {
+      "core": "Core",
+      "optional": "Optional",
+      "religion": "Religion",
+      "co_curricular": "Co-curricular"
+    },
+    "fourthBadge": "4th subject",
+    "readOnlyNote": "You can view classes and subjects. Only an owner or admin can change them."
   }
 }

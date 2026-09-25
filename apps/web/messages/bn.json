@@ -789,5 +789,63 @@
       "yes": "হ্যাঁ",
       "no": "না"
     }
+  },
+  "classes": {
+    "title": "শ্রেণি",
+    "yearLabel": "শিক্ষাবর্ষ {year}",
+    "noYear": "এই স্কুলের এখনো কোনো চলতি শিক্ষাবর্ষ নেই।",
+    "tabs": {
+      "classes": "শ্রেণি ও শাখা",
+      "subjects": "বিষয়"
+    },
+    "sectionsCountOne": "১টি শাখা",
+    "sectionsCountOther": "{count}টি শাখা",
+    "noSections": "এখনো কোনো শাখা নেই",
+    "addSection": "শাখা যোগ করুন",
+    "addSectionTo": "{grade}-এ শাখা যোগ করুন",
+    "addSectionDescription": "এটি এই শিক্ষাবর্ষে যোগ হবে। পরে আর্কাইভ করতে পারবেন।",
+    "sectionName": "শাখার নাম",
+    "classTeacher": "শ্রেণিশিক্ষক",
+    "noClassTeacher": "এখনো শ্রেণিশিক্ষক নেই",
+    "room": "কক্ষ",
+    "capacity": "আসন সংখ্যা",
+    "optional": "ঐচ্ছিক",
+    "save": "সংরক্ষণ",
+    "saving": "সংরক্ষণ হচ্ছে…",
+    "cancel": "বাতিল",
+    "archive": "আর্কাইভ",
+    "archiveSection": "{section} আর্কাইভ করবেন?",
+    "archiveDescription": "এটি তালিকা থেকে সরে যাবে। এর ইতিহাস থাকবে। এখান থেকে ফেরানো যাবে না।",
+    "archiving": "আর্কাইভ হচ্ছে…",
+    "classTeacherShort": "শ্রেণিশিক্ষক: {name}",
+    "roomShort": "কক্ষ {room}",
+    "errors": {
+      "SECTION_NAME_TAKEN": "এই শ্রেণিতে ওই নামে একটি শাখা আগে থেকেই আছে।",
+      "CLASS_TEACHER_TAKEN": "ওই শিক্ষক এ বছর আগে থেকেই একটি শাখার শ্রেণিশিক্ষক।",
+      "MEMBER_NOT_ELIGIBLE": "এই স্কুলের একজন সক্রিয় শিক্ষক বেছে নিন।",
+      "SUBJECT_TAKEN": "ওই নাম বা কোডে স্কুলে আগে থেকেই একটি বিষয় আছে।",
+      "generic": "কিছু একটা ভুল হয়েছে। আবার চেষ্টা করুন।",
+      "readOnly": "স্কুলটি এখন শুধু-পড়া অবস্থায় আছে, তাই কিছু পরিবর্তন করা যাবে না।"
+    },
+    "subjectsEmpty": "এখনো কোনো বিষয় নেই।",
+    "useStarter": "NCTB-এর শুরুর তালিকা ব্যবহার করুন",
+    "addingStarter": "যোগ হচ্ছে…",
+    "starterAdded": "{count}টি বিষয় যোগ হয়েছে।",
+    "starterNothing": "শুরুর তালিকার সব বিষয় আগে থেকেই আছে।",
+    "addSubject": "বিষয় যোগ করুন",
+    "addSubjectDescription": "স্কুলের সব শ্রেণি একই বিষয় তালিকা ব্যবহার করে।",
+    "subjectName": "বিষয়ের নাম",
+    "subjectNameBn": "বাংলায় নাম",
+    "subjectCode": "কোড",
+    "category": "ধরন",
+    "fourthSubject": "চতুর্থ বিষয় হিসেবে নেওয়া যায়",
+    "categories": {
+      "core": "আবশ্যিক",
+      "optional": "ঐচ্ছিক",
+      "religion": "ধর্ম",
+      "co_curricular": "সহশিক্ষা"
+    },
+    "fourthBadge": "৪র্থ বিষয়",
+    "readOnlyNote": "আপনি শ্রেণি ও বিষয় দেখতে পারবেন। শুধু মালিক বা অ্যাডমিন পরিবর্তন করতে পারেন।"
   }
 }

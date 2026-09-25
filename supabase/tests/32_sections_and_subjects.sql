@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-01 demo cut — sections and subjects
--- (20260925300103_sections_and_subjects.sql, D-102)
+-- (20260925300203_sections_and_subjects.sql, D-102)
 --
 -- Isolation, escalation, the composite (tenant-bound) foreign keys, the
 -- natural-key uniqueness, class-teacher eligibility and one-per-year,
