@@ -10,9 +10,12 @@ describe("roundHalfUp", () => {
     expect(rows.length).toBeGreaterThanOrEqual(10)
   })
 
-  it.each(rows)("roundHalfUp(%s, %s) = %s — same as app.round_half_up", (v, p, e) => {
-    expect(roundHalfUp(Number(v), Number(p))).toBe(Number(e))
-  })
+  it.each(rows)(
+    "roundHalfUp(%s, %s) = %s — same as app.round_half_up",
+    (v, p, e) => {
+      expect(roundHalfUp(Number(v), Number(p))).toBe(Number(e))
+    }
+  )
 
   it("AC-2: round_half_up(21.5 / 5, 2) = 4.30", () => {
     expect(roundHalfUp(21.5 / 5, 2)).toBe(4.3)

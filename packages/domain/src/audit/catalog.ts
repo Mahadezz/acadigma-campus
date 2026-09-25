@@ -543,6 +543,10 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // supabase/migrations/20260925300101_create_school_workspace.sql.
   "grade_levels",
   "academic_years",
+  // F-AC-06 Part 1 (D-302) — seeded in
+  // supabase/migrations/20260925300202_grade_scales.sql.
+  "grade_scales",
+  "grade_bands",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =

@@ -18,13 +18,62 @@ export const BD_GRADE_SCALE_CODE = "BD_GPA5"
 
 /** PRODUCT-DECISIONS 2.4 — same rows as `public.seed_bd_grade_scale`. */
 export const BD_GRADE_BANDS: readonly GradeBand[] = [
-  { letter: "A+", minPercent: 80, maxPercent: 100, gradePoint: 5, isFail: false, sortOrder: 1 },
-  { letter: "A", minPercent: 70, maxPercent: 79.99, gradePoint: 4, isFail: false, sortOrder: 2 },
-  { letter: "A-", minPercent: 60, maxPercent: 69.99, gradePoint: 3.5, isFail: false, sortOrder: 3 },
-  { letter: "B", minPercent: 50, maxPercent: 59.99, gradePoint: 3, isFail: false, sortOrder: 4 },
-  { letter: "C", minPercent: 40, maxPercent: 49.99, gradePoint: 2, isFail: false, sortOrder: 5 },
-  { letter: "D", minPercent: 33, maxPercent: 39.99, gradePoint: 1, isFail: false, sortOrder: 6 },
-  { letter: "F", minPercent: 0, maxPercent: 32.99, gradePoint: 0, isFail: true, sortOrder: 7 },
+  {
+    letter: "A+",
+    minPercent: 80,
+    maxPercent: 100,
+    gradePoint: 5,
+    isFail: false,
+    sortOrder: 1,
+  },
+  {
+    letter: "A",
+    minPercent: 70,
+    maxPercent: 79.99,
+    gradePoint: 4,
+    isFail: false,
+    sortOrder: 2,
+  },
+  {
+    letter: "A-",
+    minPercent: 60,
+    maxPercent: 69.99,
+    gradePoint: 3.5,
+    isFail: false,
+    sortOrder: 3,
+  },
+  {
+    letter: "B",
+    minPercent: 50,
+    maxPercent: 59.99,
+    gradePoint: 3,
+    isFail: false,
+    sortOrder: 4,
+  },
+  {
+    letter: "C",
+    minPercent: 40,
+    maxPercent: 49.99,
+    gradePoint: 2,
+    isFail: false,
+    sortOrder: 5,
+  },
+  {
+    letter: "D",
+    minPercent: 33,
+    maxPercent: 39.99,
+    gradePoint: 1,
+    isFail: false,
+    sortOrder: 6,
+  },
+  {
+    letter: "F",
+    minPercent: 0,
+    maxPercent: 32.99,
+    gradePoint: 0,
+    isFail: true,
+    sortOrder: 7,
+  },
 ]
 
 /** The band holding `pct` once rounded to the bands' 2 decimals; null if none. */

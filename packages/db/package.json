@@ -11,7 +11,8 @@
     "./workspace-context": "./src/workspace-context.ts",
     "./types": "./src/types.generated.ts",
     "./repositories/settings": "./src/repositories/settings.ts",
-    "./repositories/staff": "./src/repositories/staff.ts"
+    "./repositories/staff": "./src/repositories/staff.ts",
+    "./repositories/grading": "./src/repositories/grading.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

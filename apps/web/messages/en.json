@@ -697,6 +697,11 @@
         "title": "How this school works",
         "description": "Grading, attendance and the school week, read-only",
         "keywords": "grade pass mark attendance late working days weekend friday timezone"
+      },
+      "grading": {
+        "title": "Grading",
+        "description": "Grade bands, letters and grade points",
+        "keywords": "grade scale gpa letter band point pass fail a+ bangladesh"
       }
     },
     "notSet": "Not set",
@@ -788,6 +793,28 @@
       "minAttendance": "Minimum attendance (warning only)",
       "yes": "Yes",
       "no": "No"
+    },
+    "grading": {
+      "title": "Grading",
+      "description": "The bands that turn a percentage into a letter and a grade point.",
+      "emptyTitle": "No grade scale yet",
+      "emptyBody": "Start from the Bangladesh GPA 5.00 scale (A+ 80-100 … F 0-32.99). You can change it afterwards.",
+      "seed": "Use the Bangladesh default",
+      "seeding": "Adding…",
+      "name": "Scale name",
+      "letter": "Letter",
+      "min": "From %",
+      "max": "To %",
+      "point": "Grade point",
+      "fail": "Fail",
+      "addBand": "Add band",
+      "removeBand": "Remove band {n}",
+      "previewLabel": "Try a percentage",
+      "previewResult": "{pct} % → {letter} ({point})",
+      "previewNone": "No band covers {pct} %",
+      "gap": "Nothing covers {at} %. The bands must cover 0 to 100 with no gap.",
+      "overlap": "Two bands both cover {at} %.",
+      "readOnly": "Only an owner or admin can change grading."
     }
   }
 }

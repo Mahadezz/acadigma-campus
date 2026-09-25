@@ -44,6 +44,11 @@ export default async function SettingsPage() {
       summary: branding?.header_line_1 || branding?.accent || s.notSet,
     },
     {
+      href: "/app/settings/academics/grading",
+      ...s.rows.grading,
+      summary: s.rows.grading.description,
+    },
+    {
       href: "/app/settings/overview",
       ...s.rows.overview,
       summary: s.rows.overview.description,
