@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
 
+import type { AttendanceStatus } from "@acadigma/contracts"
+
 import {
   attendancePercentage,
   editWindowOpen,
@@ -7,7 +9,6 @@ import {
   sectionDayRate,
 } from "./percentage"
 
-import type { AttendanceStatus } from "@acadigma/contracts"
 
 const DEFAULT = { late_counts_present: true, half_day_counts_present: true }
 
