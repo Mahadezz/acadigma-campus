@@ -13,7 +13,6 @@
  */
 
 import { textSizeSchema, uiModeSchema } from "@acadigma/contracts"
-
 import type { TextSize, UiMode, UiPreferences } from "@acadigma/contracts"
 
 export function isUiMode(value: string | null | undefined): value is UiMode {

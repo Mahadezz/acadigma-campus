@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { useRouter } from "next/navigation"
 
+import type { TextSize, UiMode } from "@acadigma/contracts"
 import { Card } from "@acadigma/ui/components/card"
 import { Label } from "@acadigma/ui/components/label"
 import { RadioGroup, RadioGroupItem } from "@acadigma/ui/components/radio-group"
@@ -12,8 +13,6 @@ import { Switch } from "@acadigma/ui/components/switch"
 import { updateUiPreferences } from "@/app/(shared)/workspace/actions"
 
 import { SaveNotice, type Notice } from "../save-notice"
-
-import type { TextSize, UiMode } from "@acadigma/contracts"
 
 const TEXT_SIZES: { value: TextSize; sampleClassName: string }[] = [
   { value: "normal", sampleClassName: "text-base" },
@@ -105,11 +104,16 @@ export function DisplaySettingsForm({
             >
               <span className="space-y-1">
                 <span className="block font-medium">{t[size.value]}</span>
-                <span className={`text-muted-foreground block ${size.sampleClassName}`}>
+                <span
+                  className={`text-muted-foreground block ${size.sampleClassName}`}
+                >
                   {t.sampleText}
                 </span>
               </span>
-              <RadioGroupItem id={`text-size-${size.value}`} value={size.value} />
+              <RadioGroupItem
+                id={`text-size-${size.value}`}
+                value={size.value}
+              />
             </Label>
           ))}
         </RadioGroup>
@@ -124,7 +128,9 @@ export function DisplaySettingsForm({
             <p className="text-muted-foreground text-sm">
               {t.basicModeDescription}
             </p>
-            <p className="text-muted-foreground text-xs">{t.basicModeComingSoon}</p>
+            <p className="text-muted-foreground text-xs">
+              {t.basicModeComingSoon}
+            </p>
           </div>
           <Switch
             id="basic-mode-switch"

@@ -95,7 +95,7 @@ describe("UserMenu", () => {
 
     expect(
       screen.queryByRole("menuitem", { name: "Switch to basic mode" })
-    ).not.toBeInTheDocument()
+    ).toBeNull()
   })
 
   it("switches to basic mode and navigates to /app/home (F-ID-10 §4.2, D-403)", async () => {

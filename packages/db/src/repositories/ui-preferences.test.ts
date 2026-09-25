@@ -44,9 +44,12 @@ function fakeClient(options: {
                   ? null
                   : (options.upsertRow ??
                     ({
-                      ui_mode: (values.ui_mode as string) ?? row?.ui_mode ?? "full",
+                      ui_mode:
+                        (values.ui_mode as string) ?? row?.ui_mode ?? "full",
                       text_size:
-                        (values.text_size as string) ?? row?.text_size ?? "normal",
+                        (values.text_size as string) ??
+                        row?.text_size ??
+                        "normal",
                     } satisfies NonNullable<Row>)),
                 error: options.upsertError
                   ? { message: "constraint violation" }
@@ -65,13 +68,19 @@ describe("fetchUiPreferences", () => {
   it("returns the row's values when one exists", async () => {
     const client = fakeClient({ row: { ui_mode: "basic", text_size: "large" } })
     const result = await fetchUiPreferences(client, USER_ID)
-    expect(result.ok && result.data).toEqual({ uiMode: "basic", textSize: "large" })
+    expect(result.ok && result.data).toEqual({
+      uiMode: "basic",
+      textSize: "large",
+    })
   })
 
   it("returns the documented defaults when there is no row (§3 'no row needed to read')", async () => {
     const client = fakeClient({ row: null })
     const result = await fetchUiPreferences(client, USER_ID)
-    expect(result.ok && result.data).toEqual({ uiMode: "full", textSize: "normal" })
+    expect(result.ok && result.data).toEqual({
+      uiMode: "full",
+      textSize: "normal",
+    })
   })
 
   it("returns dependency_unavailable on a query error", async () => {
@@ -102,12 +111,17 @@ describe("upsertUiPreferences", () => {
       uiMode: "basic",
       textSize: "xlarge",
     })
-    expect(result.ok && result.data).toEqual({ uiMode: "basic", textSize: "xlarge" })
+    expect(result.ok && result.data).toEqual({
+      uiMode: "basic",
+      textSize: "xlarge",
+    })
   })
 
   it("returns dependency_unavailable on a write error", async () => {
     const client = fakeClient({ upsertError: true })
-    const result = await upsertUiPreferences(client, USER_ID, { uiMode: "basic" })
+    const result = await upsertUiPreferences(client, USER_ID, {
+      uiMode: "basic",
+    })
     expect(!result.ok && result.error.code).toBe("dependency_unavailable")
   })
 })

@@ -1,10 +1,7 @@
-import { redirect } from "next/navigation"
-
-import { Button } from "@acadigma/ui/components/button"
-
-import { updateUiPreferences } from "@/app/(shared)/workspace/actions"
 import { getMessages } from "@/lib/i18n"
 import { requireShell } from "@/lib/workspace"
+
+import { SwitchToFullAppButton } from "./switch-to-full-app-button"
 
 import type { Metadata } from "next"
 
@@ -23,23 +20,11 @@ export default async function BasicHomePlaceholderPage() {
   const { t } = await getMessages()
   const s = t.basicMode.home
 
-  async function switchToFullApp() {
-    "use server"
-    // F-ID-10 §4.2: one tap, no confirmation — reversible the same way it
-    // was turned on.
-    await updateUiPreferences({ uiMode: "full" })
-    redirect("/app/dashboard")
-  }
-
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 text-center">
       <h2 className="text-lg font-semibold tracking-tight">{s.title}</h2>
       <p className="text-muted-foreground text-sm">{s.message}</p>
-      <form action={switchToFullApp}>
-        <Button type="submit" size="lg" className="min-h-14 min-w-56">
-          {s.switchToFullApp}
-        </Button>
-      </form>
+      <SwitchToFullAppButton label={s.switchToFullApp} />
     </div>
   )
 }

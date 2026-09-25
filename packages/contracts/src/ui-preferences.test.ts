@@ -40,9 +40,9 @@ describe("uiPreferencesSchema", () => {
 
 describe("updateUiPreferencesInputSchema", () => {
   it("accepts either field alone", () => {
-    expect(updateUiPreferencesInputSchema.safeParse({ uiMode: "basic" }).success).toBe(
-      true
-    )
+    expect(
+      updateUiPreferencesInputSchema.safeParse({ uiMode: "basic" }).success
+    ).toBe(true)
     expect(
       updateUiPreferencesInputSchema.safeParse({ textSize: "large" }).success
     ).toBe(true)

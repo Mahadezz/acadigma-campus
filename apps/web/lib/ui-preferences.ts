@@ -4,12 +4,11 @@ import { cache } from "react"
 
 import { cookies } from "next/headers"
 
+import type { UiPreferences } from "@acadigma/contracts"
 import { fetchUiPreferences } from "@acadigma/db/repositories/ui-preferences"
 import { resolveUiPrefs } from "@acadigma/domain/ui-preferences"
 
 import { createClient } from "@/lib/supabase/server"
-
-import type { UiPreferences } from "@acadigma/contracts"
 
 /**
  * F-ID-10 §3 cookie mirrors, written server-side by `updateUiPreferences`

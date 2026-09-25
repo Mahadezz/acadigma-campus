@@ -8,15 +8,15 @@
  */
 
 import { apiError, err, ok, uiPreferencesSchema } from "@acadigma/contracts"
-
 import type {
   ApiError,
   Result,
   UiPreferences,
   UpdateUiPreferencesInput,
 } from "@acadigma/contracts"
+
 import type { AcadigmaSupabaseClient } from "../client"
-import type { TablesUpdate } from "../types.generated"
+import type { TablesInsert } from "../types.generated"
 
 const COLUMNS = "ui_mode, text_size"
 
@@ -72,7 +72,7 @@ export async function upsertUiPreferences(
   userId: string,
   patch: UpdateUiPreferencesInput
 ): Promise<Result<UiPreferences, ApiError>> {
-  const values: TablesUpdate<"user_preferences"> = { user_id: userId }
+  const values: TablesInsert<"user_preferences"> = { user_id: userId }
   if (patch.uiMode !== undefined) values.ui_mode = patch.uiMode
   if (patch.textSize !== undefined) values.text_size = patch.textSize
 
