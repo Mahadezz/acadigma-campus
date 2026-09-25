@@ -6,7 +6,9 @@ import {
   ok,
   type ApiError,
   type ComputeResultsSummary,
+  type MarkStatus,
   type Result,
+  type ResultStatus,
   type SectionResults,
   type StudentResultRow,
 } from "@acadigma/contracts"
@@ -74,6 +76,7 @@ const lineRow = z.object({
   subject_name_bn: z.string().nullable(),
   full_marks: num,
   status: z.enum(["entered", "absent", "exempt"]),
+  subject_kind: z.enum(["compulsory", "optional_fourth"]),
   obtained: numOrNull,
   percentage: numOrNull,
   letter: z.string().nullable(),
@@ -88,8 +91,9 @@ const resultRow = z.object({
   total_full: num,
   percentage: numOrNull,
   gpa: numOrNull,
+  gpa_without_optional: numOrNull,
   letter: z.string().nullable(),
-  result_status: z.enum(["pass", "fail"]),
+  result_status: z.enum(["pass", "fail", "incomplete", "withheld"]),
   failed_subjects: z.number(),
   section_rank: z.number().nullable(),
   computed_at: z.string(),
@@ -103,10 +107,10 @@ const resultRow = z.object({
 })
 
 const RESULT_COLUMNS =
-  "student_id, section_id, total_obtained, total_full, percentage, gpa, letter, result_status, " +
+  "student_id, section_id, total_obtained, total_full, percentage, gpa, gpa_without_optional, letter, result_status, " +
   "failed_subjects, section_rank, computed_at, enrollments(roll_number), " +
   "students(student_code, full_name, full_name_bn), " +
-  "result_subject_lines(subject_name, subject_name_bn, full_marks, status, obtained, percentage, " +
+  "result_subject_lines(subject_name, subject_name_bn, full_marks, status, subject_kind, obtained, percentage, " +
   "letter, grade_point, passed)"
 
 function toRow(r: z.infer<typeof resultRow>): StudentResultRow {
@@ -195,11 +199,14 @@ export async function getSectionResults(
 }
 
 /**
- * One student's computed result, shaped for F-OP-03's `ReportCardDto`
- * (D-206, PR #63's `packages/contracts/src/operations/report-card.ts`) minus
- * `attendance`, which the report-card seam adds from F-AC-03. `rankOf` is the
- * number of ranked students in the section. `examNameBn` is the exam's name
- * (exams have one name); a subject without a Bangla name uses its English one.
+ * One student's computed result, shaped for F-OP-03's report card (D-206,
+ * PR #63's `ReportCardDto` as the lead revised it on 2026-09-26) minus
+ * `attendance`, which the report-card seam adds from F-AC-03. Read through the
+ * caller's RLS client. `rankOf` is the number of ranked students in the
+ * section; `rankTied` is true when another student shares the rank.
+ * `examNameBn` is the exam's name (exams have one name); a subject without a
+ * Bangla name uses its English one. `gpa`, `overallLetter` and `rank` are null
+ * when the result is incomplete or withheld (or every paper was exempt).
  */
 export type ReportCardResult = {
   studentNameEn: string
@@ -213,6 +220,8 @@ export type ReportCardResult = {
   subjects: {
     subjectNameEn: string
     subjectNameBn: string
+    status: MarkStatus
+    subjectKind: "compulsory" | "optional_fourth"
     marksObtained: number | null
     fullMarks: number
     letter: string | null
@@ -220,11 +229,13 @@ export type ReportCardResult = {
   }[]
   totalObtained: number
   totalFull: number
-  percentage: number
-  gpa: number
-  overallLetter: string
-  result: "pass" | "fail"
+  percentage: number | null
+  gpa: number | null
+  gpaWithoutOptional: number | null
+  overallLetter: string | null
+  result: ResultStatus
   rank: number | null
+  rankTied: boolean
   rankOf: number | null
 }
 
@@ -256,19 +267,25 @@ export async function getReportCardResult(
     .safeParse(data)
   if (!parsed.success) return err(UNAVAILABLE)
   const r = parsed.data
-  // Every paper exempt leaves no GPA; the report card has nothing to print.
-  if (r.gpa === null || r.percentage === null || r.letter === null) {
-    return err(NOT_FOUND)
-  }
 
-  const ranked = await client
-    .from("results")
-    .select("id", { count: "exact", head: true })
-    .eq("workspace_id", ctx.workspaceId)
-    .eq("exam_id", examId)
-    .eq("section_id", r.section_id)
-    .not("section_rank", "is", null)
-  if (ranked.error) return err(UNAVAILABLE)
+  const sectionCount = (rank?: number) => {
+    let query = client
+      .from("results")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", ctx.workspaceId)
+      .eq("exam_id", examId)
+      .eq("section_id", r.section_id)
+    query =
+      rank === undefined
+        ? query.not("section_rank", "is", null)
+        : query.eq("section_rank", rank)
+    return query
+  }
+  const [ranked, sameRank] = await Promise.all([
+    r.section_rank === null ? null : sectionCount(),
+    r.section_rank === null ? null : sectionCount(r.section_rank),
+  ])
+  if (ranked?.error || sameRank?.error) return err(UNAVAILABLE)
 
   const row = toRow(r)
   return ok({
@@ -280,21 +297,27 @@ export async function getReportCardResult(
     sectionName: r.sections.name,
     examNameEn: r.exams.name,
     examNameBn: r.exams.name,
-    subjects: row.lines.map((l) => ({
-      subjectNameEn: l.subjectName,
-      subjectNameBn: l.subjectNameBn ?? l.subjectName,
-      marksObtained: l.obtained,
-      fullMarks: l.fullMarks,
-      letter: l.letter,
-      gradePoint: l.gradePoint,
-    })),
+    subjects: r.result_subject_lines
+      .map((l) => ({
+        subjectNameEn: l.subject_name,
+        subjectNameBn: l.subject_name_bn ?? l.subject_name,
+        status: l.status,
+        subjectKind: l.subject_kind,
+        marksObtained: l.obtained,
+        fullMarks: l.full_marks,
+        letter: l.letter,
+        gradePoint: l.grade_point,
+      }))
+      .sort((a, b) => a.subjectNameEn.localeCompare(b.subjectNameEn)),
     totalObtained: row.totalObtained,
     totalFull: row.totalFull,
-    percentage: r.percentage,
-    gpa: r.gpa,
-    overallLetter: r.letter,
+    percentage: row.percentage,
+    gpa: row.gpa,
+    gpaWithoutOptional: r.gpa_without_optional,
+    overallLetter: row.letter,
     result: row.status,
     rank: row.sectionRank,
-    rankOf: row.sectionRank === null ? null : (ranked.count ?? null),
+    rankTied: (sameRank?.count ?? 0) > 1,
+    rankOf: ranked?.count ?? null,
   })
 }

@@ -32,8 +32,17 @@
 --     read nothing until Part 7 (publishing).
 -- =====================================================================
 
+-- incomplete and withheld are part of the shape the report card reads
+-- (F-OP-03, D-206); nothing produces them yet: compute refuses incomplete
+-- marks, and withholding arrives with publishing (Part 7).
 do $$ begin
-  create type public.result_status as enum ('pass', 'fail');
+  create type public.result_status as enum ('pass', 'fail', 'incomplete', 'withheld');
+exception when duplicate_object then null; end $$;
+
+-- §5.4: the Bangladesh 4th subject. Every line is `compulsory` until
+-- section_subjects (F-AC-01 Part 5) and the 4th-subject rule (Part 6) exist.
+do $$ begin
+  create type public.subject_kind as enum ('compulsory', 'optional_fourth');
 exception when duplicate_object then null; end $$;
 
 -- ---------------------------------------------------------------------
@@ -50,6 +59,7 @@ create table if not exists public.results (
   total_full      numeric(8,2) not null,
   percentage      numeric(5,2),   -- null only when every paper is exempt
   gpa             numeric(4,2) check (gpa between 0 and 5),
+  gpa_without_optional numeric(4,2) check (gpa_without_optional between 0 and 5),  -- Part 6
   letter          text,
   result_status   public.result_status not null,
   failed_subjects smallint not null check (failed_subjects >= 0),
@@ -98,6 +108,7 @@ create table if not exists public.result_subject_lines (
   full_marks      numeric(6,2) not null,
   pass_marks      numeric(6,2) not null,
   status          public.mark_status not null,
+  subject_kind    public.subject_kind not null default 'compulsory',   -- snapshotted (§5.4)
   obtained        numeric(6,2),    -- null when absent or exempt
   percentage      numeric(5,2),    -- 0 when absent, null when exempt
   letter          text,
@@ -117,6 +128,9 @@ comment on table public.result_subject_lines is
   'F-AC-06 §3 (Part 5 demo cut, D-305): one paper''s line on a result — the '
   'mark-sheet row. Written only by app.compute_results.';
 
+create unique index if not exists result_subject_lines_one_fourth_key
+  on public.result_subject_lines (result_id) where subject_kind = 'optional_fourth';
+-- justification: §3 — at most one 4th subject per result.
 create index if not exists result_subject_lines_exam_subject_idx on public.result_subject_lines (exam_subject_id);
 create index if not exists result_subject_lines_subject_idx on public.result_subject_lines (subject_id);
 create index if not exists result_subject_lines_workspace_idx on public.result_subject_lines (workspace_id);

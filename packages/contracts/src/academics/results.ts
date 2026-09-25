@@ -14,6 +14,10 @@ export const computeResultsInputSchema = z
   .strict()
 export type ComputeResultsInput = z.infer<typeof computeResultsInputSchema>
 
+/** Only pass/fail are produced today; incomplete and withheld arrive with
+ * force-absent (Part 4) and withholding (Part 7). */
+export type ResultStatus = "pass" | "fail" | "incomplete" | "withheld"
+
 export type ComputeResultsSummary = {
   computed: number
   passed: number
@@ -47,7 +51,7 @@ export type StudentResultRow = {
   percentage: number | null
   gpa: number | null
   letter: string | null
-  status: "pass" | "fail"
+  status: ResultStatus
   failedSubjects: number
   sectionRank: number | null
   lines: ResultLine[]

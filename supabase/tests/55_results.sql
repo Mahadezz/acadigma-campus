@@ -256,11 +256,11 @@ create or replace function tests.line(p_code text, p_paper int) returns text lan
      and l.subject_id = ('55000000-0000-4000-c000-00000000003' || p_paper)::uuid
 $fn$;
 
-select is(tests.line('S05', 1), 'entered|79.50|79.50|A|4.00|true', '79.5 % is an A: no rounding before banding');
-select is(tests.line('S08', 2), 'entered|32.50|32.50|F|0.00|false', '32.5 % is an F and a failed paper');
-select is(tests.line('S09', 6), 'entered|16.50|33.00|D|1.00|true', '16.50 of 50 is exactly the pass mark: D, passed');
-select is(tests.line('S10', 6), 'entered|16.49|32.98|F|0.00|false', '16.49 of 50 is one hundredth short: F, failed');
-select is(tests.line('S07', 3), 'absent|0.00|F|0.00|false', 'absent scores 0 % and fails the paper');
+select is(tests.line('S05', 1), 'entered|79.50|79.50|A|4.00|t', '79.5 % is an A: no rounding before banding');
+select is(tests.line('S08', 2), 'entered|32.50|32.50|F|0.00|f', '32.5 % is an F and a failed paper');
+select is(tests.line('S09', 6), 'entered|16.50|33.00|D|1.00|t', '16.50 of 50 is exactly the pass mark: D, passed');
+select is(tests.line('S10', 6), 'entered|16.49|32.98|F|0.00|f', '16.49 of 50 is one hundredth short: F, failed');
+select is(tests.line('S07', 3), 'absent|0.00|F|0.00|f', 'absent scores 0 % and fails the paper');
 select is(tests.line('S06', 5), 'exempt', 'exempt has no mark, percentage, grade or pass flag');
 select is((select count(*)::int from public.result_subject_lines), 72, 'one line per student per paper');
 select is(
@@ -335,19 +335,19 @@ select throws_ok('select tests.compute()', '42501', 'PLAN_READ_ONLY', 'read_only
 select tests.logout();
 select app.set_access_mode('55000000-0000-4000-b000-000000000001', 'normal', 'Upgraded.');
 
-select throws_ok(
-  $$insert into public.results (workspace_id, exam_id, section_id, student_id, enrollment_id,
-      total_obtained, total_full, result_status, failed_subjects)
-    select '55000000-0000-4000-b000-000000000002', exam_id, section_id, student_id, enrollment_id, 1, 1, 'pass', 0
-      from public.results limit 1$$,
-  '23503', null, 'a result cannot pair another school with school A''s exam (composite FK)');
-
 select tests.login('55000000-0000-4000-a000-000000000001');
 update public.exams set status = 'marks_entry', status_reason = 'A mark was wrong'
  where id = tests.id('exam');
 select tests.logout();
 select is((select count(*)::int from public.results), 0, 'going back to marks entry clears the stale results');
 select is((select count(*)::int from public.result_subject_lines), 0, 'and their lines');
+select throws_ok(
+  format($$insert into public.results (workspace_id, exam_id, section_id, student_id, enrollment_id,
+      total_obtained, total_full, result_status, failed_subjects)
+    select '55000000-0000-4000-b000-000000000002', %L, e.section_id, e.student_id, e.id, 1, 1, 'pass', 0
+      from public.enrollments e where e.workspace_id = '55000000-0000-4000-b000-000000000001' limit 1$$,
+    tests.id('exam')),
+  '23503', null, 'a result cannot pair another school with school A''s exam (composite FK)');
 
 select * from finish();
 rollback;

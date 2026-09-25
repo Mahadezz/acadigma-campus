@@ -1200,6 +1200,8 @@
       "grade": "গ্রেড",
       "pass": "পাস",
       "fail": "ফেল",
+      "incomplete": "অসম্পূর্ণ",
+      "withheld": "স্থগিত",
       "total": "মোট",
       "roll": "রোল {n}",
       "subject": "বিষয়",

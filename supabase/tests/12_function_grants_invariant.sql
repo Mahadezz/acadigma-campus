@@ -121,7 +121,8 @@ with allowed as (
     ('public.save_attendance(uuid, jsonb)'),  -- F-AC-03 demo cut, D-104
     ('public.attendance_day(uuid, date)'),  -- F-AC-03 demo cut, D-104
     ('public.save_marks(uuid, jsonb)'),  -- F-AC-06 Part 3, D-304
-    ('public.exam_marks_progress(uuid, uuid)')  -- F-AC-06 Part 3, D-304
+    ('public.exam_marks_progress(uuid, uuid)'),  -- F-AC-06 Part 3, D-304
+    ('public.compute_results(uuid, uuid)')  -- F-AC-06 Part 5, D-305
   ) as a(sig)
   union all
   select p.oid
