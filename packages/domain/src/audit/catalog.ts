@@ -539,6 +539,10 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "staff_records",
   "staff_compensation",
   "staff_documents",
+  // F-ID-05 Part 4 (D-100) — seeded in
+  // supabase/migrations/20260925300101_create_school_workspace.sql.
+  "grade_levels",
+  "academic_years",
   // F-AC-11 Part 1 (D-202) — 20260925300301_school_calendar.sql.
   "holidays",
   "working_day_overrides",

@@ -139,13 +139,13 @@ describe("updateSchoolProfile — optimistic concurrency", () => {
     })
   })
 
-  it("maps a duplicate EIIN to a conflict on the eiin field", async () => {
+  it("maps any database error to dependency_unavailable (EIIN is not editable here, D-100)", async () => {
     const result = await updateSchoolProfile(
-      fakeClient({ row: ROW, updateError: { code: "23505", message: "dup" } }),
+      fakeClient({ row: ROW, updateError: { code: "42501", message: "x" } }),
       CTX,
-      { version: V1, profile: { eiin: "654321" } }
+      { version: V1, profile: { motto: "Light" } }
     )
-    expect(!result.ok && result.error.fieldErrors?.["eiin"]).toBeTruthy()
+    expect(!result.ok && result.error.code).toBe("dependency_unavailable")
   })
 
   it("does not write an empty patch", async () => {

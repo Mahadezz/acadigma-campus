@@ -44,7 +44,7 @@
 --      'pro' plan row's code temporarily renamed.
 -- =====================================================================
 begin;
-select plan(20);
+select plan(18);
 
 create schema if not exists tests;
 
@@ -91,49 +91,56 @@ $fn$;
 select tests.mkuser('16000001-0000-0000-0000-000000000001', 'd59.owner@test.local', 'D59 Owner');
 select tests.login('16000001-0000-0000-0000-000000000001');
 
+-- Since D-100 the only client path to a school is
+-- public.create_school_workspace (the direct INSERT grant is gone); the
+-- same bootstrap triggers run under role `authenticated` through it.
+create temp table d59_ids (id uuid);
+grant all on d59_ids to authenticated;
 select lives_ok(
-  $$insert into public.workspaces (id, type, name, slug, owner_id, created_by)
-    values ('16000001-0000-0000-0000-0000000000aa', 'school', 'D59 School',
-            'd59-school', '16000001-0000-0000-0000-000000000001',
-            '16000001-0000-0000-0000-000000000001')$$,
-  'an authenticated owner can insert their own school workspace, end to end, with no 42501 from the bootstrap/guard interaction');
+  $$insert into d59_ids select (public.create_school_workspace(jsonb_build_object(
+      'name', 'D59 School', 'board', 'dhaka', 'medium', 'bangla', 'timezone', 'Asia/Dhaka',
+      'working_days', jsonb_build_array(6, 7, 1, 2, 3, 4),
+      'academic_year', jsonb_build_object('name', '2026', 'starts_on', '2026-01-01', 'ends_on', '2026-12-31'),
+      'grade_levels', jsonb_build_array(jsonb_build_object('name', 'Class 6', 'level_number', 6)),
+      'idempotency_key', '16000001-0000-4000-8000-0000000000aa')) ->> 'workspace_id')::uuid$$,
+  'an authenticated owner can create their own school workspace, end to end, with no 42501 from the bootstrap/guard interaction');
 
 select is(
   (select p.code from public.workspaces w
      join public.plans p on p.id = w.plan_id
-    where w.id = '16000001-0000-0000-0000-0000000000aa'),
+    where w.id = (select id from d59_ids)),
   'pro',
   'the bootstrap trigger set plan_id to the Pro plan, via NEW in the BEFORE INSERT trigger');
 
 select ok(
   (select w.trial_ends_at > now()
-     from public.workspaces w where w.id = '16000001-0000-0000-0000-0000000000aa'),
+     from public.workspaces w where w.id = (select id from d59_ids)),
   'trial_ends_at was set (in the future) by the BEFORE INSERT bootstrap trigger');
 
 select is(
   (select m.role::text from public.workspace_members m
-    where m.workspace_id = '16000001-0000-0000-0000-0000000000aa'
+    where m.workspace_id = (select id from d59_ids)
       and m.user_id = '16000001-0000-0000-0000-000000000001'),
   'owner',
   'the owner membership was still created by app.tg_workspace_bootstrap() (untouched by D-59)');
 
 select is(
   (select m.status::text from public.workspace_members m
-    where m.workspace_id = '16000001-0000-0000-0000-0000000000aa'
+    where m.workspace_id = (select id from d59_ids)
       and m.user_id = '16000001-0000-0000-0000-000000000001'),
   'active',
   'the owner membership is active immediately');
 
 select is(
   (select s.status::text from public.subscriptions s
-    where s.workspace_id = '16000001-0000-0000-0000-0000000000aa'),
+    where s.workspace_id = (select id from d59_ids)),
   'trialing',
   'a trialing subscription row was created by app.tg_workspace_billing_bootstrap(), now AFTER-INSERT-only and reading NEW.plan_id');
 
 select is(
   (select count(*)::int from public.subscription_events se
     join public.subscriptions s on s.id = se.subscription_id
-    where s.workspace_id = '16000001-0000-0000-0000-0000000000aa'
+    where s.workspace_id = (select id from d59_ids)
       and se.type = 'trial_started'),
   1,
   'a trial_started subscription_events row was created');
@@ -148,21 +155,21 @@ select tests.login('16000001-0000-0000-0000-000000000001');
 
 select throws_ok(
   $$update public.workspaces set plan_id = (select id from public.plans where code = 'personal_free')
-     where id = '16000001-0000-0000-0000-0000000000aa'$$,
+     where id = (select id from d59_ids)$$,
   '42501',
   'plan, trial, workspace status and access mode are set by billing and platform staff',
   'a direct client UPDATE of plan_id on the owner''s own workspace is still refused, same message as before D-59');
 
 select throws_ok(
   $$update public.workspaces set trial_ends_at = now() + interval '1 day'
-     where id = '16000001-0000-0000-0000-0000000000aa'$$,
+     where id = (select id from d59_ids)$$,
   '42501',
   'plan, trial, workspace status and access mode are set by billing and platform staff',
   'a direct client UPDATE of trial_ends_at on the owner''s own workspace is still refused');
 
 select throws_ok(
   $$update public.workspaces set access_mode = 'read_only'
-     where id = '16000001-0000-0000-0000-0000000000aa'$$,
+     where id = (select id from d59_ids)$$,
   '42501',
   'plan, trial, workspace status and access mode are set by billing and platform staff',
   'a direct client UPDATE of access_mode on the owner''s own workspace is still refused');
@@ -170,7 +177,7 @@ select throws_ok(
 select is(
   (select p.code from public.workspaces w
      join public.plans p on p.id = w.plan_id
-    where w.id = '16000001-0000-0000-0000-0000000000aa'),
+    where w.id = (select id from d59_ids)),
   'pro',
   'the three blocked UPDATE attempts left plan_id exactly as the bootstrap set it');
 
@@ -205,33 +212,19 @@ select is(
 select tests.mkuser('16000003-0000-0000-0000-000000000003', 'd59.hostile@test.local', 'D59 Hostile Plan');
 select tests.login('16000003-0000-0000-0000-000000000003');
 
-select lives_ok(
+select throws_ok(
   $$insert into public.workspaces (id, type, name, slug, owner_id, created_by, plan_id, trial_ends_at)
     values ('16000003-0000-0000-0000-0000000000cc', 'school', 'D59 Hostile Plan School',
             'd59-hostile-plan', '16000003-0000-0000-0000-000000000003',
             '16000003-0000-0000-0000-000000000003',
             (select id from public.plans where code = 'starter'),
             now() + interval '10 years')$$,
-  'a client-supplied plan_id/trial_ends_at on the INSERT itself does not error out (workspaces_insert''s WITH CHECK does not constrain either column) — the bootstrap trigger is what has to correct it');
+  '42501', 'permission denied for table workspaces',
+  'D-100: a client cannot insert a workspace at all any more, so a client-supplied plan_id/trial_ends_at never reaches the table');
 
 select is(
-  (select p.code from public.workspaces w
-     join public.plans p on p.id = w.plan_id
-    where w.id = '16000003-0000-0000-0000-0000000000cc'),
-  'pro',
-  'the caller-supplied ''starter'' plan_id was overwritten with ''pro'' by app.tg_workspace_billing_defaults(), not left as the client set it');
-
-select ok(
-  (select w.trial_ends_at <= now() + make_interval(days => p.trial_days) + interval '1 minute'
-     from public.workspaces w
-     join public.plans p on p.id = w.plan_id
-    where w.id = '16000003-0000-0000-0000-0000000000cc'),
-  'trial_ends_at was overwritten to the pro plan''s own trial_days, not the client-supplied 10-year value');
-
-select ok(
-  (select w.trial_ends_at > now()
-     from public.workspaces w where w.id = '16000003-0000-0000-0000-0000000000cc'),
-  'trial_ends_at is still a real, future trial (sanity check on the overwritten value)');
+  (select count(*)::int from public.workspaces where id = '16000003-0000-0000-0000-0000000000cc'),
+  0, 'no workspace row was created by the refused insert');
 
 select tests.logout();
 
