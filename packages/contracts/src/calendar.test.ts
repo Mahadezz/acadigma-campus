@@ -32,14 +32,14 @@ describe("createHolidayInputSchema", () => {
       createHolidayInputSchema.safeParse({
         ...valid,
         startsOn: "2026-01-01",
-        endsOn: "2027-01-01",
+        endsOn: "2027-01-02",
       }).success
     ).toBe(false)
     expect(
       createHolidayInputSchema.safeParse({
         ...valid,
         startsOn: "2026-01-01",
-        endsOn: "2026-12-31",
+        endsOn: "2027-01-01",
       }).success
     ).toBe(true)
   })
