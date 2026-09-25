@@ -211,7 +211,7 @@ select throws_ok(
   'a reversed range is refused');
 
 select is(
-  (select array_agg(d order by d) from app.school_days('41000000-0000-4000-b000-00000000000a', '2026-04-09', '2026-04-11')),
+  (select array_agg(d order by d) from app.school_days('41000000-0000-4000-b000-00000000000a', '2026-04-09', '2026-04-11') as s(d)),
   array['2026-04-09', '2026-04-10', '2026-04-11']::date[],
   'school_days lists the dates themselves, override-opened Friday included');
 
