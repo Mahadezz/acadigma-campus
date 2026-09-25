@@ -1,10 +1,18 @@
 # Acadigma Campus — Build Log
 
-A dated, newest-first record of what merged to `main`, what it shipped, which decisions it carries, which migrations went live and how the smoke test went. The lead appends one entry here after every merge (`docs/plan/LANES.md` "How a Part moves", step 6). Seeded from `git log origin/main --first-parent` and `gh pr list --state merged` for everything from M0 through 2026-09-25.
+A dated, newest-first record of what merged to `main`, what it shipped, which decisions it carries, which migrations went live and how the smoke test went. The lead appends one entry here after every merge (`docs/plan/LANES.md` "How a Part moves", step 6). Seeded from `git log origin/main --first-parent` and `gh pr list --state merged` for everything from M0 through 2026-09-25. Order is true merge order (`git log --first-parent`/`mergedAt`), newest first — not commit-message date.
 
 ---
 
-## 2026-09-25 — PR #34 — feat(identity): F-ID-05 Part 3 — create-school wizard, steps 1-2
+## 2026-09-24 — PR #33 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets "version packages" release PR, merged — bumps package versions and `CHANGELOG`s for the changesets accumulated up to and including PR #34.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-24 — PR #34 — feat(identity): F-ID-05 Part 3 — create-school wizard, steps 1-2
 
 - **Lane:** identity
 - **Shipped:** The create-school onboarding wizard's first two steps (school profile, EIIN lookup/availability).
@@ -28,6 +36,14 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Migrations:** none.
 - **Review/incidents:** none noted.
 
+## 2026-09-24 — PR #24 — feat(identity): F-ID-05 Part 2 — onboarding shell and chooser
+
+- **Lane:** identity
+- **Shipped:** Onboarding shell and path chooser; `onboarding_progress` repository keyed on `userId` rather than `WorkspaceContext` (no context exists yet at this stage).
+- **Decisions:** D-60.
+- **Migrations:** `20260925000300_onboarding_progress.sql` — applied to production. Merged after PR #29 the same day, so the anonymous-RPC smoke test (added by #29) already existed for this deploy and passed.
+- **Review/incidents:** none noted.
+
 ## 2026-09-24 — PR #29 — fix(db): hotfix — pre-request hook broke every anonymous API call (D-65)
 
 - **Lane:** lead
@@ -35,14 +51,6 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Decisions:** D-65.
 - **Migrations:** `20260925000250_pre_request_public_wrapper.sql` — applied to production; first deploy to carry the new smoke test, passed.
 - **Review/incidents:** **Incident.** The audit-substrate migration (PR #6) had set `pgrst.db_pre_request = app.pre_request`, and `anon` has no USAGE on schema `app` (D-50) — every anonymous request (sign in, register, reset password) failed with `42501` on the live site from the moment that migration deployed. CI could not catch it (no PostgREST in CI's Postgres). Found manually on 2026-09-24 by signing in to campus.acadigma.com with the demo account; fixed same day.
-
-## 2026-09-24 — PR #24 — feat(identity): F-ID-05 Part 2 — onboarding shell and chooser
-
-- **Lane:** identity
-- **Shipped:** Onboarding shell and path chooser; `onboarding_progress` repository keyed on `userId` rather than `WorkspaceContext` (no context exists yet at this stage).
-- **Decisions:** D-60.
-- **Migrations:** `20260925000300_onboarding_progress.sql` — applied to production before the smoke-test step existed (added later the same day by PR #29); no smoke-test record for this deploy.
-- **Review/incidents:** none noted.
 
 ## 2026-09-24 — PR #28 — docs(decisions): D-64 — infrastructure decisions taken with the owner on 2026-09-24
 
@@ -92,14 +100,6 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Migrations:** `20260925000200_billing_bootstrap_vs_workspace_guard.sql` — applied to production before the smoke-test step existed; no smoke-test record for this deploy.
 - **Review/incidents:** hardening added on Opus review before merge (see D-59 consequences).
 
-## 2026-09-24 — PR #22 — chore(deps): triage and fix Dependabot alerts
-
-- **Lane:** lead
-- **Shipped:** Triaged and resolved open Dependabot security alerts.
-- **Decisions:** none.
-- **Migrations:** none.
-- **Review/incidents:** none noted.
-
 ## 2026-09-24 — PR #19 — feat(identity): F-ID-05 Part 1 — personal workspace at registration
 
 - **Lane:** identity
@@ -107,6 +107,14 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Decisions:** D-58.
 - **Migrations:** `20260925000100_personal_workspace_uniqueness.sql` — applied to production before the smoke-test step existed; no smoke-test record for this deploy.
 - **Review/incidents:** decision raised on Opus review (D-58) rather than left as an undiscussed spec deviation.
+
+## 2026-09-24 — PR #22 — chore(deps): triage and fix Dependabot alerts
+
+- **Lane:** lead
+- **Shipped:** Triaged and resolved open Dependabot security alerts.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
 
 ## 2026-09-24 — PR #20 — feat(ui): visual language from acadigma.com — ink/paper tokens, JetBrains Mono (D-57)
 
@@ -164,6 +172,22 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Migrations:** `20260924030000_revoke_default_function_grants.sql` — applied to production.
 - **Review/incidents:** none noted.
 
+## 2026-09-24 — PR #12 — fix(tenancy): F-ID-03 review follow-ups — stale workspace cookie, removed-vs-forger tripwire, cascade freeze
+
+- **Lane:** identity
+- **Shipped:** Fixed three review follow-ups from the F-ID-03 tenancy PR: stale workspace cookie handling, distinguishing a removed member from a forged context, and a cascade-freeze exception.
+- **Decisions:** D-52.
+- **Migrations:** `20260924010000_tenancy_freeze_cascade_exception.sql`, `20260924020000_tenancy_tripwire_membership_status.sql` — applied to production.
+- **Review/incidents:** follow-ups from F-ID-03's own review (PR #7).
+
+## 2026-09-24 — PR #6 — feat(identity): F-ID-09 Parts 1-3 - audit substrate, catalogue, owner viewer
+
+- **Lane:** lead
+- **Shipped:** Append-only audit substrate, generic `app.tg_audit()` trigger, `app.log_audit_event()`, the audit action catalogue, and the owner's audit viewer.
+- **Decisions:** D-51.
+- **Migrations:** `20260924000100_audit_substrate.sql` — applied to production. This migration is the one that later broke anonymous sign-in (see PR #29's incident note).
+- **Review/incidents:** the pre-request-hook permission gap that caused the D-65 incident originates in this migration; not caught here because CI has no PostgREST.
+
 ## 2026-09-24 — PR #15 — ci(db): check generated types against the PR's own migrations (D-55)
 
 - **Lane:** lead
@@ -180,14 +204,6 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Migrations:** none (project migration, not a schema migration).
 - **Review/incidents:** none noted.
 
-## 2026-09-24 — PR #12 — fix(tenancy): F-ID-03 review follow-ups — stale workspace cookie, removed-vs-forger tripwire, cascade freeze
-
-- **Lane:** identity
-- **Shipped:** Fixed three review follow-ups from the F-ID-03 tenancy PR: stale workspace cookie handling, distinguishing a removed member from a forged context, and a cascade-freeze exception.
-- **Decisions:** D-52.
-- **Migrations:** `20260924010000_tenancy_freeze_cascade_exception.sql`, `20260924020000_tenancy_tripwire_membership_status.sql` — applied to production.
-- **Review/incidents:** follow-ups from F-ID-03's own review (PR #7).
-
 ## 2026-09-24 — PR #11 — fix(ui): self-host Inter and Hind Siliguri via next/font (DESIGN-SYSTEM §1.6)
 
 - **Lane:** design
@@ -195,14 +211,6 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Decisions:** none.
 - **Migrations:** none.
 - **Review/incidents:** none noted.
-
-## 2026-09-24 — PR #6 — feat(identity): F-ID-09 Parts 1-3 - audit substrate, catalogue, owner viewer
-
-- **Lane:** lead
-- **Shipped:** Append-only audit substrate, generic `app.tg_audit()` trigger, `app.log_audit_event()`, the audit action catalogue, and the owner's audit viewer.
-- **Decisions:** D-51.
-- **Migrations:** `20260924000100_audit_substrate.sql` — applied to production. This migration is the one that later broke anonymous sign-in (see PR #29's incident note).
-- **Review/incidents:** the pre-request-hook permission gap that caused the D-65 incident originates in this migration; not caught here because CI has no PostgREST.
 
 ## 2026-09-24 — PR #7 — F-ID-03 Workspaces & Membership, Parts 1-3: tenancy hardening, WorkspaceContext, permissions + nav
 
@@ -212,14 +220,6 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Migrations:** `20260917020300_tenancy_hardening.sql` — applied to production.
 - **Review/incidents:** produced the follow-ups fixed in PR #12.
 
-## 2026-09-17 — PR #8 — M0 0.9: packages/ui primitives conformance, OpenTelemetry, redactForAI()
-
-- **Lane:** design
-- **Shipped:** `packages/ui` primitives (AppShell, TopBar, BottomNav, FormSheet, DataList, EmptyState, StatusChip, MoneyText) matched to `DESIGN-SYSTEM.md`; GSAP motion module (lazy-loaded, reduced-motion aware); OpenTelemetry wiring (`@vercel/otel`); `redactForAI()` moved up from M5 to land before any AI code path exists.
-- **Decisions:** D-30, D-33 (implemented).
-- **Migrations:** none.
-- **Review/incidents:** none noted.
-
 ## 2026-09-17 — PR #3 — feat(auth): F-ID-01 Authentication, Parts 1-4
 
 - **Lane:** identity
@@ -228,11 +228,11 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Migrations:** `20260917020000_identity_auth.sql` — applied to production.
 - **Review/incidents:** none noted.
 
-## 2026-09-17 — PR #4 — feat(settings,notifications): resolve() defaults + notification catalogue skeleton
+## 2026-09-17 — PR #8 — M0 0.9: packages/ui primitives conformance, OpenTelemetry, redactForAI()
 
-- **Lane:** operations
-- **Shipped:** `resolve()` settings with defaults (timezone Asia/Dhaka, working days, policies as jsonb); notification event catalogue skeleton with its CI parity test.
-- **Decisions:** none.
+- **Lane:** design
+- **Shipped:** `packages/ui` primitives (AppShell, TopBar, BottomNav, FormSheet, DataList, EmptyState, StatusChip, MoneyText) matched to `DESIGN-SYSTEM.md`; GSAP motion module (lazy-loaded, reduced-motion aware); OpenTelemetry wiring (`@vercel/otel`); `redactForAI()` moved up from M5 to land before any AI code path exists.
+- **Decisions:** D-30, D-33 (implemented).
 - **Migrations:** none.
 - **Review/incidents:** none noted.
 
@@ -242,6 +242,14 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 - **Shipped:** Plans, subscriptions and trial; the limits engine (`assertWithinLimit`, `hasModule`, `access_mode`) every later area gates on.
 - **Decisions:** D-39 (plan_prices/overage numbers).
 - **Migrations:** `20260917020100_plans_limits_engine.sql` — applied to production.
+- **Review/incidents:** none noted.
+
+## 2026-09-17 — PR #4 — feat(settings,notifications): resolve() defaults + notification catalogue skeleton
+
+- **Lane:** operations
+- **Shipped:** `resolve()` settings with defaults (timezone Asia/Dhaka, working days, policies as jsonb); notification event catalogue skeleton with its CI parity test.
+- **Decisions:** none.
+- **Migrations:** none.
 - **Review/incidents:** none noted.
 
 ## 2026-09-17 — PR #1 — Foundation: monorepo, database substrate, app shell, CI (M0 0.1)
