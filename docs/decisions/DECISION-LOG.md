@@ -732,6 +732,97 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Consequences:** pgTAP `41_school_calendar.sql` asserts that a parent gets postgres's answer for a holiday, an override and a month count, and that a member of another school gets NULL or FORBIDDEN.
 
+## D-400 — The school dashboard ships now, built only from data that exists, with empty slots for what does not · ACCEPTED · 2026-09-25
+
+**Context:** `/app/dashboard` was a developer placeholder ("Workspace resolved … Role owner, workspace <uuid>"). The owner approved a demo cut: replace it with a real owner/admin "today" dashboard before timetable, attendance and marks exist. F-TE-07's analytics views, and DESIGN-SYSTEM §8.2's teacher wireframe (the "NOW" period card), both depend on tables that are not built yet.
+
+**Decision:**
+
+1. Show only what the database already holds: the workspace name and F-OP-07 letterhead, plan code and `trial_ends_at` (days left counted on the school's calendar, `trialDaysLeft`), `access_mode` (a Read-only chip), active members by role, the staff-directory count, the current academic year and grade levels (both created by the F-ID-05 wizard, D-100), and — for roles with `audit.read` — the last five audit events that have a curated sentence, rendered with the existing `renderAuditSentence`. Generic `<table>.<op>` rows name raw tables ("a profiles record"), so they stay on `/app/audit` only (`isCuratedAuditAction`).
+2. Counts are `head: true` count queries under the caller's RLS (`getDashboardSummary`, `packages/db`). No member or staff row reaches the page; a parent never reaches the shell. A settings read that fails for any reason other than a missing profile row is an error state, not a silent "no letterhead" default.
+3. Attendance and exam results are real `EmptyState` cards with copy that says what fills them. No sample number appears anywhere on the page (PRODUCT-DECISIONS 3.9, F-TE-07's anti-mock rule).
+4. A setup checklist (letterhead, academic year, teachers, staff records, students) comes from `buildSetupChecklist` (`packages/domain/dashboard`). A step links only to a page that exists (`/app/settings/branding` for the letterhead today; the others link when their pages ship). "Academic year and classes" is done when the school has a current academic year and at least one grade level — one step, because the wizard does both on one screen. Students stay "to do" until the student table exists. The card is hidden once every step is done.
+5. Owners and admins get the full view; teachers and office staff get the lighter one (date, school, Today slots, Members).
+6. No migration and no new permission: every read is already allowed by existing RLS.
+7. The school shell shows only nav items whose page exists (`apps/web/lib/implemented-routes.ts`, unit-tested against the `page.tsx` files in both directions). The nav configs stay complete; a Part adds its route to the list when it ships its page. Before this, every signed-in page prefetched up to 14 routes that returned 404. The owner's "School settings" item now points to `/app/settings` (D-201).
+
+**Why:** a demo that shows invented numbers would contradict PRODUCT-DECISIONS 3.9 the first time a school compares it with its register. A page built from real counts and honest empty states is useful today and gets richer as each Part ships, without rework.
+
+**Consequences:** F-TE-07 Part 1's `analytics.overview` replaces the Members/Today cards' data source when it ships. F-AC-03 fills the attendance slot, F-AC-05 adds the "NOW" card, and the exams Part fills the results slot. When the student table lands, `page.tsx` passes a real count to `buildSetupChecklist` in place of the constant. The dashboard has its own `loading.tsx` and `error.tsx`, so a slow or failed count keeps the shell on screen.
+
+## D-302 — Grade scales: DATA-MODEL's shape, rules stay in settings, coverage checked at commit · ACCEPTED · 2026-09-25
+
+**Context:** F-AC-06 Part 1 builds grade scales. The spec's §3 draft and DATA-MODEL §2 disagree: `grade_scale_bands (min_pct, max_pct, colour)` plus seven rule columns on the scale (pass mark, F-zeroes-GPA, 4th-subject rule and threshold, decimals, effective date, active flag) versus DATA-MODEL's `grade_scales (code, name, is_default)` / `grade_bands (letter, min_percent, max_percent, grade_point, sort_order)`. Those rules already exist in `school_profiles.academic_settings` (`pass_mark_percent`, `fail_any_subject_zero_gpa`, `grade_scale_code = BD_GPA5`) and `academic_years.fourth_subject_bonus_threshold_gp`.
+
+**Decision:** (1) DATA-MODEL's tables and names, plus `grade_bands.is_fail` (§5.3 needs it; a fail band is not always point 0 on a custom scale). (2) The rule columns stay where they already live; they move onto the scale only when Part 2's exams need to snapshot them. (3) Coverage (0.00-100.00, no gap, no overlap, 0.01 steps) is a DEFERRED constraint trigger, so a whole band set is replaced in one transaction by `public.save_grade_scale`, which then sets the constraint IMMEDIATE to surface `BAND_GAP`/`BAND_OVERLAP` by name. Not a gist exclusion constraint — that would need `btree_gist` and still not catch gaps. (4) Both write RPCs are SECURITY INVOKER, so RLS and `require_writable` decide, not the function. (5) One parity table: the pgTAP rows between `-- parity:` markers in `52_grade_scales.sql` are read verbatim by the domain's vitest, so SQL `app.band_for`/`app.round_half_up` and TS `bandFor`/`roundHalfUp` are asserted against the same cases.
+
+**Why:** Two homes for the pass mark would drift. Replacing bands one by one would pass through invalid states.
+
+**Consequences:** Part 2 decides the snapshot shape (copy rules onto the scale, or snapshot `academic_settings` on the exam). Only the default scale is editable in Part 1; `SCALE_IN_USE` versioning arrives with exams.
+
+**Lead decisions on review of PR #46 (2026-09-25; owner confirmation pending on (a)):**
+
+- **(a) Rounding.** F-AC-06 §5.1 wins: `subject_pct = round(100 × obtained / full, 2)`, then banded as-is with `min_percent <= pct <= max_percent` on the .99 upper edges (79.5 → A, 32.5 → F). There is no rounding before banding: `app.band_for` and `bandFor` compare the value they are given. F-OP-07 §5.2's "percent comparisons use integers" and its OQ-4 round-half-up default are superseded and now point here.
+- **(b) Route and permission.** F-OP-07's names are used: `/app/settings/grade-scale` and `settings.grade_scale.write`. From F-OP-07 Part 4's extra rules, "grade points must not decrease band by band" is enforced now, in the database (`BAND_POINTS_DECREASE`) and in Zod. Scale versioning and "the pass boundary equals `pass_mark_percent`" are deferred to F-AC-06 Part 2, where exams snapshot the scale and the pass mark.
+- **Review fixes:**
+  - An empty band set is `BAND_GAP`.
+  - Bands change only through the two RPCs: `authenticated` has only SELECT on `grade_bands`, and the RPCs are SECURITY DEFINER and re-check owner/admin.
+  - The coverage check locks the scale row.
+  - `seed_bd_grade_scale` uses `insert ... on conflict do nothing`.
+  - `save_grade_scale` takes the workspace id and filters on it.
+  - `grade_scales.code` and `is_default` are immutable to clients.
+  - Band letters are unique case-insensitively.
+  - Band audit rows are info-level.
+
+## D-402 — The audit trail reads as sentences: per-table nouns, no empty placeholders, no raw codes in the list · ACCEPTED · 2026-09-25
+
+**Context:** `/app/audit` (F-ID-09) rendered generic trigger rows as "Demo Owner updated a profiles record ()": the sentence template used the table name and a `({fields})` placeholder no caller ever filled. Unknown actions showed their raw code ("performed an unrecognised action (mystery.happened)"), and the desktop table's "Action" column printed the action code, although F-ID-09 §4.1 says the list shows sentences, not action strings. The owner saw this on the demo school; the dashboard (D-400) had to hide these rows.
+
+**Decision:**
+
+1. Generic sentences come from a per-table noun (`GENERIC_TABLE_NOUNS` in `packages/domain/src/audit/catalog.ts`, English and Bengali): "{actor} added a holiday", "{actor} updated a school setting", "{actor} removed a member". A table without a noun falls back to "a record", and a unit test fails until the noun is added, so a newly audited table cannot ship a raw name.
+2. `renderAuditSentence` never leaves a gap: a parenthetical whose value is missing is dropped, a missing subject or workspace gets a plain stand-in ("a member", "the school"), and spaces are collapsed. An unknown action reads "{actor} made a change" / "{actor} একটি পরিবর্তন করেছেন".
+3. The list, the desktop "Action" column, the detail sheet title and the correlation list all render the same sentence through `BnEnText`, so an English actor name inside a Bengali sentence gets the right font and line height. Digits stay Western.
+4. The detail sheet leads with the readable noun and keeps the raw table and row id as a muted technical reference, as F-ID-09 §4.1 intends. Changed-field names show with spaces instead of underscores.
+5. The SQL `audit_action_catalog` rows keep their original wording. No code reads those sentence columns, and the parity check covers action names and tables, not sentence text; changing them would need a migration for no visible effect.
+6. No permission change: the trail stays owner-only (`audit.read`).
+
+**Why:** the trail exists so an owner can answer "who changed what". A sentence with a table name and an empty "()" answers neither, and fixing it once in the renderer fixes every screen that shows audit events.
+
+**Consequences:** the dashboard's curated-only filter (`isCuratedAuditAction`, D-400) could now show generic rows too; it is left as is and can be relaxed in a later design pass. A future audited table adds its noun in the same PR (the unit test enforces it).
+
+## D-101 — Per-user throttle keys are derived from `auth.uid()` in the database; rate-limit waits are shown once, in minutes · ACCEPTED · 2026-09-25
+
+**Context:** Two follow-ups. (1) D-100 item 7: `public.throttle_status`, `throttle_record_failure` and `throttle_reset` accept any key from `anon`/`authenticated` (sign-in runs before a session, so they must be callable). The IP/email buckets are safe because the app sends a salted hash nobody else can compute, but `create_school_workspace` keyed its bucket on the plain user id, so anyone who knew a user's id could lock them out of school creation for 15 minutes. (2) A production bug: after the sign-in limit tripped, `/login` showed "Too many attempts. Try again in 900s." twice — in the banner and as the submit button's label.
+
+**Decision:** (1) `app.throttle_key(p_key)` rewrites any key starting `user:` to `user:<bucket>:<auth.uid()>` (and refuses it for anon); all three public functions go through it, and `throttle_record_failure` ignores `p_key` for the per-user buckets (`changePassword`, `eiinCheck`, `createSchool`), deriving it the same way. The app sends `user:changePassword` / `user:eiinCheck` (`USER_THROTTLE_KEYS`). Client-keyed buckets and the D-65 anon smoke test are unchanged. (2) `ApiError` gains an optional `retryAfterSeconds`; every rate-limited action sets it and words the message in whole minutes, rounded up (`apps/web/lib/throttle-copy.ts`, en + bn). The login form shows the wait only in the banner, counting down from `retryAfterSeconds` instead of parsing the message; the button stays a disabled "Sign in".
+
+**Review follow-ups (PR #45):** `throttle_reset` refuses `user:` keys from clients (42501) — with a fixed public key, any signed-in user could otherwise have cleared their own createSchool/eiinCheck/changePassword limit; per-user rows expire with their window, and `changePassword` no longer resets on success. Minutes keep Western digits in both languages ("15 মিনিট", DESIGN-SYSTEM §1.6), and the login banner wakes only on minute boundaries. Two older gaps closed in the same function: an expired block (or window) now starts a fresh window instead of re-blocking on the next single failure, and a running block is never shortened (a `user:<bucket>` key is refused under any other bucket, and a new block keeps the later end). **Accepted trade-off:** anyone who knows an email address can fail sign-in five times and lock that account out of password sign-in for 15 minutes (`loginByEmail` is keyed on the salted email; the per-IP bucket is separate, and either one blocks). That is the intended F-ID-01 behaviour (§5 rate limits), recorded here so it is a known choice rather than a surprise.
+
+**Why:** tying the key to the session inside the database makes "somebody else's bucket" unnameable by construction, for every per-user bucket at once, instead of relying on an app-side secret the database cannot check.
+
+**Consequences:** `supabase/tests/31_throttle_per_user_keys.sql`; `30_create_school_workspace.sql` reads the new key name. Existing per-user rows under the old salted keys simply expire.
+
+## D-102 — F-AC-01 demo cut: sections and subjects on the current year, tenant-bound foreign keys, rooms as text · ACCEPTED · 2026-09-25
+
+**Context:** The owner needs the Classes screen for sales demos before the full F-AC-01 build (six Parts: years/terms, grades, sections/rooms, subjects/templates, section-subjects, setup wizard). `grade_levels` and `academic_years` already exist (D-100); schools created by the wizard have a current year and grade levels.
+
+**Decision:**
+
+1. **Scope:** `sections` (F-AC-01 Part 3 minus rooms) and `subjects` (Part 4 minus `grade_level_subjects`), plus `/app/classes`: a card per grade with this year's sections (add, archive), and a Subjects tab (add, "Use the NCTB starter list"). Terms, rooms, grade templates, section-subjects and the setup wizard stay in their own Parts.
+2. **Sections always belong to the current academic year**, resolved server-side; the client never names a year.
+3. **Tenant-bound foreign keys:** `academic_years`, `grade_levels` and `workspace_members` gain `unique (id, workspace_id)`, and `sections` references them with composite keys that include `workspace_id`. A section cannot point at another school's grade, year or member even through a SECURITY DEFINER path, not just through RLS.
+4. **Class teacher rules in the database:** a trigger requires an active owner/admin/teacher (`MEMBER_NOT_ELIGIBLE`); a partial unique index keeps one live section per teacher per year (§5 rule 10, `CLASS_TEACHER_TAKEN`; `allow_multi_class_teacher` is not built).
+5. **`room` is free text** until the `rooms` table lands (Part 3); **archive, not delete** (`archived_at`), for both tables.
+6. **The NCTB starter list** lives in `packages/domain/src/academic/structure.ts` and is copied into the school's own rows; running it twice adds nothing.
+7. **Permissions:** `academics.structure.read` (owner, admin, teacher, staff), `academics.section.write` and `academics.subject.write` (owner, admin). Parents read nothing here (T2); their view is F-AC-10.
+8. **Migration timestamps:** `20260925300304` sorts after main's newest (`20260925300302`, #46) and after #45's `20260925300303`. The three `add constraint ... unique (id, workspace_id)` statements are plain, not `CONCURRENTLY`: migrations run inside a transaction, where `CONCURRENTLY` is impossible, and these tables are tiny.
+9. **Review follow-ups (PR #47):** when a member stops being an active owner/admin/teacher (removed, or moved to staff/parent), `app.tg_members_release_class_teacher` clears them as class teacher of live sections (§4.5; archived sections keep their history). Sections and subjects are archive-only: no DELETE policy or grant. The NCTB starter list has Bangla and English as two papers each (marks are kept per paper), religion as one subject per faith, and "Physical Education and Health". A Bangla school is offered ক, খ … as section names.
+
+**Why:** the smallest slice that gives a demo school a real class list, without inventing shapes the later Parts would have to undo.
+
+**Consequences:** `supabase/tests/32_sections_and_subjects.sql`. When `rooms` lands, `sections.room` becomes `room_id` (expand, backfill, contract).
+
 ## D-204 — F-OP-03 Part 1 PDF engine: `@react-pdf/renderer`, Hind Siliguri over the spec's proposed Noto Sans Bengali, no build-time font subsetting · ACCEPTED · 2026-09-25
 
 **Context:** F-OP-03 §7 already names the render library (`@react-pdf/renderer`, Node runtime, not Edge, not headless Chrome) and §3.6 proposes **Noto Sans Bengali** for the Bengali face, with reasons (OFL licence, the widest Bengali coverage). DESIGN-SYSTEM §1.6 (D-57) separately fixes **Hind Siliguri** as the one Bengali face this product uses everywhere on screen, specifically because it is the same face acadigma-website ships, and rejects Noto Sans Bengali there as "the safe default, but wider and less economical... than Hind Siliguri." A report card is the one artefact a parent associates with the school as strongly as the website; shipping it in a different Bengali face than the rest of the product would be a visible inconsistency the spec's own §3.6 note did not anticipate because it was written before D-57.

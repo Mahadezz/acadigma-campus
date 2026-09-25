@@ -4,6 +4,7 @@ import {
   AUDIT_ACTION_CATALOG,
   FULL_AUDIT_ACTION_CATALOG,
   GENERIC_AUDIT_TABLES,
+  GENERIC_TABLE_NOUNS,
   catalogEntry,
   genericActionsForTable,
   isKnownAuditAction,
@@ -51,9 +52,16 @@ describe("genericActionsForTable", () => {
     expect(rows.every((r) => r.isGeneric)).toBe(true)
   })
 
-  it("humanises the table name in the sentence", () => {
+  it("describes what the table holds, not its name (D-402)", () => {
     const [insertRow] = genericActionsForTable("school_profiles")
-    expect(insertRow?.sentenceEn).toContain("school profiles")
+    expect(insertRow?.sentenceEn).toBe("{actor} added a school setting")
+    expect(insertRow?.sentenceEn).not.toContain("school profiles")
+  })
+
+  it("falls back to 'a record' for a table with no noun yet", () => {
+    const [, updateRow] = genericActionsForTable("not_a_table")
+    expect(updateRow?.sentenceEn).toBe("{actor} updated a record")
+    expect(updateRow?.sentenceBn).toBe("{actor} একটি রেকর্ড হালনাগাদ করেছেন")
   })
 })
 
@@ -84,5 +92,16 @@ describe("catalogEntry / isKnownAuditAction / severityForAction", () => {
     expect(catalogEntry("nothing.here")).toBeUndefined()
     expect(isKnownAuditAction("nothing.here")).toBe(false)
     expect(severityForAction("nothing.here")).toBe("info")
+  })
+})
+
+describe("GENERIC_TABLE_NOUNS (D-402)", () => {
+  it("has a readable noun for every audited table, in both languages", () => {
+    for (const table of GENERIC_AUDIT_TABLES) {
+      const noun = GENERIC_TABLE_NOUNS[table]
+      expect(noun, `${table} needs a noun in GENERIC_TABLE_NOUNS`).toBeDefined()
+      expect(noun?.en).not.toContain("_")
+      expect(noun?.bn).not.toContain("_")
+    }
   })
 })

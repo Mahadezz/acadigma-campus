@@ -51,6 +51,11 @@ export default async function SettingsPage() {
       summary: s.calendar.rowDescription,
     },
     {
+      href: "/app/settings/grade-scale",
+      ...s.rows.grading,
+      summary: s.rows.grading.description,
+    },
+    {
       href: "/app/settings/overview",
       ...s.rows.overview,
       summary: s.rows.overview.description,

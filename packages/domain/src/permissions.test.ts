@@ -228,6 +228,8 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "billing.manage": [...rolesWithAction("billing.manage")],
     "settings.manage": [...rolesWithAction("settings.manage")],
     "policies.manage": [...rolesWithAction("policies.manage")],
+    // F-AC-06 §2 — asserted explicitly, not derived.
+    "settings.grade_scale.write": ["owner", "admin"],
     "reports.read": [...rolesWithAction("reports.read")],
     "messages.send": [...rolesWithAction("messages.send")],
     "ai.use": [...rolesWithAction("ai.use")],
@@ -241,6 +243,10 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "audit.export": [...rolesWithAction("audit.export")],
     "report.view": [...rolesWithAction("report.view")],
     "report.render.sample": [...rolesWithAction("report.render.sample")],
+    // F-AC-01 §2 (D-102): asserted for real, not against the matrix itself.
+    "academics.structure.read": ["owner", "admin", "teacher", "staff"],
+    "academics.section.write": ["owner", "admin"],
+    "academics.subject.write": ["owner", "admin"],
   }
 
   it("gives every declared action in ACTIONS an entry in this table", () => {

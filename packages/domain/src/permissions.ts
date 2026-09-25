@@ -39,6 +39,8 @@ export const ACTIONS = [
   "students.write",
   "marks.read",
   "marks.write",
+  // F-AC-06 §2: grade scales, pass mark, GPA rules — owner/admin.
+  "settings.grade_scale.write",
   "timetable.read",
   "timetable.manage",
   // Workspace administration
@@ -103,6 +105,11 @@ export const ACTIONS = [
   // none of them exist yet (D-204).
   "report.view",
   "report.render.sample",
+  // Academic structure (F-AC-01 §2, D-102): owner/admin/teacher/staff read,
+  // owner/admin write. Parents see structure only through their portal.
+  "academics.structure.read",
+  "academics.section.write",
+  "academics.subject.write",
 ] as const
 
 export type Action = (typeof ACTIONS)[number]
@@ -128,6 +135,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "billing.manage",
     "settings.manage",
     "policies.manage",
+    "settings.grade_scale.write",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -156,6 +164,9 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // F-OP-03 §2 — Reports and PDF (D-204)
     "report.view",
     "report.render.sample",
+    "academics.structure.read",
+    "academics.section.write",
+    "academics.subject.write",
   ],
   // Runs the school day to day. Money and owner-only settings (modules, danger
   // zone) stay with the owner; the F-OP-07 policy blobs do not (RLS §3.1).
@@ -172,6 +183,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.manage",
     "billing.read",
     "policies.manage",
+    "settings.grade_scale.write",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -201,6 +213,9 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // F-OP-03 §2 — Reports and PDF (D-204)
     "report.view",
     "report.render.sample",
+    "academics.structure.read",
+    "academics.section.write",
+    "academics.subject.write",
   ],
   teacher: [
     "attendance.read",
@@ -226,6 +241,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // no student data, so a plain role grant is enough.
     "report.view",
     "report.render.sample",
+    "academics.structure.read",
   ],
   // Office staff: sees the school, changes almost nothing.
   staff: [
@@ -242,6 +258,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.leave",
     // Audit (F-ID-09 §2)
     "audit.read.self",
+    "academics.structure.read",
   ],
   // Read-only parent portal (DECISION-LOG D-10), narrowed to their children by RLS.
   parent: [

@@ -261,7 +261,7 @@ grade points:     b[i].grade_point >= b[i-1].grade_point             // higher b
 pass flag:        exactly one boundary where is_pass flips false→true, and it equals pass_mark_percent
 ```
 
-Percent comparisons use integers (0–100); schools that mark in halves round before banding (documented on the screen).
+~~Percent comparisons use integers (0–100); schools that mark in halves round before banding.~~ **Superseded by D-302 (a):** a subject percentage is rounded to 2 decimals (F-AC-06 §5.1) and banded as-is on the .99 upper edges, with no further rounding. "Grade points must not decrease" is enforced (`BAND_POINTS_DECREASE`). Versioning and "the pass flag flips at `pass_mark_percent`" are deferred to F-AC-06 Part 2, where exams snapshot the scale.
 
 ### 5.3 Attendance percentage (the definition every screen uses)
 
@@ -421,10 +421,12 @@ _Demo:_ hide the Hiring module and confirm it disappears from nav and 404s for a
 
 ## 11. Open questions
 
+**Grade scale (Part 4) — built early by F-AC-06 Part 1 (D-302):** `grade_scales`/`grade_bands` with DATA-MODEL's names, the route `/app/settings/grade-scale` and the permission `settings.grade_scale.write` from this spec. The coverage rules and "grade points must not decrease" are enforced in the database and in Zod. **Deferred to F-AC-06 Part 2**, where exams snapshot the scale and the pass mark: versioning (draft/active/retired, effective date), and "the pass flag flips exactly at `pass_mark_percent`". §5.2's integer-banding line and OQ-4 are superseded by D-302 (a).
+
 1. **Where do academic years and terms live?** They are edited here but owned by the academics area. _Default assumed:_ tables `academic_years` / `terms` owned by academics; this feature owns only the screens and the `current_academic_year_id` pointer. Flagged to the data-model agent.
 2. **jsonb vs columns for the policy blobs.** This spec uses jsonb for `attendance_policy`, `academic_settings`, `cover_policy`, `messaging_policy` and `branding` because they are read as a unit and change shape often, with Zod as the schema of record. If DATA-MODEL.md prefers typed columns, `resolve()` is the only place that changes. **Flagged.**
 3. **Per-grade-level grade scales** (a madrasa stream with a different scale) are out of v1; one active scale per workspace. Tracked for FUTURE.
-4. **Half marks.** _Default assumed:_ percentages band on integers; schools marking in halves round half-up before banding, stated on the editor.
+4. **Half marks.** ~~_Default assumed:_ percentages band on integers; schools marking in halves round half-up before banding.~~ **Superseded by D-302 (a):** percentages band at 2 decimals with no rounding before banding.
 5. **Multi-campus settings inheritance** is out of scope (one workspace = one campus, PRODUCT-DECISIONS §7).
 6. **Who may see the read-only overview?** _Default assumed:_ teachers and staff, not parents. A parent-facing "how grading works" page is a good idea and is tracked for FUTURE.
 7. **Part 1 deviations (D-200, PR #39).** (a) Logo upload deferred until a files pipeline exists; the preview shows initials. (b) No `school_public_settings` view: DATA-MODEL §1.3 widens SELECT to members and no owner-only column lives on `school_profiles`. (c) The branding preview is HTML from `renderHeaderLine()` (`packages/domain/settings/header.ts`), not the F-OP-03 renderer, which does not exist yet; F-OP-03 should reuse the function. (d) `stale_version` is the envelope's `conflict` code; the UI offers a reload. (e) EIIN stays strictly 6 digits (F-ID-05 §5 and the wizard) instead of "warns but saves". (f) Admins see no inline change history: `audit_events` is owner-readable only (F-ID-09 OQ-2). (g) The §5.1 key-parity CI test and `resolve()` lint rule are still open. (h) Board/medium use the wizard's enums (F-ID-03 §3), not the board list in §3.1 here.
