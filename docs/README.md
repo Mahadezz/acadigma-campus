@@ -197,6 +197,7 @@ End-to-end journeys crossing several features. Read the workflow before building
 | [`BUILD-LOG.md`](plan/BUILD-LOG.md)                   | Dated, newest-first log of every merged PR: what shipped, decisions, migrations applied to production, deploy/smoke-test result, review findings and incidents.                       |
 | [`HANDOFF-2026-09-24.md`](plan/HANDOFF-2026-09-24.md) | Current state: M0 foundation merged and deployed, infrastructure, rules learned, owner actions, next steps. Read first.                                                               |
 | [`HANDOFF-2026-09-18.md`](plan/HANDOFF-2026-09-18.md) | Superseded by the 2026-09-24 handoff; kept for history.                                                                                                                               |
+| [`ONBOARDING-CHECKLIST.md`](plan/ONBOARDING-CHECKLIST.md) | **D-72.** The owner's first-week checklist for visiting a school: what to ask for before, what to do days 1-5, what to log after.                                                     |
 
 ## reference/ — inherited and external material, read-only
 
