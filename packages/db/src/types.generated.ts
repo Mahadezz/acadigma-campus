@@ -3698,7 +3698,7 @@ export type Database = {
       member_role: "owner" | "admin" | "teacher" | "staff" | "parent"
       member_status: "pending" | "active" | "removed"
       onboarding_path: "undecided" | "create_school" | "join_school"
-      report_kind: "sample"
+      report_kind: "sample" | "report_card"
       report_locale: "bn" | "en"
       report_status: "queued" | "rendering" | "ready" | "failed" | "expired"
       staff_document_kind:
@@ -3941,7 +3941,7 @@ export const Constants = {
       member_role: ["owner", "admin", "teacher", "staff", "parent"],
       member_status: ["pending", "active", "removed"],
       onboarding_path: ["undecided", "create_school", "join_school"],
-      report_kind: ["sample"],
+      report_kind: ["sample", "report_card"],
       report_locale: ["bn", "en"],
       report_status: ["queued", "rendering", "ready", "failed", "expired"],
       staff_document_kind: [

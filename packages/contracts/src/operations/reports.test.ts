@@ -8,9 +8,10 @@ import {
 } from "./reports"
 
 describe("report enums — parity with the Postgres enums (report_runs migration)", () => {
-  it("reportKindSchema accepts exactly the one report_kind label shipped so far", () => {
+  it("reportKindSchema accepts exactly the report_kind labels shipped so far", () => {
     expect(reportKindSchema.safeParse("sample").success).toBe(true)
-    expect(reportKindSchema.safeParse("report_card").success).toBe(false)
+    expect(reportKindSchema.safeParse("report_card").success).toBe(true)
+    expect(reportKindSchema.safeParse("mark_sheet").success).toBe(false)
   })
 
   it("reportStatusSchema accepts exactly the five report_status labels", () => {
@@ -36,9 +37,21 @@ describe("reportRunInputSchema", () => {
     expect(parsed.success).toBe(true)
   })
 
+  it("accepts a report_card request with its own params", () => {
+    const parsed = reportRunInputSchema.safeParse({
+      params: {
+        kind: "report_card",
+        studentId: "11111111-1111-1111-1111-111111111111",
+        examId: "22222222-2222-2222-2222-222222222222",
+      },
+      locale: "en",
+    })
+    expect(parsed.success).toBe(true)
+  })
+
   it("rejects an unknown report kind", () => {
     const parsed = reportRunInputSchema.safeParse({
-      params: { kind: "report_card" },
+      params: { kind: "mark_sheet" },
       locale: "en",
     })
     expect(parsed.success).toBe(false)

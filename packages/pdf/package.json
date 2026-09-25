@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@acadigma/contracts": "workspace:*",
     "@acadigma/domain": "workspace:*",
     "@react-pdf/renderer": "4.9.0",
     "react": "^19"

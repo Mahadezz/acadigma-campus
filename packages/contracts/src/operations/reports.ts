@@ -2,23 +2,25 @@ import { z } from "zod"
 
 import { isoDateTimeSchema, uuidSchema, workspaceIdSchema } from "../common"
 
+import { reportCardParamsSchema } from "./report-card"
+
 /**
  * F-OP-03 Parts 1-2 — the run pipeline (`report_runs`), row shapes and the
- * one endpoint input this Part ships (`createReportRun`). Report *content*
- * schemas (`ReportCardParams`, `BulkReportCardParams`, ...) are not modelled
- * yet — every real kind depends on exams/marks (F-AC-0x), which is not built.
- * `report_kind` therefore has exactly one Postgres value so far, `'sample'`
- * (the run pipeline's own proof, spec §8 Part 2 demo: "enqueue a stub
- * report"); later Parts add their real kinds with `alter type ... add value`
- * plus a `ReportParams` union member each — additive, no migration on this
- * table's shape.
+ * endpoint input this Part ships (`createReportRun`). Report *content*
+ * schemas beyond `report_card` (`BulkReportCardParams`, ...) are not
+ * modelled yet — every remaining real kind depends on exams/marks (F-AC-0x),
+ * which is not built. `report_kind` started with exactly one Postgres
+ * value, `'sample'` (the run pipeline's own proof, spec §8 Part 2 demo:
+ * "enqueue a stub report"); Part 3 (D-206) adds `'report_card'` with
+ * `alter type ... add value` plus its own `ReportCardParams` union member —
+ * additive, no migration on this table's shape.
  */
 
 // ---------------------------------------------------------------------------
 // Enums — mirror public.report_kind / report_status / report_locale exactly
 // (parity asserted in reports.test.ts).
 // ---------------------------------------------------------------------------
-export const reportKindSchema = z.enum(["sample"])
+export const reportKindSchema = z.enum(["sample", "report_card"])
 export type ReportKind = z.infer<typeof reportKindSchema>
 
 export const reportStatusSchema = z.enum([
@@ -34,14 +36,19 @@ export const reportLocaleSchema = z.enum(["bn", "en"])
 export type ReportLocale = z.infer<typeof reportLocaleSchema>
 
 // ---------------------------------------------------------------------------
-// createReportRun — the only params shape that exists yet.
+// createReportRun — one params shape per kind, discriminated on `kind`.
 // ---------------------------------------------------------------------------
 export const sampleReportParamsSchema = z.object({ kind: z.literal("sample") })
 export type SampleReportParams = z.infer<typeof sampleReportParamsSchema>
 
-/** Discriminated union of one member today; the shape every later kind joins. */
+export const reportRunParamsSchema = z.discriminatedUnion("kind", [
+  sampleReportParamsSchema,
+  reportCardParamsSchema,
+])
+export type ReportRunParams = z.infer<typeof reportRunParamsSchema>
+
 export const reportRunInputSchema = z.object({
-  params: sampleReportParamsSchema,
+  params: reportRunParamsSchema,
   locale: reportLocaleSchema,
 })
 export type ReportRunInput = z.infer<typeof reportRunInputSchema>

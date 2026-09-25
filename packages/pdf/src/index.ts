@@ -12,4 +12,8 @@ export {
   type ReportLocale,
 } from "./format"
 export { renderPdfToBuffer } from "./render"
+export {
+  ReportCardDocument,
+  type ReportCardDocumentProps,
+} from "./templates/report-card"
 export { SampleDocument, type SampleDocumentProps } from "./templates/sample"

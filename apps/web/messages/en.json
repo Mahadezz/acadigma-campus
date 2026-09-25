@@ -959,6 +959,7 @@
     "generating": "Generating…",
     "generated": "Generated. Ready to download below.",
     "error": "Could not generate this report. Try again.",
+    "generateReportCard": "Generate progress report (Class 6 sample)",
     "empty": "No reports generated yet.",
     "recent": "Recent runs",
     "status": {
