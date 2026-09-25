@@ -89,7 +89,7 @@
       "errorSuspended": "This account is suspended. Contact support to continue.",
       "errorUnverified": "Confirm your email to finish signing in.",
       "linkExpiredBanner": "That link has expired or was already used. Sign in, or request a new one.",
-      "throttled": "Too many attempts. Try again in {seconds}s."
+      "throttled": "Too many attempts. Try again in {minutes} min."
     },
     "register": {
       "title": "Create an account",
