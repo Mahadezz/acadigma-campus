@@ -33,7 +33,8 @@ const NOT_FOUND = apiError("not_found", "That exam does not exist.")
 const DB_ERRORS: Record<string, ApiError> = {
   NO_GRADE_SCALE: apiError(
     "validation_failed",
-    "Set up a grade scale in Settings → Grading before creating an exam."
+    "Set up a grade scale in Settings → Grading before creating an exam.",
+    { fieldErrors: { gradeScale: ["NO_GRADE_SCALE"] } }
   ),
   SECTION_WRONG_YEAR: apiError(
     "validation_failed",
