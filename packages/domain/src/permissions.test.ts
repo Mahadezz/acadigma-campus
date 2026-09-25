@@ -197,6 +197,7 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     ],
     "workspace.settings.write": ["owner", "admin"],
     "workspace.branding.write": ["owner", "admin"],
+    "calendar.holiday.write": ["owner", "admin"],
     "members.read": ["owner", "admin", "teacher", "staff", "platform"],
     "members.contact.read": ["owner", "admin", "platform"],
     "members.invite": ["owner", "admin"],

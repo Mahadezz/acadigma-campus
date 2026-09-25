@@ -44,6 +44,13 @@ export default async function SettingsPage() {
       summary: branding?.header_line_1 || branding?.accent || s.notSet,
     },
     {
+      href: "/app/settings/calendar",
+      title: s.calendar.title,
+      description: s.calendar.rowDescription,
+      keywords: s.calendar.rowKeywords,
+      summary: s.calendar.rowDescription,
+    },
+    {
       href: "/app/settings/overview",
       ...s.rows.overview,
       summary: s.rows.overview.description,
