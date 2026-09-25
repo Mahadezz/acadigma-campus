@@ -95,7 +95,8 @@ values
 insert into public.subjects (id, workspace_id, name)
 values
   ('53000000-0000-4000-c000-000000000031', '53000000-0000-4000-b000-000000000001', 'Mathematics 53'),
-  ('53000000-0000-4000-c000-000000000032', '53000000-0000-4000-b000-000000000001', 'English 53');
+  ('53000000-0000-4000-c000-000000000032', '53000000-0000-4000-b000-000000000001', 'English 53'),
+  ('53000000-0000-4000-c000-000000000033', '53000000-0000-4000-b000-000000000001', 'Science 53');
 
 select tests.login('53000000-0000-4000-a000-000000000001');
 select public.seed_bd_grade_scale('53000000-0000-4000-b000-000000000001');
@@ -247,10 +248,12 @@ with attempted as (
 select is((select count(*)::int from attempted), 0, 'another school''s paper update affects zero rows');
 
 select throws_ok(
-  format($$insert into public.exam_sections (workspace_id, exam_id, section_id)
+  format($$insert into public.exam_subjects
+           (workspace_id, exam_id, section_id, subject_id, full_marks, pass_marks)
            values ('53000000-0000-4000-b000-000000000002', %L,
-                   '53000000-0000-4000-c000-000000000021')$$, current_setting('tests.exam')),
-  '23503', null, 'a row cannot point at another school''s exam (composite FK)');
+                   '53000000-0000-4000-c000-000000000021',
+                   '53000000-0000-4000-c000-000000000033', 100, 33)$$, current_setting('tests.exam')),
+  '23503', null, 'a paper cannot point at another school''s exam (composite FK)');
 
 select tests.logout();
 select tests.login('53000000-0000-4000-a000-000000000002');   -- teacher A
