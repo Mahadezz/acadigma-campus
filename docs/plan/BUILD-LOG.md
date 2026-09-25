@@ -4,6 +4,14 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-09-25 — PR #35 — feat(billing): read-only mode refuses every write — server actions + database (D-300)
+
+- **Lane:** billing
+- **Shipped:** `requireWritable` on every tenant write server action, plus a shared `app.tg_require_writable()` trigger on every tenant table as defence in depth; `scripts/check-require-writable.mjs` and `supabase/tests/50_require_writable.sql` enforce it in CI. Supersedes D-62's "allow everything else" — read-only now refuses every write, not just creates.
+- **Decisions:** D-300.
+- **Migrations:** `20260925300100_require_writable_guard.sql` — applied to production; smoke test passed.
+- **Review/incidents:** review follow-ups (same PR): removing access (membership → `removed`, capability revoke, invitation revoke/decline) stays possible in read-only while siblings (role change, grant, invitation edit) are refused.
+
 ## 2026-09-25 — PR #36 — feat(design): D-68 visual refinement (Blend) + Acadigma product logos
 
 - **Lane:** design

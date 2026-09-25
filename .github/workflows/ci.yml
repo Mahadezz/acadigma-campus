@@ -373,6 +373,7 @@ jobs:
       # coverage.sql's header comment for why this lives in a different job).
       - name: workspace_id table coverage (named in a supabase/tests/*.sql file)
         run: node scripts/check-coverage-test-files.mjs
+      - run: node --test scripts/check-require-writable.test.mjs && node scripts/check-require-writable.mjs # D-300: tenant write paths call requireWritable
 
       # Generated-type freshness moved to the `db` job (DECISION-LOG D-55): types
       # are generated from THIS PR's migrations applied to the CI Postgres, not
