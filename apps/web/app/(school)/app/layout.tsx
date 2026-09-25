@@ -10,6 +10,7 @@ import { Logo } from "@acadigma/ui/primitives/logo"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
 
 import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
+import { UserMenu } from "@/app/(shared)/workspace/user-menu"
 import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
 import { getMessages } from "@/lib/i18n"
 import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
@@ -44,7 +45,7 @@ export default async function SchoolLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const ctx = await requireShell("school")
-  const { t } = await getMessages()
+  const { t, locale } = await getMessages()
 
   const client = await createClient()
 
@@ -65,6 +66,7 @@ export default async function SchoolLayout({
           config={config}
           role={ctx.role}
           entitledModules={entitledModules}
+          locale={locale}
         />
       }
       bottomNav={
@@ -72,6 +74,7 @@ export default async function SchoolLayout({
           config={config}
           role={ctx.role}
           entitledModules={entitledModules}
+          locale={locale}
         />
       }
       topBar={
@@ -84,11 +87,21 @@ export default async function SchoolLayout({
             />
           }
           title={<Logo product="campus" />}
-          subtitle={`Signed in as ${ctx.role}`}
+          subtitle={t.workspace.signedInAs.replace("{role}", ctx.role)}
           actions={
-            <Button variant="ghost" size="icon" aria-label="Notifications">
-              <BellIcon />
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t.nav.notifications}
+              >
+                <BellIcon />
+              </Button>
+              <UserMenu
+                locale={locale}
+                t={{ ...t.workspace.userMenu, ...t.auth.languageToggle }}
+              />
+            </>
           }
         />
       }
@@ -100,7 +113,7 @@ export default async function SchoolLayout({
         // sign-out and removing access still work.
         <InlineAlert
           tone="error"
-          title="This workspace is read-only"
+          title={t.workspace.readOnly.title}
           className="mb-4"
         >
           {planReadOnlyApiError(writable.error).message}

@@ -6,6 +6,7 @@ import { getMessages } from "@/lib/i18n"
 import { requireShell } from "@/lib/workspace"
 
 import { listMyWorkspaces } from "./actions"
+import { UserMenu } from "./user-menu"
 import { WorkspaceSwitcher } from "./workspace-switcher"
 
 /**
@@ -29,7 +30,7 @@ export async function GatedShell({
   children: React.ReactNode
 }) {
   const ctx = await requireShell(shell)
-  const { t } = await getMessages()
+  const { t, locale } = await getMessages()
   const workspacesResult = await listMyWorkspaces()
 
   return (
@@ -44,6 +45,12 @@ export async function GatedShell({
             />
           }
           title={title}
+          actions={
+            <UserMenu
+              locale={locale}
+              t={{ ...t.workspace.userMenu, ...t.auth.languageToggle }}
+            />
+          }
         />
       }
     >
