@@ -1,6 +1,9 @@
+import Link from "next/link"
+
 import { getSchoolSettings } from "@acadigma/db/repositories/settings"
 import { SAT_FIRST_ORDER } from "@acadigma/domain/academic"
 import { resolve } from "@acadigma/domain/settings"
+import { Button } from "@acadigma/ui/components/button"
 
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
@@ -68,6 +71,14 @@ export default async function SettingsOverviewPage() {
         title={s.title}
         description={s.description}
       />
+      {/* F-ID-10 §2/§6 (D-403): text size is every role's own setting, but
+          this page's caller (teacher/staff, no workspace.settings.write) is
+          redirected away from the grouped Settings list above, which is the
+          list's only other link to /app/settings/display — without this,
+          those roles could never reach the text-size screen at all. */}
+      <Button asChild variant="outline" size="sm">
+        <Link href="/app/settings/display">{t.settings.rows.display.title}</Link>
+      </Button>
       <div className="grid gap-4 lg:grid-cols-2">
         {groups.map((group) => (
           <section key={group.title} className="rounded-lg border p-4">

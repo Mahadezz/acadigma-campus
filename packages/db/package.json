@@ -14,7 +14,8 @@
     "./repositories/settings": "./src/repositories/settings.ts",
     "./repositories/staff": "./src/repositories/staff.ts",
     "./repositories/grading": "./src/repositories/grading.ts",
-    "./repositories/exams": "./src/repositories/exams.ts"
+    "./repositories/exams": "./src/repositories/exams.ts",
+    "./repositories/ui-preferences": "./src/repositories/ui-preferences.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
