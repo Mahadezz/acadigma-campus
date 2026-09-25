@@ -144,6 +144,7 @@ describe("getRollCall", () => {
     expect(enrol?.ops).toContainEqual(["eq", ["workspace_id", CTX.workspaceId]])
     expect(enrol?.ops).toContainEqual(["lte", ["enrolled_on", "2026-09-25"]])
     expect(enrol?.ops).toContainEqual(["eq", ["students.status", "active"]])
+    expect(enrol?.ops).not.toContainEqual(["eq", ["status", "active"]])
   })
 
   it("starts everyone unmarked when the day has no session (D-22)", async () => {
@@ -195,7 +196,7 @@ describe("saveAttendance", () => {
 
   it("maps the named database errors and never echoes an unknown one", async () => {
     for (const [message, code] of [
-      ["NOT_ASSIGNED", "forbidden"],
+      ["FORBIDDEN", "forbidden"],
       ["OUTSIDE_EDIT_WINDOW", "forbidden"],
       ["CONFLICT", "conflict"],
       ["UNMARKED_STUDENTS", "validation_failed"],

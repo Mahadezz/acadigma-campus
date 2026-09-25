@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-06 Part 3 (demo cut) — marks entry, and Part 4's publish
--- gate (20260925300311_marks.sql, D-304)
+-- gate (20260925300312_marks.sql, D-304)
 --
 --   A. save_marks: entry opens only in marks_entry; per-row rejection
 --      (MARK_OUT_OF_RANGE) while valid rows save; the paper moves to

@@ -939,7 +939,7 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Why:** the smallest slice that makes the demo true end to end, with every rule a pgTAP case can break rather than a UI convention.
 
-**Consequences:** `supabase/tests/34_attendance.sql` (47 assertions). `enrollments (id, workspace_id)` (D-103) and `attendance_sessions (id, workspace_id)` are the targets later tables use. When the offline queue lands it calls `save_attendance` unchanged; when period mode lands, the `(section_id, date)` key widens.
+**Consequences:** `supabase/tests/34_attendance.sql` (47 assertions; 45 after D-105). **Point 1's class-teacher rule (`NOT_ASSIGNED`) is superseded by D-105:** any active teacher of the school may mark any section. `enrollments (id, workspace_id)` (D-103) and `attendance_sessions (id, workspace_id)` are the targets later tables use. When the offline queue lands it calls `save_attendance` unchanged; when period mode lands, the `(section_id, date)` key widens.
 
 ## D-403 — Basic mode: a per-user, class-by-class layout over the same actions, with bigger everything and plain confirmations · ACCEPTED · 2026-09-26
 
@@ -972,6 +972,20 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 **Why:** a second, offline-only write path would be a second set of rules to secure and test; replaying the real actions with idempotency keys means the only new contract is "the key must dedupe". Generating and sending need the server's current data or an external provider, so queuing them would produce stale documents or late messages.
 
 **Consequences:** six Parts on their own track (ROADMAP): app shell + read cache + cache purge → 2a the outbox with attendance and the outbox purge (absorbs F-AC-03 Part 7's offline half) → 2b conflict sheet, late sync, session-expiry resume → marks (absorbs F-AC-06 Part 4's offline half, adds `marks.client_edited_at`; online saves stamp server `now()`) → lesson plans and handouts as those features ship → the 14-day lock and storage. `ARCHITECTURE.md` §6 and F-AC-03 §4.6 are updated to match (whole-app offline, no Background Sync). Every `full`-level action must take an idempotency key, return named errors and, where edits collide, a base version. Stated honestly: this is about ten days of work that touches every offline-capable feature's contract, and Parts 1–2b carry most of the risk.
+
+## D-105 — F-AC-03: any teacher may take any section's attendance; enrolment on a date by its dates · ACCEPTED · 2026-09-26
+
+**Context:** D-104 let only the section's class teacher (or an owner/admin) save its roll call. On a normal morning the class teacher is sometimes absent, and the teacher covering the class could view the roster but not save it, so the day went unmarked or an admin had to do it. Separately, the expected class list filtered enrolments by `status = 'active'` as well as by date, so a student transferred out today vanished from last week's register.
+
+**Decision (owner, 2026-09-26):**
+
+1. **Any active teacher of the school may view and mark/save the roll call for any section** — substitutes cover. `public.save_attendance`'s role guard (active owner/admin/teacher of this workspace, else `FORBIDDEN`) is the whole rule; the class-teacher check (`NOT_ASSIGNED`, `app.can_mark_attendance`) is removed. Every other guard stays: edit window for teachers, no future date, school day unless confirmed, exactly the enrolled students, idempotency, the `CONFLICT` version check, the read-only guard. The audit already records who saved (`taken_by`, `marked_by`, the audit actor).
+2. **"Enrolled in the section on that date" is `enrolled_on <= date <= ended_on`** (open-ended when `ended_on` is null), plus the student being active and not deleted — not the enrolment's current status. If two enrolments in the same section cover the date, the student counts once (the later enrolment).
+3. **A closed enrolment has an end date:** `enrollments_closed_has_end` — `status = 'active' or ended_on is not null` — so a transfer or withdrawal can never leave a student on a register by accident.
+
+**Why:** schools substitute every week; a register that only one person can save is a register that goes unmarked. History must not change when a student moves.
+
+**Consequences:** migration `20260925300311_attendance_any_teacher.sql` (CREATE OR REPLACE of `save_attendance` and `attendance_day`, drops `app.can_mark_attendance`); `supabase/tests/35_attendance_any_teacher.sql` (16 assertions); the two `NOT_ASSIGNED` cases leave `34_attendance.sql`. The UI offers "Take attendance" on every class to anyone with `attendance.write`. `33_students_and_guardians.sql` now closes last year's enrolments with an `ended_on`.
 
 ## D-304 — Marks entry demo cut: the paper names its teacher, one save function with per-row checks, Publish waits for complete marks · ACCEPTED · 2026-09-26
 

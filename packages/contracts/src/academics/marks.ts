@@ -4,7 +4,7 @@ import { uuidSchema } from "../common"
 
 /**
  * F-AC-06 Part 3 (demo cut, D-304) — marks entry
- * (`supabase/migrations/20260925300311_marks.sql`), §7 `saveMarks`.
+ * (`supabase/migrations/20260925300312_marks.sql`), §7 `saveMarks`.
  */
 
 export const markStatusSchema = z.enum(["entered", "absent", "exempt"])
