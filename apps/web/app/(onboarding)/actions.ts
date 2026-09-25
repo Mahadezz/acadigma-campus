@@ -31,9 +31,12 @@ import { validateAcademicYearRange } from "@acadigma/domain/academic"
 import { resolveOnboardingExitRoute } from "@acadigma/domain/onboarding"
 
 import { getMessages } from "@/lib/i18n"
-import { throttleKey } from "@/lib/request-context"
 import { createClient } from "@/lib/supabase/server"
-import { throttleRecordFailure, throttleStatus } from "@/lib/throttle"
+import {
+  throttleRecordFailure,
+  throttleStatus,
+  USER_THROTTLE_KEYS,
+} from "@/lib/throttle"
 import { throttledMessage } from "@/lib/throttle-copy"
 import { WORKSPACE_COOKIE } from "@/lib/workspace"
 
@@ -146,7 +149,8 @@ export async function checkEiinAvailability(
     return err(apiError("unauthenticated", "Please sign in to continue."))
   }
 
-  const key = throttleKey("eiin-check", user.id)
+  // D-101: per-user key, derived from auth.uid() inside the database.
+  const key = USER_THROTTLE_KEYS.eiinCheck
   const status = await throttleStatus(supabase, key)
   if (status.blocked) {
     const { t } = await getMessages()

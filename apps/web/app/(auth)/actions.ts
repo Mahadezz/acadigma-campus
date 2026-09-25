@@ -38,6 +38,7 @@ import {
   throttleRecordFailure,
   throttleReset,
   throttleStatus,
+  USER_THROTTLE_KEYS,
 } from "@/lib/throttle"
 import { throttledMessage } from "@/lib/throttle-copy"
 import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie"
@@ -507,7 +508,9 @@ export async function changePassword(
   }
 
   const ctx = await getRequestContext()
-  const key = throttleKey("change-password", user.id)
+  // D-101: the database derives the real key from auth.uid(); nothing a
+  // caller sends can name another user's bucket.
+  const key = USER_THROTTLE_KEYS.changePassword
   const status = await throttleStatus(supabase, key)
   if (status.blocked) {
     const { t } = await getMessages()

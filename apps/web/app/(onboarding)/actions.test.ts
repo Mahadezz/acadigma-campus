@@ -40,6 +40,10 @@ const mockThrottleRecordFailure = vi.fn()
 vi.mock("@/lib/throttle", () => ({
   throttleStatus: mockThrottleStatus,
   throttleRecordFailure: mockThrottleRecordFailure,
+  USER_THROTTLE_KEYS: {
+    changePassword: "user:changePassword",
+    eiinCheck: "user:eiinCheck",
+  },
 }))
 
 const { checkEiinAvailability, createSchoolWorkspace } =
@@ -78,7 +82,8 @@ describe("checkEiinAvailability", () => {
 
     const [, key] = mockThrottleStatus.mock.calls[0] as [unknown, string]
     expect(typeof key).toBe("string")
-    expect(key.startsWith("eiin-check:")).toBe(true)
+    // D-101: the database scopes it to auth.uid(); the app sends the bucket.
+    expect(key).toBe("user:eiinCheck")
   })
 
   it("when not blocked, records the attempt (bucket eiinCheck) before calling the RPC", async () => {
@@ -109,7 +114,7 @@ describe("checkEiinAvailability", () => {
     expect(mockThrottleRecordFailure).toHaveBeenCalledWith(
       expect.anything(),
       "eiinCheck",
-      expect.stringContaining("eiin-check:")
+      "user:eiinCheck"
     )
     expect(callOrder).toEqual(["throttleRecordFailure", "rpc"])
   })
