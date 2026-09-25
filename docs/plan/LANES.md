@@ -16,21 +16,21 @@ The roadmap's own streams (ROADMAP §4) still describe long-term ownership. This
 
 ## Numbers each lane may use
 
-| Lane       | Decision numbers | Migration timestamp | pgTAP files    |
-| ---------- | ---------------- | ------------------- | -------------- |
-| Lead       | D-69 to D-99     | `YYYYMMDD0NNN00`    | `23_` to `29_` |
-| Identity   | D-100 to D-199   | `YYYYMMDD1NNN00`    | `30_` to `39_` |
-| Operations | D-200 to D-299   | `YYYYMMDD2NNN00`    | `40_` to `49_` |
-| Billing    | D-300 to D-399   | `YYYYMMDD3NNN00`    | `50_` to `59_` |
-| Design     | D-400 to D-499   | `YYYYMMDD4NNN00`    | `60_` to `69_` |
+| Lane       | Decision numbers | pgTAP files    |
+| ---------- | ---------------- | -------------- |
+| Lead       | D-69 to D-99     | `23_` to `29_` |
+| Identity   | D-100 to D-199   | `30_` to `39_` |
+| Operations | D-200 to D-299   | `40_` to `49_` |
+| Billing    | D-300 to D-399   | `50_` to `59_` |
+| Design     | D-400 to D-499   | `60_` to `69_` |
 
 - Take the next unused number in your own range. Never use another lane's range. D-68 (design refinement) was reserved before lanes began and stays with the design lane.
 - Decision entries go at the end of DECISION-LOG in merge order, so numbers will not be sorted. That is expected.
-- Migration timestamps: `YYYYMMDD` is the day you write it, then your lane digit, a three-digit sequence and `00`. Example: identity's first migration on 1 October is `20261001100100`.
+- **Migration timestamps carry no lane digit.** Write the real UTC time the file is created — `date -u +%Y%m%d%H%M%S` — as the 14-digit prefix. A fixed per-lane digit (e.g. lane 1 always sorting before lane 3 on the same day) would force a re-date on almost every merge regardless of which PR actually finished first; real wall-clock time sorts correctly on its own in the overwhelmingly common case, and `scripts/check-migrations-order.mjs` (below) catches the rare case where it doesn't.
 
 ## Migration order at merge time
 
-`supabase db push` refuses a migration dated before the newest one already applied. Lanes merge in whatever order they finish, so a PR can fall behind. `scripts/check-migrations-order.mjs` fails CI when a PR's new migration sorts before the newest on main, and prints a name that would sort after it. The builder renames the file with `git mv` (it has never been applied, so this is allowed) and updates references. The lead never merges a PR with a red order check.
+`supabase db push` refuses a migration dated before the newest one already applied. Lanes merge in whatever order they finish, so a PR's real-time timestamp can still fall behind if another lane's migration lands later on main after this one was written. `scripts/check-migrations-order.mjs` fails CI when a PR's new migration sorts before the newest on main, and prints a name that would sort after it (the current UTC time, or one second past main's newest if that isn't later). The builder renames the file with `git mv` (it has never been applied, so this is allowed) and updates references. The lead never merges a PR with a red order check.
 
 ## Shared files
 

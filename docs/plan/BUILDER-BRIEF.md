@@ -13,7 +13,7 @@ Repo: public GitHub `Mahadezz/acadigma-campus`. `gh` must be authenticated.
 - Work only in your own worktree: `git worktree add .worktrees/<name> -b <branch> origin/main`.
 - NEVER `git stash`. NEVER force-push. Do NOT merge PRs. Never read `.claude/settings.local.json` (secrets).
 - After every `git merge origin/main`: run `git status`, resolve every UU conflict BEFORE committing; `git grep -nE '^(<<<<<<<|>>>>>>>) '` must be empty before any commit. Never chain `git commit` blindly after a merge.
-- Use ONLY your lane's migration timestamp format, decision range and pgTAP range (see Lanes below). Migrations must sort after every migration on main (CI enforces this — `scripts/check-migrations-order.mjs`).
+- Migration timestamps carry no lane digit — write the real UTC time you create the file (`date -u +%Y%m%d%H%M%S`). Use ONLY your lane's decision range and pgTAP range (see Lanes below). Migrations must sort after every migration on main (CI enforces this — `scripts/check-migrations-order.mjs`).
 - New client-callable functions need explicit `grant execute` (defaults deny, D-54). New tables need RLS + pgTAP isolation/escalation (`supabase/tests/coverage.sql` and `scripts/check-coverage-test-files.mjs` enforce it).
 - Count RLS-protected rows as `postgres` (`tests.logout()`) in pgTAP unless asserting caller visibility. Pin error messages in `throws_ok` (use the 4-arg form).
 - Seeded/live-account Playwright journeys: `test.skip(!process.env.E2E_LIVE_SUPABASE, ...)`.
@@ -24,7 +24,7 @@ Repo: public GitHub `Mahadezz/acadigma-campus`. `gh` must be authenticated.
 
 ## Lanes (D-69, `docs/plan/LANES.md`)
 
-- You are assigned ONE lane (identity=1, operations=2, billing=3, design=4) and ONE Part from its queue. Use only your lane's ranges: decisions (identity D-100..199, operations D-200..299, billing D-300..399, design D-400..499; take the next unused in your range), migration timestamp `YYYYMMDD<lane digit>NNN00`, pgTAP files (identity 30_-39_, operations 40_-49_, billing 50_-59_, design 60_-69_). Worktree `.worktrees/<lane>-<slug>`.
+- You are assigned ONE lane (identity=1, operations=2, billing=3, design=4) and ONE Part from its queue. Use only your lane's ranges: decisions (identity D-100..199, operations D-200..299, billing D-300..399, design D-400..499; take the next unused in your range), pgTAP files (identity 30_-39_, operations 40_-49_, billing 50_-59_, design 60_-69_). Migration timestamps carry no lane digit — they're the real UTC time the file is written (`date -u +%Y%m%d%H%M%S`). Worktree `.worktrees/<lane>-<slug>`.
 - Stay in your lane's folders. Feature lanes may ADD shadcn components to `packages/ui/src/components/ui`; only the design lane edits existing components or tokens. Once `requireWritable` merges, every new write action calls it.
 - If `check-migrations-order` fails (another lane merged a later migration first): `git mv` your unapplied migration to the suggested name, update references, re-run the gate.
 - Before the lead merges you'll be asked to merge `origin/main`: keep every other lane's entries in `DECISION-LOG.md`, the `docs/README.md` test-report table and `DATA-MODEL.md`.

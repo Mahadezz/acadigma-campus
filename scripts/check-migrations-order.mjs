@@ -3,6 +3,11 @@
 // newest one already applied, and lanes merge in whatever order they finish — a PR
 // written against one main can fall behind by the time it merges. This checks it
 // mechanically, the same way check-migrations-append-only.mjs checks forward-only.
+//
+// Migration timestamps are the real UTC time the file was written
+// (`date -u +%Y%m%d%H%M%S`, LANES.md) — there is no per-lane digit or sequence
+// number to reason about here; lane digits apply only to decision numbers and
+// pgTAP file ranges.
 import { execFileSync } from "node:child_process"
 import { basename } from "node:path"
 
@@ -17,21 +22,27 @@ function timestampOf(filename) {
   return match ? match[1] : null
 }
 
-// The suggested name keeps the offending file's lane digit (LANES.md: position 9,
-// `YYYYMMDD<lane digit>NNN00`) where that still sorts after main's newest; otherwise
-// it falls back to main's newest timestamp plus one sequence step, whole cloth.
-// Returns null when main's sequence (NNN) is already at 999 for that day/lane: adding
-// one more step carries into the lane-digit (or date) position, which would either
-// silently hand out a filename in ANOTHER lane's range or roll onto a different day —
-// neither is a safe thing to suggest automatically.
-export function suggestTimestamp(newestMainTs, offendingTs) {
-  const bumped = (BigInt(newestMainTs) + 100n).toString().padStart(14, "0")
-  if (bumped.slice(0, 9) !== newestMainTs.slice(0, 9)) {
-    return null
-  }
-  const laneDigit = offendingTs[8]
-  const withLaneDigit = bumped.slice(0, 8) + laneDigit + bumped.slice(9)
-  return withLaneDigit > newestMainTs ? withLaneDigit : bumped
+function utcTimestamp(date) {
+  const pad = (n) => String(n).padStart(2, "0")
+  return (
+    String(date.getUTCFullYear()) +
+    pad(date.getUTCMonth() + 1) +
+    pad(date.getUTCDate()) +
+    pad(date.getUTCHours()) +
+    pad(date.getUTCMinutes()) +
+    pad(date.getUTCSeconds())
+  )
+}
+
+// The simplest correct suggestion: the current UTC time, since that's what a
+// re-dated migration should carry anyway. Only if "now" has somehow not caught
+// up with main's newest yet (clock skew, or another lane merged a
+// later-than-now timestamp) does it fall back to one second past main's newest.
+export function suggestTimestamp(newestMainTs, now = new Date()) {
+  const nowTs = utcTimestamp(now)
+  return nowTs > newestMainTs
+    ? nowTs
+    : (BigInt(newestMainTs) + 1n).toString().padStart(14, "0")
 }
 
 function main() {
@@ -93,14 +104,7 @@ function main() {
     const ts = timestampOf(file)
     if (!ts) continue // not this script's job — append-only check catches malformed names elsewhere
     if (ts <= newestMainTs) {
-      const suggestion = suggestTimestamp(newestMainTs, ts)
-      if (suggestion === null) {
-        console.error(
-          `::error file=${file}::this migration (${ts}) sorts at or before the newest migration on ${baseRef} (${newestMainTs}), and that day's sequence number is already at capacity (999) — rename it with a new day's date prefix (today's date or later) instead of bumping the sequence, since bumping past 999 would land on another lane's digit`
-        )
-        failed = true
-        continue
-      }
+      const suggestion = suggestTimestamp(newestMainTs)
       const suggestedName = basename(file).replace(ts, suggestion)
       console.error(
         `::error file=${file}::this migration (${ts}) sorts at or before the newest migration on ${baseRef} (${newestMainTs}) — rename with 'git mv ${file} supabase/migrations/${suggestedName}' and update any references`
@@ -116,28 +120,24 @@ function main() {
 }
 
 function selfCheck() {
-  const cases = [
-    ["20260925000500", "20260924000100"], // ordinary stale timestamp
-    ["20260925000599", "20260925000600"], // adjacent, different lane digit position value
-  ]
-  for (const [newestMainTs, offendingTs] of cases) {
-    const suggestion = suggestTimestamp(newestMainTs, offendingTs)
-    console.assert(
-      suggestion !== null && suggestion.length === 14,
-      `suggestion must be a 14-digit string: ${suggestion}`
-    )
-    console.assert(
-      suggestion > newestMainTs,
-      `suggestion ${suggestion} must sort after main's newest ${newestMainTs}`
-    )
-  }
+  const now = new Date("2026-09-25T12:00:00Z")
+  const nowTs = "20260925120000"
 
-  // NNN at capacity (999): bumping would carry into the lane digit — must refuse
-  // rather than hand out a filename in another lane's range.
-  const overflow = suggestTimestamp("20260925099900", "20260925099900")
+  // Ordinary case: main's newest is in the past relative to now -> suggest now.
+  const ordinary = suggestTimestamp("20260924000000", now)
+  console.assert(ordinary === nowTs, `expected now (${nowTs}), got ${ordinary}`)
+
+  // Edge case: main's newest is later than "now" (clock skew, or another lane
+  // just merged a later real-time timestamp) -> bump main's newest by one second.
+  const skewed = suggestTimestamp("20260925120005", now)
   console.assert(
-    overflow === null,
-    `an NNN=999 newest timestamp must return null, got: ${overflow}`
+    skewed === "20260925120006",
+    `expected one second past main's newest, got ${skewed}`
+  )
+
+  console.assert(
+    /^\d{14}$/.test(ordinary) && /^\d{14}$/.test(skewed),
+    "suggestions must be 14-digit strings"
   )
 
   console.log("selfCheck: ok")
