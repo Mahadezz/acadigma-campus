@@ -533,6 +533,12 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "workspace_member_capabilities",
   "user_preferences",
   "device_registrations",
+  // F-OP-06 Part 1 (D-63) — seeded in
+  // supabase/migrations/20260925000900_staff_schema.sql, not the original
+  // audit-substrate migration (never edited after it applied).
+  "staff_records",
+  "staff_compensation",
+  "staff_documents",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
