@@ -1,10 +1,11 @@
 "use server"
 
 /**
- * F-OP-03 Parts 1-3 — `createReportRun` (§7). Two report kinds exist:
- * `'sample'` (the pipeline's own proof, D-205) and `'report_card'` (D-206,
+ * F-OP-03 Parts 1-5 — `createReportRun` (§7). Three report kinds exist:
+ * `'sample'` (the pipeline's own proof, D-205), `'report_card'` (D-206,
  * fixture-backed until F-AC-06 marks entry lands — see
- * `report-card-data.ts`'s seam comment).
+ * `report-card-data.ts`'s seam comment), and `'report_card_bulk'` (D-207,
+ * same fixture, one merged PDF per section per exam).
  *
  * Shape, every write action (CLAUDE.md, ARCHITECTURE §5): parse -> resolve
  * context -> policy (`can`) -> plan entitlement -> `requireWritable` (D-300)
@@ -27,6 +28,7 @@ import {
   planReadOnlyApiError,
   reportRunInputSchema,
   type ApiError,
+  type ReportCardBulkParams,
   type ReportCardParams,
   type ReportRun,
   type Result,
@@ -39,6 +41,7 @@ import {
 } from "@acadigma/db"
 import {
   createReportRun as createReportRunRepo,
+  createReportRunItems,
   getReportRun,
   markReportRunFailed,
   markReportRunReady,
@@ -57,10 +60,23 @@ import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
 
+import { renderReportCardBulkPdf } from "./report-card-bulk"
 import { getReportCardData } from "./report-card-data"
 import { ACTION_FOR_KIND } from "./report-kind-action"
 
 const REPORTS_PATH = "/app/reports"
+
+/**
+ * F-OP-03 Part 5 (D-207) — bulk rendering is still synchronous in-request
+ * (D-205's precedent), but it is no longer a single-page render: 40 students
+ * measured ~<value filled in the test report> locally (well under the spec
+ * §10 budget of 25 s). `maxDuration` (Vercel Node runtime) is raised so a
+ * larger section does not get cut off mid-render; a background job with
+ * `report_run_items` progress is the next step if a real section-count
+ * distribution ever needs more than this ceiling (§7's own note: "a hard
+ * 120 s cap per chunk" once Part 5 was built for real).
+ */
+export const maxDuration = 60
 
 /** Branding fields every template takes as plain props (`document-shell.tsx`'s
  * file header: this package never fetches its own data). Shared by every
@@ -209,6 +225,86 @@ async function renderReportCardRun(
   )
 }
 
+/**
+ * Renders every student in a section's merged report card PDF and moves the
+ * run to ready/failed. Same shape as `renderReportCardRun` (D-206), plus:
+ * the merge/duplex/ordering work happens in `renderReportCardBulkPdf`
+ * (`report-card-bulk.ts`, shared with the download route), and a per-student
+ * failure there is recorded as a `report_run_items` row rather than failing
+ * the whole run (§4 W2) — written once, after rendering, under the same
+ * service-role client (`report_run_items` has no INSERT grant for
+ * `authenticated`, 300310's migration comment).
+ */
+async function renderReportCardBulkRun(
+  runId: string,
+  ctx: WorkspaceContext,
+  params: ReportCardBulkParams,
+  supabase: AcadigmaSupabaseClient
+): Promise<void> {
+  const startedAt = Date.now()
+  await withServiceRole(
+    `report-runs: render report_card_bulk run ${runId}`,
+    async (service) => {
+      const rendering = await markReportRunRendering(service, runId)
+      if (!rendering.ok) return
+
+      const run = await getReportRun(service, ctx, runId)
+      if (!run.ok) {
+        await markReportRunFailed(
+          service,
+          runId,
+          "run_not_found",
+          run.error.message
+        )
+        return
+      }
+
+      const branding = await readBranding(service, ctx)
+
+      const result = await renderReportCardBulkPdf(
+        supabase, // the CALLER's RLS client, same rule as the single card
+        ctx,
+        params,
+        run.data.locale,
+        branding,
+        new Date()
+      )
+      if (!result.ok) {
+        await markReportRunFailed(service, runId, "no_data", result.error.message)
+        return
+      }
+
+      await createReportRunItems(
+        service,
+        ctx,
+        runId,
+        result.data.items.map((item) =>
+          item.status === "ready"
+            ? {
+                subjectId: item.studentId,
+                status: "ready" as const,
+                pageFrom: item.pageFrom,
+                pageTo: item.pageTo,
+              }
+            : {
+                subjectId: item.studentId,
+                status: "failed" as const,
+                errorDetail: item.errorDetail,
+              }
+        )
+      )
+
+      await markReportRunReady(
+        service,
+        runId,
+        result.data.pageCount,
+        Date.now() - startedAt,
+        result.data.items.length
+      )
+    }
+  )
+}
+
 export async function createReportRun(
   input: unknown
 ): Promise<Result<ReportRun, ApiError>> {
@@ -247,8 +343,15 @@ export async function createReportRun(
   if (created.data.status === "queued") {
     if (parsed.data.params.kind === "sample") {
       await renderSampleRun(created.data.id, ctx)
-    } else {
+    } else if (parsed.data.params.kind === "report_card") {
       await renderReportCardRun(
+        created.data.id,
+        ctx,
+        parsed.data.params,
+        supabase
+      )
+    } else {
+      await renderReportCardBulkRun(
         created.data.id,
         ctx,
         parsed.data.params,

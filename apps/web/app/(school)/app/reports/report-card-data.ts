@@ -11,6 +11,7 @@ import type { AcadigmaSupabaseClient, WorkspaceContext } from "@acadigma/db"
 import {
   buildClass6KaReportCards,
   FIXTURE_EXAM_ID,
+  FIXTURE_SECTION_ID,
   FIXTURE_STUDENT_IDS,
 } from "./report-card-fixture"
 
@@ -53,4 +54,36 @@ export async function getReportCardData(
   if (!dto)
     return err(apiError("not_found", "This student is not in the fixture."))
   return ok(dto)
+}
+
+/**
+ * F-OP-03 Part 5 (D-207) — resolves a section's student roster for bulk
+ * rendering. NOT the seam above: it never returns a `ReportCardDto` itself —
+ * the bulk render step still calls `getReportCardData` once per id this
+ * returns, the same seam every other caller uses. Today the only known
+ * section is the fixture's own Class 6-ক (`FIXTURE_SECTION_ID`), so this is
+ * fixture-only in exactly the same way and for exactly the same reason as
+ * `getReportCardData` — deleted alongside it once F-AC-06 Part 5 lands and
+ * a real `enrollments`-backed roster query takes its place.
+ */
+export async function getReportCardBulkStudentIds(
+  // Unused by the fixture; the real query reads through them.
+  _supabase: AcadigmaSupabaseClient,
+  _ctx: WorkspaceContext,
+  sectionId: string,
+  examId: string
+): Promise<Result<readonly string[], ApiError>> {
+  if (
+    process.env.NODE_ENV === "production" ||
+    sectionId !== FIXTURE_SECTION_ID ||
+    examId !== FIXTURE_EXAM_ID
+  ) {
+    return err(
+      apiError(
+        "not_found",
+        "This section has no report card data yet (fixture-only in this Part)."
+      )
+    )
+  }
+  return ok(FIXTURE_STUDENT_IDS)
 }

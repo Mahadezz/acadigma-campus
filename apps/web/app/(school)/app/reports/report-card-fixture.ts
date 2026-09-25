@@ -16,9 +16,16 @@ import { bandFor, BD_GRADE_BANDS, roundHalfUp } from "@acadigma/domain/grading"
  * exercised end to end. `getReportCardData` (`report-card-data.ts`) is the
  * one seam that looks these up; nothing else in the render path should
  * import this file directly.
+ *
+ * `FIXTURE_SECTION_ID` (F-OP-03 Part 5, D-207): all 40 fixture students are
+ * one section's roster (Class 6-ক), so bulk rendering's `sectionId` param
+ * resolves to this one fixed uuid — see `getReportCardBulkStudentIds` in
+ * `report-card-data.ts`.
  */
 
 export const FIXTURE_EXAM_ID = "00000000-6000-4000-9000-000000000000"
+
+export const FIXTURE_SECTION_ID = "00000000-6000-4000-7000-000000000000"
 
 export const FIXTURE_STUDENT_IDS: readonly string[] = Array.from(
   { length: 40 },

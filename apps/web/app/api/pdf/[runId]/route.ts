@@ -1,6 +1,6 @@
 /**
- * F-OP-03 §7 `GET /api/pdf/[runId]` — Parts 1-3: `'sample'` and
- * `'report_card'` (D-206).
+ * F-OP-03 §7 `GET /api/pdf/[runId]` — Parts 1-5: `'sample'`, `'report_card'`
+ * (D-206) and `'report_card_bulk'` (D-207).
  *
  * Shape: parse -> resolve context -> policy (`can`) -> fetch the run through
  * the CALLER's own RLS-scoped client (so a cross-tenant `runId` is simply
@@ -19,6 +19,7 @@ import { NextResponse } from "next/server"
 import {
   apiError,
   httpStatusForError,
+  reportCardBulkParamsSchema,
   reportCardParamsSchema,
   uuidSchema,
 } from "@acadigma/contracts"
@@ -32,6 +33,7 @@ import {
   SampleDocument,
 } from "@acadigma/pdf"
 
+import { renderReportCardBulkPdf } from "@/app/(school)/app/reports/report-card-bulk"
 import { getReportCardData } from "@/app/(school)/app/reports/report-card-data"
 import { ACTION_FOR_KIND } from "@/app/(school)/app/reports/report-kind-action"
 import { createClient } from "@/lib/supabase/server"
@@ -39,6 +41,11 @@ import { requireWorkspace } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
+// F-OP-03 Part 5 (D-207): a report_card_bulk download re-renders and
+// re-merges every student in the section (no stored PDF yet — item 11 of
+// the Parts 1-2 addendum), the same cost `createReportRun` paid once
+// already. Same ceiling as `actions.ts`'s `maxDuration`.
+export const maxDuration = 60
 
 export async function GET(
   _request: Request,
@@ -141,6 +148,30 @@ export async function GET(
         generatedAt,
       })
     )
+  } else if (run.data.kind === "report_card_bulk") {
+    const parsedParams = reportCardBulkParamsSchema.safeParse(run.data.params)
+    if (!parsedParams.success) {
+      const error = apiError("internal", "This report's params are invalid.")
+      return NextResponse.json(
+        { error },
+        { status: httpStatusForError(error.code) }
+      )
+    }
+    const merged = await renderReportCardBulkPdf(
+      supabase,
+      ctx,
+      parsedParams.data,
+      run.data.locale,
+      branding,
+      generatedAt
+    )
+    if (!merged.ok) {
+      return NextResponse.json(
+        { error: merged.error },
+        { status: httpStatusForError(merged.error.code) }
+      )
+    }
+    buffer = merged.data.buffer
   } else {
     buffer = await renderPdfToBuffer(
       SampleDocument({ locale: run.data.locale, ...branding, generatedAt })

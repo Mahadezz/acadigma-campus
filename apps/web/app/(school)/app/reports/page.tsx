@@ -14,6 +14,7 @@ import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
+import { GenerateReportCardBulkButton } from "./generate-report-card-bulk-button"
 import { GenerateReportCardButton } from "./generate-report-card-button"
 import { GenerateSampleButton } from "./generate-sample-button"
 
@@ -64,6 +65,18 @@ export default async function ReportsPage() {
           <GenerateReportCardButton
             t={{
               generateReportCard: r.generateReportCard,
+              generating: r.generating,
+              error: r.error,
+            }}
+          />
+        )}
+
+      {/* D-207: same fixture-only rule as report_card, for the whole section. */}
+      {process.env.NODE_ENV !== "production" &&
+        can(ctx.role, "report.render.report_card_bulk") && (
+          <GenerateReportCardBulkButton
+            t={{
+              generateReportCardBulk: r.generateReportCardBulk,
               generating: r.generating,
               error: r.error,
             }}

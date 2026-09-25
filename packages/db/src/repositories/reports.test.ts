@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   computeIdempotencyKey,
   createReportRun,
+  createReportRunItems,
   getReportRun,
   listReportRuns,
   markReportRunFailed,
@@ -358,6 +359,74 @@ describe("markReportRunRendering / markReportRunReady / markReportRunFailed", ()
       error: { message: "db down" },
     })
     const result = await markReportRunRendering(client, ROW.id)
+    expect(result.ok).toBe(false)
+  })
+
+  it("markReportRunReady sets item_count only when passed (bulk runs, D-207)", async () => {
+    const { client, calls } = fakeClient({ data: null, error: null })
+    await markReportRunReady(client, ROW.id, 80, 1000, 40)
+    const update = calls.find((c) => c.op === "update")
+    expect(update?.args[0]).toMatchObject({ page_count: 80, item_count: 40 })
+  })
+
+  it("markReportRunReady omits item_count entirely when not passed", async () => {
+    const { client, calls } = fakeClient({ data: null, error: null })
+    await markReportRunReady(client, ROW.id, 1, 42)
+    const update = calls.find((c) => c.op === "update") as
+      | { args: [Record<string, unknown>] }
+      | undefined
+    expect(update?.args[0]).not.toHaveProperty("item_count")
+  })
+})
+
+describe("createReportRunItems", () => {
+  it("inserts one row per item, scoped to the workspace and run", async () => {
+    const { client, calls } = fakeClient({ data: null, error: null })
+    const result = await createReportRunItems(client, CTX, ROW.id, [
+      { subjectId: "s1", status: "ready", pageFrom: 1, pageTo: 1 },
+      { subjectId: "s2", status: "failed", errorDetail: "no_marks" },
+    ])
+    expect(result.ok).toBe(true)
+    const insertCall = calls.find((c) => c.op === "insert")
+    expect(insertCall?.args[0]).toEqual([
+      {
+        workspace_id: CTX.workspaceId,
+        report_run_id: ROW.id,
+        subject_type: "student",
+        subject_id: "s1",
+        status: "ready",
+        page_from: 1,
+        page_to: 1,
+        error_detail: null,
+      },
+      {
+        workspace_id: CTX.workspaceId,
+        report_run_id: ROW.id,
+        subject_type: "student",
+        subject_id: "s2",
+        status: "failed",
+        page_from: null,
+        page_to: null,
+        error_detail: "no_marks",
+      },
+    ])
+  })
+
+  it("is a no-op for an empty item list", async () => {
+    const { client, calls } = fakeClient({ data: null, error: null })
+    const result = await createReportRunItems(client, CTX, ROW.id, [])
+    expect(result.ok).toBe(true)
+    expect(calls.find((c) => c.op === "insert")).toBeUndefined()
+  })
+
+  it("maps an insert error to dependency_unavailable", async () => {
+    const { client } = fakeClient({
+      data: null,
+      error: { message: "db down" },
+    })
+    const result = await createReportRunItems(client, CTX, ROW.id, [
+      { subjectId: "s1", status: "ready" },
+    ])
     expect(result.ok).toBe(false)
   })
 })
