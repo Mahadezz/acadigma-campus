@@ -773,3 +773,20 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
   - `grade_scales.code` and `is_default` are immutable to clients.
   - Band letters are unique case-insensitively.
   - Band audit rows are info-level.
+
+## D-402 — The audit trail reads as sentences: per-table nouns, no empty placeholders, no raw codes in the list · ACCEPTED · 2026-09-25
+
+**Context:** `/app/audit` (F-ID-09) rendered generic trigger rows as "Demo Owner updated a profiles record ()": the sentence template used the table name and a `({fields})` placeholder no caller ever filled. Unknown actions showed their raw code ("performed an unrecognised action (mystery.happened)"), and the desktop table's "Action" column printed the action code, although F-ID-09 §4.1 says the list shows sentences, not action strings. The owner saw this on the demo school; the dashboard (D-400) had to hide these rows.
+
+**Decision:**
+
+1. Generic sentences come from a per-table noun (`GENERIC_TABLE_NOUNS` in `packages/domain/src/audit/catalog.ts`, English and Bengali): "{actor} added a holiday", "{actor} updated a school setting", "{actor} removed a member". A table without a noun falls back to "a record", and a unit test fails until the noun is added, so a newly audited table cannot ship a raw name.
+2. `renderAuditSentence` never leaves a gap: a parenthetical whose value is missing is dropped, a missing subject or workspace gets a plain stand-in ("a member", "the school"), and spaces are collapsed. An unknown action reads "{actor} made a change" / "{actor} একটি পরিবর্তন করেছেন".
+3. The list, the desktop "Action" column, the detail sheet title and the correlation list all render the same sentence through `BnEnText`, so an English actor name inside a Bengali sentence gets the right font and line height. Digits stay Western.
+4. The detail sheet leads with the readable noun and keeps the raw table and row id as a muted technical reference, as F-ID-09 §4.1 intends. Changed-field names show with spaces instead of underscores.
+5. The SQL `audit_action_catalog` rows keep their original wording. No code reads those sentence columns, and the parity check covers action names and tables, not sentence text; changing them would need a migration for no visible effect.
+6. No permission change: the trail stays owner-only (`audit.read`).
+
+**Why:** the trail exists so an owner can answer "who changed what". A sentence with a table name and an empty "()" answers neither, and fixing it once in the renderer fixes every screen that shows audit events.
+
+**Consequences:** the dashboard's curated-only filter (`isCuratedAuditAction`, D-400) could now show generic rows too; it is left as is and can be relaxed in a later design pass. A future audited table adds its noun in the same PR (the unit test enforces it).

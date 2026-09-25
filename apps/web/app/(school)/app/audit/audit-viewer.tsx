@@ -7,15 +7,16 @@ import dynamic from "next/dynamic"
 import { FilterIcon } from "lucide-react"
 
 import type { AuditEventDto } from "@acadigma/contracts/audit"
-import { renderAuditSentence } from "@acadigma/domain/audit"
 import { Alert, AlertDescription } from "@acadigma/ui/components/alert"
 import { Avatar, AvatarFallback } from "@acadigma/ui/components/avatar"
 import { Button } from "@acadigma/ui/components/button"
+import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { DataList, DataListSkeleton } from "@acadigma/ui/primitives/data-list"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 
 import { getAuditEvent, listAuditEvents } from "./actions"
 import { AUDIT_FILTERS_DEFAULT } from "./schema"
+import { AuditSentence, auditSentence } from "./sentence"
 import { SeverityChip } from "./severity-chip"
 
 import type { AuditFilterFormValues } from "./schema"
@@ -187,10 +188,7 @@ export function AuditViewer({
           <span className="flex items-center gap-2">
             <SeverityChip severity={event.severity} />
             <span className="line-clamp-2">
-              {renderAuditSentence(event.action, language, {
-                actor: event.actorName,
-                subject: event.subjectName,
-              })}
+              <AuditSentence event={event} language={language} />
             </span>
           </span>
         )}
@@ -199,10 +197,7 @@ export function AuditViewer({
             type="button"
             onClick={() => openDetail(event)}
             className="focus-visible:ring-ring block w-full rounded-lg text-left outline-none focus-visible:ring-2"
-            aria-label={renderAuditSentence(event.action, language, {
-              actor: event.actorName,
-              subject: event.subjectName,
-            })}
+            aria-label={auditSentence(event, language)}
           >
             {children}
           </button>
@@ -218,7 +213,12 @@ export function AuditViewer({
                     {(event.actorName ?? "S").slice(0, 1).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                {event.actorName ?? (language === "bn" ? "সিস্টেম" : "System")}
+                <BnEnText
+                  text={
+                    event.actorName ??
+                    (language === "bn" ? "সিস্টেম" : "System")
+                  }
+                />
               </span>
             ),
           },
@@ -226,13 +226,20 @@ export function AuditViewer({
             key: "action",
             header: language === "bn" ? "কার্যক্রম" : "Action",
             hideOnCard: true,
-            cell: (event) => <code className="text-xs">{event.action}</code>,
+            // The sentence, not the raw action code (F-ID-09 §4.1); the code
+            // stays in the detail sheet for anyone who needs it.
+            cell: (event) => (
+              <AuditSentence event={event} language={language} />
+            ),
           },
           {
             key: "changedFields",
             header: language === "bn" ? "পরিবর্তিত ক্ষেত্র" : "Changed fields",
             hideOnCard: true,
-            cell: (event) => event.changedFields?.join(", ") ?? "—",
+            cell: (event) =>
+              event.changedFields
+                ?.map((f) => f.replace(/_/g, " "))
+                .join(", ") ?? "—",
           },
           {
             key: "time",
