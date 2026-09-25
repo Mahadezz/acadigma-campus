@@ -143,6 +143,7 @@ export type LogoProps = {
 export function Logo({ product, className }: LogoProps) {
   return (
     <span
+      // 17px / -0.02em deliberately match acadigma-website's wordmark, not our type scale.
       className={cn(
         "inline-flex min-w-0 items-center gap-2.5 text-[17px] font-medium tracking-[-0.02em]",
         className

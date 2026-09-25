@@ -191,7 +191,8 @@ than Hind Siliguri at the same size.
 - Inputs are 16px (`--text-md`) minimum. Anything smaller makes iOS Safari zoom
   the page and the user loses their place.
 
-Type scale (`tokens.css` §2): 11 · 12 · 13 · 16 · 16 · 18 · 22 · 28 · 36 px.
+Type scale (`tokens.css` §2): 11 · 12 · 13 · 16 · 18 · 22 · 28 · 36 px
+(`--text-md` is an alias of `--text-base` since D-68).
 `--text-base` is **16px** (D-68, the owner's "Blend" decision; it was 15px,
 which bought about four more characters per line in a student-name column).
 Dense tables still set `--text-sm` explicitly. Inputs are 16 as before.
@@ -395,6 +396,18 @@ by `border` plus a ring (one edge, not two).
 | `--shadow-overlay` | 1px ring in `--border-strong` | popovers, dropdowns, select menus, toasts.                                  |
 | `--shadow-sheet`   | upward shadow                 | the bottom sheet only — it slides over the page from the bottom edge.       |
 | `--shadow-nav`     | 1px rule                      | above the bottom nav, not a shadow.                                         |
+
+**Exemption:** Dialog and Sheet sit on a scrim and keep the registry's
+`border` plus `shadow-lg`; the ring rule covers cards and anything that
+floats over content without a scrim (popovers, dropdowns, select menus).
+
+**Forced colours (Windows High Contrast).** `forced-colors: active` removes
+every box-shadow, so a ring-only edge would vanish. `tokens.css` §11 gives
+those surfaces a `1px solid CanvasText` outline instead, keyed on
+`data-slot`: `card`, `choice-card`, `auth-card` (from `sm`, where it is a
+card), `popover-content`, `dropdown-menu-content`,
+`dropdown-menu-sub-content`, `select-content`. A new ring-only surface adds
+its `data-slot` to that list.
 
 Shadows are ink-tinted (D-57: `rgb(11 11 11 / …)` in light, matching
 acadigma-website's `shadow-input`; was the hue-272 neutral tint), never pure

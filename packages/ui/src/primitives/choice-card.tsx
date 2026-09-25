@@ -86,7 +86,7 @@ export function ChoiceCard({
 
   if (disabled) {
     return (
-      <div className={shared} aria-disabled="true">
+      <div data-slot="choice-card" className={shared} aria-disabled="true">
         {content}
       </div>
     )
@@ -94,14 +94,19 @@ export function ChoiceCard({
 
   if (href) {
     return (
-      <a href={href} className={shared}>
+      <a data-slot="choice-card" href={href} className={shared}>
         {content}
       </a>
     )
   }
 
   return (
-    <button type="button" onClick={onClick} className={shared}>
+    <button
+      data-slot="choice-card"
+      type="button"
+      onClick={onClick}
+      className={shared}
+    >
       {content}
     </button>
   )
