@@ -12,6 +12,7 @@ import {
   apiError,
   apiErrorFromZod,
   err,
+  planReadOnlyApiError,
   updateBrandingInputSchema,
   updateSchoolProfileInputSchema,
   type ApiError,
@@ -54,15 +55,7 @@ async function gateWrite(permission: Action): Promise<WriteGate> {
   }
   const supabase = await createClient()
   const writable = await requireWritable(ctx, supabase)
-  if (!writable.ok) {
-    return err(
-      apiError(
-        "payment_required",
-        writable.error.reason ??
-          "This workspace is read-only. Upgrade to make changes — nothing has been deleted."
-      )
-    )
-  }
+  if (!writable.ok) return err(planReadOnlyApiError(writable.error))
   return { ok: true, data: { ctx, supabase } }
 }
 
