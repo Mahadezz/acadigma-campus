@@ -20,13 +20,19 @@
  * PostgREST.
  *
  * Opt-in, same philosophy as the `E2E_LIVE_SUPABASE` journeys — needs a
- * local Supabase stack (`supabase start`, Docker Desktop running):
+ * local Supabase stack (`supabase start`, Docker Desktop running), then the
+ * URL and the two JWTs it prints (`supabase status` shows them again):
  *
- *   DB_LOCAL_SUPABASE=1 pnpm --filter @acadigma/db test
+ *   DB_LOCAL_SUPABASE=1 \
+ *   DB_LOCAL_SUPABASE_ANON_KEY=<ANON_KEY> \
+ *   DB_LOCAL_SUPABASE_SERVICE_KEY=<SERVICE_ROLE_KEY> \
+ *   pnpm --filter @acadigma/db test
  *
- * Not wired into CI: no CI job today runs a full Supabase stack with
- * PostgREST. See docs/features/02-academics/F-AC-01-classes-and-subjects.md
- * §11.
+ * No default keys in source on purpose (CLAUDE.md §"No secrets in the repo"
+ * — a gitleaks-shaped JWT string is one even when it is the well-known
+ * local-CLI demo value). Not wired into CI: no CI job today runs a full
+ * Supabase stack with PostgREST. See
+ * docs/features/02-academics/F-AC-01-academic-structure.md §11.
  */
 import { randomUUID } from "node:crypto"
 
@@ -40,30 +46,29 @@ import type { AcadigmaSupabaseClient } from "../client"
 import type { Database } from "../types.generated"
 import type { WorkspaceContext } from "../workspace-context"
 
-const RUN = process.env.DB_LOCAL_SUPABASE === "1"
 const URL = process.env.DB_LOCAL_SUPABASE_URL ?? "http://127.0.0.1:54321"
-// `supabase start`'s fixed local-CLI demo keys — the same on every machine,
-// not a secret. Overridable in case a lane's local stack differs.
-const ANON_KEY =
-  process.env.DB_LOCAL_SUPABASE_ANON_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
-const SERVICE_KEY =
-  process.env.DB_LOCAL_SUPABASE_SERVICE_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
+const ANON_KEY = process.env.DB_LOCAL_SUPABASE_ANON_KEY
+const SERVICE_KEY = process.env.DB_LOCAL_SUPABASE_SERVICE_KEY
+const RUN = process.env.DB_LOCAL_SUPABASE === "1" && !!ANON_KEY && !!SERVICE_KEY
 
 describe.skipIf(!RUN)(
   "getClassesOverview + listClassTeacherOptions (local Supabase, opt-in)",
   () => {
-    const serviceClient: AcadigmaSupabaseClient = createClient<Database>(
-      URL,
-      SERVICE_KEY,
-      { auth: { persistSession: false } }
-    )
-
+    // Constructed inside beforeAll, never at describe-body scope: vitest
+    // still evaluates a skipped suite's describe body (just not its hooks
+    // or tests), and createClient throws synchronously on an undefined key
+    // — exactly the case when RUN is false and these are unset.
+    let serviceClient: AcadigmaSupabaseClient
     let ctx: WorkspaceContext
     let userId: string
 
     beforeAll(async () => {
+      // RUN guarantees both keys are set; not narrowed by TS.
+      const anonKey = ANON_KEY as string
+      serviceClient = createClient<Database>(URL, SERVICE_KEY as string, {
+        auth: { persistSession: false },
+      })
+
       const email = `d102-regress-${randomUUID()}@test.local`
       const password = `Pw-${randomUUID()}-Aa1`
 
@@ -79,7 +84,7 @@ describe.skipIf(!RUN)(
       }
       userId = created.user.id
 
-      const anonClient = createClient<Database>(URL, ANON_KEY)
+      const anonClient = createClient<Database>(URL, anonKey)
       const { data: session, error: signInError } =
         await anonClient.auth.signInWithPassword({ email, password })
       if (signInError || !session.session) {
@@ -87,7 +92,7 @@ describe.skipIf(!RUN)(
       }
 
       // A real user JWT: `create_school_workspace` reads `auth.uid()`.
-      const userClient = createClient<Database>(URL, ANON_KEY, {
+      const userClient = createClient<Database>(URL, anonKey, {
         global: {
           headers: {
             Authorization: `Bearer ${session.session.access_token}`,
