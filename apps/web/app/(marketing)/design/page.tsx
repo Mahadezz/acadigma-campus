@@ -22,6 +22,12 @@ import {
 } from "@acadigma/ui/primitives/data-list"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
+import {
+  GridMark,
+  Logo,
+  PRODUCT_NAMES,
+  type MarkName,
+} from "@acadigma/ui/primitives/logo"
 import { MarkCell } from "@acadigma/ui/primitives/mark-cell"
 import { MoneyText } from "@acadigma/ui/primitives/money-text"
 import { schoolTeacherNav } from "@acadigma/ui/primitives/nav-config"
@@ -60,6 +66,14 @@ export default function DesignSmokePage() {
   }
   return <DesignSmoke />
 }
+
+const BRAND_MARKS: readonly MarkName[] = [
+  "acadigma",
+  "campus",
+  "ledger",
+  "students",
+  "parents",
+]
 
 const ATTENDANCE_STATUSES: readonly AttendanceStatus[] = [
   "present",
@@ -131,6 +145,24 @@ function DesignSmoke() {
       }
     >
       <div className="flex flex-col gap-10 pb-10">
+        <section aria-labelledby="logo-heading" className="flex flex-col gap-3">
+          <p className="eyebrow">Brand · D-68</p>
+          <h2 id="logo-heading" className="text-lg font-medium tracking-tight">
+            Logo
+          </h2>
+          <Logo product="campus" />
+          <ul className="flex flex-wrap gap-6" aria-label="Acadigma products">
+            {BRAND_MARKS.map((mark) => (
+              <li key={mark} className="flex flex-col items-center gap-2">
+                <GridMark mark={mark} className="size-10" />
+                <span className="text-muted-foreground text-xs">
+                  {mark === "acadigma" ? "Acadigma" : PRODUCT_NAMES[mark]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         <section
           aria-labelledby="status-chip-heading"
           className="flex flex-col gap-3"

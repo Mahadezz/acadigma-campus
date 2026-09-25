@@ -5,25 +5,29 @@ import { OnboardingShell } from "./onboarding-shell"
 
 describe("OnboardingShell", () => {
   it("renders the brand mark and children when there is no back link or progress", () => {
-    render(
+    const { container } = render(
       <OnboardingShell>
         <p>chooser content</p>
       </OnboardingShell>
     )
-    expect(screen.getByText("Acadigma Campus")).toBeInTheDocument()
+    // D-68: the Campus lockup (grid mark + "Acadigma Campus"), not plain text.
+    expect(container.querySelector("header")).toHaveTextContent(
+      "Acadigma Campus"
+    )
+    expect(container.querySelector('[data-mark="campus"]')).not.toBeNull()
     expect(screen.getByText("chooser content")).toBeInTheDocument()
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
   })
 
   it("renders a back link instead of the brand mark when backHref is given", () => {
-    render(
+    const { container } = render(
       <OnboardingShell backHref="/app" backLabel="Back to Ideal School">
         <p>content</p>
       </OnboardingShell>
     )
     const link = screen.getByRole("link", { name: /back to ideal school/i })
     expect(link).toHaveAttribute("href", "/app")
-    expect(screen.queryByText("Acadigma Campus")).not.toBeInTheDocument()
+    expect(container.querySelector('[data-mark="campus"]')).toBeNull()
   })
 
   it("renders an accessible progressbar with the right aria attributes", () => {
@@ -35,6 +39,17 @@ describe("OnboardingShell", () => {
     const bar = screen.getByRole("progressbar")
     expect(bar).toHaveAttribute("aria-valuenow", "2")
     expect(bar).toHaveAttribute("aria-valuemax", "5")
+  })
+
+  it("shows the step as a digits-only eyebrow, hidden from AT (D-68)", () => {
+    render(
+      <OnboardingShell progress={{ current: 2, total: 5 }} title="Step two">
+        <p>step 2</p>
+      </OnboardingShell>
+    )
+    const eyebrow = screen.getByText("02 / 05")
+    expect(eyebrow).toHaveClass("eyebrow")
+    expect(eyebrow).toHaveAttribute("aria-hidden", "true")
   })
 
   it("renders the title as an <h1>", () => {
