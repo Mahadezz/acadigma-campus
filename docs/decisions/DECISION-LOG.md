@@ -745,7 +745,8 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 5. **`room` is free text** until the `rooms` table lands (Part 3); **archive, not delete** (`archived_at`), for both tables.
 6. **The NCTB starter list** lives in `packages/domain/src/academic/structure.ts` and is copied into the school's own rows; running it twice adds nothing.
 7. **Permissions:** `academics.structure.read` (owner, admin, teacher, staff), `academics.section.write` and `academics.subject.write` (owner, admin). Parents read nothing here (T2); their view is F-AC-10.
-8. **Migration timestamps:** `20260925300203` sorts after main's newest (`20260925300201`, #42) and after #45's `20260925300202`.
+8. **Migration timestamps:** `20260925300303` sorts after main's newest (`20260925300301`, #43) and after #45's `20260925300302`. The three `add constraint ... unique (id, workspace_id)` statements are plain, not `CONCURRENTLY`: migrations run inside a transaction, where `CONCURRENTLY` is impossible, and these tables are tiny.
+9. **Review follow-ups (PR #47):** when a member stops being an active owner/admin/teacher (removed, or moved to staff/parent), `app.tg_members_release_class_teacher` clears them as class teacher of live sections (§4.5; archived sections keep their history). Sections and subjects are archive-only: no DELETE policy or grant. The NCTB starter list has Bangla and English as two papers each (marks are kept per paper), religion as one subject per faith, and "Physical Education and Health". A Bangla school is offered ক, খ … as section names.
 
 **Why:** the smallest slice that gives a demo school a real class list, without inventing shapes the later Parts would have to undo.
 

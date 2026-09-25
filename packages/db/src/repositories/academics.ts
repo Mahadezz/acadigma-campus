@@ -192,7 +192,11 @@ export async function createSection(
         )
       )
     }
-    if (error.message === "MEMBER_NOT_ELIGIBLE" || error.code === "23503") {
+    if (
+      error.message === "MEMBER_NOT_ELIGIBLE" ||
+      (error.code === "23503" &&
+        error.message.includes("sections_class_teacher_fkey"))
+    ) {
       return err(
         apiError(
           "validation_failed",
@@ -200,6 +204,15 @@ export async function createSection(
           {
             fieldErrors: { classTeacherId: ["MEMBER_NOT_ELIGIBLE"] },
           }
+        )
+      )
+    }
+    if (error.code === "23503") {
+      // The grade (or year) is not this school's: nothing the form can fix.
+      return err(
+        apiError(
+          "validation_failed",
+          "That class does not belong to this school."
         )
       )
     }

@@ -6,7 +6,7 @@ import { gradeStageSchema } from "./identity/school"
 /**
  * F-AC-01 demo cut (D-102) — sections and the subject catalogue. Enums
  * mirror `public.subject_category` / `public.subject_kind`
- * (20260925300103_sections_and_subjects.sql).
+ * (20260925300303_sections_and_subjects.sql).
  */
 
 export const subjectCategorySchema = z.enum([

@@ -246,6 +246,7 @@ function GradeCard({
         <>
           <AddSectionSheet
             t={t}
+            locale={locale}
             open={adding}
             onOpenChange={setAdding}
             grade={grade}
@@ -268,6 +269,7 @@ function GradeCard({
 
 function AddSectionSheet({
   t,
+  locale,
   open,
   onOpenChange,
   grade,
@@ -275,6 +277,7 @@ function AddSectionSheet({
   teachers,
 }: {
   t: T
+  locale: Locale
   open: boolean
   onOpenChange: (open: boolean) => void
   grade: GradeWithSections
@@ -344,7 +347,10 @@ function AddSectionSheet({
             name="name"
             required
             maxLength={20}
-            defaultValue={nextSectionName(grade.sections.map((s) => s.name))}
+            defaultValue={nextSectionName(
+              grade.sections.map((s) => s.name),
+              locale
+            )}
             className="h-11"
           />
         </div>

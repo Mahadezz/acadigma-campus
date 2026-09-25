@@ -106,14 +106,14 @@ describe("seedStarterSubjects", () => {
     mockListSubjects.mockResolvedValue({
       ok: true,
       data: [
-        { name: "bangla", code: null },
+        { name: "bangla 1st paper", code: null },
         { name: "Maths (custom)", code: "MATH" },
       ],
     })
     await seedStarterSubjects()
     const inserted = mockCreateSubjects.mock.calls[0]?.[2] as { code: string }[]
     expect(inserted).toHaveLength(NCTB_STARTER_SUBJECTS.length - 2)
-    expect(inserted.map((s) => s.code)).not.toContain("BAN")
+    expect(inserted.map((s) => s.code)).not.toContain("BAN1")
     expect(inserted.map((s) => s.code)).not.toContain("MATH")
   })
 

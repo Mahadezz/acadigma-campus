@@ -75,7 +75,7 @@ Index: `unique (workspace_id, name)`.
 
 **Private files.** None in this feature.
 
-**Seeds.** `supabase/seed/bd-defaults.sql` supplies, as _copies into the workspace_ (never cross-tenant references): 16 grade levels (Play, Nursery, KG, Class 1–12 with ordinals −3…12 and Bengali names) and an NCTB starter subject catalogue (Bangla, English, Mathematics, Science, Bangladesh & Global Studies, ICT, Religion & Moral Education, Physical Education, Agriculture, Home Science, Higher Mathematics, Physics, Chemistry, Biology, Accounting, Business Entrepreneurship, Economics), with board variants NCTB / Madrasah / Cambridge / Edexcel.
+**Seeds.** (Demo cut: the list lives in `packages/domain/src/academic/structure.ts` and uses two papers for Bangla and English, and one religion subject per faith — D-102.) `supabase/seed/bd-defaults.sql` supplies, as _copies into the workspace_ (never cross-tenant references): 16 grade levels (Play, Nursery, KG, Class 1–12 with ordinals −3…12 and Bengali names) and an NCTB starter subject catalogue (Bangla, English, Mathematics, Science, Bangladesh & Global Studies, ICT, Religion & Moral Education, Physical Education, Agriculture, Home Science, Higher Mathematics, Physics, Chemistry, Biology, Accounting, Business Entrepreneurship, Economics), with board variants NCTB / Madrasah / Cambridge / Edexcel.
 
 ## 4. Workflows
 
@@ -211,6 +211,7 @@ Typed read selectors exported for other features: `listSections(ctx, {yearId, gr
 
 ### Status / deviations recorded 2026-09-25 (demo cut, D-102)
 
-- **Built:** `sections` and `subjects` (migration `20260925300203_sections_and_subjects.sql`, pgTAP `32_sections_and_subjects.sql`), `/app/classes` with a card per grade (add section with class teacher, room, capacity; archive) and a Subjects tab (add subject; "Use the NCTB starter list"), in English and Bangla. Grade levels and the current academic year come from the create-school wizard (F-ID-05 Part 4, D-100).
+- **Built:** `sections` and `subjects` (migration `20260925300303_sections_and_subjects.sql`, pgTAP `32_sections_and_subjects.sql`), `/app/classes` with a card per grade (add section with class teacher, room, capacity; archive) and a Subjects tab (add subject; "Use the NCTB starter list"), in English and Bangla. Grade levels and the current academic year come from the create-school wizard (F-ID-05 Part 4, D-100).
 - **Deviations from §3:** `sections.room` is text until `rooms` exists; no `shift`, `stream`, `student_count` or `is_active` yet (archive via `archived_at`); `subjects` has no `counts_in_gpa`, `credit`, `default_full_marks` or `colour` yet. `grade_levels` uses `level_number`/`stage` (D-100), not `code`/`ordinal`. Section names are unique ignoring case.
 - **Not built yet:** terms and `app.current_term()` (Part 1), rooms (Part 3), `grade_level_subjects` (Part 4), section-subjects and teacher assignments (Part 5), the setup wizard (Part 6), the grade detail and section detail routes (the demo cut shows everything on `/app/classes`).
+- **Review follow-ups (PR #47):** the §4.5 orphaning trigger ships for class teachers (section-subject teachers come with Part 5); sections and subjects are archive-only; the starter list uses per-paper Bangla/English and per-faith religion subjects; Bangla schools get ক/খ section suggestions. Journey `apps/web/e2e/journeys/add-section-and-assign-teacher.spec.ts` (skip-gated on OQ-27).
