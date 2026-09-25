@@ -543,6 +543,9 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // supabase/migrations/20260925300101_create_school_workspace.sql.
   "grade_levels",
   "academic_years",
+  // F-AC-11 Part 1 (D-202) — 20260925300301_school_calendar.sql.
+  "holidays",
+  "working_day_overrides",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
