@@ -18,7 +18,7 @@
 
 ## 2. Environment
 
-Migration head `20260925300200_readonly_join_check.sql`. pgTAP is CI-only (no local Docker).
+Migration head `20260925300201_readonly_join_check.sql`. pgTAP is CI-only (no local Docker).
 
 ## 3. Unit
 
@@ -32,5 +32,5 @@ No TypeScript changed. Local gate (format, typecheck, lint, test, `scripts/check
 
 | #   | Issue                                                                                                                     | Severity | Ship anyway?                             |
 | --- | ------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------- |
-| 1   | The migration uses the lane-digit name `20260925300200`, not real UTC time: today's real time sorts before D-300's file.  | low      | yes — D-301 (3); real time from tomorrow |
+| 1   | The migration uses the lane-digit name `20260925300201`, not real UTC time: today's real time sorts before D-300's file.  | low      | yes — D-301 (3); real time from tomorrow |
 | 2   | CI still does not run `supabase db reset` with the seed; `51_` applies it inside a rolled-back pgTAP transaction instead. | low      | yes                                      |
