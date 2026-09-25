@@ -24,6 +24,7 @@ test.describe("design smoke — packages/ui primitives", () => {
     )
 
     for (const heading of [
+      "Logo",
       "StatusChip",
       "MoneyText",
       "AttendanceToggle",
@@ -38,6 +39,19 @@ test.describe("design smoke — packages/ui primitives", () => {
         page.getByRole("heading", { level: 2, name: heading })
       ).toBeVisible()
     }
+
+    // Logo (D-68): the Campus lockup and every Acadigma product mark.
+    const products = page.getByRole("list", { name: "Acadigma products" })
+    for (const name of [
+      "Acadigma",
+      "Campus",
+      "Ledger",
+      "Students",
+      "Parents",
+    ]) {
+      await expect(products.getByText(name, { exact: true })).toBeVisible()
+    }
+    await expect(products.locator("svg[data-mark]")).toHaveCount(5)
 
     // StatusChip: every attendance status renders its glyph + name.
     await expect(page.getByText("Present").first()).toBeVisible()
