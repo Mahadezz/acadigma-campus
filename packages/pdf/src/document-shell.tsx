@@ -112,9 +112,13 @@ export type ReportShellProps = {
   children: ReactNode
 }
 
-/** True for a run of Bengali-block codepoints, so mixed strings pick the right font per run. */
+/**
+ * True for a run of Bengali-block codepoints, so mixed strings pick the right font per run.
+ * Includes the danda/double danda (U+0964/U+0965): they live in the Devanagari block
+ * but end every Bengali sentence, and Inter has no glyph for them (tofu box).
+ */
 function isBengaliRun(text: string): boolean {
-  return /[ঀ-৿]/.test(text)
+  return /[।॥ঀ-৿]/.test(text)
 }
 
 /** Splits `text` into alternating Bengali/non-Bengali runs, each tagged with the font it needs. */
