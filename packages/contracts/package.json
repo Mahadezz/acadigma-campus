@@ -6,6 +6,7 @@
   "description": "Zod schemas and inferred types shared by UI, server actions, jobs and tests.",
   "exports": {
     ".": "./src/index.ts",
+    "./academics/attendance": "./src/academics/attendance.ts",
     "./academics/structure": "./src/academics/structure.ts",
     "./academics/students": "./src/academics/students.ts",
     "./errors": "./src/errors.ts",

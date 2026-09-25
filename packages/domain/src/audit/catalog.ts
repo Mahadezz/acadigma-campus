@@ -630,7 +630,10 @@ export const GENERIC_TABLE_NOUNS: Readonly<
   },
   guardians: { en: "a guardian", bn: "একজন অভিভাবক" },
   enrollments: { en: "an enrolment", bn: "একটি ভর্তি" },
-  attendance_sessions: { en: "a class's attendance", bn: "একটি শ্রেণির হাজিরা" },
+  attendance_sessions: {
+    en: "a class's attendance",
+    bn: "একটি শ্রেণির হাজিরা",
+  },
   attendance_records: {
     en: "a student's attendance",
     bn: "একজন শিক্ষার্থীর হাজিরা",
