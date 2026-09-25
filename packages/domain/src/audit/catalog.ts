@@ -539,6 +539,9 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "staff_records",
   "staff_compensation",
   "staff_documents",
+  // F-AC-11 Part 1 (D-202) — 20260925300102_school_calendar.sql.
+  "holidays",
+  "working_day_overrides",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
