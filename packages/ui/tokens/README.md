@@ -132,7 +132,7 @@ Calibrate with a `@font-face` override rather than a per-component font-size:
 ```
 
 Calibration string (put it in the Storybook a11y page and compare x-heights at
-15px, light and dark):
+16px, light and dark):
 
 ```
 ষষ্ঠ শ্রেণি – A · Room 204 · উপস্থিত ৳১,২৫০ 98.5%

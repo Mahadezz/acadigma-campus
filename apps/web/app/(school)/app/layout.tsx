@@ -1,10 +1,12 @@
 import { BellIcon } from "lucide-react"
 
+import { planReadOnlyApiError } from "@acadigma/contracts"
 import { requireWritable } from "@acadigma/db"
 import { getNavConfig, type NavConfig } from "@acadigma/domain/nav"
 import { Button } from "@acadigma/ui/components/button"
 import { AppShell } from "@acadigma/ui/primitives/app-shell"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
+import { Logo } from "@acadigma/ui/primitives/logo"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
 
 import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
@@ -81,7 +83,7 @@ export default async function SchoolLayout({
               t={t.workspace.switcher}
             />
           }
-          title="Acadigma Campus"
+          title={<Logo product="campus" />}
           subtitle={`Signed in as ${ctx.role}`}
           actions={
             <Button variant="ghost" size="icon" aria-label="Notifications">
@@ -93,16 +95,15 @@ export default async function SchoolLayout({
     >
       {writable.ok ? null : (
         // F-CM-06 Part 4 (D-62): a Pro trial past trial_ends_at (or any other
-        // access_mode=read_only cause) shows here, on every screen — reads,
-        // exports, edits and deletes still work; only creating something new is
-        // blocked (§5.6), which the reason text below explains.
+        // access_mode=read_only cause) shows here, on every screen. D-300: every
+        // write is refused (server action and database); reads, exports, billing,
+        // sign-out and removing access still work.
         <InlineAlert
           tone="error"
           title="This workspace is read-only"
           className="mb-4"
         >
-          {writable.error.reason ??
-            "Upgrade to keep adding new records — nothing has been deleted."}
+          {planReadOnlyApiError(writable.error).message}
         </InlineAlert>
       )}
       {children}

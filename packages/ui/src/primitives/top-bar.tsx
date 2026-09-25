@@ -47,7 +47,7 @@ export function TopBar({
         ) : null}
 
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base leading-tight font-semibold sm:text-lg">
+          <h1 className="truncate text-base leading-tight font-medium tracking-tight sm:text-lg">
             {title}
           </h1>
           {subtitle ? (

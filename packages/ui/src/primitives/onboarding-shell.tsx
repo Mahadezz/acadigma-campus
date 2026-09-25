@@ -4,6 +4,8 @@ import { ChevronLeftIcon } from "lucide-react"
 
 import { cn } from "../lib/utils"
 
+import { Logo } from "./logo"
+
 /**
  * F-ID-05 §6: the frame every onboarding screen renders inside — the
  * chooser (Part 2) and the create-school wizard's five steps (Parts 3-4),
@@ -92,9 +94,7 @@ export const OnboardingShell = React.forwardRef<
             {backLabel}
           </a>
         ) : (
-          <span className="text-sm font-semibold tracking-tight">
-            Acadigma Campus
-          </span>
+          <Logo product="campus" />
         )}
         {actions}
       </header>
@@ -119,11 +119,21 @@ export const OnboardingShell = React.forwardRef<
         </div>
       ) : null}
 
+      {progress ? (
+        // D-68 eyebrow: the step count as digits, so it needs no copy in
+        // either locale; hidden from AT because the progressbar above
+        // already announces it.
+        <p className="eyebrow mb-2" aria-hidden="true">
+          {String(progress.current).padStart(2, "0")} /{" "}
+          {String(progress.total).padStart(2, "0")}
+        </p>
+      ) : null}
+
       {title ? (
         <h1
           ref={ref}
           tabIndex={-1}
-          className="mb-6 text-xl font-bold tracking-tight outline-none sm:text-2xl"
+          className="mb-6 text-2xl font-medium tracking-tight outline-none sm:text-3xl"
         >
           {title}
         </h1>
