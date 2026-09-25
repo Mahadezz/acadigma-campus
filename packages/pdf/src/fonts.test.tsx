@@ -20,9 +20,8 @@ import { fileURLToPath } from "node:url"
 
 import { describe, expect, it } from "vitest"
 
-import { SampleDocument } from "./templates/sample"
-
 import { renderPdfToBuffer } from "./render"
+import { SampleDocument } from "./templates/sample"
 
 const FONTS_TS_PATH = fileURLToPath(new URL("./fonts.ts", import.meta.url))
 
