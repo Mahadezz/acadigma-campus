@@ -24,4 +24,12 @@ regexes = [
   '''0b6f4a8e-3c1d-4e2a-9f7b-5d8c6e4a2b10''',
   # F-AC-02 tests: the same kind of fixed idempotency key (quick admit).
   '''5f0c2a1e-8b7d-4c3a-9e6f-1a2b3c4d5e6f''',
+  # `supabase start`'s fixed local-CLI demo JWTs (anon + service_role) — the
+  # same public values on every machine running the Supabase CLI, never a
+  # real project's key. An earlier commit on fix/academics-classes-profile-
+  # embed (PR #61) used them as source defaults; they were since removed
+  # from source (DB_LOCAL_SUPABASE_ANON_KEY / _SERVICE_KEY are now required
+  # env vars with no default), but gitleaks still scans that commit's history.
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9\.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0''',
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0\.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU''',
 ]
