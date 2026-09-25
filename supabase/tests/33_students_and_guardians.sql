@@ -11,7 +11,7 @@
 -- (guardian phone masked, one correlation id per admission).
 -- =====================================================================
 begin;
-select plan(52);
+select plan(55);
 
 create schema if not exists tests;
 
@@ -299,6 +299,11 @@ select throws_ok(
             'f1030000-0000-0000-0000-000000000003')$$,
   '42501', 'new row violates row-level security policy for table "guardians"',
   'escalation: a teacher cannot add a guardian');
+select is(
+  (select string_agg(grade_name || ' – ' || section_name || ' #' || roll_number, ', ' order by section_name, roll_number)
+     from public.student_roster where workspace_id = (select id from ids where label = 'a')),
+  'Class 6 – ক #1, Class 6 – ক #2, Class 6 – খ #2',
+  'the roster view gives a subject teacher class, section and roll');
 update public.students set first_name = 'Hacked' where workspace_id = (select id from ids where label = 'a');
 update public.enrollments set roll_number = 99 where workspace_id = (select id from ids where label = 'a');
 select tests.logout();
@@ -323,6 +328,8 @@ select is((select count(*)::int from public.students where workspace_id = (selec
 select tests.logout();
 
 select tests.login('f1030000-0000-0000-0000-000000000006');
+select is((select count(*)::int from public.student_roster where workspace_id = (select id from ids where label = 'a')),
+  0, 'isolation: the roster view shows another school''s owner nothing');
 select is((select count(*)::int from public.students where workspace_id = (select id from ids where label = 'a'))
         + (select count(*)::int from public.student_private_details where workspace_id = (select id from ids where label = 'a'))
         + (select count(*)::int from public.guardians where workspace_id = (select id from ids where label = 'a'))
@@ -381,6 +388,7 @@ select ok(not has_table_privilege('anon', 'public.students', 'select')
           and not has_table_privilege('anon', 'public.guardians', 'select')
           and not has_table_privilege('anon', 'public.enrollments', 'select'),
   'anon has no privilege on students, private details, guardians or enrolments');
+select ok(not has_table_privilege('anon', 'public.student_roster', 'select'), 'anon cannot read the roster view');
 select ok(not has_function_privilege('anon', 'public.admit_student(uuid, jsonb)', 'execute'),
   'anon cannot call admit_student');
 select is(

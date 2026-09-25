@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./academics/structure": "./src/academics/structure.ts",
+    "./academics/students": "./src/academics/students.ts",
     "./errors": "./src/errors.ts",
     "./result": "./src/result.ts",
     "./common": "./src/common.ts",

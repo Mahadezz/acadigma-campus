@@ -1,3 +1,4 @@
 export * from "./gradeLevels"
 export * from "./structure"
+export * from "./students"
 export * from "./year"

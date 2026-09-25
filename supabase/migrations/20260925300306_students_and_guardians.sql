@@ -353,6 +353,43 @@ grant select, insert, update, delete on public.guardians to authenticated;
 grant select, update on public.enrollments to authenticated;
 
 -- ---------------------------------------------------------------------
+-- student_roster — the roster projection (§4.9): a student with their
+-- live enrolment's section and roll. security_invoker, so it shows only
+-- what the caller's own RLS on every joined table allows; it carries no
+-- private field by construction.
+-- ---------------------------------------------------------------------
+create or replace view public.student_roster
+with (security_invoker = true) as
+select st.id,
+       st.workspace_id,
+       st.student_code,
+       st.full_name,
+       st.full_name_bn,
+       st.gender,
+       st.status,
+       st.deleted_at,
+       e.section_id,
+       e.roll_number,
+       se.name        as section_name,
+       g.name         as grade_name,
+       g.name_bn      as grade_name_bn,
+       g.level_number as grade_level_number
+  from public.students st
+  left join public.enrollments e
+    on e.student_id = st.id and e.status = 'active'
+  left join public.sections se on se.id = e.section_id
+  left join public.grade_levels g on g.id = se.grade_level_id;
+
+comment on view public.student_roster is
+  'F-AC-02 §4.9 (D-103): students with their active enrolment, for the '
+  'roster and search. security_invoker: the caller''s RLS applies to every '
+  'joined table. No private column. A student with active enrolments in two '
+  'years (after promotion, before the old one closes) appears once per year.';
+
+revoke all on public.student_roster from anon, authenticated;
+grant select on public.student_roster to authenticated;
+
+-- ---------------------------------------------------------------------
 -- public.admit_student — F-AC-02 §4.1 quick admit, one transaction.
 -- ---------------------------------------------------------------------
 create or replace function public.admit_student(p_workspace_id uuid, p_input jsonb)
