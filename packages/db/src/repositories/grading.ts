@@ -110,7 +110,9 @@ const SAVE_ERRORS: Record<string, ApiError> = {
 
 /** `public.save_grade_scale` — renames the scale and replaces its bands atomically. */
 export async function saveGradeScale(
-  ctx: WorkspaceContext,
+  // RLS on the scale row is the tenancy check; the context is taken for the
+  // repository convention (CLAUDE.md rule 6).
+  _ctx: WorkspaceContext,
   client: AcadigmaSupabaseClient,
   input: SaveGradeScaleInput
 ): Promise<Result<{ scaleId: string }, ApiError>> {
