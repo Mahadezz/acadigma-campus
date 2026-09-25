@@ -514,7 +514,7 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn:
       "সিস্টেমটি ধরে রাখার মেয়াদ পার হওয়া {n}টি অডিট ইভেন্ট মুছে ফেলেছে",
     isGeneric: false,
-  },  // F-AC-06 Part 3 (D-304) — one paper-level event per save_marks.
+  }, // F-AC-06 Part 3 (D-304) — one paper-level event per save_marks.
   {
     action: "marks.entered",
     severity: "info",
