@@ -55,7 +55,7 @@ export function importErrorText(t: T, error: ApiError): string {
 }
 
 function rowErrorText(t: T, row: ImportReportRow, e: ImportRowError): string {
-  const message = t.rowErrors[e.code]
+  const message = fill(t.rowErrors[e.code], { code: row.student_code ?? "" })
   if (!e.column) return message
   const typed = row.raw?.[e.column]
   return `${t.columns[e.column]}: ${message}${typed ? ` (“${typed}”)` : ""}`

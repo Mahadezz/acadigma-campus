@@ -7,13 +7,7 @@ import { uuidSchema } from "../common"
  * 20260925300316_student_import_batches.sql.
  */
 
-export const importStatusSchema = z.enum([
-  "validating",
-  "preview",
-  "importing",
-  "completed",
-  "failed",
-])
+export const importStatusSchema = z.enum(["preview", "importing", "completed"])
 export type ImportStatus = z.infer<typeof importStatusSchema>
 
 /** D-106: the spec's 5 MB does not fit a server action body (1 MB), and
@@ -77,6 +71,8 @@ export const importRowErrorCodeSchema = z.enum([
   "duplicate_roll",
   "invalid_relation",
   "invalid_phone",
+  "already_admitted",
+  "duplicate_in_file",
   "VALIDATION",
   "ROLL_TAKEN",
   "SECTION_NOT_FOUND",

@@ -21,6 +21,7 @@ import {
 import {
   createImportBatch,
   getClassesOverview,
+  listImportExistingStudents,
   requireWritable,
   runImportBatch,
 } from "@acadigma/db"
@@ -59,8 +60,12 @@ export async function previewStudentImport(
   const table = await readSheetFile(file instanceof File ? file : null)
   if (!Array.isArray(table)) return err(fileError(table.fileError))
 
-  const overview = await getClassesOverview(supabase, ctx)
+  const [overview, existing] = await Promise.all([
+    getClassesOverview(supabase, ctx),
+    listImportExistingStudents(supabase, ctx),
+  ])
   if (!overview.ok) return overview
+  if (!existing.ok) return existing
   const sections = overview.data.grades.flatMap((g) =>
     g.sections.map((s) => ({
       id: s.id,
@@ -71,7 +76,12 @@ export async function previewStudentImport(
     }))
   )
 
-  const checked = validateStudentImport(table, sections, todayIn())
+  const checked = validateStudentImport(
+    table,
+    sections,
+    todayIn(),
+    existing.data
+  )
   if (!checked.ok) {
     return err(fileError(checked.fileError, checked.missingColumns))
   }

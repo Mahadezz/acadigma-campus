@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { STUDENT_IMPORT_COLUMNS } from "@acadigma/contracts"
 
 import {
+  classLevel,
   parseImportDate,
   validateStudentImport,
   type ImportSectionOption,
@@ -189,5 +190,79 @@ describe("validateStudentImport", () => {
     expect(
       validateStudentImport([HEADER, ...many], SECTIONS, TODAY)
     ).toMatchObject({ fileError: "too_many_rows" })
+  })
+
+  it("marks a student already on this year's roster, and a repeat within the file", () => {
+    const existing = [
+      {
+        sectionId: KA,
+        name: "rahim uddin",
+        dateOfBirth: "2014-03-09",
+        studentCode: "STU-2026-00007",
+      },
+    ]
+    const result = validateStudentImport(
+      [HEADER, good, row({ 0: "Karim" }), row({ 0: "karim " })],
+      SECTIONS,
+      TODAY,
+      existing
+    )
+    if (!result.ok) throw new Error(result.fileError)
+    expect(
+      result.report.rows.map((r) => [
+        r.errors[0]?.code ?? r.status,
+        r.student_code,
+      ])
+    ).toEqual([
+      ["already_admitted", "STU-2026-00007"],
+      ["valid", undefined],
+      ["duplicate_in_file", undefined],
+    ])
+  })
+
+  it("matches a class written the ways real registers write it", () => {
+    for (const klass of [
+      "Class Six",
+      "six",
+      "6th",
+      "VI",
+      "Class 6",
+      "৬",
+      "ষষ্ঠ",
+      "ষষ্ঠ শ্রেণি",
+    ]) {
+      expect(validate([row({ 5: klass })]).report.rows[0]?.status, klass).toBe(
+        "valid"
+      )
+    }
+    expect(classLevel("Grade 12")).toBe(12)
+    expect(classLevel("XI")).toBe(11)
+    expect(classLevel("ক")).toBeNull()
+  })
+
+  it("puts back the leading 0 Excel drops from a mobile number", () => {
+    expect(
+      validate([row({ 10: "1712345678" })]).report.rows[0]?.input?.guardian
+        .phone
+    ).toBe("+8801712345678")
+  })
+
+  it("finds the header below title rows and keeps spreadsheet line numbers", () => {
+    const result = validateStudentImport(
+      [
+        ["Ideal School — Class 6 register"],
+        [""],
+        HEADER,
+        good,
+        row({ 3: "x" }),
+      ],
+      SECTIONS,
+      TODAY
+    )
+    if (!result.ok) throw new Error(result.fileError)
+    expect(result.report.rows.map((r) => [r.line, r.status])).toEqual([
+      [4, "valid"],
+      [5, "error"],
+    ])
   })
 })

@@ -27,6 +27,24 @@ export type ImportSectionOption = {
   sectionName: string
 }
 
+/** A student already actively enrolled this year, keyed like a row. */
+export type ImportExistingStudent = {
+  sectionId: string
+  /** `lower(first_name || ' ' || last_name)` */
+  name: string
+  dateOfBirth: string
+  studentCode: string
+}
+
+/** How a row is recognised as the same student: section, name, birthday. */
+export function studentKey(
+  sectionId: string,
+  name: string,
+  dateOfBirth: string
+): string {
+  return `${sectionId}|${name.normalize("NFC").trim().toLowerCase()}|${dateOfBirth}`
+}
+
 export type StudentImportValidation =
   | {
       ok: false
@@ -87,6 +105,49 @@ const RELATIONS = lookup<GuardianRelation>({
   other: ["অন্যান্য"],
 })
 
+const NUMBER_WORDS = [
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+]
+const ROMAN = [
+  "i",
+  "ii",
+  "iii",
+  "iv",
+  "v",
+  "vi",
+  "vii",
+  "viii",
+  "ix",
+  "x",
+  "xi",
+  "xii",
+]
+const SHRENI = /(শ্রেণি|শ্রেণী)$/u
+
+/** "6", "Class 6", "6th", "Six", "Class Six", "VI", "৬" → 6; else null. */
+export function classLevel(value: string): number | null {
+  const v = norm(westernDigits(value))
+    .replace(/^(class|grade)/, "")
+    .replace(SHRENI, "")
+  const n = /^(\d{1,2})(st|nd|rd|th)?$/.exec(v)
+  if (n) return Number(n[1])
+  const word = NUMBER_WORDS.indexOf(v)
+  if (word >= 0) return word + 1
+  const roman = ROMAN.indexOf(v)
+  return roman >= 0 ? roman + 1 : null
+}
+
 /** `YYYY-MM-DD`, or `DD/MM/YYYY` (also `-` or `.`), the way Bangladesh
  * writes dates. Null when it is not a real calendar date. */
 export function parseImportDate(value: string): string | null {
@@ -130,6 +191,12 @@ function headerIndex(header: string[]): {
   return { index, ignored }
 }
 
+/** A mobile typed into a number cell loses its leading 0 (1712345678). */
+function phoneCell(value: string): string {
+  const v = westernDigits(value)
+  return /^1[3-9]\d{8}$/.test(v) ? `0${v}` : v
+}
+
 /** Zod paths of `quickAdmitInputSchema` → template columns. */
 const PATH_COLUMN: Record<string, StudentImportColumn> = {
   firstName: "first_name",
@@ -147,9 +214,16 @@ const PATH_COLUMN: Record<string, StudentImportColumn> = {
 export function validateStudentImport(
   table: string[][],
   sections: ImportSectionOption[],
-  today: string
+  today: string,
+  existing: ImportExistingStudent[] = []
 ): StudentImportValidation {
-  const [header, ...body] = table
+  // The header is the first of the top 10 rows naming ≥ 3 template
+  // columns (registers often start with a school name or a title).
+  const headerAt = Math.max(
+    0,
+    table.slice(0, 10).findIndex((row) => headerIndex(row).index.size >= 3)
+  )
+  const header = table[headerAt]
   if (!header) return { ok: false, fileError: "empty" }
   const { index, ignored } = headerIndex(header)
   const missingColumns = STUDENT_IMPORT_COLUMNS.map((c) => c.key).filter(
@@ -159,8 +233,9 @@ export function validateStudentImport(
     return { ok: false, fileError: "missing_columns", missingColumns }
   }
 
-  const lines = body
-    .map((cells, i) => ({ cells, line: i + 2 }))
+  const lines = table
+    .map((cells, i) => ({ cells, line: i + 1 }))
+    .slice(headerAt + 1)
     .filter(({ cells }) => cells.some((cell) => cell.trim() !== ""))
   if (lines.length === 0) return { ok: false, fileError: "empty" }
   if (lines.length > STUDENT_IMPORT_MAX_ROWS) {
@@ -168,6 +243,13 @@ export function validateStudentImport(
   }
 
   const rollsSeen = new Set<string>()
+  const onRoster = new Map(
+    existing.map((e) => [
+      studentKey(e.sectionId, e.name, e.dateOfBirth),
+      e.studentCode,
+    ])
+  )
+  const inFile = new Set<string>()
   const rows = lines.map(({ cells, line }): ImportReportRow => {
     const cell = (key: StudentImportColumn): string => {
       const i = index.get(key)
@@ -209,11 +291,13 @@ export function validateStudentImport(
     let sectionId: string | undefined
     if (cell("class") && cell("section")) {
       const klass = norm(westernDigits(cell("class")))
+      const level = classLevel(cell("class"))
       const inClass = sections.filter(
         (s) =>
           norm(s.gradeName) === klass ||
           norm(s.gradeNameBn) === klass ||
-          String(s.levelNumber) === klass
+          norm(s.gradeNameBn).replace(SHRENI, "") === klass ||
+          s.levelNumber === level
       )
       const want = norm(cell("section"))
       sectionId = inClass.find((s) => norm(s.sectionName) === want)?.id
@@ -248,11 +332,33 @@ export function validateStudentImport(
         guardian: {
           relation,
           fullName: cell("guardian_name"),
-          phone: westernDigits(cell("guardian_phone")),
+          phone: phoneCell(cell("guardian_phone")),
         },
       })
       if (parsed.success) {
         const v = parsed.data
+        const key = studentKey(
+          v.sectionId,
+          `${v.firstName} ${v.lastName}`,
+          v.dateOfBirth
+        )
+        const code = onRoster.get(key)
+        if (code) {
+          return {
+            line,
+            status: "error",
+            errors: [{ column: null, code: "already_admitted" }],
+            student_code: code,
+          }
+        }
+        if (inFile.has(key)) {
+          return {
+            line,
+            status: "error",
+            errors: [{ column: null, code: "duplicate_in_file" }],
+          }
+        }
+        inFile.add(key)
         return {
           line,
           status: "valid",

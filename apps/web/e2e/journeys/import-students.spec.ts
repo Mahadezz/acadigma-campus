@@ -51,6 +51,7 @@ test("owner imports a register: 3 errors previewed, 37 students added", async ({
   await page.getByLabel("Email").fill(process.env.E2E_OWNER_EMAIL ?? "")
   await page.getByLabel("Password").fill(process.env.E2E_OWNER_PASSWORD ?? "")
   await page.getByRole("button", { name: "Sign in" }).click()
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"))
 
   await page.goto("/app/students")
   await page.getByRole("link", { name: "Import" }).click()

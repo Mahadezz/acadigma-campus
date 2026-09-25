@@ -15,8 +15,7 @@
 -- =====================================================================
 
 do $$ begin
-  create type public.import_status as enum
-    ('validating', 'preview', 'importing', 'completed', 'failed');
+  create type public.import_status as enum ('preview', 'importing', 'completed');
 exception when duplicate_object then null; end $$;
 
 create table if not exists public.student_import_batches (
@@ -128,7 +127,8 @@ set search_path = ''
 as $$
 declare
   v_batch   public.student_import_batches;
-  v_rows    jsonb := '[]'::jsonb;
+  v_rows    jsonb[] := '{}';
+  v_code    text;
   v_row     jsonb;
   v_res     jsonb;
   v_done    integer := 0;
@@ -167,6 +167,26 @@ begin
   for v_row in select value from jsonb_array_elements(v_batch.report -> 'rows') loop
     if v_row ->> 'status' = 'valid' then
       if v_done + v_failed < p_limit then
+        -- Already on this year's roster (a second preview of the same
+        -- register imported first): report it, never admit a twin.
+        select st.student_code into v_code
+          from public.enrollments e
+          join public.students st on st.id = e.student_id and st.deleted_at is null
+          join public.student_private_details d on d.student_id = st.id
+         where e.workspace_id = p_workspace_id
+           and e.section_id = (v_row #>> '{input,section_id}')::uuid
+           and e.status = 'active'
+           and d.date_of_birth = (v_row #>> '{input,date_of_birth}')::date
+           and lower(st.first_name || ' ' || st.last_name)
+               = lower(btrim(v_row #>> '{input,first_name}') || ' ' || btrim(v_row #>> '{input,last_name}'))
+         limit 1;
+        if v_code is not null then
+          v_row := v_row || jsonb_build_object('status', 'failed', 'student_code', v_code,
+            'errors', jsonb_build_array(jsonb_build_object('column', null, 'code', 'already_admitted')));
+          v_failed := v_failed + 1;
+          v_rows := array_append(v_rows, v_row);
+          continue;
+        end if;
         begin
           v_res := public.admit_student(p_workspace_id,
             (v_row -> 'input') || jsonb_build_object('idempotency_key',
@@ -189,14 +209,14 @@ begin
         v_left := v_left + 1;
       end if;
     end if;
-    v_rows := v_rows || jsonb_build_array(v_row);
+    v_rows := array_append(v_rows, v_row);
   end loop;
 
   v_created := v_batch.created_count + v_done;
   v_status := case when v_left = 0 then 'completed' else 'importing' end;
 
   update public.student_import_batches b
-     set report        = jsonb_set(b.report, '{rows}', v_rows),
+     set report        = jsonb_set(b.report, '{rows}', to_jsonb(v_rows)),
          status        = v_status,
          created_count = v_created,
          finished_at   = case when v_left = 0 then now() end
@@ -209,10 +229,46 @@ $$;
 comment on function public.import_student_batch(uuid, uuid, integer) is
   'F-AC-02 §4.7 (D-106): owner/admin only. Admits up to p_limit of a batch''s '
   'valid rows, each through public.admit_student with an idempotency key '
-  'derived from (batch, line), and writes each outcome (student code, or the '
-  'named refusal) back into the report in the same transaction. Call until '
+  'derived from (batch, line), skipping a row already on this year''s roster '
+  '(already_admitted), and writes each outcome (student code, or the named '
+  'refusal) back into the report in the same transaction. Call until '
   'remaining = 0. Raises FORBIDDEN, VALIDATION, BATCH_NOT_FOUND, BATCH_EXPIRED '
   '(a preview older than 24 h); PLAN_READ_ONLY comes from the table guards.';
 
 revoke all on function public.import_student_batch(uuid, uuid, integer) from public, anon;
 grant execute on function public.import_student_batch(uuid, uuid, integer) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- public.student_import_existing — this year's roster, keyed for the
+-- preview's "already imported" check. SECURITY INVOKER: the caller's RLS
+-- decides what they see (owner/admin: everyone; nobody else imports).
+-- One jsonb value, so PostgREST's row cap never truncates it.
+-- ---------------------------------------------------------------------
+create or replace function public.student_import_existing(p_workspace_id uuid)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'section_id', e.section_id,
+           'name', lower(st.first_name || ' ' || st.last_name),
+           'date_of_birth', d.date_of_birth,
+           'student_code', st.student_code)), '[]'::jsonb)
+    from public.enrollments e
+    join public.academic_years y on y.id = e.academic_year_id and y.is_current
+    join public.students st on st.id = e.student_id and st.deleted_at is null
+    join public.student_private_details d on d.student_id = st.id
+   where e.workspace_id = p_workspace_id
+     and e.status = 'active'
+$$;
+
+comment on function public.student_import_existing(uuid) is
+  'F-AC-02 §4.7 (D-106): the current year''s actively enrolled students as '
+  '{section_id, name (lower first || '' '' || last), date_of_birth, '
+  'student_code}, for the import preview''s already_admitted check. '
+  'SECURITY INVOKER; RLS limits it to what the caller may read.';
+
+revoke all on function public.student_import_existing(uuid) from public, anon;
+grant execute on function public.student_import_existing(uuid) to authenticated;

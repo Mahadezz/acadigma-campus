@@ -122,7 +122,8 @@ with allowed as (
     ('public.attendance_day(uuid, date)'),  -- F-AC-03 demo cut, D-104
     ('public.save_marks(uuid, jsonb)'),  -- F-AC-06 Part 3, D-304
     ('public.exam_marks_progress(uuid, uuid)'),  -- F-AC-06 Part 3, D-304
-    ('public.import_student_batch(uuid, uuid, integer)')  -- F-AC-02 §4.7, D-106
+    ('public.import_student_batch(uuid, uuid, integer)'),  -- F-AC-02 §4.7, D-106
+    ('public.student_import_existing(uuid)')  -- F-AC-02 §4.7, D-106
   ) as a(sig)
   union all
   select p.oid

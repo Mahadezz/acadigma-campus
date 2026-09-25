@@ -14,6 +14,9 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = { title: "Import students" }
 
+/** The import action runs on this page; 2,000 rows take up to 20 calls. */
+export const maxDuration = 60
+
 /**
  * F-AC-02 §6 "Import" — demo cut (D-106): upload → preview → done. The
  * batch id is in the URL and the report is in the database, so the

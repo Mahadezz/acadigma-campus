@@ -3669,6 +3669,10 @@ export type Database = {
         Returns: Json
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
+      student_import_existing: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       switch_workspace: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -3754,12 +3758,7 @@ export type Database = {
         | "weather"
         | "emergency"
       holiday_source: "seed" | "manual" | "import"
-      import_status:
-        | "validating"
-        | "preview"
-        | "importing"
-        | "completed"
-        | "failed"
+      import_status: "preview" | "importing" | "completed"
       invitation_channel: "email" | "phone"
       invitation_status:
         | "pending"
@@ -4002,13 +4001,7 @@ export const Constants = {
         "emergency",
       ],
       holiday_source: ["seed", "manual", "import"],
-      import_status: [
-        "validating",
-        "preview",
-        "importing",
-        "completed",
-        "failed",
-      ],
+      import_status: ["preview", "importing", "completed"],
       invitation_channel: ["email", "phone"],
       invitation_status: [
         "pending",

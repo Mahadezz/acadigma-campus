@@ -28,7 +28,7 @@ const INPUT = {
     relation: "father",
     full_name: "Karim Uddin",
     full_name_bn: null,
-    phone: "+8801000000001",
+    phone: "+8801700000001",
   },
 }
 

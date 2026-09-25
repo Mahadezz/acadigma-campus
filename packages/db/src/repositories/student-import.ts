@@ -15,6 +15,7 @@ import {
   type Result,
   type StudentImportBatch,
 } from "@acadigma/contracts"
+import type { ImportExistingStudent } from "@acadigma/domain/academic"
 
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
@@ -129,4 +130,30 @@ export async function runImportBatch(
     }
   }
   return err(UNAVAILABLE)
+}
+
+/** This year's actively enrolled students, keyed for the preview's
+ * "already on the roster" check (`public.student_import_existing`). */
+export async function listImportExistingStudents(
+  supabase: AcadigmaSupabaseClient,
+  ctx: WorkspaceContext
+): Promise<Result<ImportExistingStudent[], ApiError>> {
+  const { data, error } = await supabase.rpc("student_import_existing", {
+    p_workspace_id: ctx.workspaceId,
+  })
+  if (error) return err(UNAVAILABLE)
+  const rows = (data ?? []) as {
+    section_id: string
+    name: string
+    date_of_birth: string
+    student_code: string
+  }[]
+  return ok(
+    rows.map((r) => ({
+      sectionId: r.section_id,
+      name: r.name,
+      dateOfBirth: r.date_of_birth,
+      studentCode: r.student_code,
+    }))
+  )
 }

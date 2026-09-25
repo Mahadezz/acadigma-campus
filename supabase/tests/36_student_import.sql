@@ -10,7 +10,7 @@
 -- audit row with the batch.
 -- =====================================================================
 begin;
-select plan(41);
+select plan(45);
 
 create schema if not exists tests;
 
@@ -76,7 +76,7 @@ returns jsonb language sql as $fn$
       'gender', 'male', 'date_of_birth', '2014-03-09', 'section_id', p_section,
       'roll_number', p_roll,
       'guardian', jsonb_build_object('relation', 'father', 'full_name', 'Karim Uddin',
-                                     'full_name_bn', null, 'phone', '+8801000000001')));
+                                     'full_name_bn', null, 'phone', '+8801700000001')));
 $fn$;
 
 create or replace function tests.error_row(p_line int)
@@ -210,6 +210,29 @@ select is(
   true, 'each row is admitted under a key derived from (batch, line)');
 
 -- =====================================================================
+-- Already on the roster: a second preview of the same register
+-- =====================================================================
+insert into ids select 'batch_dup', tests.new_batch((select id from ids where label = 'a'),
+  jsonb_build_array(tests.valid_row(2, 'Rahim', (select id from ids where label = 'ka'))),
+  'f1060000-0000-0000-0000-000000000001');
+select is(
+  public.import_student_batch((select id from ids where label = 'a'), (select id from ids where label = 'batch_dup')),
+  '{"status": "completed", "remaining": 0, "created_count": 0}'::jsonb,
+  'a row already on this year''s roster is not admitted again');
+select is(
+  (select (e -> 'errors' -> 0 ->> 'code') || ' ' || (e ->> 'student_code')
+     from public.student_import_batches b, jsonb_array_elements(b.report -> 'rows') e
+    where b.id = (select id from ids where label = 'batch_dup')),
+  'already_admitted ' || (select student_code from public.students where first_name = 'Rahim'),
+  'it is reported as already_admitted with the existing student code');
+select is(
+  (select jsonb_array_length(public.student_import_existing((select id from ids where label = 'a')))),
+  1, 'student_import_existing lists this year''s roster for the owner');
+select is(
+  (select public.student_import_existing((select id from ids where label = 'a')) -> 0 ->> 'name'),
+  'rahim import', 'keyed by lower(first || '' '' || last)');
+
+-- =====================================================================
 -- Chunks: three valid rows, two per call
 -- =====================================================================
 insert into ids select 'batch2', tests.new_batch((select id from ids where label = 'a'),
@@ -263,7 +286,7 @@ select tests.logout();
 -- An admin may import too.
 select tests.login('f1060000-0000-0000-0000-000000000004');
 select is((select count(*)::int from public.student_import_batches where workspace_id = (select id from ids where label = 'a')),
-  2, 'an admin reads the school''s imports');
+  3, 'an admin reads the school''s imports');
 select lives_ok(
   $$select tests.new_batch((select id from ids where label = 'a'), '[]'::jsonb, 'f1060000-0000-0000-0000-000000000004')$$,
   'an admin can store a batch');

@@ -23,10 +23,12 @@ const SECTION = "6a1d3b2f-9c8e-4d4b-8f70-2b3c4d5e6f7a"
 const mockRequireWritable = vi.fn()
 const mockCreate = vi.fn()
 const mockRun = vi.fn()
+const mockExisting = vi.fn()
 vi.mock("@acadigma/db", () => ({
   requireWritable: (...a: unknown[]) => mockRequireWritable(...a),
   createImportBatch: (...a: unknown[]) => mockCreate(...a),
   runImportBatch: (...a: unknown[]) => mockRun(...a),
+  listImportExistingStudents: (...a: unknown[]) => mockExisting(...a),
   getClassesOverview: async () => ({
     ok: true,
     data: {
@@ -47,8 +49,8 @@ const { commitStudentImport, previewStudentImport } = await import("./actions")
 
 const CSV =
   "first_name,last_name,date_of_birth,gender,class,section,guardian_relation,guardian_name,guardian_phone\r\n" +
-  "Rahim,Uddin,09/03/2014,male,Class 6,ক,father,Karim Uddin,01000000001\r\n" +
-  "Nusrat,Jahan,2014-02-31,female,Class 6,ক,mother,Salma Begum,01000000002\r\n"
+  "Rahim,Uddin,09/03/2014,male,Class 6,ক,father,Karim Uddin,01700000001\r\n" +
+  "Nusrat,Jahan,2014-02-31,female,Class 6,ক,mother,Salma Begum,01700000002\r\n"
 
 function form(content: string, name = "register.csv"): FormData {
   const data = new FormData()
@@ -62,6 +64,7 @@ beforeEach(() => {
   mockRequireWritable.mockResolvedValue({ ok: true, data: undefined })
   mockCreate.mockResolvedValue({ ok: true, data: { batchId: "b" } })
   mockRun.mockResolvedValue({ ok: true, data: { createdCount: 1 } })
+  mockExisting.mockResolvedValue({ ok: true, data: [] })
 })
 
 describe("previewStudentImport", () => {
@@ -71,7 +74,7 @@ describe("previewStudentImport", () => {
     const input = mockCreate.mock.calls[0]?.[2]
     expect(input.filename).toBe("register.csv")
     expect(input.totals).toEqual({ total: 2, valid: 1, error: 1 })
-    expect(input.report.rows[0].input.guardian.phone).toBe("+8801000000001")
+    expect(input.report.rows[0].input.guardian.phone).toBe("+8801700000001")
     expect(input.report.rows[1].errors).toEqual([
       { column: "date_of_birth", code: "invalid_date" },
     ])
@@ -100,6 +103,27 @@ describe("previewStudentImport", () => {
       [20, "unknown_section"],
       [33, "invalid_phone"],
     ])
+  })
+
+  it("re-uploading a register skips students already on the roster", async () => {
+    mockExisting.mockResolvedValue({
+      ok: true,
+      data: [
+        {
+          sectionId: SECTION,
+          name: "rahim uddin",
+          dateOfBirth: "2014-03-09",
+          studentCode: "STU-2026-00001",
+        },
+      ],
+    })
+    await previewStudentImport(form(CSV))
+    const input = mockCreate.mock.calls[0]?.[2]
+    expect(input.totals).toEqual({ total: 2, valid: 0, error: 2 })
+    expect(input.report.rows[0].errors).toEqual([
+      { column: null, code: "already_admitted" },
+    ])
+    expect(input.report.rows[0].student_code).toBe("STU-2026-00001")
   })
 
   it("names a file problem without creating a batch", async () => {
