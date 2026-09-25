@@ -106,17 +106,21 @@ const SAVE_ERRORS: Record<string, ApiError> = {
     "Two bands cover the same mark.",
     { fieldErrors: { bands: ["BAND_OVERLAP"] } }
   ),
+  BAND_POINTS_DECREASE: apiError(
+    "validation_failed",
+    "Grade points cannot go down as the bands go up.",
+    { fieldErrors: { bands: ["BAND_POINTS_DECREASE"] } }
+  ),
 }
 
 /** `public.save_grade_scale` — renames the scale and replaces its bands atomically. */
 export async function saveGradeScale(
-  // RLS on the scale row is the tenancy check; the context is taken for the
-  // repository convention (CLAUDE.md rule 6).
-  _ctx: WorkspaceContext,
+  ctx: WorkspaceContext,
   client: AcadigmaSupabaseClient,
   input: SaveGradeScaleInput
 ): Promise<Result<{ scaleId: string }, ApiError>> {
   const { data, error } = await client.rpc("save_grade_scale", {
+    p_workspace_id: ctx.workspaceId,
     p_scale_id: input.scaleId,
     p_name: input.name,
     p_bands: input.bands.map((b) => ({

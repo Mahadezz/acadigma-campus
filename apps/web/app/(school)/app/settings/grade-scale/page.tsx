@@ -8,7 +8,7 @@ import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
-import { SubPageHeader } from "../../sub-page-header"
+import { SubPageHeader } from "../sub-page-header"
 
 import { GradeScaleEditor, SeedDefaultScale } from "./grade-scale-editor"
 
@@ -16,10 +16,10 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = { title: "Grading" }
 
-/** F-AC-06 §6 "Grade scale settings" — owner/admin (`grading.policy.write`). */
+/** F-AC-06 §6 "Grade scale settings" — owner/admin (`settings.grade_scale.write`). */
 export default async function GradingSettingsPage() {
   const ctx = await requireShell("school")
-  if (!can(ctx.role, "grading.policy.write")) forbidden()
+  if (!can(ctx.role, "settings.grade_scale.write")) forbidden()
 
   const { t } = await getMessages()
   const g = t.settings.grading

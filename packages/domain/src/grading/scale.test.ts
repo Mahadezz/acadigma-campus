@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import { parityRows } from "./parity"
-import { BD_GRADE_BANDS, bandFor, checkCoverage } from "./scale"
+import {
+  BD_GRADE_BANDS,
+  bandFor,
+  checkCoverage,
+  pointsDecreaseAt,
+} from "./scale"
 
 /** Independent restatement of PRODUCT-DECISIONS 2.4 for the full-range sweep. */
 function bdLetter(pct: number): string {
@@ -16,17 +21,25 @@ function bdLetter(pct: number): string {
 
 describe("bandFor", () => {
   it.each(parityRows("band"))(
-    "bandFor(BD, %s) = %s — same as app.band_for",
-    (pct, letter) => {
-      expect(bandFor(BD_GRADE_BANDS, Number(pct))?.letter).toBe(letter)
+    "bandFor(BD, %s) = %s %s — same as app.band_for",
+    (pct, letter, point) => {
+      const band = bandFor(BD_GRADE_BANDS, Number(pct))
+      expect(band?.letter).toBe(letter)
+      expect(band?.gradePoint).toBe(Number(point))
     }
   )
+
+  it("does not round before banding (D-302 a)", () => {
+    expect(bandFor(BD_GRADE_BANDS, 79.5)?.letter).toBe("A")
+    expect(bandFor(BD_GRADE_BANDS, 32.5)?.letter).toBe("F")
+    expect(bandFor(BD_GRADE_BANDS, 79.995)).toBeNull()
+  })
 
   it("maps every integer 0-100 and every .99 boundary", () => {
     for (let i = 0; i <= 100; i++) {
       expect(bandFor(BD_GRADE_BANDS, i)?.letter).toBe(bdLetter(i))
       if (i < 100) {
-        const x = i + 0.99
+        const x = Number(`${i}.99`) // how a §5.1-rounded percentage arrives
         expect(bandFor(BD_GRADE_BANDS, x)?.letter).toBe(bdLetter(x))
       }
     }
@@ -75,5 +88,17 @@ describe("checkCoverage", () => {
       code: "BAND_OVERLAP",
       at: 5000,
     })
+  })
+})
+
+describe("pointsDecreaseAt", () => {
+  it("accepts the BD scale and finds a band whose point goes down", () => {
+    expect(pointsDecreaseAt(BD_GRADE_BANDS)).toBeNull()
+    expect(
+      pointsDecreaseAt([
+        { minPercent: 40, gradePoint: 1 },
+        { minPercent: 0, gradePoint: 2 },
+      ])
+    ).toBe(40)
   })
 })

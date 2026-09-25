@@ -4,7 +4,7 @@
  * F-AC-06 Part 1 §7 — `seedBdGradeScale` and `upsertGradeScale` (here
  * `saveGradeScale`: Part 1 edits an existing scale; creating a second scale
  * waits for exams, which is when a scale gets snapshotted and versioned).
- * parse -> context -> policy (`grading.policy.write`) -> requireWritable ->
+ * parse -> context -> policy (`settings.grade_scale.write`) -> requireWritable ->
  * domain coverage check -> repository RPC -> revalidate.
  */
 
@@ -25,12 +25,12 @@ import {
   seedBdGradeScale as seedBdGradeScaleRepo,
 } from "@acadigma/db/repositories/grading"
 import { can } from "@acadigma/domain"
-import { checkCoverage } from "@acadigma/domain/grading"
+import { checkCoverage, pointsDecreaseAt } from "@acadigma/domain/grading"
 
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
 
-const GRADING_PATH = "/app/settings/academics/grading"
+const GRADING_PATH = "/app/settings/grade-scale"
 
 type Gate = Result<
   { ctx: WorkspaceContext; supabase: Awaited<ReturnType<typeof createClient>> },
@@ -39,7 +39,7 @@ type Gate = Result<
 
 async function gateWrite(): Promise<Gate> {
   const ctx = await requireWorkspace()
-  if (!can(ctx.role, "grading.policy.write")) {
+  if (!can(ctx.role, "settings.grade_scale.write")) {
     return err(
       apiError("forbidden", "Only an owner or admin can change grading.")
     )
@@ -78,6 +78,16 @@ export async function saveGradeScale(
           ? "The bands must cover every mark from 0 to 100 with no gap."
           : "Two bands cover the same mark.",
         { fieldErrors: { bands: [issue.code] } }
+      )
+    )
+  }
+
+  if (pointsDecreaseAt(parsed.data.bands) !== null) {
+    return err(
+      apiError(
+        "validation_failed",
+        "Grade points cannot go down as the bands go up.",
+        { fieldErrors: { bands: ["BAND_POINTS_DECREASE"] } }
       )
     )
   }

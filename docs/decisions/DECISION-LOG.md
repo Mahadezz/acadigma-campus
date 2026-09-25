@@ -713,3 +713,17 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 **Why:** Two homes for the pass mark would drift. Replacing bands one by one would pass through invalid states.
 
 **Consequences:** Part 2 decides the snapshot shape (copy rules onto the scale, or snapshot `academic_settings` on the exam). Only the default scale is editable in Part 1; `SCALE_IN_USE` versioning arrives with exams.
+
+**Lead decisions on review of PR #46 (2026-09-25; owner confirmation pending on (a)):**
+
+- **(a) Rounding.** F-AC-06 §5.1 wins: `subject_pct = round(100 × obtained / full, 2)`, then banded as-is with `min_percent <= pct <= max_percent` on the .99 upper edges (79.5 → A, 32.5 → F). There is no rounding before banding: `app.band_for` and `bandFor` compare the value they are given. F-OP-07 §5.2's "percent comparisons use integers" and its OQ-4 round-half-up default are superseded and now point here.
+- **(b) Route and permission.** F-OP-07's names are used: `/app/settings/grade-scale` and `settings.grade_scale.write`. From F-OP-07 Part 4's extra rules, "grade points must not decrease band by band" is enforced now, in the database (`BAND_POINTS_DECREASE`) and in Zod. Scale versioning and "the pass boundary equals `pass_mark_percent`" are deferred to F-AC-06 Part 2, where exams snapshot the scale and the pass mark.
+- **Review fixes:**
+  - An empty band set is `BAND_GAP`.
+  - Bands change only through the two RPCs: `authenticated` has only SELECT on `grade_bands`, and the RPCs are SECURITY DEFINER and re-check owner/admin.
+  - The coverage check locks the scale row.
+  - `seed_bd_grade_scale` uses `insert ... on conflict do nothing`.
+  - `save_grade_scale` takes the workspace id and filters on it.
+  - `grade_scales.code` and `is_default` are immutable to clients.
+  - Band letters are unique case-insensitively.
+  - Band audit rows are info-level.

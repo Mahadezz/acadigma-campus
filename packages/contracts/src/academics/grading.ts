@@ -44,4 +44,16 @@ export const saveGradeScaleInputSchema = z
       v.bands.length,
     { message: "Each letter can be used once.", path: ["bands"] }
   )
+  .refine(
+    (v) => {
+      const sorted = [...v.bands].sort((a, b) => a.minPercent - b.minPercent)
+      return sorted.every(
+        (b, i) => i === 0 || b.gradePoint >= sorted[i - 1]!.gradePoint
+      )
+    },
+    {
+      message: "Grade points cannot go down as the bands go up.",
+      path: ["bands"],
+    }
+  )
 export type SaveGradeScaleInput = z.infer<typeof saveGradeScaleInputSchema>

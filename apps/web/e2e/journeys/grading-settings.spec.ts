@@ -24,7 +24,7 @@ test("owner seeds the BD scale and previews 72 % → A", async ({
   page,
 }, testInfo) => {
   await signIn(page, "owner@acadigma.test")
-  await page.goto("/app/settings/academics/grading")
+  await page.goto("/app/settings/grade-scale")
 
   const seed = page.getByRole("button", { name: "Use the Bangladesh default" })
   if (await seed.isVisible()) await seed.click()
@@ -47,6 +47,6 @@ test("owner seeds the BD scale and previews 72 % → A", async ({
 
 test("a teacher cannot open grading settings", async ({ page }) => {
   await signIn(page, "teacher@acadigma.test")
-  const response = await page.goto("/app/settings/academics/grading")
+  const response = await page.goto("/app/settings/grade-scale")
   expect(response?.status()).toBe(403)
 })

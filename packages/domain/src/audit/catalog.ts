@@ -560,6 +560,18 @@ function humanizeTable(table: string): string {
   return table.replace(/_/g, " ")
 }
 
+/**
+ * Per-table severity overrides, mirrored from the migrations' `update
+ * public.audit_action_catalog set severity` lines. grade_bands rows churn on
+ * every save (delete + insert of the whole set), so they are info-level
+ * (20260925300202_grade_scales.sql, review of PR #46).
+ */
+const GENERIC_SEVERITY_OVERRIDES: Readonly<
+  Record<string, Partial<Record<"insert" | "update" | "delete", AuditSeverity>>>
+> = {
+  grade_bands: { update: "info", delete: "info" },
+}
+
 /** The three `<table>.<op>` rows the trigger writes for one table (migration §4.2). */
 export function genericActionsForTable(
   table: string
@@ -567,7 +579,7 @@ export function genericActionsForTable(
   const label = humanizeTable(table)
   return (["insert", "update", "delete"] as const).map((op) => ({
     action: `${table}.${op}`,
-    severity: GENERIC_SEVERITY[op],
+    severity: GENERIC_SEVERITY_OVERRIDES[table]?.[op] ?? GENERIC_SEVERITY[op],
     sentenceEn:
       op === "update"
         ? `{actor} updated a ${label} record ({fields})`

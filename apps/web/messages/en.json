@@ -814,7 +814,8 @@
       "previewNone": "No band covers {pct} %",
       "gap": "Nothing covers {at} %. The bands must cover 0 to 100 with no gap.",
       "overlap": "Two bands both cover {at} %.",
-      "readOnly": "Only an owner or admin can change grading."
+      "readOnly": "Only an owner or admin can change grading.",
+      "pointsDecrease": "Grade points cannot go down as the bands go up (at {at} %)."
     }
   }
 }

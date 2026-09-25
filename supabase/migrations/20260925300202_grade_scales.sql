@@ -8,14 +8,21 @@
 -- (`school_profiles.academic_settings`, `academic_years`) — D-302.
 --
 --   - Bands of one scale must cover 0.00-100.00 with no gap and no overlap
---     (2-decimal steps: next.min = prev.max + 0.01). Checked by a DEFERRED
---     constraint trigger, so a whole band set can be replaced in one
---     transaction (public.save_grade_scale).
+--     (2-decimal steps: next.min = prev.max + 0.01), and grade points must
+--     not decrease band by band. Checked by a DEFERRED constraint trigger
+--     that locks the scale row first, so a whole band set is replaced in one
+--     transaction (public.save_grade_scale) and two writers serialise.
+--   - Bands change only through save_grade_scale / seed_bd_grade_scale:
+--     authenticated has SELECT on grade_bands, not INSERT/UPDATE/DELETE, so
+--     both RPCs are SECURITY DEFINER and re-check owner/admin themselves.
+--   - grade_scales.code and is_default are immutable to clients.
+--   - Banding (D-302 a): a percentage is banded as-is — min <= pct <= max —
+--     after §5.1 has rounded it to 2 decimals; band_for does not round.
 --   - app.round_half_up / app.band_for are the SQL halves of
 --     packages/domain/src/grading (parity-tested against the same table in
 --     supabase/tests/52_grade_scales.sql).
 --   - public.seed_bd_grade_scale(workspace) — the Bangladesh default
---     (PRODUCT-DECISIONS 2.4), idempotent. SECURITY INVOKER: RLS decides.
+--     (PRODUCT-DECISIONS 2.4), idempotent.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -73,8 +80,8 @@ comment on table public.grade_bands is
   'The composite FK keeps a band in its scale''s workspace.';
 
 create unique index if not exists grade_bands_scale_letter_key
-  on public.grade_bands (grade_scale_id, letter);
--- justification: DATA-MODEL.md — one "A" per scale.
+  on public.grade_bands (grade_scale_id, lower(letter));
+-- justification: DATA-MODEL.md — one "A" per scale, case-insensitive like the Zod contract.
 create index if not exists grade_bands_scale_min_idx
   on public.grade_bands (grade_scale_id, min_percent);
 -- justification: DATA-MODEL.md — band lookup by percentage (app.band_for).
@@ -83,22 +90,30 @@ create index if not exists grade_bands_workspace_idx
 -- justification: tenant key; RLS predicate and cascade from workspaces.
 
 -- ---------------------------------------------------------------------
--- Coverage: no gap, no overlap, 0.00 to 100.00 — checked at commit.
+-- Coverage: no gap, no overlap, 0.00 to 100.00, grade points never
+-- decrease — checked at commit.
 -- ---------------------------------------------------------------------
 create or replace function app.assert_grade_scale_coverage(p_scale_id uuid)
 returns void
 language plpgsql
-stable
+volatile
 security definer   -- sees every band of the scale regardless of the caller
 set search_path = ''
 as $$
 declare
-  v_band record;
-  v_prev numeric(5,2);
-  v_n    int := 0;
+  v_band  record;
+  v_prev  numeric(5,2);
+  v_point numeric(3,2);
+  v_n     int := 0;
 begin
+  -- Serialise writers of one scale; a deleted scale (cascade) has nothing to check.
+  perform 1 from public.grade_scales s where s.id = p_scale_id for update;
+  if not found then
+    return;
+  end if;
+
   for v_band in
-    select b.min_percent, b.max_percent
+    select b.min_percent, b.max_percent, b.grade_point
       from public.grade_bands b
      where b.grade_scale_id = p_scale_id
      order by b.min_percent, b.max_percent
@@ -116,10 +131,20 @@ begin
       raise exception 'BAND_GAP' using errcode = '23514',
         detail = format('nothing covers %s to %s', v_prev + 0.01, v_band.min_percent - 0.01);
     end if;
-    v_prev := v_band.max_percent;
+    if v_point is not null and v_band.grade_point < v_point then
+      raise exception 'BAND_POINTS_DECREASE' using errcode = '23514',
+        detail = format('the band starting at %s has a lower grade point than the band below it',
+                        v_band.min_percent);
+    end if;
+    v_prev  := v_band.max_percent;
+    v_point := v_band.grade_point;
   end loop;
 
-  if v_n > 0 and v_prev <> 100 then
+  if v_n = 0 then
+    raise exception 'BAND_GAP' using errcode = '23514',
+      detail = 'a grade scale needs bands covering 0 to 100';
+  end if;
+  if v_prev <> 100 then
     raise exception 'BAND_GAP' using errcode = '23514',
       detail = format('the highest band ends at %s, not 100', v_prev);
   end if;
@@ -170,9 +195,9 @@ as $$
   select round(p_value, p_places)
 $$;
 
--- The band whose [min_percent, max_percent] holds pct, after rounding pct
--- to the 2 decimals the bands are stated in. Null when the scale has no
--- band there (an empty scale).
+-- The band whose [min_percent, max_percent] holds pct, as given (D-302 a:
+-- no rounding before banding — §5.1 already rounded pct to 2 decimals).
+-- Null when no band holds it.
 create or replace function app.band_for(p_grade_scale_id uuid, p_pct numeric)
 returns public.grade_bands
 language sql
@@ -182,7 +207,7 @@ as $$
   select b.*
     from public.grade_bands b
    where b.grade_scale_id = p_grade_scale_id
-     and app.round_half_up(p_pct, 2) between b.min_percent and b.max_percent
+     and p_pct between b.min_percent and b.max_percent
    limit 1
 $$;
 
@@ -190,7 +215,10 @@ revoke all on function app.round_half_up(numeric, int) from public, anon, authen
 revoke all on function app.band_for(uuid, numeric) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------
--- Client RPCs (D-50: public, SECURITY INVOKER — RLS is the gate)
+-- Client RPCs (D-50: public). SECURITY DEFINER because clients hold no
+-- INSERT/UPDATE/DELETE on grade_bands (bands change only here); each one
+-- re-checks owner/admin itself. require_writable still fires (it reads the
+-- caller's role GUC, which a definer call does not change).
 -- ---------------------------------------------------------------------
 -- The Bangladesh default (PRODUCT-DECISIONS 2.4). Idempotent: a second call
 -- returns the existing scale and changes nothing.
@@ -198,16 +226,14 @@ create or replace function public.seed_bd_grade_scale(p_workspace_id uuid)
 returns uuid
 language plpgsql
 volatile
-security invoker
+security definer
 set search_path = ''
 as $$
 declare
   v_id uuid;
 begin
-  select s.id into v_id from public.grade_scales s
-   where s.workspace_id = p_workspace_id and s.code = 'BD_GPA5';
-  if found then
-    return v_id;
+  if not app.has_role(p_workspace_id, array['owner', 'admin']) then
+    raise exception 'only an owner or admin can change grading' using errcode = '42501';
   end if;
 
   insert into public.grade_scales (workspace_id, code, name, is_default, created_by)
@@ -215,7 +241,14 @@ begin
           not exists (select 1 from public.grade_scales s
                        where s.workspace_id = p_workspace_id and s.is_default),
           auth.uid())
+  on conflict (workspace_id, code) do nothing
   returning id into v_id;
+
+  if v_id is null then   -- already seeded
+    select s.id into v_id from public.grade_scales s
+     where s.workspace_id = p_workspace_id and s.code = 'BD_GPA5';
+    return v_id;
+  end if;
 
   insert into public.grade_bands
     (workspace_id, grade_scale_id, letter, min_percent, max_percent, grade_point, is_fail, sort_order)
@@ -234,27 +267,28 @@ $$;
 
 comment on function public.seed_bd_grade_scale(uuid) is
   'F-AC-06 Part 1: creates the Bangladesh GPA 5.00 scale (code BD_GPA5) for a '
-  'school, once. SECURITY INVOKER — grade_scales/grade_bands RLS (owner/admin) '
-  'and the require_writable trigger decide who may.';
+  'school, once (insert ... on conflict do nothing). Owner/admin only.';
 
 -- Replaces a scale's name and whole band set in one transaction, so the
 -- deferred coverage check sees only the final set.
 create or replace function public.save_grade_scale(
-  p_scale_id uuid,
-  p_name     text,
-  p_bands    jsonb)
+  p_workspace_id uuid,
+  p_scale_id     uuid,
+  p_name         text,
+  p_bands        jsonb)
 returns uuid
 language plpgsql
 volatile
-security invoker
+security definer
 set search_path = ''
 as $$
-declare
-  v_ws uuid;
 begin
+  if not app.has_role(p_workspace_id, array['owner', 'admin']) then
+    raise exception 'only an owner or admin can change grading' using errcode = '42501';
+  end if;
+
   update public.grade_scales set name = p_name
-   where id = p_scale_id
-  returning workspace_id into v_ws;
+   where id = p_scale_id and workspace_id = p_workspace_id;
   if not found then
     raise exception 'grade scale not found' using errcode = 'P0002';
   end if;
@@ -263,7 +297,7 @@ begin
 
   insert into public.grade_bands
     (workspace_id, grade_scale_id, letter, min_percent, max_percent, grade_point, is_fail, sort_order)
-  select v_ws, p_scale_id, b.letter, b.min_percent, b.max_percent, b.grade_point,
+  select p_workspace_id, p_scale_id, b.letter, b.min_percent, b.max_percent, b.grade_point,
          coalesce(b.is_fail, false), b.sort_order
     from jsonb_to_recordset(p_bands) as b(
            letter text, min_percent numeric, max_percent numeric,
@@ -275,14 +309,34 @@ begin
 end;
 $$;
 
-comment on function public.save_grade_scale(uuid, text, jsonb) is
+comment on function public.save_grade_scale(uuid, uuid, text, jsonb) is
   'F-AC-06 Part 1 upsertGradeScale: rename a scale and replace its bands '
-  'atomically. SECURITY INVOKER; raises BAND_GAP / BAND_OVERLAP (23514).';
+  'atomically. Owner/admin only; raises BAND_GAP / BAND_OVERLAP / '
+  'BAND_POINTS_DECREASE (23514).';
 
 revoke all on function public.seed_bd_grade_scale(uuid) from public, anon;
-revoke all on function public.save_grade_scale(uuid, text, jsonb) from public, anon;
+revoke all on function public.save_grade_scale(uuid, uuid, text, jsonb) from public, anon;
 grant execute on function public.seed_bd_grade_scale(uuid) to authenticated;
-grant execute on function public.save_grade_scale(uuid, text, jsonb) to authenticated;
+grant execute on function public.save_grade_scale(uuid, uuid, text, jsonb) to authenticated;
+
+-- code and is_default are identity: a client cannot move them (security
+-- review, PR #46). Privileged callers (migrations, platform tooling) can.
+create or replace function app.tg_grade_scales_identity_immutable()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if (new.code is distinct from old.code or new.is_default is distinct from old.is_default)
+     and not app.is_privileged_context() then
+    raise exception 'GRADE_SCALE_IDENTITY_IMMUTABLE' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger grade_scales_identity_immutable before update on public.grade_scales
+  for each row execute function app.tg_grade_scales_identity_immutable();
 
 -- ---------------------------------------------------------------------
 -- Triggers (class T2 template) + audit catalogue
@@ -325,6 +379,13 @@ begin
 end
 $$;
 
+-- Band rows churn on every save (delete + insert of the whole set); the
+-- scale's own grade_scales.update row is the notable event, so band rows are
+-- info-level (review of PR #46). Mirrored in GENERIC_SEVERITY_OVERRIDES
+-- (packages/domain/src/audit/catalog.ts).
+update public.audit_action_catalog set severity = 'info'
+ where action in ('grade_bands.update', 'grade_bands.delete');
+
 -- ---------------------------------------------------------------------
 -- RLS (F-AC-06 §3: read by all active members, write by owner/admin)
 -- ---------------------------------------------------------------------
@@ -356,20 +417,7 @@ drop policy if exists grade_bands_select on public.grade_bands;
 create policy grade_bands_select on public.grade_bands
   for select to authenticated
   using (app.member_role(workspace_id) is not null or (select app.is_platform_admin()));
-drop policy if exists grade_bands_insert on public.grade_bands;
-create policy grade_bands_insert on public.grade_bands
-  for insert to authenticated
-  with check (app.has_role(workspace_id, array['owner', 'admin']));
-drop policy if exists grade_bands_update on public.grade_bands;
-create policy grade_bands_update on public.grade_bands
-  for update to authenticated
-  using      (app.has_role(workspace_id, array['owner', 'admin']))
-  with check (app.has_role(workspace_id, array['owner', 'admin']));
-drop policy if exists grade_bands_delete on public.grade_bands;
-create policy grade_bands_delete on public.grade_bands
-  for delete to authenticated
-  using (app.has_role(workspace_id, array['owner', 'admin']));
 
 revoke all on public.grade_scales, public.grade_bands from anon, authenticated;
 grant select, insert, update, delete on public.grade_scales to authenticated;
-grant select, insert, update, delete on public.grade_bands  to authenticated;
+grant select on public.grade_bands to authenticated;   -- writes only via the RPCs

@@ -1,5 +1,3 @@
-import { roundHalfUp } from "./round"
-
 /**
  * Grade scales — F-AC-06 §5.2. `bandFor` is the only letter/grade-point lookup
  * in TypeScript; `app.band_for(grade_scale_id, pct)` is the only one in SQL.
@@ -76,13 +74,29 @@ export const BD_GRADE_BANDS: readonly GradeBand[] = [
   },
 ]
 
-/** The band holding `pct` once rounded to the bands' 2 decimals; null if none. */
+/**
+ * The band with `minPercent <= pct <= maxPercent`; null if none. No rounding
+ * here (D-302 a): §5.1 has already rounded the subject percentage to 2
+ * decimals, and bands are banded as-is on their .99 upper edges.
+ */
 export function bandFor(
   bands: readonly GradeBand[],
   pct: number
 ): GradeBand | null {
-  const p = roundHalfUp(pct, 2)
-  return bands.find((b) => p >= b.minPercent && p <= b.maxPercent) ?? null
+  return bands.find((b) => pct >= b.minPercent && pct <= b.maxPercent) ?? null
+}
+
+/** Grade points never go down as the bands go up (F-OP-07 §5.2). Null when
+ * they don't; otherwise the min percent of the first offending band. */
+export function pointsDecreaseAt(
+  bands: readonly Pick<GradeBand, "minPercent" | "gradePoint">[]
+): number | null {
+  const sorted = [...bands].sort((a, b) => a.minPercent - b.minPercent)
+  for (let i = 1; i < sorted.length; i++) {
+    const band = sorted[i]!
+    if (band.gradePoint < sorted[i - 1]!.gradePoint) return band.minPercent
+  }
+  return null
 }
 
 export type CoverageIssue = {

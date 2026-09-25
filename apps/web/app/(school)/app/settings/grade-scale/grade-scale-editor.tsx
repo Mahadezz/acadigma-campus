@@ -10,6 +10,7 @@ import type { GradeScaleDto } from "@acadigma/contracts/academics/grading"
 import {
   bandFor,
   checkCoverage,
+  pointsDecreaseAt,
   type GradeBand,
 } from "@acadigma/domain/grading"
 import { Button } from "@acadigma/ui/components/button"
@@ -20,8 +21,8 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
 
-import { SaveNotice, type Notice } from "../../save-notice"
-import { StickySaveBar } from "../../sticky-save-bar"
+import { SaveNotice, type Notice } from "../save-notice"
+import { StickySaveBar } from "../sticky-save-bar"
 
 import { saveGradeScale, seedBdGradeScale } from "./actions"
 
@@ -114,6 +115,7 @@ export function GradeScaleEditor({
     (r) => r.letter.trim() && r.min !== "" && r.max !== "" && r.point !== ""
   )
   const issue = complete ? checkCoverage(bands) : null
+  const decreaseAt = complete ? pointsDecreaseAt(bands) : null
   const pct = Number(preview)
   const band = preview.trim() === "" ? null : bandFor(bands, pct)
 
@@ -191,6 +193,10 @@ export function GradeScaleEditor({
           {fill(issue.code === "BAND_GAP" ? g.gap : g.overlap, {
             at: (issue.at / 100).toFixed(2),
           })}
+        </InlineAlert>
+      ) : decreaseAt !== null ? (
+        <InlineAlert tone="error">
+          {fill(g.pointsDecrease, { at: decreaseAt.toFixed(2) })}
         </InlineAlert>
       ) : null}
 
