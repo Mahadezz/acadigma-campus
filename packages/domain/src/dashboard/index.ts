@@ -18,11 +18,7 @@ export type SetupFacts = {
 }
 
 export type SetupStepKey =
-  | "school_profile"
-  | "academic_year"
-  | "teachers"
-  | "staff_records"
-  | "students"
+  "school_profile" | "academic_year" | "teachers" | "staff_records" | "students"
 
 export type SetupStep = { key: SetupStepKey; done: boolean; href: string }
 
