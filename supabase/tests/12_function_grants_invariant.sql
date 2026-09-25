@@ -117,7 +117,9 @@ with allowed as (
     ('public.seed_bd_grade_scale(uuid)'),  -- F-AC-06 Part 1, D-302
     ('public.save_grade_scale(uuid, uuid, text, jsonb)'),  -- F-AC-06 Part 1, D-302
     ('public.create_exam(jsonb)'),  -- F-AC-06 Part 2, D-303
-    ('public.admit_student(uuid, jsonb)')  -- F-AC-02 demo cut, D-103
+    ('public.admit_student(uuid, jsonb)'),  -- F-AC-02 demo cut, D-103
+    ('public.save_attendance(uuid, jsonb)'),  -- F-AC-03 demo cut, D-104
+    ('public.attendance_day(uuid, date)')  -- F-AC-03 demo cut, D-104
   ) as a(sig)
   union all
   select p.oid
