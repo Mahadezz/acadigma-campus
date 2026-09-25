@@ -610,6 +610,56 @@ export type Database = {
           },
         ]
       }
+      grade_bands: {
+        Row: {
+          created_at: string
+          grade_point: number
+          grade_scale_id: string
+          id: string
+          is_fail: boolean
+          letter: string
+          max_percent: number
+          min_percent: number
+          sort_order: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          grade_point: number
+          grade_scale_id: string
+          id?: string
+          is_fail?: boolean
+          letter: string
+          max_percent: number
+          min_percent: number
+          sort_order?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          grade_point?: number
+          grade_scale_id?: string
+          id?: string
+          is_fail?: boolean
+          letter?: string
+          max_percent?: number
+          min_percent?: number
+          sort_order?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grade_bands_scale_fkey"
+            columns: ["grade_scale_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "grade_scales"
+            referencedColumns: ["id", "workspace_id"]
+          },
+        ]
+      }
       grade_levels: {
         Row: {
           created_at: string
@@ -654,6 +704,54 @@ export type Database = {
           },
           {
             foreignKeyName: "grade_levels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grade_scales: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grade_scales_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grade_scales_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -2372,6 +2470,16 @@ export type Database = {
         Returns: undefined
       }
       pre_request: { Args: never; Returns: undefined }
+      save_grade_scale: {
+        Args: {
+          p_bands: Json
+          p_name: string
+          p_scale_id: string
+          p_workspace_id: string
+        }
+        Returns: string
+      }
+      seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
       switch_workspace: {
         Args: { p_workspace_id: string }
         Returns: {
