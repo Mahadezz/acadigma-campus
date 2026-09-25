@@ -4,7 +4,7 @@ import { uuidSchema } from "../common"
 
 /**
  * F-AC-06 Part 1 — grade scales (`grade_scales`, `grade_bands`,
- * `supabase/migrations/20260925300202_grade_scales.sql`) and the two §7
+ * `supabase/migrations/20260925300302_grade_scales.sql`) and the two §7
  * contracts Part 1 builds: `upsertGradeScale` (edit an existing scale's
  * name and bands — `saveGradeScaleInputSchema`) and `seedBdGradeScale`.
  * Coverage (no gap / no overlap, 0-100) is checked by the domain

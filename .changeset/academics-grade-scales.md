@@ -5,7 +5,7 @@
 "@acadigma/domain": minor
 ---
 
-F-AC-06 Part 1: grade scales (D-302). Migration `20260925300202_grade_scales.sql` adds
+F-AC-06 Part 1: grade scales (D-302). Migration `20260925300302_grade_scales.sql` adds
 `grade_scales` / `grade_bands` with a no-gap/no-overlap coverage trigger,
 `app.band_for` / `app.round_half_up`, and the `seed_bd_grade_scale` / `save_grade_scale`
 RPCs. `@acadigma/domain/grading` (`bandFor`, `roundHalfUp`, `checkCoverage`,

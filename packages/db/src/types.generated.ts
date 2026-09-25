@@ -610,56 +610,6 @@ export type Database = {
           },
         ]
       }
-      grade_bands: {
-        Row: {
-          created_at: string
-          grade_point: number
-          grade_scale_id: string
-          id: string
-          is_fail: boolean
-          letter: string
-          max_percent: number
-          min_percent: number
-          sort_order: number
-          updated_at: string
-          workspace_id: string
-        }
-        Insert: {
-          created_at?: string
-          grade_point: number
-          grade_scale_id: string
-          id?: string
-          is_fail?: boolean
-          letter: string
-          max_percent: number
-          min_percent: number
-          sort_order?: number
-          updated_at?: string
-          workspace_id: string
-        }
-        Update: {
-          created_at?: string
-          grade_point?: number
-          grade_scale_id?: string
-          id?: string
-          is_fail?: boolean
-          letter?: string
-          max_percent?: number
-          min_percent?: number
-          sort_order?: number
-          updated_at?: string
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "grade_bands_scale_fkey"
-            columns: ["grade_scale_id", "workspace_id"]
-            isOneToOne: false
-            referencedRelation: "grade_scales"
-            referencedColumns: ["id", "workspace_id"]
-          },
-        ]
-      }
       grade_levels: {
         Row: {
           created_at: string
@@ -711,47 +661,59 @@ export type Database = {
           },
         ]
       }
-      grade_scales: {
+      holidays: {
         Row: {
-          code: string
           created_at: string
           created_by: string | null
+          ends_on: string
           id: string
-          is_default: boolean
+          kind: Database["public"]["Enums"]["holiday_kind"]
           name: string
+          name_bn: string | null
+          note: string | null
+          source: Database["public"]["Enums"]["holiday_source"]
+          starts_on: string
           updated_at: string
           workspace_id: string
         }
         Insert: {
-          code: string
           created_at?: string
           created_by?: string | null
+          ends_on: string
           id?: string
-          is_default?: boolean
+          kind?: Database["public"]["Enums"]["holiday_kind"]
           name: string
+          name_bn?: string | null
+          note?: string | null
+          source?: Database["public"]["Enums"]["holiday_source"]
+          starts_on: string
           updated_at?: string
           workspace_id: string
         }
         Update: {
-          code?: string
           created_at?: string
           created_by?: string | null
+          ends_on?: string
           id?: string
-          is_default?: boolean
+          kind?: Database["public"]["Enums"]["holiday_kind"]
           name?: string
+          name_bn?: string | null
+          note?: string | null
+          source?: Database["public"]["Enums"]["holiday_source"]
+          starts_on?: string
           updated_at?: string
           workspace_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "grade_scales_created_by_fkey"
+            foreignKeyName: "holidays_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "grade_scales_workspace_id_fkey"
+            foreignKeyName: "holidays_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1859,6 +1821,54 @@ export type Database = {
           },
         ]
       }
+      working_day_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          is_working: boolean
+          reason: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          is_working: boolean
+          reason: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          is_working?: boolean
+          reason?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "working_day_overrides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "working_day_overrides_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invitations: {
         Row: {
           accepted_at: string | null
@@ -2362,11 +2372,6 @@ export type Database = {
         Returns: undefined
       }
       pre_request: { Args: never; Returns: undefined }
-      save_grade_scale: {
-        Args: { p_bands: Json; p_name: string; p_scale_id: string }
-        Returns: string
-      }
-      seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
       switch_workspace: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -2413,6 +2418,15 @@ export type Database = {
         | "delete"
       file_visibility: "private" | "workspace" | "public"
       grade_stage: "early" | "primary" | "secondary" | "higher"
+      holiday_kind:
+        | "public"
+        | "religious"
+        | "national"
+        | "school"
+        | "vacation"
+        | "weather"
+        | "emergency"
+      holiday_source: "seed" | "manual" | "import"
       invitation_channel: "email" | "phone"
       invitation_status:
         | "pending"
@@ -2598,6 +2612,16 @@ export const Constants = {
       ],
       file_visibility: ["private", "workspace", "public"],
       grade_stage: ["early", "primary", "secondary", "higher"],
+      holiday_kind: [
+        "public",
+        "religious",
+        "national",
+        "school",
+        "vacation",
+        "weather",
+        "emergency",
+      ],
+      holiday_source: ["seed", "manual", "import"],
       invitation_channel: ["email", "phone"],
       invitation_status: [
         "pending",

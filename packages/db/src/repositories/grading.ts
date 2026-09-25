@@ -16,7 +16,7 @@ import type { WorkspaceContext } from "../workspace-context"
 /**
  * F-AC-06 Part 1 — grade scales. Reads go through RLS (every active member);
  * writes are the two SECURITY INVOKER RPCs in
- * `20260925300202_grade_scales.sql`, so RLS (owner/admin), the coverage
+ * `20260925300302_grade_scales.sql`, so RLS (owner/admin), the coverage
  * trigger and the require_writable trigger all still apply.
  */
 
