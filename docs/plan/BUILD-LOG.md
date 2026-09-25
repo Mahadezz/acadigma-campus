@@ -4,6 +4,62 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-09-25 — PR #51 — feat(design): Bengali covers the signed-in app shell (D-401)
+
+- **Lane:** design
+- **Shipped:** `<html lang>` follows the locale; one resolver (cookie → `profiles.locale` → en, cached per request); language switch and **sign-out** in a new user menu; 404/error/forbidden pages translated; Western digits in Bengali enforced by a guard test; en/bn key-parity test.
+- **Decisions:** D-401.
+- **Migrations:** none.
+- **Review/incidents:** review caught an uncached locale lookup (3+ DB round trips per page) and the missing sign-out; README test-report table deduplicated.
+
+## 2026-09-25 — PR #54 — feat(academics): F-AC-02 students and guardians — demo cut
+
+- **Lane:** identity
+- **Shipped:** `students`, `student_private_details` (date of birth), `guardians`, `enrollments`, the `student_roster` view and `public.admit_student` (idempotent; roll numbers unique per section; one active enrolment per year); `/app/students` search (English/Bangla/ID) and profile; demo seed script for Class 6-ক (not run on production).
+- **Decisions:** D-103 (sensitive fields split, like D-63).
+- **Migrations:** `20260925300306_students_and_guardians.sql` — applied to production; smoke test passed.
+- **Review/incidents:** security review caught date of birth being written unmasked into the audit trail (readable by platform staff) — redacted before merge; class-teacher access limited to the current academic year.
+
+## 2026-09-25 — PR #48 — feat(academics): F-AC-06 Part 2 — exams, demo cut
+
+- **Lane:** billing
+- **Shipped:** `exams`, `exam_sections`, `exam_subjects`, `public.create_exam`; each exam freezes its grading rules at creation; §5.12 status chain in DB and domain; papers lock from marks entry on; `/app/exams` list and detail.
+- **Decisions:** D-303.
+- **Migrations:** `20260925300305_exams.sql` — applied to production; smoke test passed.
+- **Review/incidents:** exam year was changeable after creation; pass marks were rounded against D-302; the snapshot trigger leaked a school's grade-scale state to strangers — all fixed before merge. Publish still needs a marks-completeness gate (Part 4).
+
+## 2026-09-25 — PR #47 — feat(academics): F-AC-01 — classes, sections, subjects (demo cut)
+
+- **Lane:** identity
+- **Shipped:** `sections` and `subjects` (archive-only), class-teacher eligibility, a trigger that clears a removed or demoted class teacher, NCTB starter subjects (Bangla/English 1st and 2nd papers, four religion subjects), `/app/classes`.
+- **Decisions:** D-102.
+- **Migrations:** `20260925300304_sections_and_subjects.sql` — applied to production; smoke test passed.
+- **Review/incidents:** removed teachers stayed as class teachers until the orphaning trigger was added.
+
+## 2026-09-25 — PR #45 — fix(auth): throttle keys derived server-side; login rate-limit copy
+
+- **Lane:** identity
+- **Shipped:** per-user throttle keys derived from `auth.uid()` so nobody can lock another user out; clients can't reset their own limits; an expired block starts a fresh window; the login rate-limit message shows once, in minutes.
+- **Decisions:** D-101 (email-lockout trade-off recorded).
+- **Migrations:** `20260925300303_throttle_per_user_keys.sql` — applied to production; smoke test passed.
+- **Review/incidents:** first version let a signed-in user reset their own limits (undoing the createSchool limit) — fixed and re-verified.
+
+## 2026-09-25 — PR #49 — feat(design): readable audit trail
+
+- **Lane:** design
+- **Shipped:** audit rows read as bilingual sentences; no raw table names, codes or empty "()"; a test renders every catalogued action in both languages.
+- **Decisions:** D-402.
+- **Migrations:** none.
+- **Review/incidents:** none (role-change sentences still render before/after blank — follow-up).
+
+## 2026-09-25 — PR #46 — feat(academics): F-AC-06 Part 1 — grade scales
+
+- **Lane:** billing
+- **Shipped:** `grade_scales`/`grade_bands` with a database coverage check (0–100, no gaps), Bangladesh default, SQL/TypeScript grading parity, `/app/settings/grade-scale`.
+- **Decisions:** D-302 (no rounding before banding; owner to confirm the 32.5% case).
+- **Migrations:** `20260925300302_grade_scales.sql` — applied to production; smoke test passed.
+- **Review/incidents:** an empty band set was accepted; bands were writable around the save function's lock — both closed.
+
 ## 2026-09-25 — PR #41 — feat(design): owner/admin today dashboard from real data (D-400)
 
 - **Lane:** design
