@@ -870,5 +870,76 @@
       "readOnly": "Only an owner or admin can change grading.",
       "pointsDecrease": "Grade points cannot go down as the bands go up (at {at} %)."
     }
+  },
+  "dashboard": {
+    "eyebrowToday": "Today",
+    "eyebrowSetup": "Setup",
+    "eyebrowPeople": "People",
+    "eyebrowActivity": "Activity",
+    "plan": {
+      "title": "Plan",
+      "trialDaysLeft": "{days} days left in your trial",
+      "trialOneDayLeft": "1 day left in your trial",
+      "trialLastDay": "Your trial ends today",
+      "trialEnded": "Your trial has ended",
+      "readOnly": "Read-only",
+      "active": "Active",
+      "noPlan": "No plan"
+    },
+    "people": {
+      "title": "Members",
+      "total": "{count} active",
+      "roles": {
+        "owner": "Owners",
+        "admin": "Admins",
+        "teacher": "Teachers",
+        "staff": "Office staff",
+        "parent": "Parents"
+      }
+    },
+    "staff": {
+      "title": "Staff directory",
+      "count": "{count} staff records",
+      "empty": "No staff records yet"
+    },
+    "checklist": {
+      "title": "Finish setting up your school",
+      "progress": "{done} of {total} done",
+      "done": "Done",
+      "todo": "To do",
+      "steps": {
+        "school_profile": "Add your school's letterhead and logo",
+        "academic_year": "Set up the academic year and classes",
+        "teachers": "Invite your teachers",
+        "staff_records": "Add staff records",
+        "students": "Add students"
+      }
+    },
+    "attendance": {
+      "title": "Today's attendance",
+      "emptyTitle": "No attendance taken yet",
+      "emptyDescription": "When teachers take today's register, present, absent and late counts show here."
+    },
+    "results": {
+      "title": "Exam results",
+      "emptyTitle": "No results yet",
+      "emptyDescription": "Results show here once marks are entered and published for an exam."
+    },
+    "activity": {
+      "title": "Recent activity",
+      "viewAll": "Open the audit trail",
+      "empty": "Nothing has changed in this workspace yet."
+    },
+    "loadError": "The dashboard could not load. Refresh to try again."
+  },
+  "shell": {
+    "signedInAs": "Signed in as {role}",
+    "roles": {
+      "owner": "owner",
+      "admin": "admin",
+      "teacher": "teacher",
+      "staff": "office staff",
+      "parent": "parent"
+    }
   }
 }
