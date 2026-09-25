@@ -19,14 +19,20 @@ Concurrency: `group: ${{ github.workflow }}-${{ github.ref }}`, `cancel-in-progr
 
 Draft PRs run every job except `e2e` and `lighthouse` — the expensive ones start when the PR is marked ready. That keeps the "push on the first commit" habit (HANDBOOK §2) cheap.
 
-**Job skipping (D-70).** A first job, `changes`, diffs the PR against its base with a plain `git diff --name-only <base>...HEAD` (no third-party action) and outputs two booleans: `db` (`supabase/**` or `.github/workflows/**` changed) and `app` (`apps/**`, `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig*`, `.github/workflows/**` or `scripts/**` changed). Neither true means the PR is docs-only. `push` to `main` and `merge_group` always set both true — those runs are never partial. Everything downstream reads these outputs instead of recomputing the diff:
+**Job skipping (D-70) — fails closed by design.** A first job, `changes`, diffs the PR against its base (`git diff --no-renames --name-only <base>...HEAD`, no third-party action) and outputs two booleans, each **defaulting to the side that runs more, not less**:
 
-- `lint`, `typecheck`, `unit`, `contracts`, `build`, `security` run when `app` or `db` is true; skipped for a docs-only PR.
-- `db` runs only when `db` is true.
-- `e2e`, `lighthouse` run only on `pull_request` (never `push` to `main` — they already ran on the PR that merged), never on a draft, and only when `app` or `db` is true. Their `needs` include `build` (and `db` for `e2e`); because a **skipped** upstream job would otherwise auto-skip anything that needs it, their `if` checks `needs.build.result == 'success'` (and, for `e2e`, `needs.db.result` is `'success'` **or** `'skipped'`) explicitly, so a docs-untouched `db` job doesn't take `e2e` down with it.
+- `app` is **`false` only when every changed file** matches a narrow docs/prose/dotfile-config allowlist (`docs/**`, any `*.md`, `.editorconfig`, `.gitattributes`, `.gitignore`). An empty diff, a file this allowlist doesn't recognise, or a rename that moved a code file into `docs/` (`--no-renames` keeps the old path as its own line, so it still counts) all leave `app=true`.
+- `db` is **`true` only when a changed file matches** `^(supabase/|\.github/)` — the narrow, opposite rule, since `db` is the expensive job and running it needlessly costs a full Postgres/pgTAP run for no correctness benefit.
+- `push` to `main` and `merge_group` always set both true — those runs are never partial (this PR's own run is a `push`-equivalent full run for the same reason).
+
+Everything downstream reads these outputs instead of recomputing the diff, and every downstream `if` compares with **`!= 'false'`, never `== 'true'`** — so an empty/unset output (the `changes` job erroring before it writes anything) is treated as "run", not "skip":
+
+- `lint`, `typecheck`, `unit`, `contracts`, `build`, `security`, and `db` run unless the relevant output is the literal string `'false'`.
+- `e2e`, `lighthouse` run on `pull_request` (not draft) and on `merge_group` — never on `push` to `main`, since they already ran on the PR that merged — and only when `app` or `db` is not `'false'`.
+- Every one of the jobs above starts its `if` with **`!cancelled()`**. Without a status-check function in the expression, GitHub silently ANDs an implicit `success()` across every job named in `needs` — so even an `if` that explicitly reads `needs.changes.outputs.db != 'false'` would still auto-skip the moment `changes` (or, for `e2e`/`lighthouse`, `db`) reports anything other than `'success'`, including a legitimate `'skipped'` (actions/runner#491). `!cancelled()` removes that implicit gate, so the written condition — not GitHub's default — decides. `e2e` and `lighthouse` still explicitly require `needs.build.result == 'success'`, and `e2e` additionally requires `needs.db.result` to be `'success'` **or** `'skipped'` (never `'failure'`).
 - `changeset`, `docs-sync`, `report` and `guard` are unaffected — they either run unconditionally on every PR/push or already do their own contextual pass/fail (`changeset`/`docs-sync` pass automatically for a docs-only diff; see §2.10-2.11).
 
-A **skipped** job reports as a passing check to GitHub, so the required-checks list (§3) stays green without any branch-protection change. `report`'s `needs.<job>.result` already renders `skipped` with its own icon (⏭️), so a run with several skipped jobs still produces a correct summary comment.
+A **skipped** job reports as a passing check to GitHub, so the required-checks list (§3) stays green without any branch-protection change — which is exactly why `CI / changes` itself **is** a required check (§3): if the `changes` job breaks outright, its failure blocks the merge instead of silently degrading into "every downstream job ran the full, safe path" (which is what the fail-closed defaults above produce, but a required, red `changes` check still forces someone to look at it rather than merge on a permanently-full-cost, unexplained run). `report`'s `needs.<job>.result` already renders `skipped` with its own icon (⏭️), so a run with several skipped jobs still produces a correct summary comment.
 
 ---
 
@@ -79,7 +85,7 @@ Outputs consumed by later jobs: the store cache key, and a `changed` matrix (`ap
 
 ### 2.3 `db` → **`CI / db`**
 
-The authorization gate. Runs only when the `changes` job's `db` output is true (§1). Runs against a disposable **Postgres 17 service container**, not the Supabase dev branch — branching needs the Supabase Pro plan, which is deferred until launch (D-20).
+The authorization gate. Skipped only when the `changes` job's `db` output is the literal string `'false'` (§1, fail-closed — anything else, including an unset output, runs it). Runs against a disposable **Postgres 17 service container**, not the Supabase dev branch — branching needs the Supabase Pro plan, which is deferred until launch (D-20).
 
 1. **Migration append-only check** (PRs only): `scripts/check-migrations-append-only.mjs` verifies every file in `supabase/migrations` is new-only relative to `origin/<base-ref>` (no edits to already-applied migrations — forward-only is checked mechanically, not trusted). Fails with the offending filename.
 2. **Migration order check** (PRs only, D-69/D-70): `scripts/check-migrations-order.mjs` compares every migration **added** in the PR (vs. the merge-base with `origin/<base-ref>`, same diff shape as the append-only check) against the newest migration timestamp already on the base ref. Any added migration whose timestamp sorts at or before that newest timestamp fails with a `::error` naming the file and a suggested new filename — `main`'s newest timestamp plus one sequence step, keeping the offending file's own lane digit (`docs/plan/LANES.md`) where that still sorts later. **Re-dating:** `git mv supabase/migrations/<old>.sql supabase/migrations/<suggested>.sql`, update any reference to the old filename, re-run the gate. The migration has never been applied, so the rename is safe — this is exactly the situation LANES.md's "Migration order at merge time" describes: lanes merge in whatever order they finish, so a PR written against one `main` can fall behind another lane's PR that merged first.
@@ -130,9 +136,9 @@ Runs on `pull_request` (not `pull_request_target`) so a fork PR cannot reach sec
 
 ### 2.8 `e2e` → **`CI / e2e`**
 
-Skipped on draft PRs. Needs `build` and `db`.
+Skipped on draft PRs, on `push` to `main`, and when neither app nor db code changed (§1, D-70). Runs on `pull_request` and `merge_group`. Needs `build` and `db`.
 
-1. Wait for the Vercel preview deployment for this commit, or start the built app locally with `pnpm start` — preview is preferred because it exercises the real edge/runtime path. `E2E_BASE_URL` is set from whichever was used and is recorded in the summary.
+1. Download the `build` artifact and start it locally with `next start` — **not** a Vercel preview. D-70's `ignoreCommand` (`apps/web/vercel.json`) means only pushes to `main` build on Vercel at all; there is no PR preview deployment for this commit to wait for. `E2E_BASE_URL` points at the local instance and is recorded in the summary.
 2. `pnpm exec playwright install --with-deps chromium` (cached).
 3. Run both projects — **`phone` (360×800) and `desktop` (1280×800)** — against the single spec file (`e2e/smoke.spec.ts`). No sharding, no `playwright merge-reports` step.
 4. `@axe-core/playwright` runs inside the journeys. **Serious and critical violations fail the job**; moderate/minor are attached.
@@ -142,7 +148,7 @@ Skipped on draft PRs. Needs `build` and `db`.
 
 ### 2.9 `lighthouse` → **`CI / lighthouse`**
 
-Skipped on draft PRs. Lighthouse CI against the preview URL, mobile emulation, 3 runs median, on the app shell and `/app/dashboard`. Fails below: PWA 90, Accessibility 95, Performance 85, or LCP above 2.5 s. Uploads `lighthouse-report`; scores table to the summary.
+Skipped on draft PRs, on `push` to `main`, and when neither app nor db code changed (§1, D-70). Runs on `pull_request` and `merge_group`. Lighthouse CI against the same locally-started build `e2e` uses (D-70: no PR preview exists to point at), mobile emulation, 3 runs median, on the app shell and `/app/dashboard`. Fails below: PWA 90, Accessibility 95, Performance 85, or LCP above 2.5 s. Uploads `lighthouse-report`; scores table to the summary.
 
 ### 2.10 `changeset` → **`CI / changeset`**
 
@@ -162,7 +168,7 @@ This job cannot verify that docs are _good_; it verifies they were not forgotten
 
 ### 2.12 `report` → not required, `if: always()`
 
-Aggregates the job summaries into one PR comment (updated in place, never appended as a new comment on each push): overall status, coverage delta, pgTAP table count, e2e results per viewport, axe counts, flaky count, artifact links, preview URL, and links to any `docs/test-reports/` file added in this PR. Needs `pull-requests: write`; skipped for fork PRs, where the summaries are still visible on the run.
+Aggregates the job summaries into one PR comment (updated in place, never appended as a new comment on each push): overall status, coverage delta, pgTAP table count, e2e results per viewport, axe counts, flaky count, artifact links, and links to any `docs/test-reports/` file added in this PR. Needs `pull-requests: write`; skipped for fork PRs, where the summaries are still visible on the run. No preview URL — D-70 dropped PR previews.
 
 ---
 
@@ -172,6 +178,7 @@ These exact names go in the branch protection rule. They are contract — renami
 
 ```
 CI / guard
+CI / changes
 CI / lint
 CI / typecheck
 CI / db
@@ -184,6 +191,8 @@ CI / lighthouse
 CI / changeset
 CI / docs-sync
 ```
+
+`CI / changes` (D-70) is required precisely because everything else's skip decision depends on it: every downstream job's `if` is written to run rather than skip when `changes` itself errors or is cancelled (§1 — fail closed), but a _required_ `CI / changes` still means a broken `changes` job blocks the merge outright instead of merely costing everyone a full, un-skipped run.
 
 Additional branch protection settings on `main`:
 
@@ -205,20 +214,20 @@ Additional branch protection settings on `main`:
 
 Repository secrets (Settings → Secrets and variables → Actions). Nothing here is ever echoed; `add-mask` is applied to any value derived from one.
 
-| Secret                                                              | Used by                        | Purpose                                                               |
-| ------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------- |
-| `SUPABASE_ACCESS_TOKEN`                                             | `db`, `release`                | CLI auth: branches, migrations, type generation                       |
-| `SUPABASE_PROJECT_REF`                                              | `db`, `release`                | `kekfmibwjejdhxjkmezo` (a variable, not a secret, but kept alongside) |
-| `SUPABASE_DB_PASSWORD`                                              | `release`                      | Production migration promotion                                        |
-| `SUPABASE_DEV_DB_URL`                                               | `db`, `unit`                   | Direct Postgres URL for pgTAP and integration tests                   |
-| `SUPABASE_SERVICE_ROLE_KEY_DEV`                                     | `unit`, `e2e`                  | Seeding and test fixtures **on the dev branch only**                  |
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `build`, `e2e`                 | Public by design; stored as variables                                 |
-| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`                | `e2e`, `lighthouse`, `release` | Resolve the preview deployment; production rollback/promotion         |
-| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`                 | `release`                      | Release creation and source map upload                                |
-| `SEMGREP_APP_TOKEN`                                                 | `security`                     | Optional rule sync                                                    |
-| `CRON_SECRET`                                                       | `e2e`                          | Exercise cron routes in the preview                                   |
-| `E2E_TEST_PASSWORD`                                                 | `e2e`                          | Password for seeded synthetic test accounts                           |
-| `GITHUB_TOKEN`                                                      | all                            | Provided automatically; least privilege per job                       |
+| Secret                                                              | Used by         | Purpose                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_ACCESS_TOKEN`                                             | `db`, `release` | CLI auth: branches, migrations, type generation                                                                                                                                                                              |
+| `SUPABASE_PROJECT_REF`                                              | `db`, `release` | `kekfmibwjejdhxjkmezo` (a variable, not a secret, but kept alongside)                                                                                                                                                        |
+| `SUPABASE_DB_PASSWORD`                                              | `release`       | Production migration promotion                                                                                                                                                                                               |
+| `SUPABASE_DEV_DB_URL`                                               | `db`, `unit`    | Direct Postgres URL for pgTAP and integration tests                                                                                                                                                                          |
+| `SUPABASE_SERVICE_ROLE_KEY_DEV`                                     | `unit`, `e2e`   | Seeding and test fixtures **on the dev branch only**                                                                                                                                                                         |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `build`, `e2e`  | Public by design; stored as variables                                                                                                                                                                                        |
+| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`                | `release`       | Production rollback/promotion. `e2e`/`lighthouse` no longer resolve a preview deployment — D-70's `ignoreCommand` means only `main` builds on Vercel, so both jobs run against the locally-started `build` artifact instead. |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`                 | `release`       | Release creation and source map upload                                                                                                                                                                                       |
+| `SEMGREP_APP_TOKEN`                                                 | `security`      | Optional rule sync                                                                                                                                                                                                           |
+| `CRON_SECRET`                                                       | `e2e`           | Exercise cron routes against the locally-started build                                                                                                                                                                       |
+| `E2E_TEST_PASSWORD`                                                 | `e2e`           | Password for seeded synthetic test accounts                                                                                                                                                                                  |
+| `GITHUB_TOKEN`                                                      | all             | Provided automatically; least privilege per job                                                                                                                                                                              |
 
 Rules: never in `pull_request_target`; fork PRs run without secrets and their `e2e`/`lighthouse` jobs are skipped with an explicit note rather than passing vacuously. Production gateway, email and Anthropic keys are **not** in GitHub Actions at all — they live only in Vercel, because CI has no reason to touch a live provider.
 
@@ -242,10 +251,10 @@ Never cache anything derived from a secret or from database content. Caches rest
 ## 6. Previews and the Supabase project
 
 - There is no Supabase dev branch yet: branching needs the Pro plan, and until Release 1 launches the Campus project `kekfmibwjejdhxjkmezo` is deliberately both dev and prod (D-20, D-53). The dev machine also has no Docker, so there is no per-PR local database either.
-- Vercel builds a preview per PR commit. Where a preview needs data, it points at the same production Supabase project **read-only** — previews never seed, migrate, or otherwise write against it.
-- `CI / db` never touches that project: a PR's migrations are applied and pgTAP-tested against a disposable Postgres 17 service container (§2.3), not the shared project. Only the `push` job in `db.yml`, triggered by a `push` to `main`, applies migrations to production; previews see the new schema once that lands.
+- **No Vercel preview deployments (D-70).** `apps/web/vercel.json`'s `ignoreCommand` skips the Vercel build on every branch except `main` — a PR gets no preview URL at all. `CI / build` (§2.6) already proves the app builds on every PR; `e2e` and `lighthouse` (§2.8-§2.9) run against that build artifact started locally with `next start`, not a preview.
+- `CI / db` never touches the shared Supabase project: a PR's migrations are applied and pgTAP-tested against a disposable Postgres 17 service container (§2.3), not the shared project. Only the `push` job in `db.yml`, triggered by a `push` to `main`, applies migrations to production.
 - Seed data on the shared project is marked demo and is wiped before launch.
-- At launch: upgrade to Supabase Pro (backups, PITR, branching) and switch previews to real per-PR branches — tracked as a `db.yml` config change only (D-20).
+- At launch: upgrade to Supabase Pro (backups, PITR, branching) — tracked as a `db.yml` config change only (D-20). Reintroducing per-PR Vercel previews, if ever wanted back, is a separate decision superseding D-70.
 
 ---
 

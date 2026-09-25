@@ -4,6 +4,14 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-09-25 — PR #32 — feat(ops): F-OP-06 Part 1 — staff schema, RLS and the compensation split
+
+- **Lane:** operations
+- **Shipped:** Staff schema (roles, employment status, the fixed/hourly compensation split) with its RLS policies.
+- **Decisions:** D-63.
+- **Migrations:** `20260925000900` — applied to production; smoke test passed.
+- **Review/incidents:** none noted.
+
 ## 2026-09-24 — PR #33 — chore(release): version packages
 
 - **Lane:** lead
