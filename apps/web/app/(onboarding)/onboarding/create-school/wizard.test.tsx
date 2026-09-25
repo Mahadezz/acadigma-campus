@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { CreateSchoolDraft } from "@acadigma/contracts"
@@ -79,6 +79,47 @@ describe("CreateSchoolWizard focus management", () => {
     })
     const step1Heading = screen.getByRole("heading", { name: t.step1Title })
     expect(document.activeElement).toBe(step1Heading)
+  })
+})
+
+describe("step 2 — working days survive a reload", () => {
+  it("saves a day toggle without Continue, and a reload restores it", async () => {
+    saveOnboardingDraft.mockResolvedValue({ ok: true, data: { savedAt: "x" } })
+    const { unmount } = renderWizard(2, COMPLETE_DRAFT)
+
+    await act(async () => {
+      screen.getByRole("button", { name: "Sunday" }).click()
+    })
+    await waitFor(() => expect(saveOnboardingDraft).toHaveBeenCalled())
+
+    const saved = saveOnboardingDraft.mock.calls.at(-1)?.[0] as {
+      step: number
+      draft: CreateSchoolDraft
+    }
+    expect(saved.step).toBe(2)
+    expect([...(saved.draft.working_days ?? [])].sort()).toEqual([
+      1, 2, 3, 4, 6,
+    ])
+
+    // "Reload": the page renders again from the saved draft.
+    unmount()
+    renderWizard(2, saved.draft)
+    expect(
+      screen
+        .getByRole("button", { name: "Sunday" })
+        .getAttribute("aria-pressed")
+    ).toBe("false")
+    expect(
+      screen
+        .getByRole("button", { name: "Saturday" })
+        .getAttribute("aria-pressed")
+    ).toBe("true")
+  })
+
+  it("does not write on first render", async () => {
+    renderWizard(2, COMPLETE_DRAFT)
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    expect(saveOnboardingDraft).not.toHaveBeenCalled()
   })
 })
 

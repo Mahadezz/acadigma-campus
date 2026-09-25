@@ -214,6 +214,17 @@ export function CreateSchoolWizard({
     hasRenderedOnceRef.current = true
   }, [])
 
+  /** Saves a patch without advancing (discrete step 2 controls, so a
+   * reload mid-step keeps them). Best effort: a failure here is retried by
+   * the next change or by Continue, which does report errors. */
+  function autosave(step: Stage, patch: Partial<CreateSchoolDraft>) {
+    setDraft((current) => {
+      const merged = { ...current, ...patch }
+      void saveOnboardingDraft({ path: "create_school", step, draft: merged })
+      return merged
+    })
+  }
+
   async function saveAndAdvance(
     nextStep: Stage,
     patch: Partial<CreateSchoolDraft>
@@ -279,6 +290,7 @@ export function CreateSchoolWizard({
         draft={draft}
         onBack={() => setStage(1)}
         onSubmit={handleStep2}
+        onAutosave={(patch) => autosave(2, patch)}
         backLabel={backLabel}
         shouldFocusRef={hasRenderedOnceRef}
       />
@@ -463,14 +475,18 @@ function Step1({
                       if (value) field.onChange(value)
                     }}
                     aria-label={t.mediumLabel}
-                    className="flex-wrap"
+                    className="grid w-full grid-cols-1 sm:grid-cols-2"
                   >
                     {schoolMediumSchema.options.map((value) => (
                       <ToggleGroupItem
                         key={value}
                         value={value}
-                        className="min-h-11 flex-1"
+                        className="group h-auto min-h-11 w-full py-2 whitespace-normal"
                       >
+                        <CheckIcon
+                          aria-hidden="true"
+                          className="hidden group-data-[state=on]:inline"
+                        />
                         {t.mediums[value]}
                       </ToggleGroupItem>
                     ))}
@@ -534,6 +550,7 @@ function Step2({
   draft,
   onBack,
   onSubmit,
+  onAutosave,
   backLabel,
   shouldFocusRef,
 }: {
@@ -541,6 +558,7 @@ function Step2({
   draft: CreateSchoolDraft
   onBack: () => void
   onSubmit: (values: CreateSchoolStep2) => Promise<StepOutcome>
+  onAutosave: (patch: Partial<CreateSchoolDraft>) => void
   backLabel: string
   shouldFocusRef: RefObject<boolean>
 }) {
@@ -631,6 +649,31 @@ function Step2({
   }
 
   const startsOn = form.watch("academic_year.starts_on")
+
+  // Working days and timezone are saved as soon as they change (not only on
+  // Continue), so a reload mid-step keeps them. Debounced so a burst of
+  // toggles is one write. Typed fields (year name, dates) still save on
+  // Continue, since a half-typed value is not a valid draft.
+  const workingDays = form.watch("working_days")
+  const timezone = form.watch("timezone")
+  const onAutosaveRef = useRef(onAutosave)
+  onAutosaveRef.current = onAutosave
+  const firstWatchRef = useRef(true)
+  const workingDaysKey = workingDays.join(",")
+  useEffect(() => {
+    if (firstWatchRef.current) {
+      firstWatchRef.current = false
+      return
+    }
+    if (!workingDaysKey) return
+    const id = setTimeout(() => {
+      onAutosaveRef.current({
+        working_days: workingDaysKey.split(",").map(Number),
+        timezone,
+      })
+    }, 400)
+    return () => clearTimeout(id)
+  }, [workingDaysKey, timezone])
 
   return (
     <OnboardingShell
