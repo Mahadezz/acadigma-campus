@@ -2842,10 +2842,10 @@ export type Database = {
           language: string
           palette: string
           push_enabled: boolean
-          text_size: string
+          text_size: Database["public"]["Enums"]["text_size"]
           theme_mode: string
           timezone: string | null
-          ui_mode: string
+          ui_mode: Database["public"]["Enums"]["ui_mode"]
           updated_at: string
           user_id: string
         }
@@ -2857,10 +2857,10 @@ export type Database = {
           language?: string
           palette?: string
           push_enabled?: boolean
-          text_size?: string
+          text_size?: Database["public"]["Enums"]["text_size"]
           theme_mode?: string
           timezone?: string | null
-          ui_mode?: string
+          ui_mode?: Database["public"]["Enums"]["ui_mode"]
           updated_at?: string
           user_id: string
         }
@@ -2872,10 +2872,10 @@ export type Database = {
           language?: string
           palette?: string
           push_enabled?: boolean
-          text_size?: string
+          text_size?: Database["public"]["Enums"]["text_size"]
           theme_mode?: string
           timezone?: string | null
-          ui_mode?: string
+          ui_mode?: Database["public"]["Enums"]["ui_mode"]
           updated_at?: string
           user_id?: string
         }
