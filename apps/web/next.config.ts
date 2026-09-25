@@ -126,11 +126,25 @@ const nextConfig: NextConfig = {
    * `pdfkit`/`fontkit` subtree out of the webpack graph entirely — Node
    * `require()`s it directly from `node_modules` at request time, where
    * pdfkit's own `package.json` is intact and `#standard-fonts/*` resolves
-   * normally. Output file tracing (`@vercel/nft`) then includes the actual
-   * files a real Node resolution would touch, `#imports` included, because
-   * it is no longer working from a bundled chunk with no package context.
+   * normally at runtime.
+   *
+   * Output file tracing (`@vercel/nft`) still has to know to COPY those
+   * font files into the deployed function in the first place. Verified by
+   * building and inspecting `route.js.nft.json`: nft follows the ordinary
+   * `require`/`import` calls pdfkit makes (and includes `pdfkit.node.mjs`
+   * itself) but does not walk the *dynamic* per-glyph `require('#standard-
+   * fonts/Helvetica')` calls pdfkit issues through its own `createRequire`
+   * — those come back as "cannot resolve" during nft's own trace, so they
+   * never make it into the file list on their own. `outputFileTracingIncludes`
+   * force-includes the directory those calls read from, for both places
+   * this route in `@acadigma/pdf` renders a PDF (the download route and the
+   * server actions that kick a render right after `createReportRun`).
    */
   serverExternalPackages: ["@react-pdf/renderer", "pdfkit", "fontkit"],
+  outputFileTracingIncludes: {
+    "/api/pdf/[runId]": ["./node_modules/pdfkit/js/standard-fonts/**"],
+    "/app/reports": ["./node_modules/pdfkit/js/standard-fonts/**"],
+  },
 
   async headers() {
     return [
