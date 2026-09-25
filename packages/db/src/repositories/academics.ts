@@ -61,7 +61,7 @@ function toSection(row: SectionRow): Section {
 
 const SECTION_COLUMNS =
   "id, grade_level_id, name, class_teacher_id, room, capacity, " +
-  "class_teacher:workspace_members!sections_class_teacher_fkey(profiles(full_name))"
+  "class_teacher:workspace_members!sections_class_teacher_fkey(profiles!workspace_members_user_id_fkey(full_name))"
 
 async function currentYear(
   supabase: AcadigmaSupabaseClient,
@@ -126,7 +126,7 @@ export async function listClassTeacherOptions(
 ): Promise<Result<TeacherOption[], ApiError>> {
   const { data, error } = await supabase
     .from("workspace_members")
-    .select("id, profiles(full_name)")
+    .select("id, profiles!workspace_members_user_id_fkey(full_name)")
     .eq("workspace_id", ctx.workspaceId)
     .eq("status", "active")
     .in("role", ["owner", "admin", "teacher"])
