@@ -22,6 +22,8 @@ export const EXEMPT = {
     "user-level onboarding_progress row, no workspace (the file only names requireWorkspace in a comment)",
   "apps/web/app/(onboarding)/actions.ts#completeOnboarding":
     "user-level profiles/onboarding_progress write, no workspace",
+  "apps/web/app/(onboarding)/actions.ts#createSchoolWorkspace":
+    "creates the workspace; tg_require_writable passes a fresh workspace",
 }
 
 const READ_NAME =

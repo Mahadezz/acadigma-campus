@@ -197,6 +197,8 @@ Separate Bengali base type size from the Latin scale; self-hosted subset Bengali
 
 ## 4. Streams and ownership (no two agents write the same folder)
 
+The lanes that run now are in `docs/plan/LANES.md`, D-69.
+
 | Stream | Owns (routes · feature folders · migrations prefix)                                                                                                                           |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A      | identity, academics core, payments core, teaching AI · `(auth)`, `(onboarding)`, `(school)/app/{students,attendance,exams,marks,lessons,ai}`                                  |

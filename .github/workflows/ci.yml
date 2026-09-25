@@ -53,8 +53,70 @@ jobs:
           fi
           echo "### guard — commit arrived via a merged pull request" >> "$GITHUB_STEP_SUMMARY"
 
+  # D-70: computed once, gates the expensive jobs so a docs-only PR pays for none of
+  # them. A skipped job reports as passing, so required checks stay green. `push` to
+  # main and `merge_group` are always a full run.
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      db: ${{ steps.diff.outputs.db }}
+      app: ${{ steps.diff.outputs.app }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # base_ref goes through env, not string interpolation (same convention as the
+      # db job's "Migrations are append-only" step). No third-party action.
+      #
+      # Fail closed: app defaults true and is skipped ONLY when every changed file is
+      # provably docs/prose/dotfile config that cannot affect app or db code (a narrow
+      # allowlist) — an empty diff, a renamed file (--no-renames keeps both the old and
+      # new path as separate lines), or anything this allowlist doesn't recognise all
+      # leave app=true. db is the narrow, opposite case (true only when supabase/** or
+      # .github/** — workflows, actions, dependabot, everything — changed) since it is
+      # the expensive job and has no correctness cost when skipped for a docs/app-only
+      # PR; the append-only and order checks it runs only matter when db=true anyway.
+      - name: Diff against the base
+        id: diff
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "merge_group" ]; then
+            echo "db=true" >> "$GITHUB_OUTPUT"
+            echo "app=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(git diff --no-renames --name-only "origin/$BASE_REF...HEAD")
+
+          app=true
+          if [ -n "$files" ] && ! grep -qvE '^(docs/|[^/]+\.md$|\.editorconfig$|\.gitattributes$|\.gitignore$)' <<<"$files"; then
+            app=false
+          fi
+
+          db=false
+          if grep -qE '^(supabase/|\.github/)' <<<"$files"; then
+            db=true
+          fi
+
+          echo "db=$db" >> "$GITHUB_OUTPUT"
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        run: |
+          docsOnly=false
+          [ "${{ steps.diff.outputs.db }}" = "false" ] && [ "${{ steps.diff.outputs.app }}" = "false" ] && docsOnly=true
+          echo "### changes — db=${{ steps.diff.outputs.db }} app=${{ steps.diff.outputs.app }} docs-only=$docsOnly" >> "$GITHUB_STEP_SUMMARY"
+
   lint:
     name: lint
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -81,6 +143,10 @@ jobs:
 
   typecheck:
     name: typecheck
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -101,6 +167,8 @@ jobs:
   # whichever branch pushed last.
   db:
     name: db
+    needs: changes
+    if: "!cancelled() && needs.changes.outputs.db != 'false'"
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -138,6 +206,16 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: node scripts/check-migrations-append-only.mjs "origin/$BASE_REF"
+
+      # LANES.md "Migration order at merge time": lanes merge in whatever order they
+      # finish, so a PR's migration can sort before one another lane merged first.
+      # `supabase db push` refuses that; catch it here instead of on the production
+      # deploy.
+      - name: Migrations sort after main's newest
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/check-migrations-order.mjs "origin/$BASE_REF"
 
       # pgTAP is a server-side extension, so it is installed inside the service
       # container. The official postgres image already has the PGDG apt repository.
@@ -234,6 +312,10 @@ jobs:
 
   unit:
     name: unit
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -260,6 +342,10 @@ jobs:
   # Cheap drift detection, separated so the failure message is unambiguous.
   contracts:
     name: contracts
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -295,6 +381,10 @@ jobs:
 
   build:
     name: build
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -336,6 +426,10 @@ jobs:
   # Runs on pull_request, never pull_request_target, so a fork PR cannot reach secrets.
   security:
     name: security
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -395,9 +489,24 @@ jobs:
 
   e2e:
     name: e2e
-    needs: [build, db]
-    # Skipped on drafts: the expensive jobs start when the PR is marked ready.
-    if: github.event.pull_request.draft != true
+    needs: [build, db, changes]
+    # Skipped on drafts (the expensive jobs start when the PR is marked ready), on a
+    # push to main (already ran on the PR that merged — CI.md §1: merge_group is never
+    # partial, so it still runs e2e), and when this PR touched neither app nor db code.
+    # `db` is allowed to be `skipped` (docs/app-only PRs never run it) but not
+    # `failure`. `!cancelled()` is required here, not decorative: without a status
+    # function in the expression GitHub silently ANDs an implicit `success()` across
+    # every job in `needs`, so a `db` job that is legitimately `skipped` would still
+    # skip e2e regardless of what the rest of this condition says
+    # (actions/runner#491). `!cancelled()` removes that implicit gate so the explicit
+    # `needs.db.result` checks below are the only thing that decides.
+    if: |
+      !cancelled() &&
+      github.event_name != 'push' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.draft) &&
+      (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false') &&
+      needs.build.result == 'success' &&
+      (needs.db.result == 'success' || needs.db.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -436,8 +545,17 @@ jobs:
 
   lighthouse:
     name: lighthouse
-    needs: [build]
-    if: github.event.pull_request.draft != true
+    needs: [build, changes]
+    # Same rules as e2e (see its comment): not on push to main, PR-drafts skipped,
+    # merge_group runs, only when app or db changed, `!cancelled()` bypasses the
+    # implicit needs-success gate so a legitimately-skipped upstream job can't take
+    # this one down with it.
+    if: |
+      !cancelled() &&
+      github.event_name != 'push' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.draft) &&
+      (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false') &&
+      needs.build.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

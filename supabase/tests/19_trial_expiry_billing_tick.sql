@@ -82,36 +82,31 @@ select ok(
   'anon has no EXECUTE grant on the trial-expiry job');
 
 -- ---------------------------------------------------------------------
--- Setup: three school workspaces, each via a real authenticated INSERT so
--- the billing-bootstrap trigger runs exactly as it does in production
--- (Part 2), then backdated as the privileged `postgres` role where a
+-- Setup: three school workspaces, inserted as `postgres` (D-100 removed the
+-- client INSERT path; the billing-bootstrap triggers run the same either
+-- way — 16_billing_bootstrap_guard.sql covers the authenticated path through
+-- public.create_school_workspace), then backdated as the privileged `postgres` role where a
 -- scenario needs a trial already in the past — a client can never do this
 -- themselves (16_billing_bootstrap_guard.sql proves the guard still refuses
 -- a direct client UPDATE of trial_ends_at/access_mode).
 -- ---------------------------------------------------------------------
 select tests.mkuser('19000001-0000-0000-0000-000000000001', 'p4.expired@test.local', 'P4 Expired Trial Owner');
-select tests.login('19000001-0000-0000-0000-000000000001');
 insert into public.workspaces (id, type, name, slug, owner_id, created_by)
 values ('19000001-0000-0000-0000-0000000000a1', 'school', 'P4 Expired Trial School',
         'p4-expired-trial', '19000001-0000-0000-0000-000000000001',
         '19000001-0000-0000-0000-000000000001');
-select tests.logout();
 
 select tests.mkuser('19000002-0000-0000-0000-000000000002', 'p4.active@test.local', 'P4 Active Trial Owner');
-select tests.login('19000002-0000-0000-0000-000000000002');
 insert into public.workspaces (id, type, name, slug, owner_id, created_by)
 values ('19000002-0000-0000-0000-0000000000a2', 'school', 'P4 Active Trial School',
         'p4-active-trial', '19000002-0000-0000-0000-000000000002',
         '19000002-0000-0000-0000-000000000002');
-select tests.logout();
 
 select tests.mkuser('19000003-0000-0000-0000-000000000003', 'p4.paying@test.local', 'P4 Paying School Owner');
-select tests.login('19000003-0000-0000-0000-000000000003');
 insert into public.workspaces (id, type, name, slug, owner_id, created_by)
 values ('19000003-0000-0000-0000-0000000000a3', 'school', 'P4 Paying School',
         'p4-paying-school', '19000003-0000-0000-0000-000000000003',
         '19000003-0000-0000-0000-000000000003');
-select tests.logout();
 
 -- Workspace 1's trial ended yesterday. Workspace 3 is already a paying
 -- (active) subscription whose trial_ends_at also happens to be in the past
