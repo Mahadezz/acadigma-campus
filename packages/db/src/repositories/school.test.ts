@@ -104,6 +104,19 @@ describe("createSchoolWorkspace", () => {
     if (!result.ok) expect(result.error.code).toBe(code)
   })
 
+  it.each([
+    ["EIIN_TAKEN", "conflict"],
+    ["RATE_LIMITED", "rate_limited"],
+    ["WORKSPACE_LIMIT_REACHED", "forbidden"],
+  ])("maps a returned {error: %s} to %s", async (code, expected) => {
+    const result = await createSchoolWorkspace(
+      fakeClient({ data: { error: code }, error: null }),
+      input
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe(expected)
+  })
+
   it("flags the eiin field on EIIN_TAKEN so step 1 can show it inline", async () => {
     const result = await createSchoolWorkspace(
       fakeClient({ data: null, error: { message: "EIIN_TAKEN" } }),

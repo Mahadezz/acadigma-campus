@@ -49,6 +49,10 @@ export const THROTTLE_LIMITS = {
    * "failed" one (D-67): the thing being capped is enumeration volume, not
    * wrong guesses. */
   eiinCheck: { maxAttempts: 30, windowSeconds: 900, blockSeconds: 900 },
+  /** D-100: counted inside public.create_school_workspace itself (key
+   * `create-school:<user id>`), never from app code — listed here so the
+   * two bucket tables stay in step. */
+  createSchool: { maxAttempts: 30, windowSeconds: 900, blockSeconds: 900 },
 } as const
 
 export type ThrottleBucket = keyof typeof THROTTLE_LIMITS

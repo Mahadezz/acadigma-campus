@@ -80,15 +80,18 @@ const CREATE_SCHOOL_ERRORS: Record<string, ApiError> = {
   ),
 }
 
-const createSchoolRpcSchema = z.object({
-  workspace_id: z.string().uuid(),
-  replayed: z.boolean(),
-})
+/** Success, or — for failures after the attempt is counted in the
+ * `createSchool` throttle bucket — `{ error: CODE }` (returned, not raised,
+ * so the count is not rolled back; D-100). */
+const createSchoolRpcSchema = z.union([
+  z.object({ workspace_id: z.string().uuid(), replayed: z.boolean() }),
+  z.object({ error: z.string() }),
+])
 
 /**
  * F-ID-05 Part 4 §7 `createSchoolWorkspace`: one call to
  * `public.create_school_workspace` (SECURITY DEFINER,
- * `20260925100100_create_school_workspace.sql`), which does every write in
+ * `20260925300101_create_school_workspace.sql`), which does every write in
  * one transaction. No `WorkspaceContext` for the same reason as above — the
  * workspace does not exist until this returns.
  */
@@ -100,18 +103,22 @@ export async function createSchoolWorkspace(
     p_input: input,
   })
 
-  if (error) {
+  const row = error ? null : createSchoolRpcSchema.safeParse(data)
+  const code =
+    error?.message ??
+    (row?.success && "error" in row.data ? row.data.error : undefined)
+  if (code !== undefined) {
     return err(
-      CREATE_SCHOOL_ERRORS[error.message] ??
+      (Object.hasOwn(CREATE_SCHOOL_ERRORS, code)
+        ? CREATE_SCHOOL_ERRORS[code]
+        : undefined) ??
         apiError(
           "dependency_unavailable",
           "Could not create the school right now. Your details are saved — try again."
         )
     )
   }
-
-  const row = createSchoolRpcSchema.safeParse(data)
-  if (!row.success) {
+  if (!row?.success || !("workspace_id" in row.data)) {
     return err(apiError("internal", "Could not create the school."))
   }
   return ok({ workspaceId: row.data.workspace_id, replayed: row.data.replayed })

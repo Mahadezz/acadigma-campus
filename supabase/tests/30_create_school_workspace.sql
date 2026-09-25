@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-ID-05 Part 4 — public.create_school_workspace + grade_levels
--- + academic_years (20260925100100_create_school_workspace.sql, D-100)
+-- + academic_years (20260925300101_create_school_workspace.sql, D-100)
 --
 --   1. Happy path: every row §4.3 "On submit" lists exists, the caller is
 --      owner at once, grade levels come back in order with Bangla names
@@ -15,7 +15,7 @@
 --   5. grade_levels / academic_years isolation and escalation (T2).
 -- =====================================================================
 begin;
-select plan(56);
+select plan(64);
 
 create schema if not exists tests;
 
@@ -212,11 +212,20 @@ select is(
 -- =====================================================================
 select tests.login('f1050401-0000-0000-0000-000000000002');
 
+-- Input is validated before the EIIN is ever tried: a taken EIIN plus a bad
+-- year says INVALID_ACADEMIC_YEAR, so a malformed request learns nothing.
 select throws_ok(
-  $$select public.create_school_workspace(
-      tests.school_input('b0000000-0000-4000-8000-000000000001', '{"name": "Copycat"}'))$$,
-  '23505', 'EIIN_TAKEN',
-  'an EIIN already registered to another school raises EIIN_TAKEN (unique index is the only check)');
+  $$select public.create_school_workspace(tests.school_input(
+      'b0000000-0000-4000-8000-00000000000a',
+      '{"name": "Copycat", "academic_year": {"name": "2026", "starts_on": "2026-12-31", "ends_on": "2026-01-01"}}'))$$,
+  '22023', 'INVALID_ACADEMIC_YEAR',
+  'a taken EIIN with an invalid year reports the year, not the EIIN (validation first)');
+
+select is(
+  (select public.create_school_workspace(
+      tests.school_input('b0000000-0000-4000-8000-000000000001', '{"name": "Copycat"}')) ->> 'error'),
+  'EIIN_TAKEN',
+  'an EIIN already registered to another school returns EIIN_TAKEN (unique index is the only check)');
 
 select throws_ok(
   $$select public.create_school_workspace(
@@ -271,14 +280,48 @@ select is(
   0, 'none of the refused calls left a school behind');
 select tests.logout();
 
+-- Every attempt that passes validation is counted, even one that fails:
+-- the EIIN_TAKEN above left one attempt in the createSchool bucket (it is
+-- returned, not raised, so the count survives). The input-shape failures
+-- before it counted nothing.
+select is(
+  (select attempts from public.auth_throttle
+    where key = 'create-school:f1050401-0000-0000-0000-000000000002'),
+  1, 'the EIIN_TAKEN attempt was counted in the createSchool bucket');
+
+-- Past 30 attempts in 15 minutes the bucket blocks, before any write.
+update public.auth_throttle set attempts = 30
+ where key = 'create-school:f1050401-0000-0000-0000-000000000002';
+select tests.login('f1050401-0000-0000-0000-000000000002');
+select is(
+  (select public.create_school_workspace(tests.school_input(
+      'b0000000-0000-4000-8000-00000000000b', '{"eiin": null, "name": "Honest School"}')) ->> 'error'),
+  'RATE_LIMITED', 'the 31st attempt in 15 minutes is refused with RATE_LIMITED');
+select tests.logout();
+select ok(
+  (select blocked_until > now() from public.auth_throttle
+    where key = 'create-school:f1050401-0000-0000-0000-000000000002'),
+  'and the block itself was kept (returned, not rolled back)');
+delete from public.auth_throttle where key = 'create-school:f1050401-0000-0000-0000-000000000002';
+
+-- One door: no client INSERT on workspaces at all (PR #37 review, HIGH).
+select tests.login('f1050401-0000-0000-0000-000000000002');
+select throws_ok(
+  $$insert into public.workspaces (type, name, slug, owner_id, created_by)
+    values ('school', 'Side Door', 'side-door', 'f1050401-0000-0000-0000-000000000002',
+            'f1050401-0000-0000-0000-000000000002')$$,
+  '42501', 'permission denied for table workspaces',
+  'a signed-in user cannot insert a school workspace directly, skipping the limits');
+select tests.logout();
+
 -- RATE_LIMITED: 3 schools per user per day (AC16).
 select tests.login('f1050401-0000-0000-0000-000000000006');
 select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000001', '{"eiin": null}'));
 select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000002', '{"eiin": null}'));
 select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000003', '{"eiin": null}'));
-select throws_ok(
-  $$select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000004', '{"eiin": null}'))$$,
-  'P0001', 'RATE_LIMITED', 'a fourth school in one day raises RATE_LIMITED');
+select is(
+  (select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000004', '{"eiin": null}')) ->> 'error'),
+  'RATE_LIMITED', 'a fourth school in one day returns RATE_LIMITED');
 select tests.logout();
 
 select throws_ok(
@@ -340,8 +383,15 @@ select is(
   (select count(*)::int from public.workspaces where created_by = 'f1050401-0000-0000-0000-000000000005' and type = 'school')
   + (select count(*)::int from public.school_profiles where eiin = '555555')
   + (select count(*)::int from app.idempotency_keys where key = 'd0000000-0000-4000-8000-000000000001')
-  + (select count(*)::int from public.onboarding_progress where user_id = 'f1050401-0000-0000-0000-000000000005'),
-  0, 'no partial school, profile, idempotency record or progress row survived any injected failure');
+  + (select count(*)::int from public.onboarding_progress where user_id = 'f1050401-0000-0000-0000-000000000005')
+  + (select count(*)::int from public.profiles where id = 'f1050401-0000-0000-0000-000000000005'
+       and (onboarding_completed_at is not null
+            or last_active_workspace_id in (select id from public.workspaces where type = 'school')))
+  + (select count(*)::int from public.workspace_members m join public.workspaces w on w.id = m.workspace_id
+      where m.user_id = 'f1050401-0000-0000-0000-000000000005' and w.type = 'school')
+  + (select count(*)::int from public.subscriptions s join public.workspaces w on w.id = s.workspace_id
+      where w.owner_id = 'f1050401-0000-0000-0000-000000000005'),
+  0, 'no partial school, profile, membership, subscription, onboarding flag, idempotency record or progress row survived');
 
 select tests.login('f1050401-0000-0000-0000-000000000005');
 select public.create_school_workspace(tests.school_input('d0000000-0000-4000-8000-000000000001', '{"eiin": "555555"}'));
@@ -426,6 +476,32 @@ select throws_ok(
             'f1050401-0000-0000-0000-000000000001')$$,
   '23505', 'duplicate key value violates unique constraint "academic_years_one_current"',
   'a second current academic year is refused');
+select throws_ok(
+  $$update public.grade_levels set created_by = 'f1050401-0000-0000-0000-000000000002'
+     where workspace_id = (select id from ids where label = 'ideal') and name = 'Class 11'$$,
+  '42501', 'created_by is immutable',
+  'created_by on a grade level cannot be rewritten, even by the owner');
+select tests.logout();
+-- This whole file is one transaction, so now() is also the school's
+-- created_at; age the row so the guard sees an ordinary later request.
+update public.school_profiles set created_at = now() - interval '1 day'
+ where workspace_id = (select id from ids where label = 'ideal');
+select tests.login('f1050401-0000-0000-0000-000000000001');
+select throws_ok(
+  $$update public.school_profiles set eiin = '999999'
+     where workspace_id = (select id from ids where label = 'ideal')$$,
+  '42501', 'the EIIN is set through the school setup, not by update',
+  'the owner cannot change the EIIN directly (no unlimited EIIN oracle)');
+select tests.logout();
+
+-- Read-only mode (D-300) covers the new tables.
+update public.workspaces set access_mode = 'read_only' where id = (select id from ids where label = 'ideal');
+select tests.login('f1050401-0000-0000-0000-000000000001');
+select throws_ok(
+  $$insert into public.grade_levels (workspace_id, name, name_bn, level_number, created_by)
+    values ((select id from ids where label = 'ideal'), 'Class 12', 'দ্বাদশ শ্রেণি', 12,
+            'f1050401-0000-0000-0000-000000000001')$$,
+  '42501', 'PLAN_READ_ONLY', 'a read-only school cannot add a grade level');
 select tests.logout();
 
 select ok(not has_table_privilege('anon', 'public.grade_levels', 'select')

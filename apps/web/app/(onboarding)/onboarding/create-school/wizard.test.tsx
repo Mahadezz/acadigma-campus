@@ -19,7 +19,7 @@ vi.mock("../../actions", () => ({
   createSchoolWorkspace: (...args: unknown[]) => createSchoolWorkspace(...args),
 }))
 
-const { CreateSchoolWizard } = await import("./wizard")
+const { CreateSchoolWizard, reviewError } = await import("./wizard")
 
 const t = en.onboarding.wizard
 
@@ -266,5 +266,32 @@ describe("step 4 — review and create", () => {
     })
     expect(screen.getByText(t.createIncomplete)).toBeTruthy()
     expect(createSchoolWorkspace).not.toHaveBeenCalled()
+  })
+})
+
+describe("reviewError — every create error has its own copy and a way forward", () => {
+  it.each([
+    [
+      { code: "conflict", fieldErrors: { eiin: ["EIIN_TAKEN"] } },
+      t.eiinTaken,
+      1,
+    ],
+    [{ code: "rate_limited" }, t.createRateLimited, undefined],
+    [{ code: "forbidden" }, t.createLimitReached, undefined],
+    [{ code: "conflict" }, t.createAlreadyUsed, undefined],
+    [
+      {
+        code: "validation_failed",
+        fieldErrors: { timezone: ["INVALID_TIMEZONE"] },
+      },
+      t.createInvalid,
+      2,
+    ],
+    [{ code: "validation_failed" }, t.createInvalid, 1],
+    [{ code: "dependency_unavailable" }, t.createError, undefined],
+  ])("%o", (error, message, editStage) => {
+    expect(reviewError(t, error)).toEqual(
+      editStage === undefined ? { message } : { message, editStage }
+    )
   })
 })

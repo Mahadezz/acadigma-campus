@@ -218,11 +218,10 @@ export function CreateSchoolWizard({
    * reload mid-step keeps them). Best effort: a failure here is retried by
    * the next change or by Continue, which does report errors. */
   function autosave(step: Stage, patch: Partial<CreateSchoolDraft>) {
-    setDraft((current) => {
-      const merged = { ...current, ...patch }
-      void saveOnboardingDraft({ path: "create_school", step, draft: merged })
-      return merged
-    })
+    // Outside any state updater: StrictMode may call an updater twice.
+    const merged = { ...draft, ...patch }
+    setDraft(merged)
+    void saveOnboardingDraft({ path: "create_school", step, draft: merged })
   }
 
   async function saveAndAdvance(
@@ -1136,6 +1135,33 @@ function Step3({
 // ---------------------------------------------------------------------------
 type ReviewError = { message: string; editStage?: Stage }
 
+/** Every error `createSchoolWorkspace` can return, in the reader's
+ * language, with a way forward where there is one (never a retry that can
+ * only fail again). */
+export function reviewError(
+  t: WizardMessages,
+  error: { code: string; fieldErrors?: Record<string, string[]> }
+): ReviewError {
+  const fields = error.fieldErrors ?? {}
+  if (fields["eiin"]) return { message: t.eiinTaken, editStage: 1 }
+  switch (error.code) {
+    case "rate_limited":
+      return { message: t.createRateLimited }
+    case "forbidden":
+      return { message: t.createLimitReached }
+    case "conflict":
+      // IDEMPOTENCY_KEY_REUSED: this form already created a school.
+      return { message: t.createAlreadyUsed }
+    case "validation_failed":
+      return {
+        message: t.createInvalid,
+        editStage: fields["timezone"] || fields["academic_year"] ? 2 : 1,
+      }
+    default:
+      return { message: t.createError }
+  }
+}
+
 function Step4({
   t,
   draft,
@@ -1189,13 +1215,7 @@ function Step4({
       return
     }
     setCreating(false)
-    if (result.error.fieldErrors?.["eiin"]) {
-      setError({ message: t.eiinTaken, editStage: 1 })
-    } else if (result.error.code === "rate_limited") {
-      setError({ message: t.createRateLimited })
-    } else {
-      setError({ message: t.createError })
-    }
+    setError(reviewError(t, result.error))
   }
 
   const sections: { stage: Stage; title: string; rows: [string, string][] }[] =
@@ -1260,7 +1280,10 @@ function Step4({
                 className="h-11"
                 onClick={() => onEdit(error.editStage ?? 1)}
               >
-                {t.reviewEditLabel.replace("{section}", t.reviewIdentity)}
+                {t.reviewEditLabel.replace(
+                  "{section}",
+                  error.editStage === 2 ? t.reviewWhereWhen : t.reviewIdentity
+                )}
               </Button>
             ) : null}
           </div>
