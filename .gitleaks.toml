@@ -18,4 +18,8 @@ regexes = [
   # .env.example, the CI workflow and DECISION-LOG D-19 on purpose.
   '''sb_publishable_6POCbYjBAcrSiT1AlCPSVQ_SG3ohfsL''',
   '''sb_publishable_VbUqiEvQiuObUZMf5IGYOA_P_EiiyGy''',
+  # F-ID-05 Part 4 tests: a fixed UUID used as a wizard idempotency_key
+  # (a request dedupe id, not a credential) — the key name trips
+  # generic-api-key.
+  '''0b6f4a8e-3c1d-4e2a-9f7b-5d8c6e4a2b10''',
 ]

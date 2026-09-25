@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { isoDateSchema } from "../common"
+import { isoDateSchema, uuidSchema } from "../common"
 
 /**
  * F-ID-05 §4.3 "Create a school — the wizard" (Part 3: steps 1-2) and §5
@@ -124,9 +124,45 @@ export const createSchoolStep2Schema = z.object({
 export type CreateSchoolStep2 = z.infer<typeof createSchoolStep2Schema>
 
 // ---------------------------------------------------------------------------
+// Step 3 — Classes (Part 4). Shape of one `grade_levels` row to seed; the
+// preset names, Bangla names and ordering come from
+// `packages/domain/src/academic/gradeLevels.ts`.
+// ---------------------------------------------------------------------------
+
+/** `public.grade_stage` (DATA-MODEL.md §2 grade_levels "group", D-100). */
+export const gradeStageSchema = z.enum([
+  "early",
+  "primary",
+  "secondary",
+  "higher",
+])
+export type GradeStage = z.infer<typeof gradeStageSchema>
+
+export const gradeLevelInputSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  name_bn: z.string().trim().min(1).max(60),
+  level_number: z.number().int().min(-10).max(200),
+  stage: gradeStageSchema.nullable(),
+})
+export type GradeLevelInput = z.infer<typeof gradeLevelInputSchema>
+
+/** §7: 1-30 levels; names and positions unique (the DB's two unique
+ * indexes on `grade_levels`, checked here so the wizard can say so). */
+export const gradeLevelsSchema = z
+  .array(gradeLevelInputSchema)
+  .min(1)
+  .max(30)
+  .refine(
+    (levels) =>
+      new Set(levels.map((l) => l.name.toLowerCase())).size === levels.length &&
+      new Set(levels.map((l) => l.level_number)).size === levels.length,
+    "Each class can only be added once"
+  )
+
+// ---------------------------------------------------------------------------
 // The full draft — Part 3's slice of the eventual `CreateSchoolWorkspaceInput`
-// (§7), minus `grade_levels`/`logo_url`, which Part 4 adds alongside steps
-// 3-4. Every field optional: `saveOnboardingDraft` accepts whatever has
+// (§7), plus Part 4's `grade_levels` and the `idempotency_key` minted when
+// the wizard first opens (§5). Every field optional: `saveOnboardingDraft` accepts whatever has
 // been filled in so far (§10: "a partially filled draft never fails
 // validation"), and `.passthrough()` keeps this wire-compatible with a
 // later Part 4 draft that also carries those two fields.
@@ -140,6 +176,8 @@ export const createSchoolDraftSchema = z
     timezone: schoolTimezoneSchema,
     working_days: workingDaysSchema,
     academic_year: z.object(academicYearFields).partial(),
+    grade_levels: z.array(gradeLevelInputSchema).max(30),
+    idempotency_key: uuidSchema,
   })
   .partial()
   .passthrough()
@@ -160,4 +198,26 @@ export const checkEiinAvailabilityOutputSchema = z.object({
 })
 export type CheckEiinAvailabilityOutput = z.infer<
   typeof checkEiinAvailabilityOutputSchema
+>
+
+// ---------------------------------------------------------------------------
+// createSchoolWorkspace — Part 4 (§7). `logo_url` is not modelled: the logo
+// step is deferred until file uploads exist (D-100).
+// ---------------------------------------------------------------------------
+export const createSchoolWorkspaceInputSchema = createSchoolStep1Schema
+  .merge(createSchoolStep2Schema)
+  .extend({
+    grade_levels: gradeLevelsSchema,
+    idempotency_key: uuidSchema,
+  })
+export type CreateSchoolWorkspaceInput = z.infer<
+  typeof createSchoolWorkspaceInputSchema
+>
+
+export const createSchoolWorkspaceOutputSchema = z.object({
+  workspaceId: uuidSchema,
+  landingRoute: z.string(),
+})
+export type CreateSchoolWorkspaceOutput = z.infer<
+  typeof createSchoolWorkspaceOutputSchema
 >
