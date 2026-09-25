@@ -90,9 +90,13 @@ export async function setExamStatus(
   if (!check.ok) {
     return err(
       check.code === "REASON_REQUIRED"
-        ? apiError("validation_failed", "Give a reason for going back a step.", {
-            fieldErrors: { reason: ["REASON_REQUIRED"] },
-          })
+        ? apiError(
+            "validation_failed",
+            "Give a reason for going back a step.",
+            {
+              fieldErrors: { reason: ["REASON_REQUIRED"] },
+            }
+          )
         : apiError(
             "conflict",
             "That status change is not allowed from the exam's current status."

@@ -56,9 +56,13 @@ function fromDbError(error: { message: string; code?: string }): ApiError {
     return DB_ERRORS[error.message] ?? UNAVAILABLE
   }
   if (error.code === "23505") {
-    return apiError("conflict", "An exam with that name already exists this year.", {
-      fieldErrors: { name: ["NAME_TAKEN"] },
-    })
+    return apiError(
+      "conflict",
+      "An exam with that name already exists this year.",
+      {
+        fieldErrors: { name: ["NAME_TAKEN"] },
+      }
+    )
   }
   return UNAVAILABLE
 }
@@ -80,7 +84,9 @@ export async function listExams(
 ): Promise<Result<ExamSummary[], ApiError>> {
   const { data, error } = await client
     .from("exams")
-    .select("id, name, exam_type, status, starts_on, ends_on, exam_subjects(count)")
+    .select(
+      "id, name, exam_type, status, starts_on, ends_on, exam_subjects(count)"
+    )
     .eq("workspace_id", ctx.workspaceId)
     .eq("academic_year_id", academicYearId)
     .order("starts_on", { ascending: false, nullsFirst: true })
@@ -147,7 +153,10 @@ export async function getExam(
     .map((p) => ({
       id: p.id,
       sectionId: p.section_id,
-      sectionLabel: sectionDisplayName(p.sections.grade_levels.name, p.sections.name),
+      sectionLabel: sectionDisplayName(
+        p.sections.grade_levels.name,
+        p.sections.name
+      ),
       level: p.sections.grade_levels.level_number,
       subjectName: p.subjects.name,
       examDate: p.exam_date,
@@ -237,4 +246,3 @@ export async function updateExamSubject(
   }
   return ok(undefined)
 }
-

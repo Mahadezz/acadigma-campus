@@ -202,7 +202,12 @@ function NewExamSheet({
           >
             {t.cancel}
           </Button>
-          <Button type="submit" form={formId} className="h-11" disabled={pending}>
+          <Button
+            type="submit"
+            form={formId}
+            className="h-11"
+            disabled={pending}
+          >
             {pending ? t.creating : t.create}
           </Button>
         </>
@@ -247,18 +252,31 @@ function NewExamSheet({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor={`${formId}-starts`}>{t.startsOn}</Label>
-            <Input id={`${formId}-starts`} name="startsOn" type="date" className="h-11" />
+            <Input
+              id={`${formId}-starts`}
+              name="startsOn"
+              type="date"
+              className="h-11"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor={`${formId}-ends`}>{t.endsOn}</Label>
-            <Input id={`${formId}-ends`} name="endsOn" type="date" className="h-11" />
+            <Input
+              id={`${formId}-ends`}
+              name="endsOn"
+              type="date"
+              className="h-11"
+            />
           </div>
         </div>
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">{t.sections}</legend>
           {grades.flatMap((grade) =>
             grade.sections.map((section) => (
-              <label key={section.id} className="flex min-h-11 items-center gap-3">
+              <label
+                key={section.id}
+                className="flex min-h-11 items-center gap-3"
+              >
                 <Checkbox name="sectionIds" value={section.id} defaultChecked />
                 {sectionDisplayName(grade.name, section.name)}
               </label>
@@ -268,7 +286,10 @@ function NewExamSheet({
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">{t.subjects}</legend>
           {subjects.map((subject) => (
-            <label key={subject.id} className="flex min-h-11 items-center gap-3">
+            <label
+              key={subject.id}
+              className="flex min-h-11 items-center gap-3"
+            >
               <Checkbox name="subjectIds" value={subject.id} />
               {subject.name}
             </label>
