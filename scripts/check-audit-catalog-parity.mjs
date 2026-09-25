@@ -1,6 +1,6 @@
-// The SQL action catalogue (public.audit_action_catalog, seeded in
-// supabase/migrations/20260924000100_audit_substrate.sql) and its TypeScript
-// mirror (packages/domain/src/audit/catalog.ts) must name the exact same actions.
+// The SQL action catalogue (public.audit_action_catalog, seeded across
+// supabase/migrations/*.sql) and its TypeScript mirror
+// (packages/domain/src/audit/catalog.ts) must name the exact same actions.
 // A drift here is exactly the Base44 prototype's "garbage action string" failure
 // mode reappearing one layer up — F-ID-09 §5.1, acceptance criterion 17.
 //
@@ -9,18 +9,30 @@
 // shared table list. So parity reduces to two comparisons — curated actions, and
 // the table list — rather than diffing ~80 fully-expanded strings, which is both
 // more robust to formatting and pinpoints exactly what to fix.
-import { readFile } from "node:fs/promises"
+//
+// Originally read only 20260924000100_audit_substrate.sql (the migration that
+// introduced the catalogue); generalised to scan every migration so a LATER
+// migration can seed more curated actions or generic-audit tables for a new
+// tenant table without ever editing an already-applied one (F-OP-06 Part 1,
+// D-63 — supabase/migrations/20260925000900_staff_schema.sql is the first
+// migration to use this).
+import { readFile, readdir } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url))
 
-const MIGRATION_PATH = "supabase/migrations/20260924000100_audit_substrate.sql"
+const MIGRATIONS_DIR = "supabase/migrations"
 const CATALOG_PATH = "packages/domain/src/audit/catalog.ts"
 
-const migrationSource = await readFile(
-  new URL(MIGRATION_PATH, `file://${repoRoot}/`),
-  "utf8"
-)
+async function readMigrationSources() {
+  const dir = new URL(`${MIGRATIONS_DIR}/`, `file://${repoRoot}/`)
+  const files = (await readdir(dir))
+    .filter((name) => name.endsWith(".sql"))
+    .sort()
+  return Promise.all(files.map((name) => readFile(new URL(name, dir), "utf8")))
+}
+
+const migrationSources = await readMigrationSources()
 const catalogSource = await readFile(
   new URL(CATALOG_PATH, `file://${repoRoot}/`),
   "utf8"
@@ -34,22 +46,29 @@ function fail(message) {
 // ---------------------------------------------------------------------------
 // 1. Curated actions
 // ---------------------------------------------------------------------------
-// SQL: the `insert into public.audit_action_catalog (...) values` block, up to
-// its closing `on conflict`. Actions are the first quoted string of each tuple.
-const sqlCuratedBlockMatch = migrationSource.match(
-  /insert into public\.audit_action_catalog[\s\S]*?values\s*([\s\S]*?)\non conflict/
-)
-if (!sqlCuratedBlockMatch) {
-  fail(`Could not find the curated INSERT block in ${MIGRATION_PATH}`)
+// SQL: every `insert into public.audit_action_catalog (...) values` block, up
+// to its closing `on conflict`, across all migrations. Actions are the first
+// quoted string of each tuple — a dynamically-built action (this migration's
+// own `v_table || '.insert'` generic-table loop) never starts with a quote
+// right after `(`, so it can never be mistaken for a curated one.
+const sqlCurated = new Set()
+for (const source of migrationSources) {
+  for (const blockMatch of source.matchAll(
+    /insert into public\.audit_action_catalog[\s\S]*?values\s*([\s\S]*?)\non conflict/g
+  )) {
+    for (const m of blockMatch[1].matchAll(
+      /\(\s*'([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)'/g
+    )) {
+      sqlCurated.add(m[1])
+    }
+  }
+}
+if (sqlCurated.size === 0) {
+  fail(
+    `Found zero curated actions across ${MIGRATIONS_DIR} — likely a parse failure, not an empty catalogue.`
+  )
   process.exit(1)
 }
-const sqlCurated = new Set(
-  [
-    ...sqlCuratedBlockMatch[1].matchAll(
-      /\(\s*'([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)'/g
-    ),
-  ].map((m) => m[1])
-)
 
 // TS: every `action: "x.y"` inside the AUDIT_ACTION_CATALOG array literal.
 const tsCatalogBlockMatch = catalogSource.match(
@@ -70,16 +89,20 @@ const tsCurated = new Set(
 // ---------------------------------------------------------------------------
 // 2. The generic-table list (each entry expands to 3 <table>.<op> actions)
 // ---------------------------------------------------------------------------
-const sqlTablesMatch = migrationSource.match(
-  /v_tables text\[\] := array\[([\s\S]*?)\];/
-)
-if (!sqlTablesMatch) {
-  fail(`Could not find v_tables in ${MIGRATION_PATH}`)
+const sqlTables = new Set()
+for (const source of migrationSources) {
+  for (const arrayMatch of source.matchAll(
+    /v_tables text\[\] := array\[([\s\S]*?)\];/g
+  )) {
+    for (const m of arrayMatch[1].matchAll(/'([a-z][a-z0-9_]*)'/g)) {
+      sqlTables.add(m[1])
+    }
+  }
+}
+if (sqlTables.size === 0) {
+  fail(`Could not find any v_tables array across ${MIGRATIONS_DIR}`)
   process.exit(1)
 }
-const sqlTables = new Set(
-  [...sqlTablesMatch[1].matchAll(/'([a-z][a-z0-9_]*)'/g)].map((m) => m[1])
-)
 
 const tsTablesMatch = catalogSource.match(
   /export const GENERIC_AUDIT_TABLES:[\s\S]*?=\s*\[([\s\S]*?)\]\n/
@@ -100,12 +123,12 @@ function reportSetDiff(label, sqlSet, tsSet) {
   const onlyInTs = [...tsSet].filter((x) => !sqlSet.has(x))
   for (const item of onlyInSql) {
     fail(
-      `${label} "${item}" is seeded in ${MIGRATION_PATH} but missing from ${CATALOG_PATH}`
+      `${label} "${item}" is seeded in ${MIGRATIONS_DIR} but missing from ${CATALOG_PATH}`
     )
   }
   for (const item of onlyInTs) {
     fail(
-      `${label} "${item}" is declared in ${CATALOG_PATH} but not seeded in ${MIGRATION_PATH}`
+      `${label} "${item}" is declared in ${CATALOG_PATH} but not seeded in ${MIGRATIONS_DIR}`
     )
   }
   return onlyInSql.length === 0 && onlyInTs.length === 0

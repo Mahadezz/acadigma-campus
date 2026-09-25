@@ -1,6 +1,6 @@
 {
   "name": "@acadigma/db",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Supabase clients, generated types and workspace context resolution.",
@@ -10,7 +10,8 @@
     "./repositories": "./src/repositories/index.ts",
     "./workspace-context": "./src/workspace-context.ts",
     "./types": "./src/types.generated.ts",
-    "./repositories/settings": "./src/repositories/settings.ts"
+    "./repositories/settings": "./src/repositories/settings.ts",
+    "./repositories/staff": "./src/repositories/staff.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
