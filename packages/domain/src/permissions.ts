@@ -106,6 +106,9 @@ export const ACTIONS = [
   "academics.structure.read",
   "academics.section.write",
   "academics.subject.write",
+  // F-AC-02 §2 (D-103): date of birth and guardians. Teachers may attempt it;
+  // RLS narrows it to the class teacher of the student's section.
+  "students.read_sensitive",
 ] as const
 
 export type Action = (typeof ACTIONS)[number]
@@ -162,6 +165,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "academics.structure.read",
     "academics.section.write",
     "academics.subject.write",
+    "students.read_sensitive",
   ],
   // Runs the school day to day. Money and owner-only settings (modules, danger
   // zone) stay with the owner; the F-OP-07 policy blobs do not (RLS §3.1).
@@ -210,6 +214,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "academics.structure.read",
     "academics.section.write",
     "academics.subject.write",
+    "students.read_sensitive",
   ],
   teacher: [
     "attendance.read",
@@ -232,6 +237,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "audit.read.self",
     "academics.structure.read",
     "exams.read",
+    "students.read_sensitive",
   ],
   // Office staff: sees the school, changes almost nothing.
   staff: [

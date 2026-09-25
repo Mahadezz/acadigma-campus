@@ -480,6 +480,87 @@ export type Database = {
         }
         Relationships: []
       }
+      enrollments: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          created_by: string | null
+          ended_on: string | null
+          enrolled_on: string
+          id: string
+          roll_number: number | null
+          section_id: string
+          status: Database["public"]["Enums"]["enrollment_status"]
+          student_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          created_by?: string | null
+          ended_on?: string | null
+          enrolled_on?: string
+          id?: string
+          roll_number?: number | null
+          section_id: string
+          status?: Database["public"]["Enums"]["enrollment_status"]
+          student_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          created_by?: string | null
+          ended_on?: string | null
+          enrolled_on?: string
+          id?: string
+          roll_number?: number | null
+          section_id?: string
+          status?: Database["public"]["Enums"]["enrollment_status"]
+          student_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollments_section_fkey"
+            columns: ["section_id", "academic_year_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id", "academic_year_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "enrollments_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "student_roster"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "enrollments_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "enrollments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_sections: {
         Row: {
           created_at: string
@@ -955,6 +1036,77 @@ export type Database = {
           },
           {
             foreignKeyName: "grade_scales_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guardians: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          full_name: string
+          full_name_bn: string | null
+          id: string
+          is_primary: boolean
+          phone: string
+          relation: Database["public"]["Enums"]["guardian_relation"]
+          student_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          full_name: string
+          full_name_bn?: string | null
+          id?: string
+          is_primary?: boolean
+          phone: string
+          relation: Database["public"]["Enums"]["guardian_relation"]
+          student_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          full_name?: string
+          full_name_bn?: string | null
+          id?: string
+          is_primary?: boolean
+          phone?: string
+          relation?: Database["public"]["Enums"]["guardian_relation"]
+          student_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guardians_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardians_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "student_roster"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "guardians_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "guardians_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1943,6 +2095,125 @@ export type Database = {
           },
         ]
       }
+      student_private_details: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_of_birth: string
+          student_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_of_birth: string
+          student_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string
+          student_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_private_details_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_private_details_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "student_roster"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "student_private_details_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "student_private_details_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          first_name: string
+          full_name: string | null
+          full_name_bn: string | null
+          gender: Database["public"]["Enums"]["student_gender"]
+          id: string
+          last_name: string
+          status: Database["public"]["Enums"]["student_status"]
+          student_code: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          first_name: string
+          full_name?: string | null
+          full_name_bn?: string | null
+          gender: Database["public"]["Enums"]["student_gender"]
+          id?: string
+          last_name: string
+          status?: Database["public"]["Enums"]["student_status"]
+          student_code: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          first_name?: string
+          full_name?: string | null
+          full_name_bn?: string | null
+          gender?: Database["public"]["Enums"]["student_gender"]
+          id?: string
+          last_name?: string
+          status?: Database["public"]["Enums"]["student_status"]
+          student_code?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           archived_at: string | null
@@ -2776,8 +3047,40 @@ export type Database = {
           },
         ]
       }
+      student_roster: {
+        Row: {
+          academic_year_id: string | null
+          deleted_at: string | null
+          full_name: string | null
+          full_name_bn: string | null
+          gender: Database["public"]["Enums"]["student_gender"] | null
+          grade_level_number: number | null
+          grade_name: string | null
+          grade_name_bn: string | null
+          id: string | null
+          roll_number: number | null
+          section_id: string | null
+          section_name: string | null
+          status: Database["public"]["Enums"]["student_status"] | null
+          student_code: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      admit_student: {
+        Args: { p_input: Json; p_workspace_id: string }
+        Returns: Json
+      }
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       create_exam: { Args: { p_input: Json }; Returns: string }
       create_school_workspace: { Args: { p_input: Json }; Returns: Json }
@@ -2860,6 +3163,7 @@ export type Database = {
         | "bounced"
         | "complained"
         | "failed"
+      enrollment_status: "active" | "transferred" | "withdrawn" | "completed"
       exam_status:
         | "draft"
         | "scheduled"
@@ -2885,6 +3189,16 @@ export type Database = {
         | "delete"
       file_visibility: "private" | "workspace" | "public"
       grade_stage: "early" | "primary" | "secondary" | "higher"
+      guardian_relation:
+        | "father"
+        | "mother"
+        | "brother"
+        | "sister"
+        | "uncle"
+        | "aunt"
+        | "grandparent"
+        | "legal_guardian"
+        | "other"
       holiday_kind:
         | "public"
         | "religious"
@@ -2921,6 +3235,14 @@ export type Database = {
         | "substitute"
         | "volunteer"
       staff_status: "pending_join" | "active" | "on_notice" | "left"
+      student_gender: "male" | "female" | "other"
+      student_status:
+        | "draft"
+        | "active"
+        | "inactive"
+        | "transferred_out"
+        | "graduated"
+        | "removed"
       subject_category: "core" | "optional" | "religion" | "co_curricular"
       subject_kind: "compulsory" | "optional_fourth"
       subscription_status:
@@ -3072,6 +3394,7 @@ export const Constants = {
         "complained",
         "failed",
       ],
+      enrollment_status: ["active", "transferred", "withdrawn", "completed"],
       exam_status: [
         "draft",
         "scheduled",
@@ -3100,6 +3423,17 @@ export const Constants = {
       ],
       file_visibility: ["private", "workspace", "public"],
       grade_stage: ["early", "primary", "secondary", "higher"],
+      guardian_relation: [
+        "father",
+        "mother",
+        "brother",
+        "sister",
+        "uncle",
+        "aunt",
+        "grandparent",
+        "legal_guardian",
+        "other",
+      ],
       holiday_kind: [
         "public",
         "religious",
@@ -3140,6 +3474,15 @@ export const Constants = {
         "volunteer",
       ],
       staff_status: ["pending_join", "active", "on_notice", "left"],
+      student_gender: ["male", "female", "other"],
+      student_status: [
+        "draft",
+        "active",
+        "inactive",
+        "transferred_out",
+        "graduated",
+        "removed",
+      ],
       subject_category: ["core", "optional", "religion", "co_curricular"],
       subject_kind: ["compulsory", "optional_fourth"],
       subscription_status: [
