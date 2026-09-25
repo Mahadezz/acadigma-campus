@@ -34,14 +34,14 @@ Also (coordinator bug hunt, HIGH): the school shell's sidebar and bottom nav lin
 
 |             |                                                                                                                                                      |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Branch      | `feat/design-owner-dashboard`, merged with `origin/main` @ `fe128c6` (screenshots taken at `c4085ff`; no dashboard or nav code changed in the merge) |
+| Branch      | `feat/design-owner-dashboard`, merged with `origin/main` @ `d60d15d` (screenshots taken at `c4085ff`; no dashboard or nav code changed in the merge) |
 | Supabase    | live project, read-only as the demo owner (Acadigma Demo School); no writes                                                                          |
 | Server      | local `next start` of this branch (after); production campus.acadigma.com (before)                                                                   |
 | Node / pnpm | v24.19.0 / 10.34.5                                                                                                                                   |
 
 ## 3. Unit (Vitest)
 
-Full `pnpm test`: **85 files, 976 tests, all passed (after merging `origin/main` @ `fe128c6`).** New: domain dashboard 6, db dashboard repository 4 (file coverage 92.3 % lines / 86.4 % branches / 100 % functions), dashboard view 7, implemented routes 4.
+Full `pnpm test`: **85 files, 976 tests, all passed (after merging `origin/main` @ `d60d15d`).** New: domain dashboard 6, db dashboard repository 4 (file coverage 92.3 % lines / 86.4 % branches / 100 % functions), dashboard view 7, implemented routes 4.
 
 ## 4. Database (pgTAP)
 
