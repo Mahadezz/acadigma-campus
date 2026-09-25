@@ -57,7 +57,7 @@ describe("createImportBatch", () => {
       report: { rows: [], ignoredColumns: [] },
       totals: { total: 0, valid: 0, error: 0 },
     })
-    expect(result).toEqual({ ok: true, data: { id: BATCH } })
+    expect(result).toEqual({ ok: true, data: { batchId: BATCH } })
     expect(ops[1]).toEqual([
       "insert",
       [

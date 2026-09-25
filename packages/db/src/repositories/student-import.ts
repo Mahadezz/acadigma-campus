@@ -53,7 +53,7 @@ export async function createImportBatch(
     report: ImportReport
     totals: { total: number; valid: number; error: number }
   }
-): Promise<Result<{ id: string }, ApiError>> {
+): Promise<Result<{ batchId: string }, ApiError>> {
   const { data, error } = await supabase
     .from("student_import_batches")
     .insert({
@@ -68,7 +68,7 @@ export async function createImportBatch(
     .select("id")
     .single()
   if (error || !data) return err(UNAVAILABLE)
-  return ok({ id: data.id })
+  return ok({ batchId: data.id })
 }
 
 export async function getImportBatch(

@@ -5,7 +5,7 @@ import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-import { PlusIcon, SearchIcon } from "lucide-react"
+import { FileUpIcon, PlusIcon, SearchIcon } from "lucide-react"
 
 import type {
   ApiError,
@@ -88,6 +88,7 @@ export function StudentsView({
   query,
   sections,
   canAdmit,
+  canImport,
 }: {
   t: T
   locale: Locale
@@ -96,6 +97,7 @@ export function StudentsView({
   query: StudentSearchQuery
   sections: SectionOption[]
   canAdmit: boolean
+  canImport: boolean
 }) {
   const [admitting, setAdmitting] = useState(false)
   const [admitted, setAdmitted] = useState<
@@ -138,19 +140,29 @@ export function StudentsView({
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-bold tracking-tight">{t.title}</h1>
-        {canAdmit ? (
-          <Button
-            type="button"
-            className="h-11"
-            onClick={() => {
-              setAdmitted(null)
-              setAdmitting(true)
-            }}
-          >
-            <PlusIcon aria-hidden="true" />
-            {t.admit}
-          </Button>
-        ) : null}
+        <div className="flex gap-2">
+          {canImport ? (
+            <Button asChild variant="outline" className="h-11">
+              <Link href="/app/students/import">
+                <FileUpIcon aria-hidden="true" />
+                {t.importButton}
+              </Link>
+            </Button>
+          ) : null}
+          {canAdmit ? (
+            <Button
+              type="button"
+              className="h-11"
+              onClick={() => {
+                setAdmitted(null)
+                setAdmitting(true)
+              }}
+            >
+              <PlusIcon aria-hidden="true" />
+              {t.admit}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {admitted ? (
