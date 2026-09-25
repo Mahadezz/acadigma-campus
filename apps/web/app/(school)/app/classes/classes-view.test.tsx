@@ -4,6 +4,13 @@ import { describe, expect, it, vi } from "vitest"
 import bn from "@/messages/bn.json"
 import en from "@/messages/en.json"
 
+// FormSheet picks Sheet vs Dialog with matchMedia; jsdom has none.
+vi.stubGlobal("matchMedia", () => ({
+  matches: false,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+}))
+
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 vi.mock("./actions", () => ({
   archiveSection: vi.fn(),

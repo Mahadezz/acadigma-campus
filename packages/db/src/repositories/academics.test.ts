@@ -126,6 +126,14 @@ describe("createSection", () => {
       "SECTION_NAME_TAKEN",
     ],
     [{ code: "22023", message: "MEMBER_NOT_ELIGIBLE" }, "MEMBER_NOT_ELIGIBLE"],
+    [
+      {
+        code: "23503",
+        message:
+          'violates foreign key constraint "sections_class_teacher_fkey"',
+      },
+      "MEMBER_NOT_ELIGIBLE",
+    ],
   ])("maps %o to %s", async (dbError, code) => {
     const { client } = fakeClient({
       academic_years: [{ data: YEAR, error: null }],
@@ -144,6 +152,28 @@ describe("createSection", () => {
     const result = await createSection(client, CTX, input)
     expect(!result.ok && result.error.code).toBe("not_found")
   })
+})
+
+it("maps a foreign grade (another FK) to a generic validation error, not the teacher field", async () => {
+  const { client } = fakeClient({
+    academic_years: [{ data: YEAR, error: null }],
+    sections: [
+      {
+        data: null,
+        error: {
+          code: "23503",
+          message:
+            'violates foreign key constraint "sections_grade_level_fkey"',
+        },
+      },
+    ],
+  })
+  const result = await createSection(client, CTX, {
+    gradeLevelId: C6.id,
+    name: "A",
+  })
+  expect(!result.ok && result.error.code).toBe("validation_failed")
+  expect(!result.ok && result.error.fieldErrors).toBeUndefined()
 })
 
 describe("archiveSection", () => {

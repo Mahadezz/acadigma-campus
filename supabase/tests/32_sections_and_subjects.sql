@@ -1,13 +1,13 @@
 -- =====================================================================
 -- pgTAP · F-AC-01 demo cut — sections and subjects
--- (20260925300203_sections_and_subjects.sql, D-102)
+-- (20260925300304_sections_and_subjects.sql, D-102)
 --
 -- Isolation, escalation, the composite (tenant-bound) foreign keys, the
 -- natural-key uniqueness, class-teacher eligibility and one-per-year,
 -- read-only mode and created_by immutability.
 -- =====================================================================
 begin;
-select plan(28);
+select plan(33);
 
 create schema if not exists tests;
 
@@ -75,6 +75,7 @@ select tests.mkuser('f1020000-0000-0000-0000-000000000003', 'd102.parent@test.lo
 select tests.mkuser('f1020000-0000-0000-0000-000000000004', 'd102.staff@test.local',   'Staff A');
 select tests.mkuser('f1020000-0000-0000-0000-000000000005', 'd102.ownerb@test.local',  'Owner B');
 select tests.mkuser('f1020000-0000-0000-0000-000000000006', 'd102.teacher2@test.local','Teacher A2');
+select tests.mkuser('f1020000-0000-0000-0000-000000000007', 'd102.teacher3@test.local','Teacher A3');
 
 create temp table ids (label text primary key, id uuid);
 grant all on ids to authenticated;
@@ -92,7 +93,8 @@ insert into public.workspace_members (workspace_id, user_id, role, status) value
   ((select id from ids where label = 'a'), 'f1020000-0000-0000-0000-000000000002', 'teacher', 'active'),
   ((select id from ids where label = 'a'), 'f1020000-0000-0000-0000-000000000003', 'parent',  'active'),
   ((select id from ids where label = 'a'), 'f1020000-0000-0000-0000-000000000004', 'staff',   'active'),
-  ((select id from ids where label = 'a'), 'f1020000-0000-0000-0000-000000000006', 'teacher', 'removed');
+  ((select id from ids where label = 'a'), 'f1020000-0000-0000-0000-000000000006', 'teacher', 'removed'),
+  ((select id from ids where label = 'a'), 'f1020000-0000-0000-0000-000000000007', 'teacher', 'active');
 
 insert into ids
 select 'a_year', id from public.academic_years where workspace_id = (select id from ids where label = 'a')
@@ -106,6 +108,8 @@ union all
 select 'teacher_m', id from public.workspace_members where workspace_id = (select id from ids where label = 'a') and user_id = 'f1020000-0000-0000-0000-000000000002'
 union all
 select 'parent_m', id from public.workspace_members where workspace_id = (select id from ids where label = 'a') and user_id = 'f1020000-0000-0000-0000-000000000003'
+union all
+select 't3_m', id from public.workspace_members where workspace_id = (select id from ids where label = 'a') and user_id = 'f1020000-0000-0000-0000-000000000007'
 union all
 select 'removed_m', id from public.workspace_members where workspace_id = (select id from ids where label = 'a') and user_id = 'f1020000-0000-0000-0000-000000000006';
 
@@ -260,6 +264,41 @@ select lives_ok(
 select tests.logout();
 
 -- =====================================================================
+-- Bengali names, archive-only, and releasing a class teacher (§4.5)
+-- =====================================================================
+select tests.login('f1020000-0000-0000-0000-000000000001');
+select lives_ok(
+  $$insert into public.sections (workspace_id, academic_year_id, grade_level_id, name, class_teacher_id, created_by)
+    values ((select id from ids where label = 'a'), (select id from ids where label = 'a_year'),
+            (select id from ids where label = 'a_c6'), 'ক', (select id from ids where label = 't3_m'),
+            'f1020000-0000-0000-0000-000000000001')$$,
+  'a section can have a Bengali name (ক)');
+select throws_ok(
+  $$delete from public.sections where workspace_id = (select id from ids where label = 'a')$$,
+  '42501', 'permission denied for table sections',
+  'sections are archived, never deleted');
+
+-- The class teacher of B is removed from the school; the teacher of ক
+-- becomes staff. Both sections lose their class teacher.
+update public.workspace_members set status = 'removed' where id = (select id from ids where label = 'teacher_m');
+update public.workspace_members set role = 'staff' where id = (select id from ids where label = 't3_m');
+select tests.logout();
+
+select is(
+  (select class_teacher_id from public.sections
+    where workspace_id = (select id from ids where label = 'a') and name = 'B'),
+  null, 'a removed member stops being a class teacher');
+select is(
+  (select class_teacher_id from public.sections
+    where workspace_id = (select id from ids where label = 'a') and name = 'ক'),
+  null, 'a member moved to staff stops being a class teacher');
+select is(
+  (select class_teacher_id from public.sections
+    where workspace_id = (select id from ids where label = 'a') and name = 'A'),
+  (select id from ids where label = 'teacher_m'),
+  'an archived section keeps its history');
+
+-- =====================================================================
 -- Read-only mode, anon, audit
 -- =====================================================================
 update public.workspaces set access_mode = 'read_only' where id = (select id from ids where label = 'a');
@@ -279,7 +318,7 @@ select ok(not has_table_privilege('anon', 'public.sections', 'select')
 select is(
   (select count(*)::int from public.audit_events
     where workspace_id = (select id from ids where label = 'a') and action = 'sections.insert'),
-  2, 'each section insert wrote a generic audit row');
+  3, 'each of the three section inserts wrote a generic audit row');
 
 select * from finish();
 rollback;

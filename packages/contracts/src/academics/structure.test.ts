@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { createSectionInputSchema, createSubjectInputSchema } from "./academics"
+import { createSectionInputSchema, createSubjectInputSchema } from "./structure"
 
 const GRADE = "5f0c2a1e-8b7d-4c3a-9e6f-1a2b3c4d5e6f"
 

@@ -199,10 +199,6 @@ create policy sections_update on public.sections
   for update to authenticated
   using      (app.has_role(workspace_id, array['owner', 'admin']))
   with check (app.has_role(workspace_id, array['owner', 'admin']));
-drop policy if exists sections_delete on public.sections;
-create policy sections_delete on public.sections
-  for delete to authenticated
-  using (app.has_role(workspace_id, array['owner', 'admin']));
 
 drop policy if exists subjects_select on public.subjects;
 create policy subjects_select on public.subjects
@@ -223,11 +219,39 @@ create policy subjects_update on public.subjects
   for update to authenticated
   using      (app.has_role(workspace_id, array['owner', 'admin']))
   with check (app.has_role(workspace_id, array['owner', 'admin']));
-drop policy if exists subjects_delete on public.subjects;
-create policy subjects_delete on public.subjects
-  for delete to authenticated
-  using (app.has_role(workspace_id, array['owner', 'admin']));
 
+-- Archive-only (F-AC-01 §5 rule 12): no DELETE policy and no DELETE grant.
 revoke all on public.sections, public.subjects from anon, authenticated;
-grant select, insert, update, delete on public.sections to authenticated;
-grant select, insert, update, delete on public.subjects to authenticated;
+grant select, insert, update on public.sections to authenticated;
+grant select, insert, update on public.subjects to authenticated;
+
+-- ---------------------------------------------------------------------
+-- F-AC-01 §4.5: when a member stops being an active owner/admin/teacher
+-- (removed, or moved to staff/parent), they stop being a class teacher.
+-- Memberships are never deleted, so the section's FK alone cannot do
+-- this, and the eligibility trigger only fires on section writes.
+-- ---------------------------------------------------------------------
+create or replace function app.tg_members_release_class_teacher()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not (new.status = 'active' and new.role in ('owner', 'admin', 'teacher')) then
+    update public.sections
+       set class_teacher_id = null
+     where class_teacher_id = new.id
+       and archived_at is null;
+  end if;
+  return new;
+end;
+$$;
+
+comment on function app.tg_members_release_class_teacher() is
+  'F-AC-01 §4.5 (D-102): clears class_teacher_id on live sections when the '
+  'member is no longer an active owner/admin/teacher.';
+
+create trigger members_release_class_teacher
+  after update of status, role on public.workspace_members
+  for each row execute function app.tg_members_release_class_teacher();

@@ -555,6 +555,9 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // supabase/migrations/20260925300302_grade_scales.sql.
   "grade_scales",
   "grade_bands",
+  // F-AC-01 demo cut (D-102) — 20260925300304_sections_and_subjects.sql.
+  "sections",
+  "subjects",
   // F-AC-06 Part 2 (D-303) — 20260925300305_exams.sql.
   "exams",
   "exam_sections",
@@ -607,6 +610,8 @@ export const GENERIC_TABLE_NOUNS: Readonly<
   },
   grade_scales: { en: "a grading scale", bn: "একটি গ্রেডিং স্কেল" },
   grade_bands: { en: "a grade band", bn: "একটি গ্রেড ব্যান্ড" },
+  sections: { en: "a section", bn: "একটি শাখা" },
+  subjects: { en: "a subject", bn: "একটি বিষয়" },
   exams: { en: "an exam", bn: "একটি পরীক্ষা" },
   exam_sections: { en: "an exam's section", bn: "পরীক্ষার একটি সেকশন" },
   exam_subjects: { en: "an exam paper", bn: "একটি পরীক্ষার পেপার" },

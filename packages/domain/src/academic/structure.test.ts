@@ -22,6 +22,10 @@ describe("nextSectionName", () => {
   it("takes the first free letter, ignoring case and spaces", () => {
     expect(nextSectionName(["a", " B ", "D"])).toBe("C")
   })
+  it("suggests ক, খ … for a Bangla school", () => {
+    expect(nextSectionName([], "bn")).toBe("ক")
+    expect(nextSectionName(["ক"], "bn")).toBe("খ")
+  })
   it("gives up after Z", () => {
     const all = Array.from({ length: 26 }, (_, i) =>
       String.fromCharCode(65 + i)
