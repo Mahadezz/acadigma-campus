@@ -822,3 +822,19 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 **Why:** the smallest slice that gives a demo school a real class list, without inventing shapes the later Parts would have to undo.
 
 **Consequences:** `supabase/tests/32_sections_and_subjects.sql`. When `rooms` lands, `sections.room` becomes `room_id` (expand, backfill, contract).
+
+## D-303 — Exams demo cut: no terms, papers from picked subjects, grading snapshotted on the exam · ACCEPTED · 2026-09-25
+
+**Context:** F-AC-06 Part 2 assumes `terms` and `section_subjects` (F-AC-01), and neither exists; F-AC-01's demo cut (#47, D-102) ships sections and a subject catalogue only. D-302 deferred scale versioning and the pass boundary to this Part.
+
+**Decision:**
+
+1. `exams` has no `term_id`; `exam_type` (midterm, term_final, annual, ...) says which part of the year it is. `term_id` is added, nullable, when `terms` lands.
+2. `exam_subjects` is exam × section × subject. `createExam` takes the subjects the admin picks and creates one paper per section × subject. When `section_subjects` lands, the default subject list comes from it. `section_subject_id` is then added and the paper keeps `section_id`/`subject_id` (the spec's denormalised columns).
+3. The grading policy is snapshotted on the exam at insert by a trigger: the scale's bands, the pass mark, F-zeroes-GPA and the year's 4th-subject threshold. It is never client-supplied and never changed afterwards. That snapshot is the "versioning" D-302 deferred: editing a scale cannot change an existing exam, so no draft/active/retired scale lifecycle is needed yet.
+4. The pass mark reaches papers as `pass_marks = round_half_up(full × pass_mark_percent / 100, 0)`. "The pass flag flips exactly at the pass mark" is enforced when results are computed (Part 5).
+5. Status moves only along §5.12's chain, in the database (`app.tg_exams_status_guard`) and in the domain (`checkExamTransition`). Every status button in the UI names its step.
+
+**Why:** It builds only on tables that exist, and it keeps grading history fixed by construction.
+
+**Consequences:** Components, aggregate exams, calendar events, question-paper upload, idempotency keys and rate limits on `createExam` are later Parts. Parents read exams only through Part 7's published view.
