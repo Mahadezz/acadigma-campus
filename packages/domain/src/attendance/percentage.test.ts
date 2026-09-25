@@ -9,7 +9,6 @@ import {
   sectionDayRate,
 } from "./percentage"
 
-
 const DEFAULT = { late_counts_present: true, half_day_counts_present: true }
 
 // The same fixture as supabase/tests/34_attendance.sql (AC5).
