@@ -1,4 +1,5 @@
-export * from "./academics"
+export * from "./academics/grading"
+export * from "./academics/structure"
 export * from "./audit"
 export * from "./calendar"
 export * from "./common"

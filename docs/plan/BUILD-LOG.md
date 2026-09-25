@@ -4,6 +4,30 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-09-25 — PR #41 — feat(design): owner/admin today dashboard from real data (D-400)
+
+- **Lane:** design
+- **Shipped:** `/app/dashboard` replaces the developer placeholder: letterhead name, plan/trial/read-only chip, members by role, staff-directory count, a five-step setup checklist (academic year + classes counted from #37's tables), owner-only recent activity as curated sentences, honest empty slots for attendance and results; lighter teacher view; en/bn. `apps/web/lib/implemented-routes.ts` hides nav links to unbuilt routes (the live bug hunt found 14 prefetch 404s per page).
+- **Decisions:** D-400.
+- **Migrations:** none.
+- **Review/incidents:** the academic-year step was hard-coded "not done"; the activity feed showed raw table names — both fixed before merge.
+
+## 2026-09-25 — PR #43 — feat(academics): F-AC-11 Part 1 — holidays, overrides, `app.is_school_day`
+
+- **Lane:** operations
+- **Shipped:** `holidays` and `working_day_overrides` (staff read, owner/admin write, audited, read-only guarded, `created_by` immutable); `app.is_school_day`, `app.school_days`, `app.school_day_count` (override → weekly pattern → holiday); holidays screen at `/app/settings/calendar`, en/bn.
+- **Decisions:** D-202, D-203 (the functions run as definer behind `app.can_read_school_calendar`, so parents get the right answer and strangers get nothing).
+- **Migrations:** `20260925300301_school_calendar.sql` — applied to production; smoke test passed.
+- **Review/incidents:** first version gave parents the wrong answer (they can't read holidays under invoker rights); fixed before merge.
+
+## 2026-09-25 — PR #42 — fix(billing): read-only join check in join functions; seed passwords hashed at seed time (D-301)
+
+- **Lane:** billing
+- **Shipped:** joining a read-only school is refused inside `accept_invitation` / `join_workspace_by_code` after the token or code is verified; the trigger's non-member branch is gone, so strangers can't learn a school's access mode; seed passwords hashed with `crypt()` at seed time (no hashes in the repo).
+- **Decisions:** D-301.
+- **Migrations:** `20260925300201_readonly_join_check.sql` — applied to production; smoke test passed.
+- **Review/incidents:** the new pgTAP exposed that the seed had been broken on main since #32 (duplicate labels); fixed.
+
 ## 2026-09-25 — PR #37 — feat(identity): F-ID-05 Part 4 — create-school wizard steps 3-4 + `public.create_school_workspace`
 
 - **Lane:** identity

@@ -9,6 +9,7 @@ Repo: public GitHub `Mahadezz/acadigma-campus`. `gh` must be authenticated.
 
 ## Hard rules
 
+- PORTS: one lane = one port, so parallel builders never test each other's server (Playwright reuses any server already on its port locally). Always set `PLAYWRIGHT_PORT` and pass the same `--port` to any `next start`/`next dev` you run: lead 3100, identity 3101, operations 3102, billing 3103, design 3104 (a second builder in the same lane adds 10: e.g. design 3114). Stop every server you started before you hand back.
 - DISK: C: is full. In EVERY shell command that runs pnpm/node/vitest/next/playwright, first `export TMP='F:\tmp' TEMP='F:\tmp' TMPDIR='F:\tmp'` (mkdir -p /f/tmp). ENOSPC errors mean you forgot. Do not delete anything on C:.
 - Work only in your own worktree: `git worktree add .worktrees/<name> -b <branch> origin/main`.
 - NEVER `git stash`. NEVER force-push. Do NOT merge PRs. Never read `.claude/settings.local.json` (secrets).

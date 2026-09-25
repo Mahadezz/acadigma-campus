@@ -750,6 +750,30 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Consequences:** F-TE-07 Part 1's `analytics.overview` replaces the Members/Today cards' data source when it ships. F-AC-03 fills the attendance slot, F-AC-05 adds the "NOW" card, and the exams Part fills the results slot. When the student table lands, `page.tsx` passes a real count to `buildSetupChecklist` in place of the constant. The dashboard has its own `loading.tsx` and `error.tsx`, so a slow or failed count keeps the shell on screen.
 
+## D-302 — Grade scales: DATA-MODEL's shape, rules stay in settings, coverage checked at commit · ACCEPTED · 2026-09-25
+
+**Context:** F-AC-06 Part 1 builds grade scales. The spec's §3 draft and DATA-MODEL §2 disagree: `grade_scale_bands (min_pct, max_pct, colour)` plus seven rule columns on the scale (pass mark, F-zeroes-GPA, 4th-subject rule and threshold, decimals, effective date, active flag) versus DATA-MODEL's `grade_scales (code, name, is_default)` / `grade_bands (letter, min_percent, max_percent, grade_point, sort_order)`. Those rules already exist in `school_profiles.academic_settings` (`pass_mark_percent`, `fail_any_subject_zero_gpa`, `grade_scale_code = BD_GPA5`) and `academic_years.fourth_subject_bonus_threshold_gp`.
+
+**Decision:** (1) DATA-MODEL's tables and names, plus `grade_bands.is_fail` (§5.3 needs it; a fail band is not always point 0 on a custom scale). (2) The rule columns stay where they already live; they move onto the scale only when Part 2's exams need to snapshot them. (3) Coverage (0.00-100.00, no gap, no overlap, 0.01 steps) is a DEFERRED constraint trigger, so a whole band set is replaced in one transaction by `public.save_grade_scale`, which then sets the constraint IMMEDIATE to surface `BAND_GAP`/`BAND_OVERLAP` by name. Not a gist exclusion constraint — that would need `btree_gist` and still not catch gaps. (4) Both write RPCs are SECURITY INVOKER, so RLS and `require_writable` decide, not the function. (5) One parity table: the pgTAP rows between `-- parity:` markers in `52_grade_scales.sql` are read verbatim by the domain's vitest, so SQL `app.band_for`/`app.round_half_up` and TS `bandFor`/`roundHalfUp` are asserted against the same cases.
+
+**Why:** Two homes for the pass mark would drift. Replacing bands one by one would pass through invalid states.
+
+**Consequences:** Part 2 decides the snapshot shape (copy rules onto the scale, or snapshot `academic_settings` on the exam). Only the default scale is editable in Part 1; `SCALE_IN_USE` versioning arrives with exams.
+
+**Lead decisions on review of PR #46 (2026-09-25; owner confirmation pending on (a)):**
+
+- **(a) Rounding.** F-AC-06 §5.1 wins: `subject_pct = round(100 × obtained / full, 2)`, then banded as-is with `min_percent <= pct <= max_percent` on the .99 upper edges (79.5 → A, 32.5 → F). There is no rounding before banding: `app.band_for` and `bandFor` compare the value they are given. F-OP-07 §5.2's "percent comparisons use integers" and its OQ-4 round-half-up default are superseded and now point here.
+- **(b) Route and permission.** F-OP-07's names are used: `/app/settings/grade-scale` and `settings.grade_scale.write`. From F-OP-07 Part 4's extra rules, "grade points must not decrease band by band" is enforced now, in the database (`BAND_POINTS_DECREASE`) and in Zod. Scale versioning and "the pass boundary equals `pass_mark_percent`" are deferred to F-AC-06 Part 2, where exams snapshot the scale and the pass mark.
+- **Review fixes:**
+  - An empty band set is `BAND_GAP`.
+  - Bands change only through the two RPCs: `authenticated` has only SELECT on `grade_bands`, and the RPCs are SECURITY DEFINER and re-check owner/admin.
+  - The coverage check locks the scale row.
+  - `seed_bd_grade_scale` uses `insert ... on conflict do nothing`.
+  - `save_grade_scale` takes the workspace id and filters on it.
+  - `grade_scales.code` and `is_default` are immutable to clients.
+  - Band letters are unique case-insensitively.
+  - Band audit rows are info-level.
+
 ## D-102 — F-AC-01 demo cut: sections and subjects on the current year, tenant-bound foreign keys, rooms as text · ACCEPTED · 2026-09-25
 
 **Context:** The owner needs the Classes screen for sales demos before the full F-AC-01 build (six Parts: years/terms, grades, sections/rooms, subjects/templates, section-subjects, setup wizard). `grade_levels` and `academic_years` already exist (D-100); schools created by the wizard have a current year and grade levels.
@@ -763,7 +787,7 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 5. **`room` is free text** until the `rooms` table lands (Part 3); **archive, not delete** (`archived_at`), for both tables.
 6. **The NCTB starter list** lives in `packages/domain/src/academic/structure.ts` and is copied into the school's own rows; running it twice adds nothing.
 7. **Permissions:** `academics.structure.read` (owner, admin, teacher, staff), `academics.section.write` and `academics.subject.write` (owner, admin). Parents read nothing here (T2); their view is F-AC-10.
-8. **Migration timestamps:** `20260925300303` sorts after main's newest (`20260925300301`, #43) and after #45's `20260925300302`. The three `add constraint ... unique (id, workspace_id)` statements are plain, not `CONCURRENTLY`: migrations run inside a transaction, where `CONCURRENTLY` is impossible, and these tables are tiny.
+8. **Migration timestamps:** `20260925300304` sorts after main's newest (`20260925300302`, #46) and after #45's `20260925300303`. The three `add constraint ... unique (id, workspace_id)` statements are plain, not `CONCURRENTLY`: migrations run inside a transaction, where `CONCURRENTLY` is impossible, and these tables are tiny.
 9. **Review follow-ups (PR #47):** when a member stops being an active owner/admin/teacher (removed, or moved to staff/parent), `app.tg_members_release_class_teacher` clears them as class teacher of live sections (§4.5; archived sections keep their history). Sections and subjects are archive-only: no DELETE policy or grant. The NCTB starter list has Bangla and English as two papers each (marks are kept per paper), religion as one subject per faith, and "Physical Education and Health". A Bangla school is offered ক, খ … as section names.
 
 **Why:** the smallest slice that gives a demo school a real class list, without inventing shapes the later Parts would have to undo.
