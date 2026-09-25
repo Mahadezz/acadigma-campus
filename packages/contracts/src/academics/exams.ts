@@ -70,6 +70,8 @@ export const updateExamSubjectInputSchema = z
     examDate: isoDateSchema.nullable(),
     fullMarks: marksSchema.positive(),
     passMarks: marksSchema,
+    /** The paper's subject teacher (D-304); null clears it, omitted keeps it. */
+    teacherId: uuidSchema.nullable().optional(),
   })
   .refine((v) => v.passMarks <= v.fullMarks, {
     message: "Pass marks cannot be more than full marks.",
@@ -100,6 +102,10 @@ export const examPaperSchema = z.object({
   fullMarks: z.number(),
   passMarks: z.number(),
   status: examSubjectStatusSchema,
+  teacherId: uuidSchema.nullable(),
+  /** Students with a mark, absent or exempt / students enrolled (D-304). */
+  marksDone: z.number().int(),
+  enrolled: z.number().int(),
 })
 export type ExamPaper = z.infer<typeof examPaperSchema>
 

@@ -15,6 +15,7 @@
     "./repositories/staff": "./src/repositories/staff.ts",
     "./repositories/grading": "./src/repositories/grading.ts",
     "./repositories/exams": "./src/repositories/exams.ts",
+    "./repositories/marks": "./src/repositories/marks.ts",
     "./repositories/ui-preferences": "./src/repositories/ui-preferences.ts"
   },
   "scripts": {

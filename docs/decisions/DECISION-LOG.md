@@ -987,6 +987,38 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Consequences:** migration `20260925300311_attendance_any_teacher.sql` (CREATE OR REPLACE of `save_attendance` and `attendance_day`, drops `app.can_mark_attendance`); `supabase/tests/35_attendance_any_teacher.sql` (16 assertions); the two `NOT_ASSIGNED` cases leave `34_attendance.sql`. The UI offers "Take attendance" on every class to anyone with `attendance.write`. `33_students_and_guardians.sql` now closes last year's enrolments with an `ended_on`.
 
+## D-304 — Marks entry demo cut: the paper names its teacher, one save function with per-row checks, Publish waits for complete marks · ACCEPTED · 2026-09-26
+
+**Context:** F-AC-06 Part 3 (marks entry) builds on grade scales (D-302) and exams (D-303). The spec gives marks to "the primary or assistant teacher of that section_subject", but `section_subjects` does not exist yet (D-303 item 2). D-303 also left a known gap: Publish had no marks-completeness gate, which Part 4 was to add. The owner confirmed D-302's rounding on 2026-09-26 and decided how offline marks will sync when that queue is built.
+
+**Decision:**
+
+1. **The paper names its teacher.** `exam_subjects.teacher_id` (composite FK to `workspace_members`) is set by an owner/admin on the exam page. Who may enter and read a paper's marks is `app.can_enter_marks`: an active owner/admin, the paper's teacher or the section's class teacher (each still an active owner/admin/teacher). Staff read; parents never read `marks` (they will read published results, Part 7); a teacher of another subject reads nothing (AC14, pgTAP). When `section_subjects` lands, it seeds `teacher_id`.
+2. **One writer.** `marks` has no INSERT/UPDATE/DELETE grant. `public.save_marks` (SECURITY DEFINER) upserts every valid row in one statement: only while the exam is in `marks_entry` (`ENTRY_CLOSED`) and the paper is not `locked` (`SUBJECT_LOCKED`), only students actively enrolled in the paper's section (`STUDENT_NOT_ENROLLED`), idempotent by key (`app.idempotency_keys`, scope `save_marks`).
+3. **Per-row checks, so valid rows still save (§4.2, AC12).** A value below 0, above full marks or with more than 2 decimals is `MARK_OUT_OF_RANGE` for that row. **The version check is per row:** each row carries the `updated_at` it was loaded with (null for a new row); a row changed by someone else since is `CONFLICT` and is not overwritten. The response lists `rejected` rows and every saved row's new `updated_at`. The first save moves the paper `pending → entering`.
+4. **Audit.** Every save that writes marks logs one paper-level `marks.entered` event with the count (§4.2), not one row per student; a mark is audited when it changes (before/after) or is removed, so an overwritten value is never lost.
+5. **Publish waits for complete marks (Part 4's gate, D-303's known gap).** `app.tg_exams_publish_gate` refuses `→ published` with `MARKS_INCOMPLETE` while any active enrolment in any of the exam's papers has no mark row. Absent and exempt count as marked.
+6. **Rounding (owner-confirmed 2026-09-26):** "D-302 stands: percentages to 2 decimals, no rounding" before banding — 79.5 → A, 32.5 → F. Marks are stored as entered, to 2 decimals.
+7. **Offline sync, when it is built (owner decision 2026-09-26, recorded in F-AC-06 §11; not built now):** per cell, the later edit wins, and the overwritten value is kept in the audit trail. D-71 item 3 records the same rule for the platform-wide outbox ("later" = `client_edited_at`).
+8. **Screen.** `/app/marks/[examSubjectId]` follows F-AC-06 §4.2/§6 (72 px rows, a large `inputmode="decimal"` input, Enter to the next student so the keypad stays up, Absent/Exempt chips acting on the selected student, a sticky "24/40 · Save"). The desktop is the same list with ↑/↓, Shift+Enter, Esc, A, E and Ctrl+S. It uses `ui/input` and `ui/toggle-group`, not `MarkCell`: `MarkCell` clamps an out-of-range value to full marks on blur, which AC12 forbids (60 of 50 must be refused, not saved as 50), and DESIGN-SYSTEM §5.2's custom one-student keypad is not what the spec asks for. Both are left for the design lane to reconcile. Bengali digits typed on a Bangla keypad are read as Western; the UI shows Western digits.
+9. **Fix found on the way:** `exam_subjects` had no FK to `sections`, so `getExam`'s `sections(...)` embed had no PostgREST relationship. A composite `(section_id, workspace_id) → sections` FK is added.
+
+**Why:** the rules a teacher can break by mistake — a wrong subject, a closed exam, 60 of 50, a colleague's newer mark — are refused by the database row by row, and a correct row is never held back by a wrong one.
+
+**Review of PR #60 (2026-09-26):**
+
+- Ctrl/Cmd/Alt+A and +E keep their browser meaning; only a bare A or E marks Absent or Exempt.
+- A dropped connection during Save keeps every typed mark and the idempotency key, so the retry replays the same save.
+- After a `CONFLICT` the row adopts the server's value and version and keeps what was typed: Save again keeps mine, Esc takes theirs.
+- The Absent/Exempt badge describes the input; the chip group is labelled with the selected student.
+- One paper-level `marks.entered` audit event per save that writes marks (security LOW-1); a `TODO(F-AC-06 Part 4)` marks where the entry-date window goes (LOW-2).
+- The exam page's "n/m marked" comes from `public.exam_marks_progress` (SQL counts, currently enrolled students only — the gate's definition), not from `marks(count)` and a full enrolment list.
+- `updateExamSubject` leaves the teacher alone when `teacherId` is omitted; null clears it.
+- The journey fills one of two subjects' papers, so the `MARKS_INCOMPLETE` refusal is asserted every time.
+- **Declined:** splitting the two new `exam_subjects` FKs into `NOT VALID` + `VALIDATE`. The migration runs in one transaction, so it gains nothing, and the table is tiny.
+
+**Consequences:** `supabase/tests/54_marks.sql` (40 assertions). Deferred: the entry date window (`entry_opens_on/closes_on`), submit/lock/unlock with reasons and the progress screen (Part 4), the offline queue and autosave draft (Part 4, item 7), components (Written/MCQ), paste-a-column and the distribution histogram on desktop, `withheld`, remarks, a teacher's "my papers" list and dashboard card. Teachers reach the screen from the exam page.
+
 ## D-404 — F-ID-10 Part 1: `user_preferences` already existed; ADD `ui_mode`/`text_size` rather than create the table, and follow its real (full-CRUD) RLS over §3's "no delete grant" line · ACCEPTED · 2026-09-26
 
 **Context:** F-ID-10 §3 and D-403 point 1 both say "`user_preferences` is not built yet, so F-ID-10 Part 1 creates it". That was true when D-403 was written; it is not true on `main` at Part 1's start. `20260917010100_identity.sql` (F-ID-01/F-ID-02's earlier demo-cut work) already created `public.user_preferences` with eight columns (`theme_mode`, `palette`, `density`, `language`, `timezone`, `email_digest`, `push_enabled`, `channels`), `class U1` RLS (DATA-MODEL.md §1.7: select/insert/update **and delete**, own row only, no platform-admin read), and a row inserted eagerly for every account by `app.handle_new_user()`. F-ID-02 §3's own proposed shape for this table (which D-403 defers to) separately says "no delete grant" — narrower than what is actually granted.

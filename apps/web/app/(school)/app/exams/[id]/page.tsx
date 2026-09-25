@@ -1,5 +1,6 @@
 import { forbidden, notFound } from "next/navigation"
 
+import { listClassTeacherOptions } from "@acadigma/db"
 import { getExam } from "@acadigma/db/repositories/exams"
 import { can } from "@acadigma/domain"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
@@ -26,7 +27,12 @@ export default async function ExamPage({
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound()
 
   const { t, locale } = await getMessages()
-  const exam = await getExam(ctx, await createClient(), id)
+  const supabase = await createClient()
+  const canWrite = can(ctx.role, "exams.write")
+  const [exam, teachers] = await Promise.all([
+    getExam(ctx, supabase, id),
+    canWrite ? listClassTeacherOptions(supabase, ctx) : null,
+  ])
   if (!exam.ok) {
     if (exam.error.code === "not_found") notFound()
     return (
@@ -41,7 +47,8 @@ export default async function ExamPage({
       t={t.exams}
       locale={locale}
       exam={exam.data}
-      canWrite={can(ctx.role, "exams.write")}
+      canWrite={canWrite}
+      teachers={teachers?.ok ? teachers.data : []}
     />
   )
 }

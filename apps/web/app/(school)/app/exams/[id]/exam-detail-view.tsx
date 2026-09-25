@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 
 import { ChevronLeftIcon } from "lucide-react"
 
-import type { ExamDetail, ExamPaper } from "@acadigma/contracts"
+import type { ExamDetail, ExamPaper, TeacherOption } from "@acadigma/contracts"
 import {
   nextExamStatus,
   papersLocked,
@@ -17,6 +17,10 @@ import { Badge } from "@acadigma/ui/components/badge"
 import { Button } from "@acadigma/ui/components/button"
 import { Input } from "@acadigma/ui/components/input"
 import { Label } from "@acadigma/ui/components/label"
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@acadigma/ui/components/native-select"
 import { Textarea } from "@acadigma/ui/components/textarea"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
@@ -38,11 +42,13 @@ export function ExamDetailView({
   locale,
   exam,
   canWrite,
+  teachers,
 }: {
   t: T
   locale: Locale
   exam: ExamDetail
   canWrite: boolean
+  teachers: TeacherOption[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -58,7 +64,11 @@ export function ExamDetailView({
     startTransition(async () => {
       const result = await setExamStatus({ examId: exam.id, status, reason })
       if (!result.ok) {
-        setError(result.error.message || t.error)
+        setError(
+          result.error.fieldErrors?._root?.[0] === "MARKS_INCOMPLETE"
+            ? t.publishBlocked
+            : result.error.message || t.error
+        )
         return
       }
       setReversing(false)
@@ -151,6 +161,9 @@ export function ExamDetailView({
                   paper={paper}
                   canWrite={canWrite}
                   locked={locked}
+                  marksOpen={exam.status === "marks_entry"}
+                  marksVisible={locked}
+                  teachers={teachers}
                   subjectName={
                     locale === "bn" && paper.subjectNameBn
                       ? paper.subjectNameBn
@@ -227,12 +240,20 @@ function PaperRow({
   paper,
   canWrite,
   locked,
+  marksOpen,
+  marksVisible,
+  teachers,
   subjectName,
   fmt,
 }: {
   t: T
   paper: ExamPaper
   canWrite: boolean
+  /** The exam is in marks entry: the paper's marks can be entered. */
+  marksOpen: boolean
+  /** Marks entry has opened (now or earlier): the marks can be viewed. */
+  marksVisible: boolean
+  teachers: TeacherOption[]
   /** From marks_entry on, full/pass marks are locked; the date still moves. */
   locked: boolean
   subjectName: string
@@ -243,28 +264,54 @@ function PaperRow({
   const [date, setDate] = useState(paper.examDate ?? "")
   const [full, setFull] = useState(String(paper.fullMarks))
   const [pass, setPass] = useState(String(paper.passMarks))
+  const [teacher, setTeacher] = useState(paper.teacherId ?? "")
   const [notice, setNotice] = useState<string | null>(null)
   const dirty =
+    teacher !== (paper.teacherId ?? "") ||
     date !== (paper.examDate ?? "") ||
     full !== String(paper.fullMarks) ||
     pass !== String(paper.passMarks)
   const id = `paper-${paper.id}`
 
+  const marksLink = marksVisible ? (
+    <Button
+      asChild
+      variant={marksOpen ? "default" : "outline"}
+      className="h-11"
+    >
+      <Link href={`/app/marks/${paper.id}`}>
+        {marksOpen ? t.enterMarks : t.viewMarks}
+        <span className="sr-only"> — {subjectName}</span>
+      </Link>
+    </Button>
+  ) : null
+
   if (!canWrite) {
     return (
-      <li className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-sm">
+      <li className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
         <span className="font-medium">{subjectName}</span>
         <span className="text-muted-foreground">
           {paper.examDate ? fmt(paper.examDate) : "—"} · {paper.passMarks}/
           {paper.fullMarks}
         </span>
+        {marksLink}
       </li>
     )
   }
 
   return (
     <li className="space-y-2 px-4 py-3">
-      <p className="font-medium">{subjectName}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-medium">{subjectName}</p>
+        {marksVisible ? (
+          <span className="text-muted-foreground text-sm tabular-nums">
+            {t.marksProgress
+              .replace("{done}", String(paper.marksDone))
+              .replace("{total}", String(paper.enrolled))}
+          </span>
+        ) : null}
+        {marksLink}
+      </div>
       <form
         className="grid grid-cols-3 items-end gap-2 sm:grid-cols-[1fr_6rem_6rem_auto]"
         onSubmit={(event) => {
@@ -276,12 +323,29 @@ function PaperRow({
               examDate: date || null,
               fullMarks: Number(full),
               passMarks: Number(pass),
+              teacherId: teacher || null,
             })
             setNotice(result.ok ? t.saved : result.error.message || t.error)
             if (result.ok) router.refresh()
           })
         }}
       >
+        <div className="col-span-3 space-y-1 sm:col-span-4">
+          <Label htmlFor={`${id}-teacher`}>{t.teacher}</Label>
+          <NativeSelect
+            id={`${id}-teacher`}
+            value={teacher}
+            onChange={(e) => setTeacher(e.target.value)}
+            className="min-h-11"
+          >
+            <NativeSelectOption value="">{t.noTeacher}</NativeSelectOption>
+            {teachers.map((option) => (
+              <NativeSelectOption key={option.memberId} value={option.memberId}>
+                {option.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
         <div className="col-span-3 space-y-1 sm:col-span-1">
           <Label htmlFor={`${id}-date`}>{t.examDate}</Label>
           <Input

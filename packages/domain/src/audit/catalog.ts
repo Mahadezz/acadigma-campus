@@ -514,6 +514,13 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn:
       "সিস্টেমটি ধরে রাখার মেয়াদ পার হওয়া {n}টি অডিট ইভেন্ট মুছে ফেলেছে",
     isGeneric: false,
+  }, // F-AC-06 Part 3 (D-304) — one paper-level event per save_marks.
+  {
+    action: "marks.entered",
+    severity: "info",
+    sentenceEn: "{actor} saved marks on an exam paper ({n})",
+    sentenceBn: "{actor} একটি পরীক্ষার পেপারে নম্বর সংরক্ষণ করেছেন ({n})",
+    isGeneric: false,
   },
 ]
 
@@ -570,6 +577,8 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // F-AC-03 demo cut (D-104) — 20260925300309_attendance.sql.
   "attendance_sessions",
   "attendance_records",
+  // F-AC-06 Part 3 (D-304) — 20260925300312_marks.sql.
+  "marks",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -638,6 +647,7 @@ export const GENERIC_TABLE_NOUNS: Readonly<
     en: "a student's attendance",
     bn: "একজন শিক্ষার্থীর হাজিরা",
   },
+  marks: { en: "a student's mark", bn: "একজন শিক্ষার্থীর নম্বর" },
 }
 
 /**
