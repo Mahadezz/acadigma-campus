@@ -39,6 +39,8 @@ export const ACTIONS = [
   "students.write",
   "marks.read",
   "marks.write",
+  // F-AC-06 §2: grade scales, pass mark, GPA rules — owner/admin.
+  "settings.grade_scale.write",
   "timetable.read",
   "timetable.manage",
   // Workspace administration
@@ -121,6 +123,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "billing.manage",
     "settings.manage",
     "policies.manage",
+    "settings.grade_scale.write",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -162,6 +165,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.manage",
     "billing.read",
     "policies.manage",
+    "settings.grade_scale.write",
     "reports.read",
     "messages.send",
     "ai.use",

@@ -551,6 +551,10 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   // F-AC-11 Part 1 (D-202) — 20260925300301_school_calendar.sql.
   "holidays",
   "working_day_overrides",
+  // F-AC-06 Part 1 (D-302) — seeded in
+  // supabase/migrations/20260925300302_grade_scales.sql.
+  "grade_scales",
+  "grade_bands",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -597,6 +601,20 @@ export const GENERIC_TABLE_NOUNS: Readonly<
     en: "a working-day change",
     bn: "একটি কর্মদিবস পরিবর্তন",
   },
+  grade_scales: { en: "a grading scale", bn: "একটি গ্রেডিং স্কেল" },
+  grade_bands: { en: "a grade band", bn: "একটি গ্রেড ব্যান্ড" },
+}
+
+/**
+ * Per-table severity overrides, mirrored from the migrations' `update
+ * public.audit_action_catalog set severity` lines. grade_bands rows churn on
+ * every save (delete + insert of the whole set), so they are info-level
+ * (20260925300302_grade_scales.sql, review of PR #46).
+ */
+const GENERIC_SEVERITY_OVERRIDES: Readonly<
+  Record<string, Partial<Record<"insert" | "update" | "delete", AuditSeverity>>>
+> = {
+  grade_bands: { update: "info", delete: "info" },
 }
 
 const GENERIC_VERBS = {
@@ -619,7 +637,7 @@ export function genericActionsForTable(
   }
   return (["insert", "update", "delete"] as const).map((op) => ({
     action: `${table}.${op}`,
-    severity: GENERIC_SEVERITY[op],
+    severity: GENERIC_SEVERITY_OVERRIDES[table]?.[op] ?? GENERIC_SEVERITY[op],
     sentenceEn: `{actor} ${GENERIC_VERBS[op].en} ${noun.en}`,
     sentenceBn: `{actor} ${noun.bn} ${GENERIC_VERBS[op].bn}`,
     isGeneric: true,
