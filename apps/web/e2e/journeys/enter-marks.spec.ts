@@ -8,10 +8,11 @@ import { expectNoA11yViolations } from "../axe"
  * an exam for the seeded class, opens marks entry, types a mark for every
  * student with Enter moving to the next one (the keypad never closes),
  * marks one student Absent, saves once, and sees the progress complete.
- * Then Publish is refused until every paper is complete (Part 4's gate).
+ * The exam has two subjects and only one paper is filled, so Publish is
+ * always refused (Part 4's completeness gate, MARKS_INCOMPLETE).
  *
- * Needs a seeded, verified owner of a school with a grade scale, a subject
- * and an enrolled section (e.g. Class 6 – ক from
+ * Needs a seeded, verified owner of a school with a grade scale, at least
+ * two subjects and an enrolled section (e.g. Class 6 – ক from
  * supabase/seed/demo-class-6-ka.sql), so it carries the same skip guard as
  * the other live journeys (OQ-27).
  */
@@ -42,11 +43,11 @@ test("owner enters a whole class's marks in one pass and saves once", async ({
   await page
     .getByLabel("Exam name")
     .fill(`Marks ${testInfo.project.name} ${Date.now()}`)
-  await page
+  const subjects = page
     .getByRole("group", { name: "Subjects" })
     .getByRole("checkbox")
-    .first()
-    .check()
+  await subjects.nth(0).check()
+  await subjects.nth(1).check()
   await page.getByRole("button", { name: "Create exam" }).click()
   await expect(page).toHaveURL(/\/app\/exams\/[0-9a-f-]{36}$/)
   for (const step of ["Schedule", "Start exam", "Open marks entry"]) {
@@ -82,13 +83,9 @@ test("owner enters a whole class's marks in one pass and saves once", async ({
   await page.getByRole("link", { name: "Back to the exam" }).click()
   await page.getByRole("button", { name: "Lock marks" }).click()
   await page.getByRole("button", { name: "Publish" }).click()
-  const papers = await page.getByRole("link", { name: /marks — / }).count()
-  if (papers > 1) {
-    // Other papers have no marks yet: Publish is refused (Part 4's gate).
-    await expect(
-      page.getByText(/Every student in every paper needs a mark/)
-    ).toBeVisible()
-  } else {
-    await expect(page.getByText("Published")).toBeVisible()
-  }
+  // The second subject's paper has no marks: Publish is refused.
+  await expect(
+    page.getByText(/Every student in every paper needs a mark/)
+  ).toBeVisible()
+  await expect(page.getByText("Marks locked")).toBeVisible()
 })

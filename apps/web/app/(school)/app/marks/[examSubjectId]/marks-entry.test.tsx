@@ -161,11 +161,84 @@ describe("MarksEntry", () => {
     fireEvent.change(input(/Ayaan R/), { target: { value: "45" } })
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
     await screen.findByText(
-      "Someone changed this mark after you opened the page. Reload to see it."
+      "Someone else changed this mark meanwhile. Save again to keep yours, or press Esc to take theirs."
     )
     expect(mockSave.mock.calls[0]?.[0].entries[0].expectedUpdatedAt).toBe("t1")
     // The other person's newer value is not taken over silently.
     expect((input(/Ayaan R/) as HTMLInputElement).value).toBe("45")
+    // Saving again names the server's version: a deliberate "keep mine".
+    fireEvent.click(await screen.findByRole("button", { name: "Save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
+    expect(mockSave.mock.calls[1]?.[0].entries[0]).toMatchObject({
+      obtained: 45,
+      expectedUpdatedAt: "tX",
+    })
+  })
+
+  it("Esc after a CONFLICT takes the other person's value", async () => {
+    mockSave.mockResolvedValue({
+      ok: true,
+      data: {
+        saved: 0,
+        entered: 1,
+        enrolled: 4,
+        rejected: [{ studentId: id(1), issue: "CONFLICT" }],
+        marks: [
+          {
+            studentId: id(1),
+            status: "entered",
+            obtained: 41,
+            updatedAt: "tX",
+          },
+        ],
+      },
+    })
+    render(<MarksEntry {...BASE} />)
+    fireEvent.change(input(/Ayaan R/), { target: { value: "45" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalled())
+    await vi.waitFor(() =>
+      expect(input(/Ayaan R/).getAttribute("aria-invalid")).toBe("true")
+    )
+    fireEvent.keyDown(input(/Ayaan R/), { key: "Escape" })
+    expect((input(/Ayaan R/) as HTMLInputElement).value).toBe("41")
+  })
+
+  it("a dropped connection keeps every typed mark and the same key", async () => {
+    mockSave.mockRejectedValueOnce(new Error("Failed to fetch"))
+    render(<MarksEntry {...BASE} />)
+    fireEvent.change(input(/Student 2/), { target: { value: "30" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await screen.findByText(en.marks.errors.generic)
+    expect((input(/Student 2/) as HTMLInputElement).value).toBe("30")
+    mockSave.mockResolvedValueOnce({
+      ok: true,
+      data: { saved: 1, entered: 2, enrolled: 4, rejected: [], marks: [] },
+    })
+    fireEvent.click(await screen.findByRole("button", { name: "Save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
+    expect(mockSave.mock.calls[1]?.[0].idempotencyKey).toBe(
+      mockSave.mock.calls[0]?.[0].idempotencyKey
+    )
+  })
+
+  it("Ctrl+A selects the text; it does not mark the student absent", () => {
+    render(<MarksEntry {...BASE} />)
+    fireEvent.keyDown(input(/Ayaan R/), { key: "a", ctrlKey: true })
+    fireEvent.keyDown(input(/Ayaan R/), { key: "e", metaKey: true })
+    expect((input(/Ayaan R/) as HTMLInputElement).value).toBe("40")
+    expect(
+      screen.queryByText("Absent", { selector: "[data-slot=badge]" })
+    ).toBeNull()
+  })
+
+  it("the Absent badge describes the input", () => {
+    render(<MarksEntry {...BASE} />)
+    fireEvent.keyDown(input(/Student 2/), { key: "a" })
+    const describedBy = input(/Student 2/).getAttribute("aria-describedby")
+    expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
+      "Absent"
+    )
   })
 
   it("a saved mark cannot be emptied", () => {

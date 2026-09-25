@@ -3549,6 +3549,10 @@ export type Database = {
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       create_exam: { Args: { p_input: Json }; Returns: string }
       create_school_workspace: { Args: { p_input: Json }; Returns: Json }
+      exam_marks_progress: {
+        Args: { p_exam_id: string; p_workspace_id: string }
+        Returns: Json
+      }
       expire_pro_trials: { Args: never; Returns: number }
       list_my_workspaces: {
         Args: never

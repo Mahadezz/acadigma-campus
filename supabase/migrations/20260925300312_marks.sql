@@ -22,9 +22,9 @@
 --   * Entry is open only while the exam is in `marks_entry` and the paper is
 --     not `locked`. The date window (entry_opens_on/closes_on) waits for
 --     Part 4.
---   * Audit: the first save moves the paper pending -> entering (audited on
---     exam_subjects); a mark is audited when it CHANGES, with before and
---     after, so an overwritten value is never lost.
+--   * Audit: every save that writes marks logs ONE paper-level
+--     `marks.entered` event with the count (§4.2); a mark is audited when it
+--     CHANGES, with before and after, so an overwritten value is never lost.
 --   * Part 4's completeness gate: an exam cannot move to `published` while
 --     any enrolled student in any of its papers has no mark row
 --     (MARKS_INCOMPLETE). Absent and exempt count as marked.
@@ -141,6 +141,18 @@ begin
 end
 $$;
 
+-- One paper-level event per save that writes marks (§4.2 marks.entered),
+-- so new marks leave a trail without an audit row per student.
+insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
+values
+  ('marks.entered', 'info', '{actor} saved marks on an exam paper ({n})',
+    '{actor} একটি পরীক্ষার পেপারে নম্বর সংরক্ষণ করেছেন ({n})', false)
+on conflict (action) do update
+  set severity    = excluded.severity,
+      sentence_en = excluded.sentence_en,
+      sentence_bn = excluded.sentence_bn,
+      is_generic  = excluded.is_generic;
+
 -- ---------------------------------------------------------------------
 -- Who may enter (and read) a paper's marks
 -- ---------------------------------------------------------------------
@@ -244,6 +256,37 @@ create trigger exams_status_publish_gate
   for each row execute function app.tg_exams_publish_gate();
 
 -- ---------------------------------------------------------------------
+-- public.exam_marks_progress — per paper, the students actively enrolled
+-- now and how many of them have a mark (the gate's definition). SECURITY
+-- INVOKER: the caller's RLS decides what is counted (owner/admin see all).
+-- ---------------------------------------------------------------------
+create or replace function public.exam_marks_progress(p_workspace_id uuid, p_exam_id uuid)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(jsonb_object_agg(x.id, jsonb_build_object('enrolled', x.enrolled, 'marked', x.marked)),
+                  '{}'::jsonb)
+    from (select es.id, count(e.id)::int as enrolled, count(mk.id)::int as marked
+            from public.exam_subjects es
+            left join (public.enrollments e
+                       join public.students st
+                         on st.id = e.student_id and st.status = 'active' and st.deleted_at is null)
+              on e.section_id = es.section_id and e.workspace_id = es.workspace_id and e.status = 'active'
+            left join public.marks mk on mk.exam_subject_id = es.id and mk.student_id = e.student_id
+           where es.workspace_id = p_workspace_id and es.exam_id = p_exam_id
+           group by es.id) x
+$$;
+
+comment on function public.exam_marks_progress(uuid, uuid) is
+  'F-AC-06 Part 3 (D-304): {paper_id: {enrolled, marked}} for an exam, counted '
+  'like app.exam_marks_missing. SECURITY INVOKER.';
+
+revoke all on function public.exam_marks_progress(uuid, uuid) from public, anon;
+grant execute on function public.exam_marks_progress(uuid, uuid) to authenticated;
+
+-- ---------------------------------------------------------------------
 -- public.save_marks — §4.2 / §7 saveMarks, the only writer.
 -- ---------------------------------------------------------------------
 create or replace function public.save_marks(p_workspace_id uuid, p_input jsonb)
@@ -260,6 +303,7 @@ declare
   v_prior   app.idempotency_keys;
   v_paper   public.exam_subjects;
   v_exam    public.exams;
+  v_written integer;
   v_result  jsonb;
 begin
   if v_uid is null or not app.has_role(p_workspace_id, array['owner', 'admin', 'teacher']) then
@@ -302,6 +346,8 @@ begin
     raise exception 'NOT_ASSIGNED' using errcode = '42501';
   end if;
   select * into v_exam from public.exams e where e.id = v_paper.exam_id;
+  -- TODO(F-AC-06 Part 4): entry-date window (entry_opens_on/closes_on;
+  -- teachers inside it, admins beyond it, stamped).
   if v_exam.status <> 'marks_entry' then
     raise exception 'ENTRY_CLOSED' using errcode = '22023';
   end if;
@@ -373,6 +419,12 @@ begin
          enrollment_id = excluded.enrollment_id, entered_by = excluded.entered_by
    where (public.marks.status, public.marks.obtained)
          is distinct from (excluded.status, excluded.obtained);
+  get diagnostics v_written = row_count;
+
+  if v_written > 0 then
+    perform app.log_audit_event('marks.entered', p_workspace_id, 'exam_subjects', v_paper.id,
+      null, jsonb_build_object('written', v_written, 'exam_id', v_paper.exam_id));
+  end if;
 
   if v_paper.status = 'pending' and exists (select 1 from pg_temp.mk_given g where g.issue is null) then
     update public.exam_subjects set status = 'entering' where id = v_paper.id;

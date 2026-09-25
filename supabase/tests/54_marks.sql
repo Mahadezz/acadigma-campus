@@ -4,7 +4,8 @@
 --
 --   A. save_marks: entry opens only in marks_entry; per-row rejection
 --      (MARK_OUT_OF_RANGE) while valid rows save; the paper moves to
---      entering; idempotent replay; a reused key with another payload.
+--      entering; idempotent replay; a reused key with another payload; one
+--      paper-level marks.entered audit event per save.
 --   B. Version check per row: a stale row is CONFLICT, a fresh one saves;
 --      the overwritten value is kept in the audit trail.
 --   C. Who: the paper's teacher, the class teacher, owner/admin enter;
@@ -16,7 +17,7 @@
 --      a mark or is absent/exempt (MARKS_INCOMPLETE).
 -- =====================================================================
 begin;
-select plan(38);
+select plan(40);
 
 create schema if not exists tests;
 
@@ -216,6 +217,10 @@ select is((select entered_by from public.marks where exam_subject_id = tests.id(
   '54000000-0000-4000-a000-000000000002'::uuid, 'entered_by is the caller');
 select is((select count(*)::int from public.audit_events where action = 'marks.insert'), 0,
   'a first entry does not write one audit row per student');
+select is(
+  (select string_agg((after ->> 'written') || '@' || (row_id = tests.id('maths'))::text, ',')
+     from public.audit_events where action = 'marks.entered'),
+  '2@true', 'the save (not its replay) logs one paper-level marks.entered event with the count');
 
 -- =====================================================================
 -- B. Version check per row; the overwritten value stays in the audit
@@ -365,6 +370,13 @@ select lives_ok(
 select tests.logout();
 
 select is((select status::text from public.exams where id = tests.id('exam')), 'published', 'the exam is published');
+
+select tests.login('54000000-0000-4000-a000-000000000001');
+select is(
+  public.exam_marks_progress('54000000-0000-4000-b000-000000000001', tests.id('exam')) -> tests.id('maths')::text,
+  '{"enrolled": 3, "marked": 3}'::jsonb,
+  'exam_marks_progress counts the enrolled students and their marks per paper');
+select tests.logout();
 
 select * from finish();
 rollback;

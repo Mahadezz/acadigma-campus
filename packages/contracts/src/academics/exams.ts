@@ -70,8 +70,8 @@ export const updateExamSubjectInputSchema = z
     examDate: isoDateSchema.nullable(),
     fullMarks: marksSchema.positive(),
     passMarks: marksSchema,
-    /** The paper's subject teacher (D-304); null clears it. */
-    teacherId: uuidSchema.nullable().default(null),
+    /** The paper's subject teacher (D-304); null clears it, omitted keeps it. */
+    teacherId: uuidSchema.nullable().optional(),
   })
   .refine((v) => v.passMarks <= v.fullMarks, {
     message: "Pass marks cannot be more than full marks.",

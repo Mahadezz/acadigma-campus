@@ -1296,7 +1296,7 @@
     "issues": {
       "NOT_A_NUMBER": "Type a number such as 45 or 32.5.",
       "MARK_OUT_OF_RANGE": "More than the full marks ({full}).",
-      "CONFLICT": "Someone changed this mark after you opened the page. Reload to see it.",
+      "CONFLICT": "Someone else changed this mark meanwhile. Save again to keep yours, or press Esc to take theirs.",
       "CLEARED": "A saved mark cannot be left empty. Type a mark, or choose Absent or Exempt."
     },
     "errors": {

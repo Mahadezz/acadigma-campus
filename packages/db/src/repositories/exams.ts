@@ -134,7 +134,6 @@ const detailRow = summaryRow.omit({ exam_subjects: true }).extend({
       pass_marks: z.coerce.number(),
       status: z.string(),
       teacher_id: z.string().nullable(),
-      marks: z.array(z.object({ count: z.number() })),
       subjects: z.object({ name: z.string(), name_bn: z.string().nullable() }),
       sections: z.object({
         name: z.string(),
@@ -153,7 +152,7 @@ export async function getExam(
     .from("exams")
     .select(
       "id, name, exam_type, status, starts_on, ends_on, status_reason, grading_snapshot, " +
-        "exam_subjects(id, section_id, exam_date, full_marks, pass_marks, status, teacher_id, marks(count), " +
+        "exam_subjects(id, section_id, exam_date, full_marks, pass_marks, status, teacher_id, " +
         "subjects(name, name_bn), sections(name, grade_levels(name, level_number)))"
     )
     .eq("workspace_id", ctx.workspaceId)
@@ -164,10 +163,8 @@ export async function getExam(
   const row = detailRow.safeParse(data)
   if (!row.success) return err(UNAVAILABLE)
   const r = row.data
-  const enrolled = await enrolledBySection(ctx, client, [
-    ...new Set(r.exam_subjects.map((p) => p.section_id)),
-  ])
-  if (!enrolled.ok) return enrolled
+  const progress = await marksProgress(ctx, client, r.id)
+  if (!progress.ok) return progress
   const papers = r.exam_subjects
     .map((p) => ({
       id: p.id,
@@ -184,8 +181,8 @@ export async function getExam(
       passMarks: p.pass_marks,
       status: p.status as ExamDetail["papers"][number]["status"],
       teacherId: p.teacher_id,
-      marksDone: p.marks[0]?.count ?? 0,
-      enrolled: enrolled.data.get(p.section_id) ?? 0,
+      marksDone: progress.data[p.id]?.marked ?? 0,
+      enrolled: progress.data[p.id]?.enrolled ?? 0,
     }))
     .sort(
       (a, b) =>
@@ -209,27 +206,29 @@ export async function getExam(
   })
 }
 
-/** Active enrolments of active students, per section (the marks progress). */
-async function enrolledBySection(
+/**
+ * Per paper: students actively enrolled now, and how many of them have a
+ * mark, absent or exempt — counted in SQL by `public.exam_marks_progress`,
+ * the same definition as the publish gate (D-304).
+ */
+async function marksProgress(
   ctx: WorkspaceContext,
   client: AcadigmaSupabaseClient,
-  sectionIds: string[]
-): Promise<Result<Map<string, number>, ApiError>> {
-  if (sectionIds.length === 0) return ok(new Map())
-  const { data, error } = await client
-    .from("enrollments")
-    .select("section_id, students!inner(id)")
-    .eq("workspace_id", ctx.workspaceId)
-    .in("section_id", sectionIds)
-    .eq("status", "active")
-    .eq("students.status", "active")
-    .is("students.deleted_at", null)
+  examId: string
+): Promise<
+  Result<Record<string, { enrolled: number; marked: number }>, ApiError>
+> {
+  const { data, error } = await client.rpc("exam_marks_progress", {
+    p_workspace_id: ctx.workspaceId,
+    p_exam_id: examId,
+  })
   if (error) return err(UNAVAILABLE)
-  const counts = new Map<string, number>()
-  for (const e of (data ?? []) as { section_id: string }[]) {
-    counts.set(e.section_id, (counts.get(e.section_id) ?? 0) + 1)
-  }
-  return ok(counts)
+  return ok(
+    (data ?? {}) as unknown as Record<
+      string,
+      { enrolled: number; marked: number }
+    >
+  )
 }
 
 /** `public.create_exam` — exam, sections and papers in one transaction. */
@@ -282,7 +281,8 @@ export async function updateExamSubject(
       exam_date: input.examDate,
       full_marks: input.fullMarks,
       pass_marks: input.passMarks,
-      teacher_id: input.teacherId,
+      // Omitted = leave the teacher as is; null clears it.
+      ...(input.teacherId !== undefined ? { teacher_id: input.teacherId } : {}),
     })
     .eq("workspace_id", ctx.workspaceId)
     .eq("id", input.id)

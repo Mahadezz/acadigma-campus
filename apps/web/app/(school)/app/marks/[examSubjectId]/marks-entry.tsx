@@ -200,11 +200,19 @@ export function MarksEntry({
       return
     }
     startTransition(async () => {
-      const result = await saveMarks({
-        idempotencyKey: key,
-        examSubjectId: sheet.paperId,
-        entries,
-      })
+      let result: Awaited<ReturnType<typeof saveMarks>>
+      try {
+        result = await saveMarks({
+          idempotencyKey: key,
+          examSubjectId: sheet.paperId,
+          entries,
+        })
+      } catch {
+        // The network dropped: keep every typed mark and the key, so a retry
+        // replays the same save instead of losing or doubling it.
+        setNotice({ tone: "error", text: t.errors.generic })
+        return
+      }
       if (!result.ok) {
         setNotice({ tone: "error", text: saveErrorText(t, result.error) })
         return
@@ -214,9 +222,12 @@ export function MarksEntry({
       )
       setRows((prev) => {
         const next = { ...prev }
+        // Every row adopts the server's current value and version; a rejected
+        // row keeps what was typed, so a CONFLICT can be saved again (keep
+        // mine) or reverted with Esc (take theirs).
         for (const m of result.data.marks) {
           const row = next[m.studentId]
-          if (!row || rejected.has(m.studentId)) continue
+          if (!row) continue
           next[m.studentId] = {
             ...row,
             saved: { status: m.status, obtained: m.obtained },
@@ -294,6 +305,11 @@ export function MarksEntry({
                 ? current.issue
                 : null)
             const errorId = `mark-${r.studentId}-error`
+            const statusId = `mark-${r.studentId}-status`
+            const describedBy =
+              [issue ? errorId : null, row.chosen ? statusId : null]
+                .filter(Boolean)
+                .join(" ") || undefined
             return (
               <li
                 key={r.studentId}
@@ -314,7 +330,9 @@ export function MarksEntry({
                   ) : null}
                 </div>
                 {row.chosen ? (
-                  <Badge variant="outline">{t[row.chosen]}</Badge>
+                  <Badge id={statusId} variant="outline">
+                    {t[row.chosen]}
+                  </Badge>
                 ) : null}
                 <Input
                   ref={(el) => {
@@ -331,7 +349,7 @@ export function MarksEntry({
                     roll: r.rollNumber ?? "—",
                   })}
                   aria-invalid={issue ? true : undefined}
-                  aria-describedby={issue ? errorId : undefined}
+                  aria-describedby={describedBy}
                   placeholder="—"
                   value={row.text}
                   // readOnly, not disabled, while saving: a disabled input
@@ -365,10 +383,10 @@ export function MarksEntry({
                     } else if (k === "Escape") {
                       revert(r.studentId)
                     } else if (
-                      k === "a" ||
-                      k === "A" ||
-                      k === "e" ||
-                      k === "E"
+                      !e.ctrlKey &&
+                      !e.metaKey &&
+                      !e.altKey &&
+                      (k === "a" || k === "A" || k === "e" || k === "E")
                     ) {
                       e.preventDefault()
                       update(r.studentId, {
@@ -400,6 +418,11 @@ export function MarksEntry({
             <ToggleGroup
               type="single"
               variant="outline"
+              aria-label={
+                focusedRow
+                  ? fill(t.chipsFor, { name: nameOf(focusedRow) })
+                  : t.chipsNone
+              }
               value={focusedState?.chosen ?? ""}
               disabled={!focused || pending}
               onValueChange={(value) => {
