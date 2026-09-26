@@ -33,7 +33,6 @@ export type DisplaySettingsFormProps = {
     sampleText: string
     basicModeLabel: string
     basicModeDescription: string
-    basicModeComingSoon: string
     saved: string
     saveError: string
   }
@@ -44,9 +43,8 @@ export type DisplaySettingsFormProps = {
  * (§7 `updateUiPreferences`, cookie mirror + `revalidatePath` re-render the
  * root layout's `<html data-text-size>`); turning basic mode on saves the
  * preference and navigates to `/app/home` (§4.1), the real class-by-class
- * home as of Part 2. `t.basicModeComingSoon` now flags the one thing Part 2
- * still does not build — a class opens the existing roll call directly
- * rather than a class hub (D-405; Part 3) — instead of the whole screen.
+ * home as of Part 2; a class block opens the real class hub as of Part 3
+ * (D-405/D-406) — no "coming soon" caveat is needed here any more.
  */
 export function DisplaySettingsForm({
   textSize,
@@ -129,9 +127,6 @@ export function DisplaySettingsForm({
             </Label>
             <p className="text-muted-foreground text-sm">
               {t.basicModeDescription}
-            </p>
-            <p className="text-muted-foreground text-xs">
-              {t.basicModeComingSoon}
             </p>
           </div>
           <Switch

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -15,8 +15,10 @@ import type {
 import { Button } from "@acadigma/ui/components/button"
 import { Checkbox } from "@acadigma/ui/components/checkbox"
 import { Label } from "@acadigma/ui/components/label"
+import { cn } from "@acadigma/ui/lib/utils"
 import { AttendanceToggle } from "@acadigma/ui/primitives/attendance-toggle"
 import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
+import { ConfirmSheet } from "@acadigma/ui/primitives/confirm-sheet"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -50,6 +52,8 @@ export function RollCall({
   students,
   sessionUpdatedAt,
   readOnlyReason,
+  basic = false,
+  basicCopy,
 }: {
   t: T
   locale: Locale
@@ -61,6 +65,25 @@ export function RollCall({
   students: RollCallStudent[]
   sessionUpdatedAt: string | null
   readOnlyReason: "cannotMark" | "window" | null
+  /**
+   * F-ID-10 §4.5/§4.6/§5.1/§5.3 (Part 3) — the class hub's Attendance tab
+   * renders this same screen with `basic` on: bigger tap targets, a
+   * `ConfirmSheet` before Save names the counts in plain words, and a
+   * post-save Undo toast (30s, §5.3) that re-saves the values this save is
+   * about to overwrite as one ordinary, audited edit. `undefined`/`false`
+   * (the plain `/app/attendance/[sectionId]` page) keeps today's direct-save
+   * behaviour byte-for-byte unchanged.
+   */
+  basic?: boolean
+  basicCopy?: {
+    /** "Save attendance for {className}? {present} present, {absent} absent." */
+    confirmTemplate: string
+    yesSave: string
+    goBack: string
+    undoToast: string
+    undo: string
+    undone: string
+  }
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -76,6 +99,16 @@ export function RollCall({
   const [key, setKey] = useState(() => crypto.randomUUID())
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  // §5.3: "the previous values" this save is about to overwrite — only set
+  // when a session already existed, so a first save (nothing to go back to)
+  // never offers Undo, only the ConfirmSheet guards it.
+  const [lastSavedMarks, setLastSavedMarks] = useState<Marks | null>(() =>
+    sessionUpdatedAt !== null
+      ? Object.fromEntries(students.map((s) => [s.studentId, s.status]))
+      : null
+  )
+  const [undoMarks, setUndoMarks] = useState<Marks | null>(null)
 
   const readOnly = readOnlyReason !== null
   const counts = useMemo(() => {
@@ -88,6 +121,14 @@ export function RollCall({
     }
     return c
   }, [marks])
+
+  // §5.3: the Undo toast lasts 30s in basic mode, then disappears — the
+  // save it points back to is still safe, it just stops being one tap away.
+  useEffect(() => {
+    if (!undoMarks) return
+    const timer = setTimeout(() => setUndoMarks(null), 30_000)
+    return () => clearTimeout(timer)
+  }, [undoMarks])
 
   function change(next: Marks) {
     setMarks(next)
@@ -113,8 +154,9 @@ export function RollCall({
     setBeforeBulk(null)
   }
 
-  function save() {
+  function saveMarks(toSave: Marks, bulk: boolean) {
     setError(null)
+    setConfirmOpen(false)
     startTransition(async () => {
       const result = await saveAttendanceSession({
         idempotencyKey: key,
@@ -122,9 +164,9 @@ export function RollCall({
         date,
         records: students.map((s) => ({
           studentId: s.studentId,
-          status: marks[s.studentId],
+          status: toSave[s.studentId],
         })),
-        bulkMarked,
+        bulkMarked: bulk,
         allowNonSchoolDay: !isSchoolDay && anyway,
         expectedUpdatedAt: version,
       })
@@ -132,6 +174,7 @@ export function RollCall({
         setError(saveErrorText(t, result.error))
         return
       }
+      setMarks(toSave)
       setVersion(result.data.updatedAt)
       setBeforeBulk(null)
       setBulkMarked(false)
@@ -142,33 +185,62 @@ export function RollCall({
           absent: result.data.absent,
         })
       )
+      // §5.3 (basic mode only — the full app has no post-save Undo today):
+      // only offer it when this save overwrote values already on the
+      // server; a first save has nothing to go back to.
+      if (basic) {
+        setUndoMarks(lastSavedMarks)
+        setLastSavedMarks(toSave)
+      }
       router.refresh()
     })
+  }
+
+  function save() {
+    saveMarks(marks, bulkMarked)
+  }
+
+  function undoSave() {
+    if (!undoMarks) return
+    const restore = undoMarks
+    setUndoMarks(null)
+    saveMarks(restore, false)
   }
 
   const blocked =
     readOnly || counts.unmarked > 0 || (!isSchoolDay && !anyway) || pending
 
+  const bigButton = basic ? "min-h-14 text-base" : "h-11"
+
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <Button asChild variant="ghost" className="h-11 px-2">
-        <Link href="/app/attendance">
-          <ArrowLeftIcon aria-hidden="true" />
-          {t.back}
-        </Link>
-      </Button>
+      {!basic ? (
+        <Button asChild variant="ghost" className="h-11 px-2">
+          <Link href="/app/attendance">
+            <ArrowLeftIcon aria-hidden="true" />
+            {t.back}
+          </Link>
+        </Button>
+      ) : null}
 
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">{dateLabel}</p>
-          <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+          <h1
+            className={cn(
+              "font-bold tracking-tight",
+              basic ? "text-2xl" : "text-xl"
+            )}
+          >
+            {title}
+          </h1>
         </div>
         {!readOnly && students.length > 0 ? (
           beforeBulk ? (
             <Button
               type="button"
               variant="outline"
-              className="h-11"
+              className={bigButton}
               onClick={undoBulk}
             >
               <Undo2Icon aria-hidden="true" />
@@ -178,7 +250,7 @@ export function RollCall({
             <Button
               type="button"
               variant="outline"
-              className="h-11"
+              className={bigButton}
               onClick={markAllPresent}
               disabled={counts.unmarked === 0}
             >
@@ -238,6 +310,7 @@ export function RollCall({
                   locale={locale}
                   disabled={readOnly || pending}
                   className="w-full sm:w-72 sm:shrink-0"
+                  size={basic ? "basic" : "default"}
                 />
               </li>
             )
@@ -251,9 +324,29 @@ export function RollCall({
           <div className="space-y-2">
             {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
             {saved ? <InlineAlert tone="success">{saved}</InlineAlert> : null}
+            {basic && basicCopy && undoMarks ? (
+              <InlineAlert tone="info">
+                <span className="flex flex-wrap items-center justify-between gap-2">
+                  {basicCopy.undoToast}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11"
+                    onClick={undoSave}
+                    disabled={pending}
+                  >
+                    {basicCopy.undo}
+                  </Button>
+                </span>
+              </InlineAlert>
+            ) : null}
             <div className="flex items-center gap-3">
               <p
-                className="min-w-0 flex-1 text-sm tabular-nums"
+                className={cn(
+                  "min-w-0 flex-1 tabular-nums",
+                  basic ? "text-base" : "text-sm"
+                )}
                 aria-live="polite"
               >
                 <span className="font-medium">
@@ -269,8 +362,11 @@ export function RollCall({
               </p>
               <Button
                 type="button"
-                className="h-14 min-w-32 text-base"
-                onClick={save}
+                className={cn(
+                  "h-14 min-w-32",
+                  basic ? "text-lg" : "text-base"
+                )}
+                onClick={basic ? () => setConfirmOpen(true) : save}
                 disabled={blocked}
               >
                 {pending ? t.saving : t.save}
@@ -278,6 +374,22 @@ export function RollCall({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {basic && basicCopy ? (
+        <ConfirmSheet
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={fill(basicCopy.confirmTemplate, {
+            className: title,
+            present: counts.present,
+            absent: counts.absent,
+          })}
+          confirmLabel={basicCopy.yesSave}
+          cancelLabel={basicCopy.goBack}
+          onConfirm={save}
+          pending={pending}
+        />
       ) : null}
     </div>
   )

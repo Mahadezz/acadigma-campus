@@ -104,6 +104,7 @@ export default async function SchoolLayout({
         helpLabel={s.home.helpLabel}
         helpTitle={s.help.title}
         homeLines={s.help.routes.home}
+        classHubLines={s.help.routes.classHub}
         defaultLines={s.help.routes.default}
         phone={phone}
         callLabel={s.help.callSchoolOffice.replace("{phone}", phone ?? "")}

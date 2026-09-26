@@ -127,6 +127,63 @@ describe("RollCall", () => {
   })
 })
 
+describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
+  const basicCopy = en.basicMode.classHub.attendance
+
+  it("confirms the plain sentence with counts before saving, and saves nothing until Yes, save", async () => {
+    render(<RollCall {...BASE} basic basicCopy={basicCopy} />)
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    const absent = screen
+      .getByRole("radiogroup", { name: "Student 2" })
+      .querySelector('[aria-label="Absent"]') as HTMLButtonElement
+    fireEvent.click(absent)
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    expect(mockSave).not.toHaveBeenCalled()
+    // ConfirmSheet renders the sentence as both its visible title and a
+    // sr-only description (same pattern HelpSheet already uses), so two
+    // matches is correct here, not a bug.
+    expect(
+      screen.getAllByText("Save attendance for Class 6 – ক? 2 present, 1 absent.")
+    ).toHaveLength(2)
+    fireEvent.click(screen.getByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+  })
+
+  it("Go back closes the sheet without saving", () => {
+    render(<RollCall {...BASE} basic basicCopy={basicCopy} />)
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(screen.getByRole("button", { name: "Go back" }))
+    expect(mockSave).not.toHaveBeenCalled()
+  })
+
+  it("offers Undo after editing an already-saved session, and Undo re-saves the previous values as one edit", async () => {
+    render(<RollCall {...BASE} sessionUpdatedAt="t0" basic basicCopy={basicCopy} />)
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(screen.getByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+    await screen.findByText(basicCopy.undoToast)
+
+    fireEvent.click(screen.getByRole("button", { name: basicCopy.undo }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
+    // The undo re-save carries the ORIGINAL (all-unmarked) statuses, not the
+    // values this save just wrote — restoring what was on the server before.
+    expect(mockSave.mock.calls[1]?.[0]).toMatchObject({
+      records: students.map((s) => ({ studentId: s.studentId, status: null })),
+    })
+  })
+
+  it("never offers Undo on a first save (nothing to go back to)", async () => {
+    render(<RollCall {...BASE} basic basicCopy={basicCopy} />)
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(screen.getByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText(basicCopy.undoToast)).toBeNull()
+  })
+})
+
 describe("saveErrorText", () => {
   it("maps codes and read-only mode to copy", () => {
     const t = en.attendance.roll

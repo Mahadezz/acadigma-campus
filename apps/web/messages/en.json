@@ -1474,7 +1474,6 @@
       "sampleText": "Sample text at this size",
       "basicModeLabel": "Basic mode",
       "basicModeDescription": "Bigger buttons, one screen per class. You can switch back any time.",
-      "basicModeComingSoon": "Tapping a class opens today's roll call for now — the full class hub is coming in a later update.",
       "switchOn": "Turn on",
       "switchOff": "Turn off",
       "saved": "Saved",
@@ -1512,9 +1511,13 @@
       "routes": {
         "home": [
           "This is your basic-mode home. Each block below is one of your classes.",
-          "Tap a class to take today's roll call.",
-          "Use Switch to full app any time to see everything else.",
-          "To enter marks: Switch to full app → Exams."
+          "Tap a class to open it: attendance, marks, students and print all live there.",
+          "Use Switch to full app any time to see everything else."
+        ],
+        "classHub": [
+          "This is one class. Everything here only affects this class's own data.",
+          "Attendance, Marks, Students and Print are the tabs across the top.",
+          "Use Home any time to get back to your class list."
         ],
         "default": [
           "You're in basic mode. Tap Home any time to get back to your classes."
@@ -1530,6 +1533,44 @@
     },
     "userMenu": {
       "switchToBasicMode": "Switch to basic mode"
+    },
+    "classHub": {
+      "backToHome": "Home",
+      "studentCountOne": "{count} student",
+      "studentCountOther": "{count} students",
+      "notAssignedTitle": "This class is not on your list.",
+      "notAssignedDescription": "Ask your school office if you think this is a mistake.",
+      "errorGeneric": "Could not load this class. Please try again.",
+      "tabs": {
+        "attendance": "Attendance",
+        "marks": "Marks",
+        "students": "Students",
+        "print": "Print"
+      },
+      "attendance": {
+        "confirmTemplate": "Save attendance for {className}? {present} present, {absent} absent.",
+        "yesSave": "Yes, save",
+        "goBack": "Go back",
+        "undoToast": "Attendance saved.",
+        "undo": "Undo",
+        "undone": "Restored the previous attendance."
+      },
+      "marks": {
+        "empty": "No papers assigned to you for this class yet.",
+        "entered": "{done}/{total} entered",
+        "statusPending": "Not started",
+        "statusEntering": "In progress",
+        "statusSubmitted": "Submitted",
+        "statusLocked": "Locked"
+      },
+      "students": {
+        "empty": "No students are enrolled in this class.",
+        "roll": "Roll {roll}"
+      },
+      "print": {
+        "empty": "No report cards are ready yet for this class.",
+        "heading": "{examName} report cards"
+      }
     }
   }
 }
