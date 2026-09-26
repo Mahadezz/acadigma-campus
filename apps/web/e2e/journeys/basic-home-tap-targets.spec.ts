@@ -93,7 +93,7 @@ test("basic home shows the All classes block for an owner, essentials row, and e
   }
 })
 
-test("the All classes list is searchable and every row opens the existing roll call (D-405 interim)", async ({
+test("the All classes list is searchable and every row opens that class's hub (F-ID-10 Part 3, D-405/D-406)", async ({
   page,
 }) => {
   await signIn(page, "owner@acadigma.test")
@@ -111,5 +111,5 @@ test("the All classes list is searchable and every row opens the existing roll c
   const firstRow = page.getByRole("link").filter({ hasText: "–" }).first()
   await expect(firstRow).toBeVisible()
   await firstRow.click()
-  await expect(page).toHaveURL(/\/app\/attendance\/[0-9a-f-]+$/)
+  await expect(page).toHaveURL(/\/app\/classes\/[0-9a-f-]+$/)
 })
