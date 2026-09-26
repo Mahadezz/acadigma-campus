@@ -218,7 +218,11 @@ export async function markReportRunReady(
   supabase: AcadigmaSupabaseClient,
   runId: string,
   pageCount: number,
-  durationMs: number
+  durationMs: number,
+  /** Bulk runs only (F-OP-03 Part 5, D-207) — the number of `report_run_items`
+   * rows the run attempted. Single-item kinds never pass this; the column
+   * stays null for them, as it already was before this Part. */
+  itemCount?: number
 ): Promise<Result<void, ApiError>> {
   const { error } = await supabase
     .from("report_runs")
@@ -227,6 +231,7 @@ export async function markReportRunReady(
       page_count: pageCount,
       completed_at: new Date().toISOString(),
       duration_ms: durationMs,
+      ...(itemCount !== undefined ? { item_count: itemCount } : {}),
     })
     .eq("id", runId)
   if (error) return err(UNAVAILABLE)
@@ -248,6 +253,46 @@ export async function markReportRunFailed(
       completed_at: new Date().toISOString(),
     })
     .eq("id", runId)
+  if (error) return err(UNAVAILABLE)
+  return ok(undefined)
+}
+
+export type ReportRunItemInput = {
+  subjectId: string
+  status: "ready" | "failed"
+  pageFrom?: number
+  pageTo?: number
+  errorDetail?: string
+}
+
+/**
+ * F-OP-03 Part 5 (D-207) — one row per student a bulk run attempted, written
+ * once at the end of the (synchronous, D-205-style) render step under
+ * `withServiceRole` — `report_run_items` has no INSERT grant for
+ * `authenticated` (300310's migration comment: written by the pipeline
+ * only). A per-student failure is recorded here without failing the run
+ * (§4 W2): the caller still calls this even when every item failed, so the
+ * run's own status/error reflects "nothing rendered", not "items lost".
+ */
+export async function createReportRunItems(
+  supabase: AcadigmaSupabaseClient,
+  ctx: WorkspaceContext,
+  runId: string,
+  items: readonly ReportRunItemInput[]
+): Promise<Result<void, ApiError>> {
+  if (items.length === 0) return ok(undefined)
+  const { error } = await supabase.from("report_run_items").insert(
+    items.map((item) => ({
+      workspace_id: ctx.workspaceId,
+      report_run_id: runId,
+      subject_type: "student",
+      subject_id: item.subjectId,
+      status: item.status,
+      page_from: item.pageFrom ?? null,
+      page_to: item.pageTo ?? null,
+      error_detail: item.errorDetail ?? null,
+    }))
+  )
   if (error) return err(UNAVAILABLE)
   return ok(undefined)
 }

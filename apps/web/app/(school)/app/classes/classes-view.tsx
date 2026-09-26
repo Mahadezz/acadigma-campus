@@ -48,6 +48,7 @@ import {
   createSection,
   createSubject,
   seedStarterSubjects,
+  setSectionSubjects,
 } from "./actions"
 
 type T = Messages["classes"]
@@ -74,6 +75,18 @@ function count(t: T, n: number, locale: Locale): string {
   return n === 1
     ? t.sectionsCountOne
     : t.sectionsCountOther.replace("{count}", formatted)
+}
+
+function subjectCount(t: T, n: number, locale: Locale): string {
+  if (n === 0) return t.noSectionSubjects
+  const formatted = new Intl.NumberFormat(`${locale}-u-nu-latn`).format(n)
+  return n === 1
+    ? t.subjectCountOne
+    : t.subjectCountOther.replace("{count}", formatted)
+}
+
+function subjectName(subject: Subject, locale: Locale): string {
+  return locale === "bn" && subject.nameBn ? subject.nameBn : subject.name
 }
 
 export function ClassesView({
@@ -126,6 +139,7 @@ export function ClassesView({
                 t={t}
                 locale={locale}
                 grade={grade}
+                subjects={subjects}
                 teachers={teachers}
                 canWrite={canWriteSections}
               />
@@ -155,17 +169,22 @@ function GradeCard({
   t,
   locale,
   grade,
+  subjects,
   teachers,
   canWrite,
 }: {
   t: T
   locale: Locale
   grade: GradeWithSections
+  subjects: Subject[]
   teachers: TeacherOption[]
   canWrite: boolean
 }) {
   const [adding, setAdding] = useState(false)
   const [archiving, setArchiving] = useState<Section | null>(null)
+  const [editing, setEditing] = useState<Section | null>(null)
+  // Archived subjects are not offered and not counted.
+  const liveSubjectIds = new Set(subjects.map((s) => s.id))
   const gradeName = locale === "bn" ? grade.nameBn : grade.name
 
   return (
@@ -221,20 +240,43 @@ function GradeCard({
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
+                  <p className="text-muted-foreground text-xs">
+                    {subjectCount(
+                      t,
+                      section.subjects.filter((s) =>
+                        liveSubjectIds.has(s.subjectId)
+                      ).length,
+                      locale
+                    )}
+                  </p>
                 </div>
                 {canWrite ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-11 shrink-0"
-                    onClick={() => setArchiving(section)}
-                    aria-label={t.archiveSection.replace(
-                      "{section}",
-                      sectionDisplayName(gradeName, section.name)
-                    )}
-                  >
-                    {t.archive}
-                  </Button>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11"
+                      onClick={() => setEditing(section)}
+                      aria-label={t.sectionSubjectsTitle.replace(
+                        "{section}",
+                        sectionDisplayName(gradeName, section.name)
+                      )}
+                    >
+                      {t.subjectsButton}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-11"
+                      onClick={() => setArchiving(section)}
+                      aria-label={t.archiveSection.replace(
+                        "{section}",
+                        sectionDisplayName(gradeName, section.name)
+                      )}
+                    >
+                      {t.archive}
+                    </Button>
+                  </div>
                 ) : null}
               </li>
             ))}
@@ -260,6 +302,16 @@ function GradeCard({
               archiving ? sectionDisplayName(gradeName, archiving.name) : ""
             }
             onClose={() => setArchiving(null)}
+          />
+          <SectionSubjectsSheet
+            key={editing?.id ?? "none"}
+            t={t}
+            locale={locale}
+            section={editing}
+            label={editing ? sectionDisplayName(gradeName, editing.name) : ""}
+            subjects={subjects}
+            teachers={teachers}
+            onClose={() => setEditing(null)}
           />
         </>
       ) : null}
@@ -471,6 +523,167 @@ function ArchiveSectionSheet({
   )
 }
 
+/** F-AC-01 §4.3, demo cut (D-107): tick the section's subjects and pick
+ * each one's teacher; one Save sends the whole list. */
+function SectionSubjectsSheet({
+  t,
+  locale,
+  section,
+  label,
+  subjects,
+  teachers,
+  onClose,
+}: {
+  t: T
+  locale: Locale
+  section: Section | null
+  label: string
+  subjects: Subject[]
+  teachers: TeacherOption[]
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  // subjectId -> teacherId ("" = no teacher); absent = not taken. A subject
+  // archived after it was assigned is not shown but stays in the saved list
+  // (the database refuses only a newly added archived subject).
+  const [initial] = useState(
+    () =>
+      new Map(
+        (section?.subjects ?? []).map((s) => [s.subjectId, s.teacherId ?? ""])
+      )
+  )
+  const [picked, setPicked] = useState<Map<string, string>>(
+    () => new Map(initial)
+  )
+  // The section's subjects first, sorted once so rows do not jump on tick.
+  const [ordered] = useState(() =>
+    [...subjects].sort(
+      (a, b) => Number(initial.has(b.id)) - Number(initial.has(a.id))
+    )
+  )
+  const isDirty =
+    picked.size !== initial.size ||
+    [...picked].some(([id, teacher]) => initial.get(id) !== teacher)
+
+  function setTeacher(subjectId: string, teacherId: string | undefined) {
+    setPicked((prev) => {
+      const next = new Map(prev)
+      if (teacherId === undefined) next.delete(subjectId)
+      else next.set(subjectId, teacherId)
+      return next
+    })
+  }
+
+  function onSave() {
+    if (!section) return
+    setError(null)
+    startTransition(async () => {
+      const result = await setSectionSubjects({
+        sectionId: section.id,
+        subjects: [...picked].map(([subjectId, teacherId]) => ({
+          subjectId,
+          teacherId: teacherId || null,
+        })),
+      })
+      if (!result.ok) {
+        setError(errorText(t, result.error))
+        return
+      }
+      onClose()
+      router.refresh()
+    })
+  }
+
+  return (
+    <FormSheet
+      open={section !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      title={t.sectionSubjectsTitle.replace("{section}", label)}
+      description={t.sectionSubjectsDescription}
+      isDirty={isDirty && !pending}
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11"
+            onClick={onClose}
+          >
+            {t.cancel}
+          </Button>
+          <Button
+            type="button"
+            className="h-11"
+            disabled={pending || subjects.length === 0}
+            onClick={onSave}
+          >
+            {pending ? t.saving : t.save}
+          </Button>
+        </>
+      }
+    >
+      {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+      {subjects.length === 0 ? (
+        <p className="text-muted-foreground text-sm">{t.needSubjectsFirst}</p>
+      ) : (
+        <ul className="divide-border divide-y">
+          {ordered.map((subject) => {
+            const name = subjectName(subject, locale)
+            const id = `ss-${subject.id}`
+            const teacherId = picked.get(subject.id)
+            return (
+              <li key={subject.id} className="space-y-2 py-2">
+                <div className="flex min-h-11 items-center gap-3">
+                  <Checkbox
+                    id={id}
+                    checked={teacherId !== undefined}
+                    onCheckedChange={(value) =>
+                      setTeacher(
+                        subject.id,
+                        value === true ? (teacherId ?? "") : undefined
+                      )
+                    }
+                    className="size-5"
+                  />
+                  <Label htmlFor={id} className="flex-1">
+                    {name}
+                  </Label>
+                </div>
+                {teacherId !== undefined ? (
+                  <NativeSelect
+                    aria-label={t.subjectTeacher.replace("{subject}", name)}
+                    value={teacherId}
+                    onChange={(event) =>
+                      setTeacher(subject.id, event.target.value)
+                    }
+                    className="min-h-11"
+                  >
+                    <NativeSelectOption value="">
+                      {t.noTeacher}
+                    </NativeSelectOption>
+                    {teachers.map((teacher) => (
+                      <NativeSelectOption
+                        key={teacher.memberId}
+                        value={teacher.memberId}
+                      >
+                        {teacher.name}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                ) : null}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </FormSheet>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Subjects
 // ---------------------------------------------------------------------------
@@ -555,11 +768,7 @@ function SubjectsPanel({
                 className="flex min-h-14 items-center justify-between gap-2 px-4 py-2"
               >
                 <div className="min-w-0">
-                  <p className="font-medium">
-                    {locale === "bn" && subject.nameBn
-                      ? subject.nameBn
-                      : subject.name}
-                  </p>
+                  <p className="font-medium">{subjectName(subject, locale)}</p>
                   <p className="text-muted-foreground text-xs">
                     {[subject.code, t.categories[subject.category]]
                       .filter(Boolean)

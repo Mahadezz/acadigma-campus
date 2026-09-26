@@ -6,4 +6,5 @@ import type { Action } from "@acadigma/domain"
 export const ACTION_FOR_KIND: Record<ReportKind, Action> = {
   sample: "report.render.sample",
   report_card: "report.render.report_card",
+  report_card_bulk: "report.render.report_card_bulk",
 }

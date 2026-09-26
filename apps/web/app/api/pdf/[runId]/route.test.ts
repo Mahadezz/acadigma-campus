@@ -46,6 +46,12 @@ vi.mock("@/app/(school)/app/reports/report-card-data", () => ({
   getReportCardData: (...args: unknown[]) => mockGetReportCardData(...args),
 }))
 
+const mockRenderReportCardBulkPdf = vi.fn()
+vi.mock("@/app/(school)/app/reports/report-card-bulk", () => ({
+  renderReportCardBulkPdf: (...args: unknown[]) =>
+    mockRenderReportCardBulkPdf(...args),
+}))
+
 const { GET } = await import("./route")
 
 const RUN_ID = "11111111-1111-1111-1111-111111111111"
@@ -264,5 +270,95 @@ describe("report_card kind (D-206)", () => {
     expect(response.status).toBe(500)
     expect(mockGetReportCardData).not.toHaveBeenCalled()
     expect(mockRenderPdfToBuffer).not.toHaveBeenCalled()
+  })
+})
+
+describe("report_card_bulk kind (D-207)", () => {
+  const BULK_PARAMS = {
+    kind: "report_card_bulk",
+    sectionId: "55555555-5555-5555-5555-555555555555",
+    examId: "44444444-4444-4444-4444-444444444444",
+    order: "roll",
+    duplex: false,
+  }
+
+  it("streams the merged PDF from renderReportCardBulkPdf", async () => {
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: {
+        id: RUN_ID,
+        kind: "report_card_bulk",
+        status: "ready",
+        locale: "bn",
+        params: BULK_PARAMS,
+        requestedAt: "2026-09-25T00:00:00.000Z",
+        completedAt: "2026-09-25T00:05:00.000Z",
+      },
+    })
+    mockRenderReportCardBulkPdf.mockResolvedValue({
+      ok: true,
+      data: { buffer: Buffer.from("%PDF-merged"), pageCount: 2, items: [] },
+    })
+    const response = await callWith(RUN_ID)
+    expect(response.status).toBe(200)
+    expect(mockRenderReportCardBulkPdf).toHaveBeenCalledWith(
+      expect.anything(),
+      CTX,
+      BULK_PARAMS,
+      "bn",
+      expect.anything(),
+      expect.any(Date)
+    )
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    expect(Buffer.from(bytes).toString()).toBe("%PDF-merged")
+  })
+
+  it("maps a renderReportCardBulkPdf failure to its own status code, never streams", async () => {
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: {
+        id: RUN_ID,
+        kind: "report_card_bulk",
+        status: "ready",
+        locale: "bn",
+        params: BULK_PARAMS,
+        requestedAt: "2026-09-25T00:00:00.000Z",
+        completedAt: "2026-09-25T00:05:00.000Z",
+      },
+    })
+    mockRenderReportCardBulkPdf.mockResolvedValue({
+      ok: false,
+      error: {
+        error: { code: "not_found", message: "no student has data" },
+        items: [],
+      },
+    })
+    const response = await callWith(RUN_ID)
+    expect(response.status).toBe(404)
+  })
+
+  it("403s a role that may open reports but not render bulk report cards", async () => {
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: {
+        id: RUN_ID,
+        kind: "report_card_bulk",
+        status: "ready",
+        locale: "bn",
+        params: BULK_PARAMS,
+        requestedAt: "2026-09-25T00:00:00.000Z",
+        completedAt: "2026-09-25T00:05:00.000Z",
+      },
+    })
+    mockCan.mockImplementation(
+      (_role: string, action: string) => action === "report.view"
+    )
+    const response = await callWith(RUN_ID)
+    expect(response.status).toBe(403)
+    expect(mockCan).toHaveBeenCalledWith(
+      CTX.role,
+      "report.render.report_card_bulk"
+    )
+    expect(mockRenderReportCardBulkPdf).not.toHaveBeenCalled()
   })
 })
