@@ -3,6 +3,7 @@ import { forbidden, notFound } from "next/navigation"
 import { uuidSchema } from "@acadigma/contracts"
 import { getMarkSheet } from "@acadigma/db/repositories/marks"
 import { can } from "@acadigma/domain"
+import { outsideEntryWindow } from "@acadigma/domain/academic"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import { getMessages } from "@/lib/i18n"
@@ -38,6 +39,16 @@ export default async function MarksEntryPage({
     return <InlineAlert tone="error">{t.marks.errors.generic}</InlineAlert>
   }
   const s = sheet.data
+  const isAdmin = ctx.role === "owner" || ctx.role === "admin"
+  // ponytail: the school's calendar day in Asia/Dhaka (the default zone);
+  // save_marks decides by the school's own zone, so this only picks the UI.
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+  }).format(new Date())
+  const outside = outsideEntryWindow(
+    { opensOn: s.entryOpensOn, closesOn: s.entryClosesOn },
+    today
+  )
 
   const readOnlyReason: ReadOnlyReason | null = !s.canEnter
     ? ctx.role === "teacher"
@@ -47,7 +58,9 @@ export default async function MarksEntryPage({
       ? "closed"
       : s.paperStatus === "locked"
         ? "locked"
-        : null
+        : outside && !isAdmin
+          ? "window"
+          : null
 
   return (
     <MarksEntry
@@ -55,6 +68,12 @@ export default async function MarksEntryPage({
       locale={locale}
       sheet={readOnlyReason === "notAssigned" ? { ...s, rows: [] } : { ...s }}
       readOnlyReason={readOnlyReason}
+      lateReasonRequired={readOnlyReason === null && outside}
+      canSubmit={
+        s.canSubmit &&
+        s.examStatus === "marks_entry" &&
+        s.paperStatus !== "locked"
+      }
     />
   )
 }

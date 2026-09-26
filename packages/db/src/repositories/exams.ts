@@ -134,6 +134,9 @@ const detailRow = summaryRow.omit({ exam_subjects: true }).extend({
       pass_marks: z.coerce.number(),
       status: z.string(),
       teacher_id: z.string().nullable(),
+      entry_opens_on: z.string().nullable(),
+      entry_closes_on: z.string().nullable(),
+      status_reason: z.string().nullable(),
       subjects: z.object({ name: z.string(), name_bn: z.string().nullable() }),
       sections: z.object({
         name: z.string(),
@@ -153,6 +156,7 @@ export async function getExam(
     .select(
       "id, name, exam_type, status, starts_on, ends_on, status_reason, grading_snapshot, " +
         "exam_subjects(id, section_id, exam_date, full_marks, pass_marks, status, teacher_id, " +
+        "entry_opens_on, entry_closes_on, status_reason, " +
         "subjects(name, name_bn), sections(name, grade_levels(name, level_number)))"
     )
     .eq("workspace_id", ctx.workspaceId)
@@ -181,6 +185,9 @@ export async function getExam(
       passMarks: p.pass_marks,
       status: p.status as ExamDetail["papers"][number]["status"],
       teacherId: p.teacher_id,
+      entryOpensOn: p.entry_opens_on,
+      entryClosesOn: p.entry_closes_on,
+      statusReason: p.status_reason,
       marksDone: progress.data[p.id]?.marked ?? 0,
       enrolled: progress.data[p.id]?.enrolled ?? 0,
     }))
@@ -283,6 +290,12 @@ export async function updateExamSubject(
       pass_marks: input.passMarks,
       // Omitted = leave the teacher as is; null clears it.
       ...(input.teacherId !== undefined ? { teacher_id: input.teacherId } : {}),
+      ...(input.entryOpensOn !== undefined
+        ? { entry_opens_on: input.entryOpensOn }
+        : {}),
+      ...(input.entryClosesOn !== undefined
+        ? { entry_closes_on: input.entryClosesOn }
+        : {}),
     })
     .eq("workspace_id", ctx.workspaceId)
     .eq("id", input.id)

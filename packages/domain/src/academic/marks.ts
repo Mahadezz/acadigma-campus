@@ -36,3 +36,38 @@ export function marksProgress(rows: ReadonlyArray<{ status: string | null }>): {
     total: rows.length,
   }
 }
+
+/**
+ * F-AC-06 §5.11 (D-307) — a paper's effective marks entry window, the same
+ * rule as `app.marks_entry_window`: opens on the date set, else the exam
+ * date; closes on the date set, else 7 days after it opens. Dates are
+ * ISO `YYYY-MM-DD`; null means that side has no limit.
+ */
+export function marksEntryWindow(paper: {
+  examDate: string | null
+  entryOpensOn: string | null
+  entryClosesOn: string | null
+}): { opensOn: string | null; closesOn: string | null } {
+  const opensOn = paper.entryOpensOn ?? paper.examDate
+  return {
+    opensOn,
+    closesOn: paper.entryClosesOn ?? (opensOn ? addDays(opensOn, 7) : null),
+  }
+}
+
+/** Is `today` (ISO date, the school's calendar day) outside the window? */
+export function outsideEntryWindow(
+  window: { opensOn: string | null; closesOn: string | null },
+  today: string
+): boolean {
+  return (
+    (window.opensOn !== null && today < window.opensOn) ||
+    (window.closesOn !== null && today > window.closesOn)
+  )
+}
+
+function addDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}

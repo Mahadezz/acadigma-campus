@@ -12,26 +12,30 @@ import type {
   MarkSheet,
   MarkSheetRow,
   MarkStatus,
+  SubmitExamSubjectResult,
 } from "@acadigma/contracts"
 import { marksProgress, parseMarkInput } from "@acadigma/domain/academic"
 import { Badge } from "@acadigma/ui/components/badge"
 import { Button } from "@acadigma/ui/components/button"
 import { Input } from "@acadigma/ui/components/input"
+import { Label } from "@acadigma/ui/components/label"
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@acadigma/ui/components/toggle-group"
 import { cn } from "@acadigma/ui/lib/utils"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
+import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
-import { saveMarks } from "../actions"
+import { saveMarks, submitExamSubject } from "../actions"
 
 type T = Messages["marks"]
-export type ReadOnlyReason = "notAssigned" | "viewOnly" | "closed" | "locked"
+export type ReadOnlyReason =
+  "notAssigned" | "viewOnly" | "closed" | "locked" | "window"
 type Issue = keyof T["issues"]
 
 type Row = {
@@ -106,11 +110,17 @@ export function MarksEntry({
   locale,
   sheet,
   readOnlyReason,
+  lateReasonRequired = false,
+  canSubmit = false,
 }: {
   t: T
   locale: Locale
   sheet: MarkSheet
   readOnlyReason: ReadOnlyReason | null
+  /** An owner/admin outside the entry window: a save needs a reason (D-307). */
+  lateReasonRequired?: boolean
+  /** The paper's teacher or an owner/admin, while it can be submitted. */
+  canSubmit?: boolean
 }) {
   const [pending, startTransition] = useTransition()
   const [rows, setRows] = useState<Record<string, Row>>(() =>
@@ -123,6 +133,9 @@ export function MarksEntry({
     text: string
   } | null>(null)
   const inputs = useRef<(HTMLInputElement | null)[]>([])
+  const [lateReason, setLateReason] = useState("")
+  const [submitted, setSubmitted] = useState(sheet.paperStatus === "submitted")
+  const [missing, setMissing] = useState<SubmitExamSubjectResult["missing"]>([])
 
   const readOnly = readOnlyReason !== null
   const full = sheet.fullMarks
@@ -199,6 +212,10 @@ export function MarksEntry({
       setNotice({ tone: "info", text: t.nothingToSave })
       return
     }
+    if (lateReasonRequired && lateReason.trim() === "") {
+      setNotice({ tone: "error", text: t.errors.REASON_REQUIRED })
+      return
+    }
     startTransition(async () => {
       let result: Awaited<ReturnType<typeof saveMarks>>
       try {
@@ -206,6 +223,7 @@ export function MarksEntry({
           idempotencyKey: key,
           examSubjectId: sheet.paperId,
           entries,
+          ...(lateReasonRequired ? { lateReason: lateReason.trim() } : {}),
         })
       } catch {
         // The network dropped: keep every typed mark and the key, so a retry
@@ -256,6 +274,49 @@ export function MarksEntry({
     })
   }
 
+  function submit(confirmIncomplete: boolean) {
+    setNotice(null)
+    startTransition(async () => {
+      let result: Awaited<ReturnType<typeof submitExamSubject>>
+      try {
+        result = await submitExamSubject({
+          examSubjectId: sheet.paperId,
+          confirmIncomplete,
+        })
+      } catch {
+        setNotice({ tone: "error", text: t.errors.generic })
+        return
+      }
+      if (!result.ok) {
+        const code = result.error.fieldErrors?._root?.[0]
+        setNotice({
+          tone: "error",
+          text:
+            code === "NOT_ASSIGNED"
+              ? t.errors.NOT_ASSIGNED_SUBMIT
+              : saveErrorText(t, result.error),
+        })
+        return
+      }
+      if (!result.data.submitted) {
+        setMissing(result.data.missing)
+        return
+      }
+      setMissing([])
+      setSubmitted(true)
+      setNotice({ tone: "success", text: t.submittedNotice })
+    })
+  }
+
+  const windowText =
+    sheet.entryOpensOn && sheet.entryClosesOn
+      ? fill(t.window, { from: sheet.entryOpensOn, to: sheet.entryClosesOn })
+      : sheet.entryOpensOn
+        ? fill(t.windowFrom, { from: sheet.entryOpensOn })
+        : sheet.entryClosesOn
+          ? fill(t.windowTo, { to: sheet.entryClosesOn })
+          : null
+
   const focusedRow = sheet.rows.find((r) => r.studentId === focused)
   const focusedState = focused ? rows[focused] : undefined
 
@@ -277,6 +338,12 @@ export function MarksEntry({
         <p className="text-muted-foreground text-sm tabular-nums">
           {fill(t.outOf, { full, pass: sheet.passMarks })}
         </p>
+        {windowText ? (
+          <p className="text-muted-foreground text-sm tabular-nums">
+            {windowText}
+          </p>
+        ) : null}
+        {submitted ? <Badge variant="outline">{t.submittedBadge}</Badge> : null}
         {!readOnly ? (
           <p className="text-muted-foreground hidden text-xs lg:block">
             {t.keysHint}
@@ -409,6 +476,22 @@ export function MarksEntry({
           {notice ? (
             <InlineAlert tone={notice.tone}>{notice.text}</InlineAlert>
           ) : null}
+          {lateReasonRequired ? (
+            <div className="space-y-1">
+              <Label htmlFor="marks-late-reason">{t.lateReason}</Label>
+              <Input
+                id="marks-late-reason"
+                value={lateReason}
+                maxLength={500}
+                aria-describedby="marks-late-help"
+                onChange={(e) => setLateReason(e.target.value)}
+                className="h-11"
+              />
+              <p id="marks-late-help" className="text-muted-foreground text-xs">
+                {t.lateHelp}
+              </p>
+            </div>
+          ) : null}
           <div className="flex min-h-11 flex-wrap items-center gap-2">
             <span className="text-muted-foreground min-w-0 truncate text-sm">
               {focusedRow
@@ -477,6 +560,68 @@ export function MarksEntry({
           </div>
         </div>
       ) : null}
+
+      {canSubmit && !submitted && sheet.rows.length > 0 ? (
+        <div className="space-y-2 border-t pt-4">
+          {readOnly && notice ? (
+            <InlineAlert tone={notice.tone}>{notice.text}</InlineAlert>
+          ) : null}
+          <p className="text-muted-foreground text-sm">
+            {dirtyIds.length > 0 ? t.submitSaveFirst : t.submitHelp}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11"
+            disabled={pending || dirtyIds.length > 0}
+            onClick={() => submit(false)}
+          >
+            {pending ? t.submitting : t.submit}
+          </Button>
+        </div>
+      ) : null}
+
+      <FormSheet
+        open={missing.length > 0}
+        onOpenChange={(open) => {
+          if (!open) setMissing([])
+        }}
+        title={fill(t.missingTitle, { n: missing.length })}
+        description={t.missingBody}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11"
+              onClick={() => setMissing([])}
+            >
+              {t.cancel}
+            </Button>
+            <Button
+              type="button"
+              className="h-11"
+              disabled={pending}
+              onClick={() => submit(true)}
+            >
+              {t.submitAnyway}
+            </Button>
+          </>
+        }
+      >
+        <ul className="divide-border divide-y text-sm">
+          {missing.map((m) => (
+            <li key={m.studentId} className="flex gap-3 py-2">
+              <span className="text-muted-foreground w-8 text-right tabular-nums">
+                {m.rollNumber ?? "—"}
+              </span>
+              <span>
+                {locale === "bn" && m.fullNameBn ? m.fullNameBn : m.fullName}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </FormSheet>
     </div>
   )
 }
