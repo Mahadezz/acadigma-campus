@@ -139,3 +139,25 @@ export const reportCardBulkParamsSchema = z.object({
   duplex: z.boolean().default(false),
 })
 export type ReportCardBulkParams = z.infer<typeof reportCardBulkParamsSchema>
+
+/** F-AC-10 results tab (D-306): one published result of a parent's child,
+ * read from `results.frozen_payload` — never recomputed. A withheld result
+ * carries only who and which exam: no marks, and never the reason. */
+export type FamilyResult = {
+  examId: string
+  studentId: string
+  publishedAt: string
+} & (
+  | { withheld: false; card: ReportCardDto }
+  | {
+      withheld: true
+      card: Pick<
+        ReportCardDto,
+        | "studentNameEn"
+        | "studentNameBn"
+        | "className"
+        | "sectionName"
+        | "examNameEn"
+      >
+    }
+)

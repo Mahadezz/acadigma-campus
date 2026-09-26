@@ -2,6 +2,7 @@ import { forbidden, notFound } from "next/navigation"
 
 import { listClassTeacherOptions } from "@acadigma/db"
 import { getExam } from "@acadigma/db/repositories/exams"
+import { listPublishCandidates } from "@acadigma/db/repositories/results"
 import { can } from "@acadigma/domain"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -41,6 +42,18 @@ export default async function ExamPage({
       </div>
     )
   }
+  const candidates =
+    can(ctx.role, "results.publish") && exam.data.status === "marks_locked"
+      ? await listPublishCandidates(ctx, supabase, id)
+      : null
+
+  if (candidates && !candidates.ok) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <InlineAlert tone="error">{candidates.error.message}</InlineAlert>
+      </div>
+    )
+  }
 
   return (
     <ExamDetailView
@@ -50,6 +63,7 @@ export default async function ExamPage({
       canWrite={canWrite}
       canCompute={can(ctx.role, "results.compute")}
       canReadResults={can(ctx.role, "results.read")}
+      publishCandidates={candidates?.ok ? candidates.data : null}
       teachers={teachers?.ok ? teachers.data : []}
     />
   )
