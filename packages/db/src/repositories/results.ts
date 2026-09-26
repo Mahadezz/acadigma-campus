@@ -580,14 +580,24 @@ export async function listPublishCandidates(
   client: AcadigmaSupabaseClient,
   examId: string
 ): Promise<Result<PublishCandidate[], ApiError>> {
-  const { data, error } = await client
-    .from("results")
-    .select(
-      "student_id, result_status, enrollments(roll_number), students(full_name), sections(name, grade_levels(name))"
-    )
-    .eq("workspace_id", ctx.workspaceId)
-    .eq("exam_id", examId)
-  if (error) return err(UNAVAILABLE)
+  // A whole-school exam can pass PostgREST's max_rows (1,000), which
+  // truncates silently: page until a short page (D-75).
+  const PAGE = 1000
+  const data: unknown[] = []
+  for (let from = 0; ; from += PAGE) {
+    const page = await client
+      .from("results")
+      .select(
+        "student_id, result_status, enrollments(roll_number), students(full_name), sections(name, grade_levels(name))"
+      )
+      .eq("workspace_id", ctx.workspaceId)
+      .eq("exam_id", examId)
+      .order("id")
+      .range(from, from + PAGE - 1)
+    if (page.error) return err(UNAVAILABLE)
+    data.push(...page.data)
+    if (page.data.length < PAGE) break
+  }
   const rows = z
     .array(
       z.object({
@@ -601,7 +611,7 @@ export async function listPublishCandidates(
         }),
       })
     )
-    .safeParse(data ?? [])
+    .safeParse(data)
   if (!rows.success) return err(UNAVAILABLE)
   return ok(
     rows.data
