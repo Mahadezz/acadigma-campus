@@ -29,6 +29,7 @@ import {
   queuedItem,
   queueSave,
   sendQueued,
+  useOutbox,
 } from "@/lib/offline/outbox-client"
 
 import { saveAttendanceSession } from "../actions"
@@ -89,10 +90,17 @@ export function RollCall({
   const [key, setKey] = useState(() => crypto.randomUUID())
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
-  // F-ID-11 Part 2a (D-309): saved on this phone, waiting to send.
-  const [queued, setQueued] = useState(false)
   const getOfflineCopy = useOfflineCopy()
   const entityKey = `attendance:${sectionId}:${date}`
+  // F-ID-11 Part 2a (D-309): this class's saves still on the phone, live —
+  // waiting to send, or refused (a conflict is shown, never swallowed).
+  const mine = useOutbox(userId).filter((i) => i.entityKey === entityKey)
+  const waiting = mine.some(
+    (i) => i.status === "pending" || i.status === "sending"
+  )
+  const refused = mine.find(
+    (i) => i.status === "conflict" || i.status === "needs_attention"
+  )
 
   useEffect(() => {
     // A roll taken offline and not sent yet shows instead of the (older)
@@ -106,13 +114,11 @@ export function RollCall({
           item.payload.records.map((r) => [r.studentId, r.status])
         ),
       }))
-      setQueued(true)
     })
     // When it lands, the version it created is the next save's base.
     const off = onOutboxSent((key, updatedAt) => {
       if (key !== entityKey) return
       setVersion(updatedAt)
-      setQueued(false)
       router.refresh()
     })
     return () => {
@@ -201,7 +207,6 @@ export function RollCall({
     setBeforeBulk(null)
     setBulkMarked(false)
     setKey(crypto.randomUUID())
-    setQueued(true)
     if (navigator.onLine) void sendQueued(userId)
   }
 
@@ -244,7 +249,6 @@ export function RollCall({
       setBeforeBulk(null)
       setBulkMarked(false)
       setKey(crypto.randomUUID())
-      setQueued(false)
       setSaved(
         fill(t.saved, {
           present: result.data.present,
@@ -360,9 +364,16 @@ export function RollCall({
           <div className="space-y-2">
             {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
             {saved ? <InlineAlert tone="success">{saved}</InlineAlert> : null}
-            {queued && !saved ? (
+            {waiting && !saved ? (
               <InlineAlert tone="offline">
                 {getOfflineCopy().savedOnPhone}
+              </InlineAlert>
+            ) : null}
+            {refused && !waiting ? (
+              <InlineAlert tone="error">
+                {refused.status === "conflict"
+                  ? getOfflineCopy().conflictReason
+                  : refused.lastError?.message}
               </InlineAlert>
             ) : null}
             <div className="flex items-center gap-3">

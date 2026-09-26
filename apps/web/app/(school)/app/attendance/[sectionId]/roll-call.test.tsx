@@ -18,7 +18,9 @@ vi.mock("@/lib/offline/outbox-client", () => ({
   queueSave: (...a: unknown[]) => mockQueueSave(...a),
   sendQueued: (...a: unknown[]) => mockSendQueued(...a),
   onOutboxSent: () => () => undefined,
+  useOutbox: () => mockOutbox(),
 }))
+const mockOutbox = vi.fn()
 vi.mock("@/app/(shared)/offline/offline-provider", () => ({
   useOfflineCopy: () => () => en.offline,
 }))
@@ -51,7 +53,16 @@ const BASE = {
 beforeEach(() => {
   mockSave.mockReset()
   mockQueued.mockReset().mockResolvedValue(undefined)
-  mockQueueSave.mockReset().mockResolvedValue("queued")
+  mockOutbox.mockReset().mockReturnValue([])
+  // Once queued, the live outbox holds a waiting item for this class.
+  mockQueueSave
+    .mockReset()
+    .mockImplementation(async (d: { entityKey: string }) => {
+      mockOutbox.mockReturnValue([
+        { entityKey: d.entityKey, status: "pending" },
+      ])
+      return "queued"
+    })
   mockSendQueued.mockReset().mockResolvedValue(undefined)
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true)
   mockSave.mockResolvedValue({
@@ -165,7 +176,16 @@ describe("saveErrorText", () => {
   })
 })
 
+const ENTITY = `attendance:${BASE.sectionId}:${BASE.date}`
+
 describe("RollCall offline (F-ID-11 Part 2a)", () => {
+  it("a queued roll refused as a CONFLICT says so, not 'waiting'", () => {
+    mockOutbox.mockReturnValue([{ entityKey: ENTITY, status: "conflict" }])
+    render(<RollCall {...BASE} />)
+    expect(screen.getByText(en.offline.conflictReason)).toBeTruthy()
+    expect(screen.queryByText(en.offline.savedOnPhone)).toBeNull()
+  })
+
   function markAndSave() {
     fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
@@ -220,6 +240,7 @@ describe("RollCall offline (F-ID-11 Part 2a)", () => {
   })
 
   it("reopened offline, shows the roll she queued rather than the cached one", async () => {
+    mockOutbox.mockReturnValue([{ entityKey: ENTITY, status: "pending" }])
     mockQueued.mockResolvedValue({
       payload: {
         records: students.map((s) => ({
