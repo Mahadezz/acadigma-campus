@@ -1,6 +1,7 @@
 import { HeartHandshakeIcon } from "lucide-react"
 
-import type { FamilyResult } from "@acadigma/contracts"
+import type { FamilyChild, FamilyResult } from "@acadigma/contracts"
+import { listFamilyChildren } from "@acadigma/db/repositories/guardian-links"
 import {
   hasGuardianLink,
   listFamilyResults,
@@ -42,12 +43,13 @@ export default async function FamilyHomePage() {
 
   const tr = t.workspace.family.results
   const supabase = await createClient()
-  const [linked, results] = can(ctx.role, "family.results.read")
+  const [linked, results, children] = can(ctx.role, "family.results.read")
     ? await Promise.all([
         hasGuardianLink(ctx, supabase),
         listFamilyResults(ctx, supabase),
+        listFamilyChildren(ctx, supabase),
       ])
-    : [null, null]
+    : [null, null, null]
 
   if (linked && !linked.ok) {
     return <InlineAlert tone="error">{linked.error.message}</InlineAlert>
@@ -55,6 +57,15 @@ export default async function FamilyHomePage() {
   if (results && !results.ok) {
     return <InlineAlert tone="error">{results.error.message}</InlineAlert>
   }
+  // F-AC-02 Part 4 (D-108): the children this account is linked to.
+  const childList =
+    children?.ok && children.data.length > 0 ? (
+      <Children
+        t={t.workspace.family.children}
+        kids={children.data}
+        bn={locale === "bn"}
+      />
+    ) : null
   if (!linked || !results || results.data.length === 0) {
     // Three different states: not a parent here (the shell's placeholder),
     // no child linked yet, or nothing published yet (D-306 review).
@@ -70,6 +81,7 @@ export default async function FamilyHomePage() {
         : tr.notLinkedDescription
     return (
       <>
+        {childList}
         <h2 className="sr-only">{title}</h2>
         <EmptyState
           icon={<HeartHandshakeIcon />}
@@ -92,6 +104,7 @@ export default async function FamilyHomePage() {
   )
   return (
     <div className="mx-auto max-w-2xl space-y-4">
+      {childList}
       <h2 className="text-lg font-semibold tracking-tight">{tr.title}</h2>
       <ul className="space-y-3">
         {results.data.map((r) =>
@@ -123,6 +136,34 @@ export default async function FamilyHomePage() {
         )}
       </ul>
     </div>
+  )
+}
+
+function Children({
+  t,
+  kids,
+  bn,
+}: {
+  t: Messages["workspace"]["family"]["children"]
+  kids: FamilyChild[]
+  bn: boolean
+}) {
+  return (
+    <section className="mx-auto mb-4 max-w-2xl space-y-2">
+      <h2 className="text-lg font-semibold tracking-tight">{t.title}</h2>
+      <ul className="space-y-2">
+        {kids.map((k) => (
+          <li key={k.id} className="bg-card rounded-lg border p-3">
+            <p className="font-medium">
+              {bn && k.fullNameBn ? k.fullNameBn : k.fullName}
+            </p>
+            <p className="text-muted-foreground text-xs tabular-nums">
+              {t.code.replace("{code}", k.studentCode)}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

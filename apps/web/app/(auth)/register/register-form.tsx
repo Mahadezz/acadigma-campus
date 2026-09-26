@@ -40,11 +40,14 @@ import { registerWithPassword } from "../actions"
 export function RegisterForm({
   t,
   network,
+  next,
 }: {
   t: Messages["auth"]["register"] & {
     strength: Messages["auth"]["passwordStrength"]
   }
   network: Messages["auth"]["network"]
+  /** D-108: "/invite" when a guardian is signing up from their link. */
+  next?: "/invite"
 }) {
   const [formError, setFormError] = useState<string | null>(null)
   const [errorTone, setErrorTone] = useState<SubmitFailureTone>("error")
@@ -61,6 +64,7 @@ export function RegisterForm({
       // unchecked box, which is `false` at runtime. safeParse rejects it either way
       // until the user actually ticks it, so this cast changes no behaviour.
       termsAccepted: false as unknown as true,
+      next,
     },
   })
 
@@ -94,7 +98,7 @@ export function RegisterForm({
           return
         }
         window.location.assign(
-          `/verify?email=${encodeURIComponent(values.email)}`
+          `/verify?email=${encodeURIComponent(values.email)}${next ? `&next=${next}` : ""}`
         )
       } catch {
         // D-35: offline is not "the server is down".
