@@ -1,22 +1,28 @@
 /**
  * F-OP-03 Part 6 (D-208) — the monthly attendance register (spec §4 "Sign and
- * lock" workflow deferred, §5.2/§5.7). One query set per (section, month):
- * the roster overlapping the month, every session taken and every record in
- * it, the school's calendar (working days + holidays + overrides, read
- * directly — no new `app.*` wrapper, see `@acadigma/domain/calendar`'s file
- * header) and the attendance policy booleans (F-AC-03 §5.4, same as
- * `getReportCard`).
+ * lock" workflow deferred, §5.2/§5.7). One RPC call per (section, month):
+ * `public.attendance_register` (20260926034526_report_register_marksheet_kinds.sql,
+ * review fix) returns the section, the roster, the calendar days
+ * (`app.is_school_day` already computed per day) and every attendance record
+ * as ONE jsonb value — PostgREST's `max_rows` (supabase/config.toml) caps the
+ * number of ROWS in a resultset, never a function's single scalar return, so
+ * this is immune to it by construction. The previous version selected
+ * `attendance_records` directly through PostgREST and silently dropped rows
+ * past 1,000 (a 40-student x 26-day month is already 1,040 records), with
+ * wrong "-" cells and % and no error anywhere — see that migration's comment.
  *
  * A cell is a status only when: the day is a school day, AND the student was
  * enrolled in this section that day, AND a session was taken that day (in
  * which case `public.save_attendance` guarantees a record for every enrolled
- * student, §5.3) — every other case is `null` ("-" on the page), and the
- * three cases are distinguishable from `AttendanceRegisterDay.isSchoolDay`/
- * `sessionTaken` plus the roster's own enrolment window, never guessed by
- * the template.
+ * student, §5.3) — every other case is `null` ("-" on the page), decided
+ * from the roster's own enrolment window and the day's `isSchoolDay`/
+ * `sessionTaken`, never guessed by the template.
  */
+import { z } from "zod"
+
 import {
   apiError,
+  attendanceStatusSchema,
   err,
   ok,
   type ApiError,
@@ -25,11 +31,6 @@ import {
   type Result,
 } from "@acadigma/contracts"
 import { attendanceWeight } from "@acadigma/domain/attendance"
-import {
-  daysInMonth,
-  isSchoolDay,
-  type HolidayRange,
-} from "@acadigma/domain/calendar"
 import { roundHalfUp } from "@acadigma/domain/grading"
 
 import type { AcadigmaSupabaseClient } from "../client"
@@ -42,25 +43,57 @@ const UNAVAILABLE: ApiError = apiError(
 
 const MONTH_RE = /^(\d{4})-(0[1-9]|1[0-2])$/
 
-type RosterRow = {
-  roll_number: number | null
-  students: {
-    id: string
-    full_name: string
-    full_name_bn: string | null
-    status: string
-    deleted_at: string | null
-  }
-  enrolled_on: string
-  ended_on: string | null
-}
+const rpcResultSchema = z.object({
+  section: z
+    .object({ id: z.string(), name: z.string(), grade_name: z.string() })
+    .nullable(),
+  policy: z
+    .object({
+      late_counts_present: z.boolean(),
+      half_day_counts_present: z.boolean(),
+    })
+    .optional(),
+  days: z
+    .array(
+      z.object({
+        date: z.string(),
+        is_school_day: z.boolean().nullable(),
+        session_taken: z.boolean(),
+      })
+    )
+    .optional()
+    .default([]),
+  roster: z
+    .array(
+      z.object({
+        student_id: z.string(),
+        roll_number: z.number().int().nullable(),
+        full_name: z.string(),
+        full_name_bn: z.string().nullable(),
+        enrolled_on: z.string(),
+        ended_on: z.string().nullable(),
+      })
+    )
+    .optional()
+    .default([]),
+  records: z
+    .array(
+      z.object({
+        student_id: z.string(),
+        date: z.string(),
+        status: attendanceStatusSchema,
+      })
+    )
+    .optional()
+    .default([]),
+})
 
 /**
- * The register's data for one section and one `YYYY-MM` month, through the
- * CALLER's own RLS client — the same read grant `attendance_sessions`/
- * `attendance_records` already give owner/admin/teacher/staff (F-AC-03
- * §5, D-104/D-105: not yet narrowed to "own sections", so this matches the
- * table's own current row-scoping rather than inventing a stricter one here).
+ * The register's data for one section and one `YYYY-MM` month, through
+ * `public.attendance_register` — SECURITY INVOKER, so the CALLER's own RLS
+ * decides what it returns (F-AC-03 §5, D-104/D-105: not yet narrowed to "own
+ * sections", so this matches the table's own current row-scoping rather
+ * than inventing a stricter one here).
  */
 export async function getAttendanceRegister(
   supabase: AcadigmaSupabaseClient,
@@ -74,138 +107,38 @@ export async function getAttendanceRegister(
   }
   const year = Number(match[1])
   const monthNum = Number(match[2])
-  const dates = daysInMonth(year, monthNum)
-  const monthStart = dates[0]!
-  const monthEnd = dates[dates.length - 1]!
 
-  const [section, roster, sessions, records, calendar, policyRow] =
-    await Promise.all([
-      supabase
-        .from("sections")
-        .select("id, name, grade_levels(name)")
-        .eq("workspace_id", ctx.workspaceId)
-        .eq("id", sectionId)
-        .maybeSingle(),
-      supabase
-        .from("enrollments")
-        .select(
-          "roll_number, enrolled_on, ended_on, students!inner(id, full_name, full_name_bn, status, deleted_at)"
-        )
-        .eq("workspace_id", ctx.workspaceId)
-        .eq("section_id", sectionId)
-        .lte("enrolled_on", monthEnd)
-        .or(`ended_on.is.null,ended_on.gte.${monthStart}`)
-        .eq("students.status", "active")
-        .is("students.deleted_at", null),
-      supabase
-        .from("attendance_sessions")
-        .select("date")
-        .eq("workspace_id", ctx.workspaceId)
-        .eq("section_id", sectionId)
-        .gte("date", monthStart)
-        .lte("date", monthEnd),
-      supabase
-        .from("attendance_records")
-        .select(
-          "student_id, status, attendance_sessions!inner(date, section_id)"
-        )
-        .eq("workspace_id", ctx.workspaceId)
-        .eq("attendance_sessions.section_id", sectionId)
-        .gte("attendance_sessions.date", monthStart)
-        .lte("attendance_sessions.date", monthEnd),
-      Promise.all([
-        supabase
-          .from("holidays")
-          .select("starts_on, ends_on")
-          .eq("workspace_id", ctx.workspaceId)
-          .lte("starts_on", monthEnd)
-          .gte("ends_on", monthStart),
-        supabase
-          .from("working_day_overrides")
-          .select("date, is_working")
-          .eq("workspace_id", ctx.workspaceId)
-          .gte("date", monthStart)
-          .lte("date", monthEnd),
-      ]),
-      supabase
-        .from("school_profiles")
-        .select("working_days, attendance_policy")
-        .eq("workspace_id", ctx.workspaceId)
-        .maybeSingle(),
-    ])
+  const { data, error } = await supabase.rpc("attendance_register", {
+    p_workspace_id: ctx.workspaceId,
+    p_section_id: sectionId,
+    p_month: `${match[1]}-${match[2]}-01`,
+  })
+  if (error) return err(UNAVAILABLE)
 
-  const [holidaysRes, overridesRes] = calendar
-  if (
-    section.error ||
-    roster.error ||
-    sessions.error ||
-    records.error ||
-    holidaysRes.error ||
-    overridesRes.error ||
-    policyRow.error
-  ) {
-    return err(UNAVAILABLE)
-  }
-  if (!section.data) {
+  const parsed = rpcResultSchema.safeParse(data)
+  if (!parsed.success) return err(UNAVAILABLE)
+  if (!parsed.data.section) {
     return err(apiError("not_found", "That class was not found."))
   }
-  const s = section.data as unknown as {
-    id: string
-    name: string
-    grade_levels: { name: string }
-  }
-
-  const workingDays = (policyRow.data?.working_days as number[] | null) ?? [
-    6, 7, 1, 2, 3, 4,
-  ]
-  const policy = policyRow.data?.attendance_policy as
-    | { late_counts_present?: boolean; half_day_counts_present?: boolean }
-    | null
-    | undefined
+  const { section, policy, days, roster, records } = parsed.data
   const lateCountsPresent = policy?.late_counts_present ?? true
   const halfDayCountsPresent = policy?.half_day_counts_present ?? true
 
-  const holidays: HolidayRange[] = (holidaysRes.data ?? []).map((h) => ({
-    startsOn: h.starts_on,
-    endsOn: h.ends_on,
-  }))
-  const overrides = new Map<string, boolean>(
-    (overridesRes.data ?? []).map((o) => [o.date, o.is_working])
-  )
-  const sessionDates = new Set(
-    (sessions.data ?? []).map((sess) => sess.date as string)
-  )
-
-  const days = dates.map((date, i) => ({
-    date,
-    dayOfMonth: i + 1,
-    isSchoolDay: isSchoolDay(date, workingDays, holidays, overrides),
-    sessionTaken: sessionDates.has(date),
-  }))
-
-  // student|date -> status, from attendance_records joined to their session.
   const recordMap = new Map<string, AttendanceStatus>()
-  for (const rec of (records.data ?? []) as unknown as {
-    student_id: string
-    status: AttendanceStatus
-    attendance_sessions: { date: string }
-  }[]) {
-    recordMap.set(
-      `${rec.student_id}|${rec.attendance_sessions.date}`,
-      rec.status
-    )
+  for (const rec of records) {
+    recordMap.set(`${rec.student_id}|${rec.date}`, rec.status)
   }
 
-  const rosterRows = (roster.data ?? []) as unknown as RosterRow[]
-  const students = rosterRows.map((row) => {
-    const enrolledOn = row.enrolled_on
-    const endedOn = row.ended_on
+  const students = roster.map((row) => {
     const cells: (AttendanceStatus | null)[] = days.map((day) => {
-      if (!day.isSchoolDay) return null
-      if (day.date < enrolledOn || (endedOn !== null && day.date > endedOn)) {
+      if (!day.is_school_day) return null
+      if (
+        day.date < row.enrolled_on ||
+        (row.ended_on !== null && day.date > row.ended_on)
+      ) {
         return null
       }
-      return recordMap.get(`${row.students.id}|${day.date}`) ?? null
+      return recordMap.get(`${row.student_id}|${day.date}`) ?? null
     })
     const recorded = cells.filter((c): c is AttendanceStatus => c !== null)
     const presentEquivalent = recorded.reduce(
@@ -222,10 +155,10 @@ export async function getAttendanceRegister(
         ? null
         : roundHalfUp((100 * presentEquivalent) / recorded.length, 0)
     return {
-      studentId: row.students.id,
+      studentId: row.student_id,
       rollNumber: row.roll_number,
-      studentNameEn: row.students.full_name,
-      studentNameBn: row.students.full_name_bn ?? row.students.full_name,
+      studentNameEn: row.full_name,
+      studentNameBn: row.full_name_bn ?? row.full_name,
       cells,
       presentEquivalent,
       recordedDays: recorded.length,
@@ -238,27 +171,27 @@ export async function getAttendanceRegister(
       (b.rollNumber ?? Number.MAX_SAFE_INTEGER)
   )
 
-  const daysWithPresentCount = days.map((day) => ({
-    ...day,
-    presentCount: day.sessionTaken
-      ? students.filter((st) => {
-          const cell = st.cells[day.dayOfMonth - 1]
-          return cell === "present"
-        }).length
+  const daysShaped = days.map((day, i) => ({
+    date: day.date,
+    dayOfMonth: i + 1,
+    isSchoolDay: day.is_school_day ?? false,
+    sessionTaken: day.session_taken,
+    presentCount: day.session_taken
+      ? students.filter((st) => st.cells[i] === "present").length
       : 0,
   }))
 
-  const incompleteDaysCount = days.filter(
+  const incompleteDaysCount = daysShaped.filter(
     (d) => d.isSchoolDay && !d.sessionTaken
   ).length
-  const totalSchoolDays = days.filter((d) => d.isSchoolDay).length
+  const totalSchoolDays = daysShaped.filter((d) => d.isSchoolDay).length
 
   return ok({
-    className: s.grade_levels.name,
-    sectionName: s.name,
+    className: section.grade_name,
+    sectionName: section.name,
     year,
     month: monthNum,
-    days: daysWithPresentCount,
+    days: daysShaped,
     students,
     incompleteDaysCount,
     totalSchoolDays,

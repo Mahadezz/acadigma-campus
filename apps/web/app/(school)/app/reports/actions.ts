@@ -499,6 +499,35 @@ export async function createReportRun(
   const writable = await requireWritable(ctx, supabase)
   if (!writable.ok) return err(planReadOnlyApiError(writable.error))
 
+  // D-208 review: `can()` only checks the role (owner/admin/teacher, same as
+  // the register), never the section — a teacher who is not that section's
+  // class teacher would otherwise get a queued run that always fails as
+  // "results not computed" (`getMarkSheetData`, RLS hides the same rows
+  // either way). Check the real row-scoping rule up front so a forbidden
+  // request never leaves a misleading failed run behind.
+  if (parsed.data.params.kind === "mark_sheet") {
+    const { data: canRead, error: canReadError } = await supabase.rpc(
+      "can_read_results",
+      {
+        p_workspace_id: ctx.workspaceId,
+        p_section_id: parsed.data.params.sectionId,
+      }
+    )
+    if (canReadError) {
+      return err(
+        apiError(
+          "dependency_unavailable",
+          "Could not reach the database. Please try again."
+        )
+      )
+    }
+    if (!canRead) {
+      return err(
+        apiError("forbidden", "You cannot read this section's results.")
+      )
+    }
+  }
+
   const created = await createReportRunRepo(supabase, ctx, {
     kind: parsed.data.params.kind,
     params: parsed.data.params,

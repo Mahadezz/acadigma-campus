@@ -199,7 +199,7 @@ export function AttendanceRegisterDocument(
               ))}
               <ScriptText
                 style={styles.totalCell}
-                text={formatNumber(student.recordedDays, locale)}
+                text={formatNumber(student.presentEquivalent, locale)}
               />
               <ScriptText
                 style={styles.totalCell}
