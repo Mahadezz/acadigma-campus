@@ -9,7 +9,6 @@ import { Button } from "@acadigma/ui/components/button"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
-
 import { saveErrorText } from "@/app/(school)/app/attendance/[sectionId]/roll-call"
 import type { Messages } from "@/lib/i18n"
 import { othersWaiting } from "@/lib/offline/check"
