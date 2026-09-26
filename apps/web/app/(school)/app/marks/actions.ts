@@ -27,13 +27,17 @@ import { requireWritable } from "@acadigma/db"
 import {
   lockExamSubject as lockExamSubjectRepo,
   saveMarks as saveMarksRepo,
+  setEntryClosesOn,
   submitExamSubject as submitExamSubjectRepo,
   unlockExamSubject as unlockExamSubjectRepo,
 } from "@acadigma/db/repositories/marks"
 import { can } from "@acadigma/domain"
+import { addDays } from "@acadigma/domain/academic"
 
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
+
+import { schoolToday } from "../exams/format"
 
 export async function saveMarks(
   input: unknown
@@ -152,6 +156,29 @@ export async function unlockExamSubject(
     gate.data.supabase,
     parsed.data.examSubjectId,
     parsed.data.reason
+  )
+  if (result.ok) revalidatePath("/app/exams", "layout")
+  return result
+}
+
+/**
+ * "Reopen 7 days" (owner/admin, D-307 review): the paper's marks entry
+ * closes 7 days from today, so its teacher can edit again after an unlock.
+ * A plain update of `entry_closes_on` (RLS owner/admin; audited).
+ */
+export async function reopenMarksEntry(
+  input: unknown
+): Promise<Result<void, ApiError>> {
+  const parsed = lockExamSubjectInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+  const gate = await gateLock()
+  if (!gate.ok) return gate
+
+  const result = await setEntryClosesOn(
+    gate.data.ctx,
+    gate.data.supabase,
+    parsed.data.examSubjectId,
+    addDays(schoolToday(), 7)
   )
   if (result.ok) revalidatePath("/app/exams", "layout")
   return result

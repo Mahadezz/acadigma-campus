@@ -1273,11 +1273,16 @@
     "lock": "Lock",
     "unlock": "Unlock",
     "unlockTitle": "Unlock {subject}",
-    "unlockHelp": "Say why. The marks can change again. If results were computed, the exam goes back to marks entry and its results are cleared.",
+    "unlockHelp": "Say why. The marks can change again. If results were computed, the exam goes back to marks entry and its results are cleared. If the entry dates are over, change 'Marks close' so the teacher can edit.",
     "lockedDone": "Locked.",
     "unlockedDone": "Unlocked.",
     "entryOpens": "Marks open",
-    "entryCloses": "Marks close"
+    "entryCloses": "Marks close",
+    "noStudentDetails": "Don't write student details here.",
+    "closesOn": "closes {date}",
+    "closed": "Closed",
+    "reopen": "Reopen 7 days",
+    "reopenedDone": "Marks entry reopened for 7 days."
   },
   "students": {
     "importButton": "Import",
@@ -1486,7 +1491,7 @@
     "windowFrom": "Marks entry from {from}",
     "windowTo": "Marks entry until {to}",
     "lateReason": "Reason for changing marks outside the entry dates",
-    "lateHelp": "The entry dates for this paper are over. Your change is saved with this reason and marked late.",
+    "lateHelp": "This paper is outside its entry dates. Your change is saved with this reason and marked as outside the dates.",
     "submit": "Submit marks",
     "submitting": "Submitting…",
     "submitHelp": "Submit when you have finished. An admin then locks the paper.",
@@ -1496,7 +1501,8 @@
     "missingTitle": "{n} students have no mark yet",
     "missingBody": "You can still submit. They stay missing until someone enters a mark or chooses Absent or Exempt.",
     "submitAnyway": "Submit anyway",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "noStudentDetails": "Don't write student details here."
   },
   "basicMode": {
     "settings": {

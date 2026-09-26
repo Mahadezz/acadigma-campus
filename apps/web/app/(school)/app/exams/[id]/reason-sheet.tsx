@@ -65,7 +65,11 @@ export function ReasonSheet({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           maxLength={500}
+          aria-describedby={`${id}-hint`}
         />
+        <p id={`${id}-hint`} className="text-muted-foreground text-xs">
+          {t.noStudentDetails}
+        </p>
       </div>
     </FormSheet>
   )

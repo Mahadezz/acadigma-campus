@@ -10,6 +10,8 @@ import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
+import { schoolToday } from "../../exams/format"
+
 import { MarksEntry, type ReadOnlyReason } from "./marks-entry"
 
 import type { Metadata } from "next"
@@ -40,11 +42,7 @@ export default async function MarksEntryPage({
   }
   const s = sheet.data
   const isAdmin = ctx.role === "owner" || ctx.role === "admin"
-  // ponytail: the school's calendar day in Asia/Dhaka (the default zone);
-  // save_marks decides by the school's own zone, so this only picks the UI.
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-  }).format(new Date())
+  const today = schoolToday()
   const outside = outsideEntryWindow(
     { opensOn: s.entryOpensOn, closesOn: s.entryClosesOn },
     today

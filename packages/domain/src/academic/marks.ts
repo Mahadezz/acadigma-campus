@@ -40,18 +40,25 @@ export function marksProgress(rows: ReadonlyArray<{ status: string | null }>): {
 /**
  * F-AC-06 §5.11 (D-307) — a paper's effective marks entry window, the same
  * rule as `app.marks_entry_window`: opens on the date set, else the exam
- * date; closes on the date set, else 7 days after it opens. Dates are
- * ISO `YYYY-MM-DD`; null means that side has no limit.
+ * date; closes on the date set, else 7 days after the later of its
+ * opening and the exam's last day (D-307 review: a BD exam runs about two
+ * weeks). Dates are ISO `YYYY-MM-DD`; null means that side has no limit.
  */
 export function marksEntryWindow(paper: {
   examDate: string | null
   entryOpensOn: string | null
   entryClosesOn: string | null
+  examEndsOn: string | null
 }): { opensOn: string | null; closesOn: string | null } {
   const opensOn = paper.entryOpensOn ?? paper.examDate
+  // ISO dates compare as strings; like SQL greatest(), a null is skipped.
+  const from = [opensOn, paper.examEndsOn]
+    .filter((d): d is string => d !== null)
+    .sort()
+    .at(-1)
   return {
     opensOn,
-    closesOn: paper.entryClosesOn ?? (opensOn ? addDays(opensOn, 7) : null),
+    closesOn: paper.entryClosesOn ?? (from ? addDays(from, 7) : null),
   }
 }
 
@@ -66,7 +73,7 @@ export function outsideEntryWindow(
   )
 }
 
-function addDays(iso: string, days: number): string {
+export function addDays(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)

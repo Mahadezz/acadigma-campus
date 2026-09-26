@@ -312,7 +312,7 @@ describe("MarksEntry", () => {
       />
     )
     expect(
-      screen.getByText("Marks entry: 2026-06-01 to 2026-06-08")
+      screen.getByText("Marks entry: 1 Jun 2026 to 8 Jun 2026")
     ).toBeTruthy()
     fireEvent.change(input(/Student 2/), { target: { value: "30" } })
     fireEvent.click(screen.getByRole("button", { name: "Save" }))

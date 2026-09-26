@@ -64,8 +64,28 @@ describe("marksEntryWindow (§5.11, D-307)", () => {
         examDate: "2026-12-28",
         entryOpensOn: null,
         entryClosesOn: null,
+        examEndsOn: null,
       })
     ).toEqual({ opensOn: "2026-12-28", closesOn: "2027-01-04" })
+  })
+
+  it("closes 7 days after the exam ends when that is later", () => {
+    expect(
+      marksEntryWindow({
+        examDate: "2026-06-01",
+        entryOpensOn: null,
+        entryClosesOn: null,
+        examEndsOn: "2026-06-14",
+      })
+    ).toEqual({ opensOn: "2026-06-01", closesOn: "2026-06-21" })
+    expect(
+      marksEntryWindow({
+        examDate: null,
+        entryOpensOn: null,
+        entryClosesOn: null,
+        examEndsOn: "2026-06-14",
+      })
+    ).toEqual({ opensOn: null, closesOn: "2026-06-21" })
   })
 
   it("uses the dates set on the paper over the exam date", () => {
@@ -74,6 +94,7 @@ describe("marksEntryWindow (§5.11, D-307)", () => {
         examDate: "2026-06-01",
         entryOpensOn: "2026-06-03",
         entryClosesOn: "2026-06-20",
+        examEndsOn: "2026-06-30",
       })
     ).toEqual({ opensOn: "2026-06-03", closesOn: "2026-06-20" })
     expect(
@@ -81,6 +102,7 @@ describe("marksEntryWindow (§5.11, D-307)", () => {
         examDate: "2026-06-01",
         entryOpensOn: "2026-06-03",
         entryClosesOn: null,
+        examEndsOn: null,
       }).closesOn
     ).toBe("2026-06-10")
   })
@@ -90,6 +112,7 @@ describe("marksEntryWindow (§5.11, D-307)", () => {
       examDate: null,
       entryOpensOn: null,
       entryClosesOn: null,
+      examEndsOn: null,
     })
     expect(window).toEqual({ opensOn: null, closesOn: null })
     expect(outsideEntryWindow(window, "2026-06-01")).toBe(false)

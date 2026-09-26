@@ -5,6 +5,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
 import type { ExamDetail, TeacherOption } from "@acadigma/contracts"
+import { marksEntryWindow } from "@acadigma/domain/academic"
 import { Badge } from "@acadigma/ui/components/badge"
 import { Button } from "@acadigma/ui/components/button"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
@@ -12,7 +13,12 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
-import { lockExamSubject, unlockExamSubject } from "../../marks/actions"
+import {
+  lockExamSubject,
+  reopenMarksEntry,
+  unlockExamSubject,
+} from "../../marks/actions"
+import { examDateFormatter } from "../format"
 
 import { ReasonSheet } from "./reason-sheet"
 
@@ -29,12 +35,15 @@ export function MarksProgress({
   locale,
   exam,
   teachers,
+  today,
 }: {
   t: T
   locale: Locale
   exam: ExamDetail
   teachers: TeacherOption[]
+  today: string
 }) {
+  const fmt = examDateFormatter(locale)
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -84,54 +93,87 @@ export function MarksProgress({
         {notice}
       </p>
       <ul className="divide-y rounded-lg border">
-        {exam.papers.map((p) => (
-          <li
-            key={p.id}
-            className="flex min-h-[72px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{subjectOf(p)}</p>
-              <p className="text-muted-foreground truncate text-sm">
-                {(p.teacherId && names.get(p.teacherId)) || t.noTeacher}
-              </p>
-            </div>
-            <span className="text-sm tabular-nums">
-              {t.marksProgress
-                .replace("{done}", String(p.marksDone))
-                .replace("{total}", String(p.enrolled))}
-            </span>
-            <Badge variant={p.status === "locked" ? "default" : "outline"}>
-              {t.paperStatuses[p.status]}
-            </Badge>
-            {p.status === "submitted" && !frozen ? (
-              <Button
-                variant="outline"
-                className="h-11"
-                disabled={pending}
-                onClick={() =>
-                  run(
-                    () => lockExamSubject({ examSubjectId: p.id }),
-                    t.lockedDone
-                  )
-                }
-              >
-                {t.lock}
-                <span className="sr-only"> — {subjectOf(p)}</span>
-              </Button>
-            ) : null}
-            {p.status === "locked" && !frozen ? (
-              <Button
-                variant="outline"
-                className="h-11"
-                disabled={pending}
-                onClick={() => setUnlocking(p.id)}
-              >
-                {t.unlock}
-                <span className="sr-only"> — {subjectOf(p)}</span>
-              </Button>
-            ) : null}
-          </li>
-        ))}
+        {exam.papers.map((p) => {
+          const closesOn = marksEntryWindow({
+            examDate: p.examDate,
+            entryOpensOn: p.entryOpensOn,
+            entryClosesOn: p.entryClosesOn,
+            examEndsOn: exam.endsOn,
+          }).closesOn
+          const closed =
+            closesOn !== null && today > closesOn && p.status !== "locked"
+          return (
+            <li
+              key={p.id}
+              className="flex min-h-[72px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{subjectOf(p)}</p>
+                <p className="text-muted-foreground truncate text-sm">
+                  {(p.teacherId && names.get(p.teacherId)) || t.noTeacher}
+                  {closesOn ? (
+                    <span className="tabular-nums">
+                      {" · "}
+                      {t.closesOn.replace("{date}", fmt(closesOn))}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+              <span className="text-sm tabular-nums">
+                {t.marksProgress
+                  .replace("{done}", String(p.marksDone))
+                  .replace("{total}", String(p.enrolled))}
+              </span>
+              <Badge variant={p.status === "locked" ? "default" : "outline"}>
+                {t.paperStatuses[p.status]}
+              </Badge>
+              {closed ? <Badge variant="outline">{t.closed}</Badge> : null}
+              {closed && !frozen ? (
+                <Button
+                  variant="outline"
+                  className="h-11"
+                  disabled={pending}
+                  onClick={() =>
+                    run(
+                      () => reopenMarksEntry({ examSubjectId: p.id }),
+                      t.reopenedDone
+                    )
+                  }
+                >
+                  {t.reopen}
+                  <span className="sr-only"> — {subjectOf(p)}</span>
+                </Button>
+              ) : null}
+              {p.status === "submitted" && !frozen ? (
+                <Button
+                  variant="outline"
+                  className="h-11"
+                  disabled={pending}
+                  onClick={() =>
+                    run(
+                      () => lockExamSubject({ examSubjectId: p.id }),
+                      t.lockedDone
+                    )
+                  }
+                >
+                  {t.lock}
+                  <span className="sr-only"> — {subjectOf(p)}</span>
+                </Button>
+              ) : null}
+              {p.status === "locked" && !frozen ? (
+                <Button
+                  variant="outline"
+                  className="h-11"
+                  disabled={pending}
+                  onClick={() => setUnlocking(p.id)}
+                >
+                  {t.unlock}
+                  <span className="sr-only"> — {subjectOf(p)}</span>
+                </Button>
+              ) : null}
+            </li>
+          )
+        })}
       </ul>
       {target ? (
         <ReasonSheet

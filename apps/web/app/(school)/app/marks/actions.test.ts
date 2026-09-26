@@ -21,6 +21,7 @@ const mockSave = vi.fn()
 const mockSubmit = vi.fn()
 const mockLock = vi.fn()
 const mockUnlock = vi.fn()
+const mockReopen = vi.fn()
 vi.mock("@acadigma/db", () => ({
   requireWritable: (...a: unknown[]) => mockRequireWritable(...a),
 }))
@@ -29,10 +30,16 @@ vi.mock("@acadigma/db/repositories/marks", () => ({
   submitExamSubject: (...a: unknown[]) => mockSubmit(...a),
   lockExamSubject: (...a: unknown[]) => mockLock(...a),
   unlockExamSubject: (...a: unknown[]) => mockUnlock(...a),
+  setEntryClosesOn: (...a: unknown[]) => mockReopen(...a),
 }))
 
-const { saveMarks, submitExamSubject, lockExamSubject, unlockExamSubject } =
-  await import("./actions")
+const {
+  saveMarks,
+  submitExamSubject,
+  lockExamSubject,
+  unlockExamSubject,
+  reopenMarksEntry,
+} = await import("./actions")
 
 const ENTRY = {
   studentId: "55555555-5555-4555-8555-555555555555",
@@ -57,6 +64,7 @@ beforeEach(() => {
   })
   mockLock.mockResolvedValue({ ok: true, data: undefined })
   mockUnlock.mockResolvedValue({ ok: true, data: undefined })
+  mockReopen.mockResolvedValue({ ok: true, data: undefined })
 })
 
 describe("saveMarks", () => {
@@ -173,5 +181,22 @@ describe("lockExamSubject / unlockExamSubject (D-307)", () => {
     const result = await lockExamSubject({ examSubjectId: PAPER })
     expect(!result.ok && result.error.code).toBe("payment_required")
     expect(mockLock).not.toHaveBeenCalled()
+  })
+})
+
+describe("reopenMarksEntry (D-307 review)", () => {
+  it("sets the close date to 7 days from today for an admin", async () => {
+    ctx.role = "admin"
+    expect((await reopenMarksEntry({ examSubjectId: PAPER })).ok).toBe(true)
+    const closesOn = mockReopen.mock.calls[0]?.[3] as string
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Dhaka",
+    }).format(new Date())
+    expect((Date.parse(closesOn) - Date.parse(today)) / 86_400_000).toBe(7)
+  })
+
+  it("refuses a teacher", async () => {
+    expect((await reopenMarksEntry({ examSubjectId: PAPER })).ok).toBe(false)
+    expect(mockReopen).not.toHaveBeenCalled()
   })
 })

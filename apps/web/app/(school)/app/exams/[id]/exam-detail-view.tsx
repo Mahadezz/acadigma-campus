@@ -58,6 +58,7 @@ export function ExamDetailView({
   canReadResults,
   publishCandidates,
   teachers,
+  today,
 }: {
   t: T
   locale: Locale
@@ -71,6 +72,8 @@ export function ExamDetailView({
    * (D-306). Null otherwise: "Publish" then moves the status directly. */
   publishCandidates: PublishCandidate[] | null
   teachers: TeacherOption[]
+  /** The school's calendar day (ISO), for the progress rows' Closed badge. */
+  today: string
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -272,7 +275,13 @@ export function ExamDetailView({
       ) : null}
 
       {canWrite && locked ? (
-        <MarksProgress t={t} locale={locale} exam={exam} teachers={teachers} />
+        <MarksProgress
+          t={t}
+          locale={locale}
+          exam={exam}
+          teachers={teachers}
+          today={today}
+        />
       ) : null}
 
       {sections.map((label) => (

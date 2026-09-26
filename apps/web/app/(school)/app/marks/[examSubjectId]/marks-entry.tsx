@@ -31,6 +31,7 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
+import { examDateFormatter } from "../../exams/format"
 import { saveMarks, submitExamSubject } from "../actions"
 
 type T = Messages["marks"]
@@ -308,13 +309,17 @@ export function MarksEntry({
     })
   }
 
+  const fmt = examDateFormatter(locale)
   const windowText =
     sheet.entryOpensOn && sheet.entryClosesOn
-      ? fill(t.window, { from: sheet.entryOpensOn, to: sheet.entryClosesOn })
+      ? fill(t.window, {
+          from: fmt(sheet.entryOpensOn),
+          to: fmt(sheet.entryClosesOn),
+        })
       : sheet.entryOpensOn
-        ? fill(t.windowFrom, { from: sheet.entryOpensOn })
+        ? fill(t.windowFrom, { from: fmt(sheet.entryOpensOn) })
         : sheet.entryClosesOn
-          ? fill(t.windowTo, { to: sheet.entryClosesOn })
+          ? fill(t.windowTo, { to: fmt(sheet.entryClosesOn) })
           : null
 
   const focusedRow = sheet.rows.find((r) => r.studentId === focused)
@@ -344,6 +349,23 @@ export function MarksEntry({
           </p>
         ) : null}
         {submitted ? <Badge variant="outline">{t.submittedBadge}</Badge> : null}
+        {lateReasonRequired ? (
+          // In the header, not the sticky bar: the phone keypad would cover it.
+          <div className="space-y-1 pt-2">
+            <Label htmlFor="marks-late-reason">{t.lateReason}</Label>
+            <Input
+              id="marks-late-reason"
+              value={lateReason}
+              maxLength={500}
+              aria-describedby="marks-late-help"
+              onChange={(e) => setLateReason(e.target.value)}
+              className="h-11"
+            />
+            <p id="marks-late-help" className="text-muted-foreground text-xs">
+              {t.lateHelp} {t.noStudentDetails}
+            </p>
+          </div>
+        ) : null}
         {!readOnly ? (
           <p className="text-muted-foreground hidden text-xs lg:block">
             {t.keysHint}
@@ -475,22 +497,6 @@ export function MarksEntry({
         <div className="bg-background sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 space-y-2 border-t py-3 lg:bottom-0">
           {notice ? (
             <InlineAlert tone={notice.tone}>{notice.text}</InlineAlert>
-          ) : null}
-          {lateReasonRequired ? (
-            <div className="space-y-1">
-              <Label htmlFor="marks-late-reason">{t.lateReason}</Label>
-              <Input
-                id="marks-late-reason"
-                value={lateReason}
-                maxLength={500}
-                aria-describedby="marks-late-help"
-                onChange={(e) => setLateReason(e.target.value)}
-                className="h-11"
-              />
-              <p id="marks-late-help" className="text-muted-foreground text-xs">
-                {t.lateHelp}
-              </p>
-            </div>
           ) : null}
           <div className="flex min-h-11 flex-wrap items-center gap-2">
             <span className="text-muted-foreground min-w-0 truncate text-sm">

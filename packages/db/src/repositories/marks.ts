@@ -38,7 +38,7 @@ type PaperRow = {
   exam_date: string | null
   entry_opens_on: string | null
   entry_closes_on: string | null
-  exams: { name: string; status: string }
+  exams: { name: string; status: string; ends_on: string | null }
   subjects: { name: string; name_bn: string | null }
   sections: {
     name: string
@@ -81,7 +81,7 @@ export async function getMarkSheet(
       .select(
         "id, exam_id, section_id, full_marks, pass_marks, status, teacher_id, " +
           "exam_date, entry_opens_on, entry_closes_on, " +
-          "exams(name, status), subjects(name, name_bn), " +
+          "exams(name, status, ends_on), subjects(name, name_bn), " +
           "sections(name, class_teacher_id, grade_levels(name))"
       )
       .eq("workspace_id", ctx.workspaceId)
@@ -131,6 +131,7 @@ export async function getMarkSheet(
     examDate: p.exam_date,
     entryOpensOn: p.entry_opens_on,
     entryClosesOn: p.entry_closes_on,
+    examEndsOn: p.exams.ends_on,
   })
 
   return ok({
@@ -351,5 +352,27 @@ export async function unlockExamSubject(
     p_reason: reason,
   })
   if (error) return err(fromDbError(error))
+  return ok(undefined)
+}
+
+/**
+ * "Reopen 7 days" (D-307 review): an owner/admin sets a paper's
+ * `entry_closes_on` (RLS: owner/admin write; audited as
+ * `exam_subjects.update`).
+ */
+export async function setEntryClosesOn(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  paperId: string,
+  closesOn: string
+): Promise<Result<void, ApiError>> {
+  const { data, error } = await client
+    .from("exam_subjects")
+    .update({ entry_closes_on: closesOn })
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("id", paperId)
+    .select("id")
+  if (error) return err(fromDbError(error))
+  if (!data || data.length === 0) return err(NOT_FOUND)
   return ok(undefined)
 }

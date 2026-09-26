@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-06 Part 4, non-offline half (demo cut) — submit, lock,
--- unlock and the entry window (20260926033816_marks_submit_lock.sql, D-307)
+-- unlock and the entry window (20260926063128_marks_submit_lock.sql, D-307)
 --
 --   A. submit_exam_subject: only the paper's teacher or owner/admin (not
 --      the class teacher, another subject's teacher, staff or another
@@ -19,7 +19,7 @@
 --      own.
 -- =====================================================================
 begin;
-select plan(49);
+select plan(53);
 
 create schema if not exists tests;
 
@@ -231,7 +231,10 @@ select throws_ok(format($$select public.lock_exam_subject(%L, %L)$$,
 select throws_ok($$select tests.save('maths', 's3', 20)$$, '42501', 'SUBJECT_LOCKED',
   'a locked paper refuses save_marks, even from the owner');
 select throws_ok(format($$update public.exam_subjects set status = 'submitted' where id = %L$$, tests.id('maths')),
-  '22023', 'REASON_REQUIRED', 'the chain refuses an unlock without a reason, even by a direct update');
+  '42501', 'UNLOCK_VIA_RPC_ONLY', 'a direct update cannot unlock a paper');
+select throws_ok(format($$update public.exam_subjects set status = 'submitted', status_reason = 'direct' where id = %L$$,
+  tests.id('maths')),
+  '42501', 'UNLOCK_VIA_RPC_ONLY', 'not even with a reason: only unlock_exam_subject unlocks (LOW-1)');
 select throws_ok(format($$update public.exam_subjects set status = 'locked' where id = %L$$, tests.id('english')),
   '22023', 'INVALID_TRANSITION', 'and a jump from pending to locked');
 select tests.logout();
@@ -290,7 +293,12 @@ select is(
 -- =====================================================================
 update public.exam_subjects
    set exam_date = app.school_today('57000000-0000-4000-b000-000000000001') - 10
- where id = tests.id('maths');   -- window: 10 to 3 days ago
+ where id = tests.id('maths');   -- window: 10 to 3 days ago (the exam has no ends_on)
+select is(
+  (select w.closes_on from public.exam_subjects es, app.marks_entry_window(es, app.school_today(es.workspace_id) - 2) w
+    where es.id = tests.id('maths')),
+  app.school_today('57000000-0000-4000-b000-000000000001') + 5,
+  'by default a paper closes 7 days after the later of its date and the exam''s end');
 
 select tests.login('57000000-0000-4000-a000-000000000002');   -- the Maths teacher
 select throws_ok($$select tests.save('maths', 's3', 20)$$, '42501', 'OUTSIDE_ENTRY_WINDOW',
@@ -324,6 +332,13 @@ select is((select (r ->> 'saved')::int from tests.save('maths', 's3', 25) r), 1,
 select tests.logout();
 select is(
   (select edited_after_window from public.marks where exam_subject_id = tests.id('maths') and student_id = tests.id('s3')),
+  true, 'the late stamp is sticky: an in-window rewrite does not clear it');
+select tests.login('57000000-0000-4000-a000-000000000002');
+select is((select (r ->> 'saved')::int from tests.save('maths', 's2', 30) r), 1,
+  'the teacher changes another mark inside the window');
+select tests.logout();
+select is(
+  (select edited_after_window from public.marks where exam_subject_id = tests.id('maths') and student_id = tests.id('s2')),
   false, 'a mark written inside the window is not stamped');
 
 update public.exam_subjects

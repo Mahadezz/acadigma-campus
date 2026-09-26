@@ -8,13 +8,16 @@
 --     status_reason (the unlock reason, like exams.status_reason). The
 --     effective window is app.marks_entry_window: opens on the date set,
 --     else the paper's exam_date; closes on the date set, else 7 days
---     after it opens. No date at all = no window (open while the exam is
---     in marks_entry, as before).
+--     after the later of its opening and the exam's ends_on (a BD exam
+--     runs about two weeks; D-307 review). No date at all = no window
+--     (open while the exam is in marks_entry, as before). Papers of exams
+--     already in marks_entry are backfilled to stay open at least 7 more
+--     days, so nobody is locked out on deploy.
 --   * public.save_marks: outside the window a teacher is refused
 --     (OUTSIDE_ENTRY_WINDOW); an owner/admin must give `late_reason`
 --     (REASON_REQUIRED without it), the written rows are stamped
---     marks.edited_after_window and the reason goes in the marks.entered
---     audit event. Everything else is D-304's function unchanged.
+--     marks.edited_after_window (sticky: a later in-window write does not
+--     clear it) and the reason goes in the marks.entered audit event. Everything else is D-304's function unchanged.
 --   * public.submit_exam_subject: the paper's teacher or an owner/admin.
 --     Missing students come back as a warning list and nothing changes,
 --     unless the caller confirms (§7 INCOMPLETE_ENTRY is a warning). The
@@ -26,7 +29,10 @@
 --     app.tg_exams_clear_results deletes the results and logs
 --     results.cleared. A published exam must be unpublished first.
 --   * The paper chain (app.tg_exam_papers_lock) gains its one reversal,
---     locked -> submitted, with a reason; a forward step clears it.
+--     locked -> submitted, with a reason, and ONLY through
+--     unlock_exam_subject (a transaction-local flag), so a direct UPDATE
+--     cannot skip EXAM_PUBLISHED or the marks_locked -> marks_entry move
+--     (security review LOW-1). A forward step clears the reason.
 --   * Notifications: F-ID-07 has no delivery yet, so marks.due and
 --     marks.submitted are TODO(D-307); the audit events are the record.
 -- =====================================================================
@@ -56,7 +62,7 @@ comment on column public.marks.edited_after_window is
 -- The effective window, in one place (the screen mirrors it in
 -- packages/domain/src/academic/marks.ts marksEntryWindow).
 -- ---------------------------------------------------------------------
-create or replace function app.marks_entry_window(p_paper public.exam_subjects,
+create or replace function app.marks_entry_window(p_paper public.exam_subjects, p_exam_ends_on date,
                                                   out opens_on date, out closes_on date)
 language sql
 immutable
@@ -64,11 +70,24 @@ set search_path = ''
 as $$
   -- ponytail: 7 days is §5.11's default; a per-school setting
   -- (grading.entry_window_days) when a school asks for another.
+  -- greatest() skips nulls, so a paper with no date closes 7 days after
+  -- the exam ends, and neither date = no limit.
   select coalesce(p_paper.entry_opens_on, p_paper.exam_date),
-         coalesce(p_paper.entry_closes_on, coalesce(p_paper.entry_opens_on, p_paper.exam_date) + 7)
+         coalesce(p_paper.entry_closes_on,
+                  greatest(coalesce(p_paper.entry_opens_on, p_paper.exam_date), p_exam_ends_on) + 7)
 $$;
 
-revoke all on function app.marks_entry_window(public.exam_subjects) from public, anon, authenticated;
+revoke all on function app.marks_entry_window(public.exam_subjects, date) from public, anon, authenticated;
+
+-- Backfill (D-307 review): papers of exams already taking marks stay open at
+-- least 7 more days, so the new window locks nobody out on deploy.
+update public.exam_subjects es
+   set entry_closes_on = greatest(current_date + 7, es.entry_opens_on)
+  from public.exams e
+ where e.id = es.exam_id
+   and e.status = 'marks_entry'
+   and coalesce((select w.closes_on from app.marks_entry_window(es, e.ends_on) w), 'infinity'::date)
+       < current_date + 7;
 
 -- ---------------------------------------------------------------------
 -- The paper chain gains its reversal (§5.12): locked -> submitted with a
@@ -125,6 +144,11 @@ begin
   end if;
   if new.status is distinct from old.status then
     if old.status = 'locked' and new.status = 'submitted' then
+      -- Only unlock_exam_subject, which refuses a published exam and moves
+      -- a marks_locked one back to marks_entry (security review LOW-1).
+      if current_setting('app.unlock_via_rpc', true) is distinct from 'on' then
+        raise exception 'UNLOCK_VIA_RPC_ONLY' using errcode = '42501';
+      end if;
       if new.status_reason is null then
         raise exception 'REASON_REQUIRED' using errcode = '22023';
       end if;
@@ -234,7 +258,7 @@ begin
 
   -- §5.11: teachers inside the window; an owner/admin beyond it, with a
   -- reason, stamped (like attendance's edited_after_window, D-104).
-  select w.opens_on, w.closes_on into v_opens, v_closes from app.marks_entry_window(v_paper) w;
+  select w.opens_on, w.closes_on into v_opens, v_closes from app.marks_entry_window(v_paper, v_exam.ends_on) w;
   v_today := app.school_today(p_workspace_id);
   v_late := coalesce(v_today < v_opens, false) or coalesce(v_today > v_closes, false);
   if v_late then
@@ -309,7 +333,8 @@ begin
   on conflict (exam_subject_id, student_id) do update
      set status = excluded.status, obtained = excluded.obtained,
          enrollment_id = excluded.enrollment_id, entered_by = excluded.entered_by,
-         edited_after_window = excluded.edited_after_window
+         -- Sticky: a later in-window write does not hide a late one (LOW-2).
+         edited_after_window = public.marks.edited_after_window or excluded.edited_after_window
    where (public.marks.status, public.marks.obtained)
          is distinct from (excluded.status, excluded.obtained);
   get diagnostics v_written = row_count;
@@ -534,7 +559,9 @@ begin
   if app.current_correlation_id() is null then
     perform set_config('app.correlation_id', gen_random_uuid()::text, true);
   end if;
+  perform set_config('app.unlock_via_rpc', 'on', true);
   update public.exam_subjects set status = 'submitted', status_reason = v_reason where id = v_paper.id;
+  perform set_config('app.unlock_via_rpc', '', true);
   perform app.log_audit_event('marks.unlocked', p_workspace_id, 'exam_subjects', v_paper.id,
     null, jsonb_build_object('exam_id', v_paper.exam_id, 'reason', v_reason));
   -- Marks can change again, so results computed from them are stale: the
