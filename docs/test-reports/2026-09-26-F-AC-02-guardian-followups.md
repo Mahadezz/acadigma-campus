@@ -6,7 +6,7 @@
 | Part    | D-108 follow-ups: staff who are also parents; class-teacher invites (F-ID-04 OQ-6)                 |
 | Spec    | `docs/features/02-academics/F-AC-02-students-and-admission.md` §2, §11; `F-AC-10-parent-portal.md` |
 | PR      | #85                                                                                                |
-| Status  | **PASS** locally; CI numbers in §3                                                                 |
+| Status  | **PASS** (CI run 36262166718, head 2bf6652)                                                        |
 | Date    | 2026-09-26                                                                                         |
 | Run by  | Identity lane builder (Claude)                                                                     |
 
@@ -52,11 +52,11 @@ A teacher or staff member whose child studies at their school accepts a guardian
 
 ### Database (pgTAP)
 
-`39_guardian_followups.sql` **52 assertions** (was 39; section C added in the PR #85 fix round). The previous builder ran 39/39 and `38` locally before the PC restart. CI `db` job: _pending — filled in from the run below_.
+`39_guardian_followups.sql` **52 assertions** (was 39; section C added in the PR #85 fix round). The previous builder ran 39/39 and `38` locally before the PC restart. CI `db` job (run 36262166718): **46 files, 1350 assertions, PASS**, including `38` and `39` (52/52). The first CI run of the fix round failed 43/52 on a test bug (a membership probe without a school filter matched the personal workspace too); fixed in 2bf6652.
 
 ### Integration and end to end
 
-`packages/db/src/repositories/guardian-links.integration.test.ts` (5 cases) and the journey "a teacher who is also a parent sees only their own child and keeps the school app" passed locally for the previous builder (journeys 6/6 on port 3101). In CI the journey is skip-gated (OQ-27; `E2E_TEACHER_*`); `db-integration` runs the integration test.
+`packages/db/src/repositories/guardian-links.integration.test.ts` (5 cases) and the journey "a teacher who is also a parent sees only their own child and keeps the school app" passed locally for the previous builder (journeys 6/6 on port 3101). In CI the journey is skip-gated (OQ-27; `E2E_TEACHER_*`). CI `db-integration` (run 36262166718): **4 files, 12 tests passed**, `guardian-links.integration.test.ts` 5/5. CI `unit`: 152 files passed, 4 skipped.
 
 ### Gate (local)
 
