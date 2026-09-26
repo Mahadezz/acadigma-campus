@@ -1275,3 +1275,7 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 **Decision (lead, under owner authorization 2026-09-26):** `apps/web/vercel.json` sets `"git": { "deploymentEnabled": { "*": false, "main": true } }`. Branch pushes (feature branches, `handoff/live`, the changesets branches) create no Vercel deployment at all; `main` deploys as before. `ignoreCommand` stays as a second guard.
 
 **Consequences:** no preview URLs for PRs, which we already didn't use (CI runs Playwright against its own build, D-70). The Vercel check on PRs disappears; it was never required. Pro stays optional: revisit only if `main` alone ever exceeds the daily limit.
+
+## D-308 — Offline Part 1: read cache of the signed-in shells, purged on sign-out, sign-in, workspace switch, revocation and role change · PROPOSED · 2026-09-26
+
+**Context:** F-ID-11 Part 1 (D-71). Work in progress; the full entry lands before the PR is marked ready.
