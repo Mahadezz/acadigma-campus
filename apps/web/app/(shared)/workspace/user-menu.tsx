@@ -20,6 +20,7 @@ import {
 
 import { signOut } from "@/app/(auth)/actions"
 import { isLocale, setLocaleCookie, type Locale } from "@/lib/locale"
+import { purgeOnSignOut } from "@/lib/offline/check"
 
 import { updateLocale, updateUiPreferences } from "./actions"
 
@@ -88,7 +89,12 @@ export function UserMenu({ locale, t, showBasicModeSwitch }: UserMenuProps) {
   }
 
   function handleSignOut() {
-    startTransition(() => signOut())
+    startTransition(async () => {
+      // F-ID-11 §4.7 (D-308): pages cached for offline reading hold student
+      // data; they go before the session does.
+      await purgeOnSignOut()
+      await signOut()
+    })
   }
 
   function handleSwitchToBasicMode() {

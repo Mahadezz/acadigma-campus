@@ -21,6 +21,7 @@ import {
 import { Input } from "@acadigma/ui/components/input"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { OnlineOnly } from "@/app/(shared)/offline/online-only"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
@@ -148,16 +149,18 @@ export function GuardianAccess({
       {guardians
         .filter((g) => !linked.has(g.id))
         .map((g) => (
-          <Button
-            key={g.id}
-            variant="outline"
-            className="h-11 w-full sm:w-auto"
-            disabled={pending}
-            onClick={() => start(g)}
-          >
-            <UserPlusIcon aria-hidden="true" />
-            {t.invite.replace("{name}", nameOf(g))}
-          </Button>
+          // F-ID-11 §4.9: an invitation is made on the server.
+          <OnlineOnly key={g.id}>
+            <Button
+              variant="outline"
+              className="h-11 w-full sm:w-auto"
+              disabled={pending}
+              onClick={() => start(g)}
+            >
+              <UserPlusIcon aria-hidden="true" />
+              {t.invite.replace("{name}", nameOf(g))}
+            </Button>
+          </OnlineOnly>
         ))}
 
       <Dialog

@@ -1,6 +1,6 @@
 import { SkipToContent } from "@acadigma/ui/primitives/app-shell"
 
-import { getLocale } from "@/lib/i18n"
+import { getMessages } from "@/lib/i18n"
 import { getUiPreferences } from "@/lib/ui-preferences"
 
 import { hindSiliguri, inter, jetbrainsMono } from "./fonts"
@@ -49,7 +49,7 @@ export default async function RootLayout({
   // makes `:lang(bn)` in tokens.css (D-68: Bengali font, zero letter-spacing)
   // apply from first paint instead of only inside components that set their
   // own `lang`.
-  const locale = await getLocale()
+  const { locale, t } = await getMessages()
 
   // F-ID-10 §5.2/§3 (D-403): `data-text-size` drives the root font-size scale
   // (tokens.css) from the very first server render — the same "cookie/row on
@@ -70,7 +70,7 @@ export default async function RootLayout({
     >
       <body className="antialiased">
         <SkipToContent />
-        <Providers>{children}</Providers>
+        <Providers offlineCopy={t.offline}>{children}</Providers>
       </body>
     </html>
   )
