@@ -113,7 +113,13 @@ export function FormSheet({
             ) : null}
           </SheetHeader>
           <div className="px-4">{children}</div>
-          {footer ? <SheetFooter>{footer}</SheetFooter> : null}
+          {/* Sticky, so Save stays reachable in a long sheet at 360 px
+              (D-107, review of PR #73). */}
+          {footer ? (
+            <SheetFooter className="bg-background sticky bottom-0">
+              {footer}
+            </SheetFooter>
+          ) : null}
         </SheetContent>
       </Sheet>
     )

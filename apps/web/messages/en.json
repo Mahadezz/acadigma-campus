@@ -1110,7 +1110,8 @@
       "MEMBER_NOT_ELIGIBLE": "Pick an active teacher of this school.",
       "SUBJECT_TAKEN": "The school already has a subject with that name or code.",
       "generic": "Something went wrong. Try again.",
-      "readOnly": "This school is read-only right now, so nothing can be changed."
+      "readOnly": "This school is read-only right now, so nothing can be changed.",
+      "SUBJECT_ARCHIVED": "One of those subjects is archived. Reload and try again."
     },
     "subjectsEmpty": "No subjects yet.",
     "useStarter": "Use the NCTB starter list",
@@ -1131,7 +1132,16 @@
       "co_curricular": "Co-curricular"
     },
     "fourthBadge": "4th subject",
-    "readOnlyNote": "You can view classes and subjects. Only an owner or admin can change them."
+    "readOnlyNote": "You can view classes and subjects. Only an owner or admin can change them.",
+    "subjectsButton": "Subjects",
+    "sectionSubjectsTitle": "Subjects of {section}",
+    "sectionSubjectsDescription": "Tick the subjects this section takes and pick who teaches each one.",
+    "subjectTeacher": "Teacher for {subject}",
+    "noTeacher": "No teacher yet",
+    "subjectCountOne": "1 subject",
+    "subjectCountOther": "{count} subjects",
+    "noSectionSubjects": "No subjects yet",
+    "needSubjectsFirst": "Add subjects on the Subjects tab first."
   },
   "exams": {
     "title": "Exams",
