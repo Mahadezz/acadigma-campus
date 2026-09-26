@@ -1096,6 +1096,10 @@ Everything below is ours; nothing in the registry does it.
 | **`PeriodGrid`**       | Week grid from `working_days`; day-tabs on phone, full grid on desktop; current-period marker.                                                                                                                                                                            |
 | **`MoneyText`**        | Takes `bigint` **paisa** (ARCHITECTURE §4) and renders `৳12,50,000.00` in the **Indian digit grouping** (2,2,3 — `৳১২,৫০,০০০`), tabular figures, `<bdi>`-wrapped, `numerals="en" \| "bn"`, optional `sign` and `compact` (`৳12.5L`). Never do currency formatting inline. |
 | **`BnEnText`**         | Renders a mixed Bn/En string with correct `lang` attributes on each run, so the right font, line-height and screen-reader voice apply to each. Handles the numerals preference and `<bdi>` isolation. Every user-generated name goes through it.                          |
+| **`BasicShell`**       | F-ID-10 §4.10 (D-403/D-405): wraps `AppShell` with a top bar of only Home (hidden on the home screen — `isHome` prop, not `usePathname()`, this package never depends on `next`) + brand + Help, and no `bottomNav`/`sidebar`. Owns the `HelpSheet` open state.           |
+| **`ClassBlock`**       | F-ID-10 §4.4.2/§5.1: one full-width, ≥96px block per class assignment — title, student count, a tick/cross **icon and label** for today's attendance (never colour alone). Takes a `renderLink` (see `BottomNav`'s `NavLinkRenderer`), not a `next/link` import.          |
+| **`TodayStrip`**       | F-ID-10 §4.1: greeting + date, optional next-period line, and the to-do rows ("2 roll calls not taken") as big tappable links, or "Nothing waiting" when empty.                                                                                                           |
+| **`HelpSheet`**        | F-ID-10 §4.7: per-route catalogue text (caller supplies the looked-up lines) then **Call school office** (`tel:` link) or a "no phone yet" line + an owner/admin-only link to add one. Read aloud (§4.8) is Part 4, not built here.                                       |
 
 ---
 

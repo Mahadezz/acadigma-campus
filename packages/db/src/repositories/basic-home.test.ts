@@ -48,7 +48,10 @@ function fakeClient(options: {
   profileError?: boolean
   memberId?: string | null
   memberError?: boolean
-  examSubjects?: { section_id: string; subjects: { name: string; name_bn: string | null } | null }[]
+  examSubjects?: {
+    section_id: string
+    subjects: { name: string; name_bn: string | null } | null
+  }[]
   examSubjectsError?: boolean
 }): AcadigmaSupabaseClient {
   const {
@@ -84,9 +87,7 @@ function fakeClient(options: {
           select: () => ({
             eq: () => ({
               maybeSingle: async () => ({
-                data: profileError
-                  ? null
-                  : { full_name: profileFullName },
+                data: profileError ? null : { full_name: profileFullName },
                 error: profileError ? { message: "down" } : null,
               }),
             }),
@@ -127,7 +128,9 @@ function fakeClient(options: {
   } as any as AcadigmaSupabaseClient
 }
 
-function section(overrides: Partial<DayJsonSection> & { section_id: string }): DayJsonSection {
+function section(
+  overrides: Partial<DayJsonSection> & { section_id: string }
+): DayJsonSection {
   return {
     section_name: "ক",
     grade_name: "Class 6",

@@ -2,6 +2,7 @@ import { BellIcon } from "lucide-react"
 
 import { planReadOnlyApiError } from "@acadigma/contracts"
 import { requireWritable } from "@acadigma/db"
+import { getSchoolProfile } from "@acadigma/db/repositories/settings"
 import { getNavConfig, type NavConfig } from "@acadigma/domain/nav"
 import { Button } from "@acadigma/ui/components/button"
 import { AppShell } from "@acadigma/ui/primitives/app-shell"
@@ -16,8 +17,10 @@ import { getMessages } from "@/lib/i18n"
 import { onlyImplemented } from "@/lib/implemented-routes"
 import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
 import { createClient } from "@/lib/supabase/server"
+import { getUiPreferences } from "@/lib/ui-preferences"
 import { requireShell } from "@/lib/workspace"
 
+import { BasicShellWrapper } from "./basic-shell-wrapper"
 import { SchoolBottomNav, SchoolSidebar } from "./nav"
 
 /**
@@ -49,10 +52,66 @@ export default async function SchoolLayout({
   const { t, locale } = await getMessages()
 
   const client = await createClient()
-
-  const [entitledModules, writable, workspacesResult] = await Promise.all([
-    resolveEntitledNavModules(ctx, client),
+  const [writable, ui] = await Promise.all([
     requireWritable(ctx, client),
+    getUiPreferences(),
+  ])
+
+  const readOnlyBanner = writable.ok ? null : (
+    // F-CM-06 Part 4 (D-62): a Pro trial past trial_ends_at (or any other
+    // access_mode=read_only cause) shows here, on every screen. D-300: every
+    // write is refused (server action and database); reads, exports, billing,
+    // sign-out and removing access still work.
+    <InlineAlert
+      tone="error"
+      title={t.workspace.readOnly.title}
+      className="mb-4"
+    >
+      {planReadOnlyApiError(writable.error).message}
+    </InlineAlert>
+  )
+
+  // F-ID-10 §4.10 (D-403/D-405): basic mode replaces the ENTIRE shell below
+  // (no sidebar, no bottom nav — "the home is the nav") for every page under
+  // `/app`, not only `/app/home` — see `basic-shell-wrapper.tsx`'s docblock
+  // for why that is deliberate rather than a narrower "only /app/home" check.
+  // §2 note 4: hidden for `staff`, who have no classes.
+  if (ui.uiMode === "basic" && ctx.role !== "staff") {
+    const profile = await getSchoolProfile(client, ctx)
+    const phone = profile.ok ? profile.data.fields.contact_phone : null
+    const s = t.basicMode
+    return (
+      <BasicShellWrapper
+        homeHref="/app/home"
+        homeLabel={s.home.homeLabel}
+        brand={
+          <Logo
+            product="campus"
+            className="[&>span]:sr-only sm:[&>span]:not-sr-only"
+          />
+        }
+        helpLabel={s.home.helpLabel}
+        helpTitle={s.help.title}
+        homeLines={s.help.routes.home}
+        defaultLines={s.help.routes.default}
+        phone={phone}
+        callLabel={s.help.callSchoolOffice.replace("{phone}", phone ?? "")}
+        noPhoneLine={s.help.noPhoneYet}
+        addPhoneHref={
+          ctx.role === "owner" || ctx.role === "admin"
+            ? "/app/settings/school"
+            : undefined
+        }
+        addPhoneLabel={s.help.addPhoneLink}
+      >
+        {readOnlyBanner}
+        {children}
+      </BasicShellWrapper>
+    )
+  }
+
+  const [entitledModules, workspacesResult] = await Promise.all([
+    resolveEntitledNavModules(ctx, client),
     listMyWorkspaces(),
   ])
   // Only links to pages that exist — no prefetch 404s (D-400).
@@ -125,19 +184,7 @@ export default async function SchoolLayout({
         />
       }
     >
-      {writable.ok ? null : (
-        // F-CM-06 Part 4 (D-62): a Pro trial past trial_ends_at (or any other
-        // access_mode=read_only cause) shows here, on every screen. D-300: every
-        // write is refused (server action and database); reads, exports, billing,
-        // sign-out and removing access still work.
-        <InlineAlert
-          tone="error"
-          title={t.workspace.readOnly.title}
-          className="mb-4"
-        >
-          {planReadOnlyApiError(writable.error).message}
-        </InlineAlert>
-      )}
+      {readOnlyBanner}
       {children}
     </AppShell>
   )

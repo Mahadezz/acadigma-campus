@@ -21,10 +21,10 @@ import {
 } from "@acadigma/domain/basic-home"
 import { clockTimeIn } from "@acadigma/domain/time"
 
+import { getAttendanceDay } from "./attendance"
+
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
-
-import { getAttendanceDay } from "./attendance"
 
 const UNAVAILABLE: ApiError = apiError(
   "dependency_unavailable",
@@ -57,9 +57,11 @@ async function resolveMyAssignments(
   ctx: WorkspaceContext,
   classTeacherSectionIds: readonly string[]
 ): Promise<Result<Assignment[], ApiError>> {
-  const assignments: Assignment[] = classTeacherSectionIds.map(
-    (sectionId) => ({ sectionId, subject: null, subjectBn: null })
-  )
+  const assignments: Assignment[] = classTeacherSectionIds.map((sectionId) => ({
+    sectionId,
+    subject: null,
+    subjectBn: null,
+  }))
 
   const member = await supabase
     .from("workspace_members")

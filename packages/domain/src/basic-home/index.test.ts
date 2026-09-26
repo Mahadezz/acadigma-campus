@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import { buildClassBlocks, buildTodos, greetingPeriod } from "./index"
-
 import type { AttendanceDaySection } from "@acadigma/contracts"
+
+import { buildClassBlocks, buildTodos, greetingPeriod } from "./index"
 
 function section(
   overrides: Partial<AttendanceDaySection> & { sectionId: string }
@@ -35,7 +35,22 @@ describe("greetingPeriod", () => {
 })
 
 describe("buildTodos", () => {
-  const taken = section({ sectionId: "s1", session: { id: "sess1", updatedAt: "", takenAt: "", takenByName: null, bulkMarked: false, expected: 38, present: 36, absent: 2, late: 0, excused: 0, halfDay: 0 } })
+  const taken = section({
+    sectionId: "s1",
+    session: {
+      id: "sess1",
+      updatedAt: "",
+      takenAt: "",
+      takenByName: null,
+      bulkMarked: false,
+      expected: 38,
+      present: 36,
+      absent: 2,
+      late: 0,
+      excused: 0,
+      halfDay: 0,
+    },
+  })
   const notTaken = section({ sectionId: "s2" })
 
   it("is empty on a non-school day, even with unmarked sections", () => {
@@ -48,14 +63,21 @@ describe("buildTodos", () => {
 
   it("counts assigned sections without a session today", () => {
     expect(
-      buildTodos(true, ["s1", "s2"], new Map([["s1", taken], ["s2", notTaken]]))
+      buildTodos(
+        true,
+        ["s1", "s2"],
+        new Map([
+          ["s1", taken],
+          ["s2", notTaken],
+        ])
+      )
     ).toEqual([{ kind: "roll_calls_not_taken", count: 1 }])
   })
 
   it("does not double count a section id repeated in the assignment list", () => {
-    expect(
-      buildTodos(true, ["s2", "s2"], new Map([["s2", notTaken]]))
-    ).toEqual([{ kind: "roll_calls_not_taken", count: 1 }])
+    expect(buildTodos(true, ["s2", "s2"], new Map([["s2", notTaken]]))).toEqual(
+      [{ kind: "roll_calls_not_taken", count: 1 }]
+    )
   })
 })
 
@@ -99,7 +121,19 @@ describe("buildClassBlocks", () => {
     const s = section({
       sectionId: "s1",
       enrolled: 40,
-      session: { id: "sess1", updatedAt: "", takenAt: "", takenByName: null, bulkMarked: false, expected: 38, present: 36, absent: 2, late: 0, excused: 0, halfDay: 0 },
+      session: {
+        id: "sess1",
+        updatedAt: "",
+        takenAt: "",
+        takenByName: null,
+        bulkMarked: false,
+        expected: 38,
+        present: 36,
+        absent: 2,
+        late: 0,
+        excused: 0,
+        halfDay: 0,
+      },
     })
     const [block] = buildClassBlocks(
       true,
@@ -114,7 +148,19 @@ describe("buildClassBlocks", () => {
   it("marks every block not_school_day on a non-school day even with a session", () => {
     const s = section({
       sectionId: "s1",
-      session: { id: "sess1", updatedAt: "", takenAt: "", takenByName: null, bulkMarked: false, expected: 38, present: 36, absent: 2, late: 0, excused: 0, halfDay: 0 },
+      session: {
+        id: "sess1",
+        updatedAt: "",
+        takenAt: "",
+        takenByName: null,
+        bulkMarked: false,
+        expected: 38,
+        present: 36,
+        absent: 2,
+        late: 0,
+        excused: 0,
+        halfDay: 0,
+      },
     })
     const [block] = buildClassBlocks(
       false,
@@ -136,7 +182,11 @@ describe("buildClassBlocks", () => {
 
   it("preserves the grade/section order of orderedSections", () => {
     const a = section({ sectionId: "s1", sectionName: "ক" })
-    const b = section({ sectionId: "s2", sectionName: "খ", gradeName: "Class 7" })
+    const b = section({
+      sectionId: "s2",
+      sectionName: "খ",
+      gradeName: "Class 7",
+    })
     const blocks = buildClassBlocks(
       true,
       [

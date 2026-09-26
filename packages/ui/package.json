@@ -12,6 +12,7 @@
     "./tokens/tokens.css": "./tokens/tokens.css",
     "./components/*": "./src/components/ui/*.tsx",
     "./primitives/nav-config": "./src/primitives/nav-config.ts",
+    "./primitives/link-renderer": "./src/primitives/link-renderer.ts",
     "./primitives/*": "./src/primitives/*.tsx",
     "./hooks/*": "./src/hooks/*.ts",
     "./lib/utils": "./src/lib/utils.ts",

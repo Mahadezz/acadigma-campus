@@ -1,30 +1,167 @@
+import Link from "next/link"
+
+import { GraduationCapIcon } from "lucide-react"
+
+import { getBasicHome } from "@acadigma/db/repositories/basic-home"
+import { getSchoolProfile } from "@acadigma/db/repositories/settings"
+import { Button } from "@acadigma/ui/components/button"
+import { ClassBlock } from "@acadigma/ui/primitives/class-block"
+import { EmptyState } from "@acadigma/ui/primitives/empty-state"
+import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
+import type { SimpleLinkRenderer } from "@acadigma/ui/primitives/link-renderer"
+import { TodayStrip } from "@acadigma/ui/primitives/today-strip"
+
 import { getMessages } from "@/lib/i18n"
+import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
-import { SwitchToFullAppButton } from "./switch-to-full-app-button"
+import { EssentialsRow } from "./essentials-row"
+import { classBlockTitle, fill, pluralize } from "./format"
 
 import type { Metadata } from "next"
 
 export const metadata: Metadata = { title: "Basic mode" }
 
+const renderLink: SimpleLinkRenderer = ({ href, className, children }) => (
+  <Link href={href} className={className}>
+    {children}
+  </Link>
+)
+
 /**
- * F-ID-10 §4.3/§6 `/app/home` — this Part's landing target for `ui_mode
- * ='basic'` (AC1), kept deliberately minimal. The class-by-class home
- * (`TodayStrip`, `ClassBlock`, `getBasicHome`) is F-ID-10 Part 2, not this
- * PR: this screen only proves the preference actually took effect (AC1,
- * AC2) and says outright, in its own copy, that the real home is still
- * coming — it does not pretend to be the finished feature.
+ * F-ID-10 §4.4/§6 `/app/home` — the real basic-mode home (Part 2). Today
+ * strip (greeting + to-dos), one `ClassBlock` per assignment from
+ * `getBasicHome`, an "All classes" block for owner/admin (§4.4 footnote ¹,
+ * AC16), then the essentials row. Every read goes through `getBasicHome`
+ * (itself built only from already-shipped repositories/RLS, D-405) — this
+ * page adds one more query beyond that, `getSchoolProfile`, only for the
+ * empty state's Call school office link.
  */
-export default async function BasicHomePlaceholderPage() {
-  await requireShell("school")
-  const { t } = await getMessages()
+export default async function BasicHomePage() {
+  const ctx = await requireShell("school")
+  const { t, locale } = await getMessages()
   const s = t.basicMode.home
+  const supabase = await createClient()
+
+  const home = await getBasicHome(supabase, ctx)
+  if (!home.ok) {
+    return (
+      <div className="mx-auto max-w-md">
+        <InlineAlert tone="error">{home.error.message}</InlineAlert>
+      </div>
+    )
+  }
+  const data = home.data
+
+  const greetingLabel = fill(
+    data.greetingPeriod === "morning"
+      ? s.greetingMorning
+      : data.greetingPeriod === "afternoon"
+        ? s.greetingAfternoon
+        : s.greetingEvening,
+    { name: data.fullName }
+  )
+  const dateLabel = new Intl.DateTimeFormat(
+    locale === "bn" ? "bn-BD-u-nu-latn" : "en-GB",
+    { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }
+  ).format(new Date(`${data.todayIso}T00:00:00Z`))
+
+  const todos = data.todos.map((todo) => ({
+    key: todo.kind,
+    label: pluralize(todo.count, s.todoRollCallsOne, s.todoRollCallsOther),
+    // The class hub (Part 3) will own a real "roll calls due" view; until
+    // then this opens the existing Today attendance overview, which already
+    // lists every section's taken/not-taken state (D-405).
+    href: "/app/attendance",
+  }))
+
+  const noClasses = data.classes.length === 0 && !data.showAllClasses
+  const profile = noClasses ? await getSchoolProfile(supabase, ctx) : null
+  const phone = profile?.ok ? profile.data.fields.contact_phone : null
 
   return (
-    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 text-center">
-      <h2 className="text-lg font-semibold tracking-tight">{s.title}</h2>
-      <p className="text-muted-foreground text-sm">{s.message}</p>
-      <SwitchToFullAppButton label={s.switchToFullApp} />
+    <div className="mx-auto flex max-w-md flex-col gap-6">
+      <TodayStrip
+        greeting={greetingLabel}
+        dateLabel={dateLabel}
+        todos={todos}
+        allDoneLabel={s.allDone}
+        renderLink={renderLink}
+      />
+
+      {noClasses ? (
+        <EmptyState
+          title={s.emptyTitle}
+          description={s.emptyDescription}
+          action={
+            phone ? (
+              <Button asChild size="lg" className="min-h-14">
+                <a href={`tel:${phone}`}>
+                  {fill(t.basicMode.help.callSchoolOffice, { phone })}
+                </a>
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {data.classes.map((cls, i) => (
+            <ClassBlock
+              // A section can appear more than once (class teacher AND a
+              // subject there, §2 footnote ²) — sectionId alone is not a
+              // unique key.
+              key={`${cls.sectionId}-${cls.subject ?? "class-teacher"}-${i}`}
+              href={`/app/attendance/${cls.sectionId}`}
+              title={classBlockTitle(locale, cls, s.classTeacher)}
+              studentCountLabel={pluralize(
+                cls.studentCount,
+                s.studentCountOne,
+                s.studentCountOther
+              )}
+              attendanceState={cls.attendanceToday}
+              attendanceLabel={
+                cls.attendanceToday === "taken"
+                  ? fill(s.attendanceTaken, {
+                      taken: cls.taken ?? 0,
+                      expected: cls.expected ?? 0,
+                    })
+                  : cls.attendanceToday === "not_taken"
+                    ? s.attendanceNotTaken
+                    : s.attendanceNotSchoolDay
+              }
+              renderLink={renderLink}
+            />
+          ))}
+
+          {data.showAllClasses ? (
+            <Link
+              href="/app/classes/all"
+              className="border-border bg-card text-card-foreground focus-visible:ring-ring flex min-h-24 w-full items-center gap-3 rounded-lg border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-hidden active:opacity-90"
+            >
+              <GraduationCapIcon
+                className="size-10 shrink-0"
+                aria-hidden="true"
+              />
+              <span className="flex flex-col">
+                <span className="text-lg leading-tight font-semibold tracking-tight">
+                  {s.allClasses}
+                </span>
+                <span className="text-muted-foreground text-base">
+                  {s.allClassesDescription}
+                </span>
+              </span>
+            </Link>
+          ) : null}
+        </div>
+      )}
+
+      <EssentialsRow
+        t={{
+          profile: s.profile,
+          settingsLabel: s.settingsLabel,
+          switchToFullApp: s.switchToFullApp,
+        }}
+      />
     </div>
   )
 }
