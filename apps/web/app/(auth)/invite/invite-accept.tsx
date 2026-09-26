@@ -40,8 +40,19 @@ function forgetToken() {
 type State =
   | { kind: "loading" }
   | { kind: "no-token" }
+  | { kind: "signed-out" }
   | { kind: "error"; message: string }
-  | { kind: "preview"; preview: GuardianInvitationPreview }
+  | { kind: "preview"; token: string; preview: GuardianInvitationPreview }
+
+async function load(signedIn: boolean): Promise<State> {
+  const token = readToken()
+  if (!token) return { kind: "no-token" }
+  if (!signedIn) return { kind: "signed-out" }
+  const r = await previewInvitation({ token })
+  return r.ok
+    ? { kind: "preview", token, preview: r.data }
+    : { kind: "error", message: r.error.message }
+}
 
 export function InviteAccept({
   t,
@@ -54,33 +65,19 @@ export function InviteAccept({
   locale: Locale
   signedIn: boolean
 }) {
-  const [token, setToken] = useState<string | null>(null)
   const [state, setState] = useState<State>({ kind: "loading" })
   const [pending, startTransition] = useTransition()
   const [acceptError, setAcceptError] = useState<string | null>(null)
 
   useEffect(() => {
-    const found = readToken()
-    setToken(found)
-    if (!found) {
-      setState({ kind: "no-token" })
-      return
-    }
-    if (!signedIn) return
-    void previewInvitation({ token: found }).then((r) =>
-      setState(
-        r.ok
-          ? { kind: "preview", preview: r.data }
-          : { kind: "error", message: r.error.message }
-      )
-    )
+    void load(signedIn).then(setState)
   }, [signedIn])
 
   if (state.kind === "no-token") {
     return <InlineAlert tone="error">{t.noToken}</InlineAlert>
   }
 
-  if (!signedIn && token) {
+  if (state.kind === "signed-out") {
     return (
       <div className="space-y-4">
         <p className="text-sm">{t.signedOut}</p>
@@ -129,8 +126,8 @@ export function InviteAccept({
   const student =
     locale === "bn" && p.studentNameBn ? p.studentNameBn : p.studentName
 
+  const token = state.token
   function accept() {
-    if (!token) return
     setAcceptError(null)
     startTransition(async () => {
       const r = await acceptInvitation({ token })
