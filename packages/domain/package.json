@@ -1,6 +1,6 @@
 {
   "name": "@acadigma/domain",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Pure business rules: permissions, money, id formatting, workspace time, plans/limits. No I/O.",

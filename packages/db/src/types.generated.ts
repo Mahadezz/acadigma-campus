@@ -2074,6 +2074,209 @@ export type Database = {
           },
         ]
       }
+      result_subject_lines: {
+        Row: {
+          exam_subject_id: string
+          full_marks: number
+          grade_point: number | null
+          id: string
+          letter: string | null
+          obtained: number | null
+          pass_marks: number
+          passed: boolean | null
+          percentage: number | null
+          result_id: string
+          status: Database["public"]["Enums"]["mark_status"] | null
+          subject_id: string
+          subject_kind: Database["public"]["Enums"]["subject_kind"]
+          subject_name: string
+          subject_name_bn: string | null
+          workspace_id: string
+        }
+        Insert: {
+          exam_subject_id: string
+          full_marks: number
+          grade_point?: number | null
+          id?: string
+          letter?: string | null
+          obtained?: number | null
+          pass_marks: number
+          passed?: boolean | null
+          percentage?: number | null
+          result_id: string
+          status?: Database["public"]["Enums"]["mark_status"] | null
+          subject_id: string
+          subject_kind?: Database["public"]["Enums"]["subject_kind"]
+          subject_name: string
+          subject_name_bn?: string | null
+          workspace_id: string
+        }
+        Update: {
+          exam_subject_id?: string
+          full_marks?: number
+          grade_point?: number | null
+          id?: string
+          letter?: string | null
+          obtained?: number | null
+          pass_marks?: number
+          passed?: boolean | null
+          percentage?: number | null
+          result_id?: string
+          status?: Database["public"]["Enums"]["mark_status"] | null
+          subject_id?: string
+          subject_kind?: Database["public"]["Enums"]["subject_kind"]
+          subject_name?: string
+          subject_name_bn?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "result_subject_lines_exam_subject_fkey"
+            columns: ["exam_subject_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "exam_subjects"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "result_subject_lines_result_fkey"
+            columns: ["result_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "results"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "result_subject_lines_subject_fkey"
+            columns: ["subject_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "result_subject_lines_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      results: {
+        Row: {
+          computed_at: string
+          computed_by: string | null
+          enrollment_id: string
+          exam_id: string
+          failed_subjects: number
+          gpa: number | null
+          gpa_without_optional: number | null
+          id: string
+          letter: string | null
+          percentage: number | null
+          result_status: Database["public"]["Enums"]["result_status"]
+          section_id: string
+          section_rank: number | null
+          student_id: string
+          total_full: number
+          total_obtained: number
+          workspace_id: string
+        }
+        Insert: {
+          computed_at?: string
+          computed_by?: string | null
+          enrollment_id: string
+          exam_id: string
+          failed_subjects: number
+          gpa?: number | null
+          gpa_without_optional?: number | null
+          id?: string
+          letter?: string | null
+          percentage?: number | null
+          result_status: Database["public"]["Enums"]["result_status"]
+          section_id: string
+          section_rank?: number | null
+          student_id: string
+          total_full: number
+          total_obtained: number
+          workspace_id: string
+        }
+        Update: {
+          computed_at?: string
+          computed_by?: string | null
+          enrollment_id?: string
+          exam_id?: string
+          failed_subjects?: number
+          gpa?: number | null
+          gpa_without_optional?: number | null
+          id?: string
+          letter?: string | null
+          percentage?: number | null
+          result_status?: Database["public"]["Enums"]["result_status"]
+          section_id?: string
+          section_rank?: number | null
+          student_id?: string
+          total_full?: number
+          total_obtained?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "results_computed_by_fkey"
+            columns: ["computed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "results_enrollment_fkey"
+            columns: ["enrollment_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enrollments"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "results_exam_fkey"
+            columns: ["exam_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "results_exam_section_fkey"
+            columns: ["exam_id", "section_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sections"
+            referencedColumns: ["exam_id", "section_id"]
+          },
+          {
+            foreignKeyName: "results_section_fkey"
+            columns: ["section_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "results_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "student_roster"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "results_student_fkey"
+            columns: ["student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "results_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_profiles: {
         Row: {
           academic_settings: Json
@@ -2549,6 +2752,69 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_import_batches: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_count: number
+          error_rows: number
+          filename: string
+          finished_at: string | null
+          id: string
+          report: Json
+          status: Database["public"]["Enums"]["import_status"]
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_count?: number
+          error_rows: number
+          filename: string
+          finished_at?: string | null
+          id?: string
+          report: Json
+          status?: Database["public"]["Enums"]["import_status"]
+          total_rows: number
+          updated_at?: string
+          valid_rows: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_count?: number
+          error_rows?: number
+          filename?: string
+          finished_at?: string | null
+          id?: string
+          report?: Json
+          status?: Database["public"]["Enums"]["import_status"]
+          total_rows?: number
+          updated_at?: string
+          valid_rows?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_import_batches_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -3553,6 +3819,10 @@ export type Database = {
         Returns: Json
       }
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
+      compute_results: {
+        Args: { p_exam_id: string; p_workspace_id: string }
+        Returns: Json
+      }
       create_exam: { Args: { p_input: Json }; Returns: string }
       create_school_workspace: { Args: { p_input: Json }; Returns: Json }
       exam_marks_progress: {
@@ -3560,6 +3830,10 @@ export type Database = {
         Returns: Json
       }
       expire_pro_trials: { Args: never; Returns: number }
+      import_student_batch: {
+        Args: { p_batch_id: string; p_limit?: number; p_workspace_id: string }
+        Returns: Json
+      }
       list_my_workspaces: {
         Args: never
         Returns: {
@@ -3608,6 +3882,10 @@ export type Database = {
         Returns: Json
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
+      student_import_existing: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       switch_workspace: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -3693,6 +3971,7 @@ export type Database = {
         | "weather"
         | "emergency"
       holiday_source: "seed" | "manual" | "import"
+      import_status: "preview" | "importing" | "completed"
       invitation_channel: "email" | "phone"
       invitation_status:
         | "pending"
@@ -3707,6 +3986,7 @@ export type Database = {
       report_kind: "sample" | "report_card"
       report_locale: "bn" | "en"
       report_status: "queued" | "rendering" | "ready" | "failed" | "expired"
+      result_status: "pass" | "fail" | "incomplete" | "withheld"
       staff_document_kind:
         | "nid"
         | "passport"
@@ -3937,6 +4217,7 @@ export const Constants = {
         "emergency",
       ],
       holiday_source: ["seed", "manual", "import"],
+      import_status: ["preview", "importing", "completed"],
       invitation_channel: ["email", "phone"],
       invitation_status: [
         "pending",
@@ -3952,6 +4233,7 @@ export const Constants = {
       report_kind: ["sample", "report_card"],
       report_locale: ["bn", "en"],
       report_status: ["queued", "rendering", "ready", "failed", "expired"],
+      result_status: ["pass", "fail", "incomplete", "withheld"],
       staff_document_kind: [
         "nid",
         "passport",

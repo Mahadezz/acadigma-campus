@@ -522,6 +522,22 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn: "{actor} একটি পরীক্ষার পেপারে নম্বর সংরক্ষণ করেছেন ({n})",
     isGeneric: false,
   },
+  // F-AC-06 Part 5 (D-305) — one event per compute_results run.
+  {
+    action: "results.computed",
+    severity: "notable",
+    sentenceEn: "{actor} computed an exam's results ({n})",
+    sentenceBn: "{actor} একটি পরীক্ষার ফলাফল তৈরি করেছেন ({n})",
+    isGeneric: false,
+  },
+  // F-AC-06 Part 5 (D-305) — unlocking marks clears the exam's results.
+  {
+    action: "results.cleared",
+    severity: "notable",
+    sentenceEn: "{actor} unlocked marks and cleared an exam's results ({n})",
+    sentenceBn: "{actor} নম্বর আনলক করে একটি পরীক্ষার ফলাফল মুছে ফেলেছেন ({n})",
+    isGeneric: false,
+  },
 ]
 
 /**
@@ -579,6 +595,8 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "attendance_records",
   // F-AC-06 Part 3 (D-304) — 20260925300312_marks.sql.
   "marks",
+  // F-AC-02 §4.7 (D-106) — 20260925300316_student_import_batches.sql.
+  "student_import_batches",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -648,6 +666,10 @@ export const GENERIC_TABLE_NOUNS: Readonly<
     bn: "একজন শিক্ষার্থীর হাজিরা",
   },
   marks: { en: "a student's mark", bn: "একজন শিক্ষার্থীর নম্বর" },
+  student_import_batches: {
+    en: "a student import",
+    bn: "একটি শিক্ষার্থী আমদানি",
+  },
 }
 
 /**

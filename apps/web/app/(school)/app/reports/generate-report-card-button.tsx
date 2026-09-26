@@ -10,14 +10,11 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { createReportRun } from "./actions"
 
 /**
- * F-OP-03 Part 3 (D-206) demo action: renders one Class 6-ক fixture
- * student's report card. Local constants, not an import of
- * `report-card-fixture.ts` — that module also builds all 40 students'
- * marks/GPA (via `@acadigma/domain/grading`), which this client component
- * has no reason to ship to the browser for two fixed uuids.
+ * F-OP-03 Part 3 (D-206): renders one student's report card for one exam
+ * from F-AC-06's computed results (D-305). Shown per student on the results
+ * preview (`/app/exams/[id]/results`), so it only ever offers a card that
+ * exists; the render still reads through the caller's RLS.
  */
-const DEMO_STUDENT_ID = "00000000-6000-4000-8000-000000000001"
-const DEMO_EXAM_ID = "00000000-6000-4000-9000-000000000000"
 
 export type ReportCardCopy = {
   generateReportCard: string
@@ -25,7 +22,20 @@ export type ReportCardCopy = {
   error: string
 }
 
-export function GenerateReportCardButton({ t }: { t: ReportCardCopy }) {
+export function GenerateReportCardButton({
+  t,
+  studentId,
+  examId,
+  locale,
+  studentName,
+}: {
+  t: ReportCardCopy
+  studentId: string
+  examId: string
+  locale: "en" | "bn"
+  /** Names the button for screen readers: "Report card — Ayesha Rahman". */
+  studentName: string
+}) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -36,10 +46,10 @@ export function GenerateReportCardButton({ t }: { t: ReportCardCopy }) {
       const result = await createReportRun({
         params: {
           kind: "report_card",
-          studentId: DEMO_STUDENT_ID,
-          examId: DEMO_EXAM_ID,
+          studentId,
+          examId,
         },
-        locale: "bn",
+        locale,
       })
       if (!result.ok) {
         setError(result.error.message)
@@ -58,6 +68,7 @@ export function GenerateReportCardButton({ t }: { t: ReportCardCopy }) {
         className="w-full sm:w-auto"
       >
         {pending ? t.generating : t.generateReportCard}
+        <span className="sr-only"> — {studentName}</span>
       </Button>
       {error && (
         <InlineAlert tone="error" className="max-w-md">
