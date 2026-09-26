@@ -72,11 +72,22 @@ export const updateExamSubjectInputSchema = z
     passMarks: marksSchema,
     /** The paper's subject teacher (D-304); null clears it, omitted keeps it. */
     teacherId: uuidSchema.nullable().optional(),
+    /** §5.11 marks entry window (D-307); null = the default, omitted keeps it. */
+    entryOpensOn: isoDateSchema.nullable().optional(),
+    entryClosesOn: isoDateSchema.nullable().optional(),
   })
   .refine((v) => v.passMarks <= v.fullMarks, {
     message: "Pass marks cannot be more than full marks.",
     path: ["passMarks"],
   })
+  .refine(
+    (v) =>
+      !v.entryOpensOn || !v.entryClosesOn || v.entryClosesOn >= v.entryOpensOn,
+    {
+      message: "Marks entry cannot close before it opens.",
+      path: ["entryClosesOn"],
+    }
+  )
 export type UpdateExamSubjectInput = z.infer<
   typeof updateExamSubjectInputSchema
 >
@@ -103,6 +114,11 @@ export const examPaperSchema = z.object({
   passMarks: z.number(),
   status: examSubjectStatusSchema,
   teacherId: uuidSchema.nullable(),
+  /** §5.11 window as set on the paper (D-307); null = the default. */
+  entryOpensOn: isoDateSchema.nullable(),
+  entryClosesOn: isoDateSchema.nullable(),
+  /** Why the paper was last unlocked (D-307). */
+  statusReason: z.string().nullable(),
   /** Students with a mark, absent or exempt / students enrolled (D-304). */
   marksDone: z.number().int(),
   enrolled: z.number().int(),

@@ -235,6 +235,7 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "results.read": ["owner", "admin", "teacher", "staff"],
     "results.compute": ["owner", "admin"],
     "results.publish": ["owner", "admin"],
+    "marks.lock": ["owner", "admin"],
     "family.results.read": ["parent"],
     "reports.read": [...rolesWithAction("reports.read")],
     "messages.send": [...rolesWithAction("messages.send")],

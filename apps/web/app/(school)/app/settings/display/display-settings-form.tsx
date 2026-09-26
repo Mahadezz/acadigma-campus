@@ -43,10 +43,10 @@ export type DisplaySettingsFormProps = {
  * F-ID-10 §6 "Display settings" (Part 1). Text size applies immediately
  * (§7 `updateUiPreferences`, cookie mirror + `revalidatePath` re-render the
  * root layout's `<html data-text-size>`); turning basic mode on saves the
- * preference and navigates to `/app/home` (§4.1) — that page is a minimal
- * placeholder in this Part (Parts 2-3 build the real class-by-class home),
- * which `t.basicModeComingSoon` says outright rather than implying a
- * feature that is not built yet.
+ * preference and navigates to `/app/home` (§4.1), the real class-by-class
+ * home as of Part 2. `t.basicModeComingSoon` now flags the one thing Part 2
+ * still does not build — a class opens the existing roll call directly
+ * rather than a class hub (D-405; Part 3) — instead of the whole screen.
  */
 export function DisplaySettingsForm({
   textSize,

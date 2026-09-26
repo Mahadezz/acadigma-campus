@@ -10,8 +10,10 @@
   "exports": {
     "./globals.css": "./globals.css",
     "./tokens/tokens.css": "./tokens/tokens.css",
+    "./components/button-variants": "./src/components/button-variants.ts",
     "./components/*": "./src/components/ui/*.tsx",
     "./primitives/nav-config": "./src/primitives/nav-config.ts",
+    "./primitives/link-renderer": "./src/primitives/link-renderer.ts",
     "./primitives/*": "./src/primitives/*.tsx",
     "./hooks/*": "./src/hooks/*.ts",
     "./lib/utils": "./src/lib/utils.ts",

@@ -30,7 +30,7 @@ export function SwitchToFullAppButton({ label }: { label: string }) {
     <Button
       type="button"
       size="lg"
-      className="min-h-14 min-w-56"
+      className="min-h-14 min-w-56 text-base"
       onClick={handleClick}
     >
       {label}

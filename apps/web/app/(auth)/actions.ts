@@ -312,6 +312,15 @@ export async function signInWithPassword(
   // Overwriting both cookies with this user's actual row as soon as the
   // credential exchange has succeeded closes that gap; `signOut()` closes
   // the other half by deleting them outright.
+  // F-ID-10 Part 2 follow-up (lead review of #64): a lookup failure (a
+  // Supabase hiccup, not "no row") must not leave whichever cookies this
+  // device already had — including a previous signed-in user's, on a shared
+  // phone — outranking this user's real preferences on the next request.
+  // `getUiPreferences()` cannot tell "no row" from "read failed" once it
+  // only sees `uiPrefs.ok === false`; deleting both here is the same "never
+  // trust a stale display-preference cookie" rule `signOut()` already
+  // follows, just reached from the opposite direction (signing in on top of
+  // a leftover cookie, not signing out).
   const uiPrefs = await fetchUiPreferences(supabase, data.user.id)
   if (uiPrefs.ok) {
     cookieStore.set(UI_MODE_COOKIE, uiPrefs.data.uiMode, UI_PREFS_COOKIE_OPTS)
@@ -320,6 +329,9 @@ export async function signInWithPassword(
       uiPrefs.data.textSize,
       UI_PREFS_COOKIE_OPTS
     )
+  } else {
+    cookieStore.delete(UI_MODE_COOKIE)
+    cookieStore.delete(TEXT_SIZE_COOKIE)
   }
 
   const { data: profile } = await supabase

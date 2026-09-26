@@ -1263,7 +1263,28 @@
       "done": "Results published: {n} shown to families, {withheld} withheld.",
       "computeFirst": "Compute results first.",
       "incomplete": "{n} results incomplete. Compute results again once every mark is in."
-    }
+    },
+    "progressTitle": "Marks progress",
+    "progressSummary": "{submitted} of {total} papers submitted · {locked} locked",
+    "paperStatuses": {
+      "pending": "Not started",
+      "entering": "Entering",
+      "submitted": "Submitted",
+      "locked": "Locked"
+    },
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "unlockTitle": "Unlock {subject}",
+    "unlockHelp": "Say why. The marks can change again. If results were computed, the exam goes back to marks entry and its results are cleared. If the entry dates are over, change 'Marks close' so the teacher can edit.",
+    "lockedDone": "Locked.",
+    "unlockedDone": "Unlocked.",
+    "entryOpens": "Marks open",
+    "entryCloses": "Marks close",
+    "noStudentDetails": "Don't write student details here.",
+    "closesOn": "closes {date}",
+    "closed": "Closed",
+    "reopen": "Reopen 7 days",
+    "reopenedDone": "Marks entry reopened for 7 days."
   },
   "students": {
     "importButton": "Import",
@@ -1448,7 +1469,8 @@
       "notAssigned": "Only this paper's teacher, the class teacher or an admin can see and enter these marks.",
       "viewOnly": "You can view these marks, not change them.",
       "closed": "Marks entry is not open for this exam.",
-      "locked": "This paper is locked."
+      "locked": "This paper is locked.",
+      "window": "Marks entry for this paper is outside its dates. Ask an admin to change the dates."
     },
     "issues": {
       "NOT_A_NUMBER": "Type a number such as 45 or 32.5.",
@@ -1462,8 +1484,27 @@
       "SUBJECT_LOCKED": "This paper is locked.",
       "ROSTER_CHANGED": "The class list changed. Reload the page.",
       "generic": "Not saved. Your marks are still here — try again.",
-      "readOnly": "The school is view-only right now, so nothing can be changed."
-    }
+      "readOnly": "The school is view-only right now, so nothing can be changed.",
+      "OUTSIDE_ENTRY_WINDOW": "Marks entry for this paper is closed. Ask an admin.",
+      "REASON_REQUIRED": "Give a reason for changing marks outside the entry dates.",
+      "NOT_ASSIGNED_SUBMIT": "Only this paper's teacher or an admin can submit it."
+    },
+    "window": "Marks entry: {from} to {to}",
+    "windowFrom": "Marks entry from {from}",
+    "windowTo": "Marks entry until {to}",
+    "lateReason": "Reason for changing marks outside the entry dates",
+    "lateHelp": "This paper is outside its entry dates. Your change is saved with this reason and marked as outside the dates.",
+    "submit": "Submit marks",
+    "submitting": "Submitting…",
+    "submitHelp": "Submit when you have finished. An admin then locks the paper.",
+    "submitSaveFirst": "Save your changes before submitting.",
+    "submittedBadge": "Submitted",
+    "submittedNotice": "Marks submitted.",
+    "missingTitle": "{n} students have no mark yet",
+    "missingBody": "You can still submit. They stay missing until someone enters a mark or chooses Absent or Exempt.",
+    "submitAnyway": "Submit anyway",
+    "cancel": "Cancel",
+    "noStudentDetails": "Don't write student details here."
   },
   "basicMode": {
     "settings": {
@@ -1476,16 +1517,59 @@
       "sampleText": "Sample text at this size",
       "basicModeLabel": "Basic mode",
       "basicModeDescription": "Bigger buttons, one screen per class. You can switch back any time.",
-      "basicModeComingSoon": "This turns basic mode on for your account. The class-by-class home screen is coming in a later update.",
+      "basicModeComingSoon": "Tapping a class opens today's roll call for now — the full class hub is coming in a later update.",
       "switchOn": "Turn on",
       "switchOff": "Turn off",
       "saved": "Saved",
       "saveError": "Could not save. Please try again."
     },
     "home": {
-      "title": "Basic mode",
-      "message": "Basic mode is on. Your class-by-class home screen is coming in a later update.",
-      "switchToFullApp": "Switch to full app"
+      "metaTitle": "Basic mode",
+      "greetingMorning": "Good morning, {name}",
+      "greetingAfternoon": "Good afternoon, {name}",
+      "greetingEvening": "Good evening, {name}",
+      "todoRollCallsOne": "{count} roll call not taken",
+      "todoRollCallsOther": "{count} roll calls not taken",
+      "allDone": "Nothing waiting. Well done.",
+      "classTeacher": "Class teacher",
+      "studentCountOne": "{count} student",
+      "studentCountOther": "{count} students",
+      "attendanceTaken": "Taken {taken}/{expected}",
+      "attendanceNotTaken": "Not taken",
+      "attendanceNotSchoolDay": "Not a school day",
+      "emptyTitle": "You have no classes yet.",
+      "emptyDescription": "Ask your school office to add you as a class teacher.",
+      "allClasses": "All classes",
+      "allClassesDescription": "Every class at your school",
+      "switchToFullApp": "Switch to full app",
+      "settingsLabel": "Settings",
+      "helpLabel": "Help",
+      "homeLabel": "Home"
+    },
+    "help": {
+      "title": "Help",
+      "callSchoolOffice": "Call school office ({phone})",
+      "noPhoneYet": "Your school office has not added a phone number yet.",
+      "addPhoneLink": "Add school phone number",
+      "goBack": "ফিরে যান / Go back",
+      "routes": {
+        "home": [
+          "This is your basic-mode home. Each block below is one of your classes.",
+          "Tap a class to take today's roll call.",
+          "Use Switch to full app any time to see everything else.",
+          "To enter marks: Switch to full app → Exams."
+        ],
+        "default": [
+          "You're in basic mode. Tap Home any time to get back to your classes."
+        ]
+      }
+    },
+    "allClasses": {
+      "title": "All classes",
+      "searchLabel": "Search classes",
+      "searchPlaceholder": "Class or section name",
+      "searchEmpty": "No classes match your search.",
+      "back": "Home"
     },
     "userMenu": {
       "switchToBasicMode": "Switch to basic mode"
