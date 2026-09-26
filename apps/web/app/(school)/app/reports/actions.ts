@@ -270,7 +270,12 @@ async function renderReportCardBulkRun(
         new Date()
       )
       if (!result.ok) {
-        await markReportRunFailed(service, runId, "no_data", result.error.message)
+        await markReportRunFailed(
+          service,
+          runId,
+          "no_data",
+          result.error.message
+        )
         return
       }
 

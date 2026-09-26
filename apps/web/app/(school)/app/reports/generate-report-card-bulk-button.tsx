@@ -24,11 +24,7 @@ export type ReportCardBulkCopy = {
   error: string
 }
 
-export function GenerateReportCardBulkButton({
-  t,
-}: {
-  t: ReportCardBulkCopy
-}) {
+export function GenerateReportCardBulkButton({ t }: { t: ReportCardBulkCopy }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)

@@ -16,7 +16,10 @@ import {
   type ReportCardDocumentProps,
 } from "@acadigma/pdf"
 
-import { getReportCardBulkStudentIds, getReportCardData } from "./report-card-data"
+import {
+  getReportCardBulkStudentIds,
+  getReportCardData,
+} from "./report-card-data"
 
 export type ReportCardBulkItemResult =
   | { studentId: string; status: "ready"; pageFrom: number; pageTo: number }

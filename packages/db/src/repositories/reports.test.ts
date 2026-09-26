@@ -373,8 +373,7 @@ describe("markReportRunRendering / markReportRunReady / markReportRunFailed", ()
     const { client, calls } = fakeClient({ data: null, error: null })
     await markReportRunReady(client, ROW.id, 1, 42)
     const update = calls.find((c) => c.op === "update") as
-      | { args: [Record<string, unknown>] }
-      | undefined
+      { args: [Record<string, unknown>] } | undefined
     expect(update?.args[0]).not.toHaveProperty("item_count")
   })
 })
