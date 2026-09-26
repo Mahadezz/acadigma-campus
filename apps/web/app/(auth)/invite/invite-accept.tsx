@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useTransition } from "react"
 
-import type { GuardianInvitationPreview } from "@acadigma/contracts"
+import type { ApiError, GuardianInvitationPreview } from "@acadigma/contracts"
 import { Button } from "@acadigma/ui/components/button"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
+
+import { signOut } from "../actions"
 
 import { acceptInvitation, previewInvitation } from "./actions"
 
@@ -37,11 +39,20 @@ function forgetToken() {
   }
 }
 
+type InviteErrors = Messages["invite"]["errors"]
+type ErrorCode = keyof InviteErrors
+
+/** The SQL code the repository attached, if the screen has words for it. */
+function errorCode(e: ApiError, t: InviteErrors): ErrorCode {
+  const code = e.fieldErrors?._root?.[0]
+  return code && Object.hasOwn(t, code) ? (code as ErrorCode) : "generic"
+}
+
 type State =
   | { kind: "loading" }
   | { kind: "no-token" }
   | { kind: "signed-out" }
-  | { kind: "error"; message: string }
+  | { kind: "error"; error: ApiError }
   | { kind: "preview"; token: string; preview: GuardianInvitationPreview }
 
 async function load(signedIn: boolean): Promise<State> {
@@ -49,9 +60,11 @@ async function load(signedIn: boolean): Promise<State> {
   if (!token) return { kind: "no-token" }
   if (!signedIn) return { kind: "signed-out" }
   const r = await previewInvitation({ token })
+  // A used, replaced or expired link will never work again: drop it.
+  if (r.ok && r.data.status !== "pending") forgetToken()
   return r.ok
     ? { kind: "preview", token, preview: r.data }
-    : { kind: "error", message: r.error.message }
+    : { kind: "error", error: r.error }
 }
 
 export function InviteAccept({
@@ -67,7 +80,27 @@ export function InviteAccept({
 }) {
   const [state, setState] = useState<State>({ kind: "loading" })
   const [pending, startTransition] = useTransition()
-  const [acceptError, setAcceptError] = useState<string | null>(null)
+  const [acceptError, setAcceptError] = useState<ApiError | null>(null)
+  const [signingOut, startSignOut] = useTransition()
+
+  function errorView(e: ApiError) {
+    const code = errorCode(e, t.errors)
+    return (
+      <div className="space-y-4">
+        <InlineAlert tone="error">{t.errors[code]}</InlineAlert>
+        {code === "MEMBERSHIP_CONFLICT" ? (
+          <Button
+            variant="outline"
+            className="h-11 w-full"
+            disabled={signingOut}
+            onClick={() => startSignOut(() => signOut("/invite"))}
+          >
+            {t.signOut}
+          </Button>
+        ) : null}
+      </div>
+    )
+  }
 
   useEffect(() => {
     void load(signedIn).then(setState)
@@ -86,7 +119,7 @@ export function InviteAccept({
             <a href="/login?next=/invite">{t.signIn}</a>
           </Button>
           <Button asChild variant="outline" className="h-11">
-            <a href="/register">{t.register}</a>
+            <a href="/register?next=/invite">{t.register}</a>
           </Button>
         </div>
         <p className="text-muted-foreground text-xs">{t.afterRegister}</p>
@@ -102,9 +135,7 @@ export function InviteAccept({
     )
   }
 
-  if (state.kind === "error") {
-    return <InlineAlert tone="error">{state.message}</InlineAlert>
-  }
+  if (state.kind === "error") return errorView(state.error)
 
   const p = state.preview
   if (p.status !== "pending") {
@@ -132,7 +163,7 @@ export function InviteAccept({
     startTransition(async () => {
       const r = await acceptInvitation({ token })
       if (!r.ok) {
-        setAcceptError(r.error.message)
+        setAcceptError(r.error)
         return
       }
       forgetToken()
@@ -151,9 +182,7 @@ export function InviteAccept({
       <p className="text-muted-foreground text-sm">
         {t.whatYouSee.replace("{student}", student)}
       </p>
-      {acceptError ? (
-        <InlineAlert tone="error">{acceptError}</InlineAlert>
-      ) : null}
+      {acceptError ? errorView(acceptError) : null}
       <Button className="h-11 w-full" onClick={accept} disabled={pending}>
         {pending ? t.accepting : t.accept}
       </Button>

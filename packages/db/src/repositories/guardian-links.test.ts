@@ -86,6 +86,10 @@ describe("guardian links (D-108)", () => {
       "t"
     )
     expect(!conflict.ok && conflict.error.code).toBe("conflict")
+    // The screen translates by this code (D-108 review).
+    expect(!conflict.ok && conflict.error.fieldErrors?._root).toEqual([
+      "MEMBERSHIP_CONFLICT",
+    ])
     const done = await acceptGuardianInvitation(
       fakeClient({ data: { workspace_id: "w", student_id: "s" }, error: null })
         .client,

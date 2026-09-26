@@ -1,6 +1,6 @@
 /**
  * F-AC-02 Part 4 demo cut (D-108) — guardian links. The four functions in
- * `20260926035028_guardian_linking.sql` do every check; this maps their
+ * `20260926064354_guardian_linking.sql` do every check; this maps their
  * named errors. Previewing and accepting a link run before the caller is a
  * member of the school, so they take no `WorkspaceContext` (like creating a
  * school); everything else does.
@@ -71,11 +71,10 @@ const ERRORS: Record<string, ApiError> = {
   ),
 }
 
+/** The SQL code rides along in `fieldErrors._root` so screens can translate it. */
 function mapError(message: string): ApiError {
-  return (
-    (Object.hasOwn(ERRORS, message) ? ERRORS[message] : undefined) ??
-    UNAVAILABLE
-  )
+  const known = Object.hasOwn(ERRORS, message) ? ERRORS[message] : undefined
+  return known ? { ...known, fieldErrors: { _root: [message] } } : UNAVAILABLE
 }
 
 /** A single-use link for one child; the raw token is returned once. */
@@ -109,7 +108,7 @@ export async function revokeGuardianLink(
   return error ? err(mapError(error.message)) : ok(null)
 }
 
-/** The accounts linked to a student's guardians (RLS: owner/admin). */
+/** The accounts actively linked to a student's guardians (RLS: owner/admin). */
 export async function listGuardianLinks(
   ctx: WorkspaceContext,
   client: AcadigmaSupabaseClient,
@@ -118,18 +117,17 @@ export async function listGuardianLinks(
   const { data, error } = await client
     .from("guardian_users")
     .select(
-      "id, guardian_id, status, accepted_at, profiles!guardian_users_user_id_fkey(full_name, email)"
+      "id, guardian_id, accepted_at, profiles!guardian_users_user_id_fkey(full_name, email)"
     )
     .eq("workspace_id", ctx.workspaceId)
     .eq("student_id", studentId)
-    .neq("status", "revoked")
+    .eq("status", "active")
     .order("accepted_at")
   if (error) return err(UNAVAILABLE)
   return ok(
     (data ?? []).map((r) => ({
       id: r.id,
       guardianId: r.guardian_id,
-      status: r.status,
       accountName: r.profiles?.full_name ?? null,
       accountEmail: r.profiles?.email ?? null,
       acceptedAt: r.accepted_at,

@@ -6,7 +6,7 @@ import type { GuardianRelation } from "./students"
 
 /**
  * F-AC-02 Part 4 (demo cut, D-108) — guardian links
- * (`supabase/migrations/20260926035028_guardian_linking.sql`).
+ * (`supabase/migrations/20260926064354_guardian_linking.sql`).
  */
 
 export const inviteGuardianInputSchema = z
@@ -46,11 +46,10 @@ export type GuardianInvitationPreview =
       acceptedByMe: boolean
     }
 
-/** An account linked to one of a student's guardians (owner/admin view). */
+/** An account actively linked to one of a student's guardians (owner/admin view). */
 export type GuardianLink = {
   id: string
   guardianId: string
-  status: "invited" | "active" | "revoked"
   accountName: string | null
   accountEmail: string | null
   acceptedAt: string | null

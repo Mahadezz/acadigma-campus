@@ -53,9 +53,7 @@ export function GuardianAccess({
   const [copied, setCopied] = useState(false)
   const [revoking, setRevoking] = useState<GuardianLink | null>(null)
 
-  const linked = new Set(
-    links.filter((l) => l.status === "active").map((l) => l.guardianId)
-  )
+  const linked = new Set(links.map((l) => l.guardianId))
   const nameOf = (g: Guardian) =>
     locale === "bn" && g.fullNameBn ? g.fullNameBn : g.fullName
 

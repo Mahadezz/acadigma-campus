@@ -104,7 +104,8 @@
       "submittingButton": "Creating account…",
       "alreadyHaveAccount": "Already have an account? Sign in",
       "errorEmailTaken": "This email already has an account — sign in or reset your password.",
-      "errorEmailTakenLoginLink": "Sign in"
+      "errorEmailTakenLoginLink": "Sign in",
+      "noEmailHelp": "No email? Ask the school office for help."
     },
     "verify": {
       "title": "Check your email",
@@ -1437,7 +1438,7 @@
       "revokeBody": "They will no longer see {student}'s results. You can invite them again later.",
       "cancel": "Cancel",
       "linkTitle": "Send this link to {name}",
-      "linkHelp": "It works once, for {student} only, until {date}. Whoever opens it first can accept it, so send it only to {name}.",
+      "linkHelp": "It works once, for {student} only, until {date}. Whoever opens it first can accept it, so send it only to {name}. A new link cancels the earlier one.",
       "linkLabel": "Invitation link",
       "copy": "Copy link",
       "copied": "Copied",
@@ -1574,6 +1575,17 @@
       "revoked": "This link was replaced. Ask the school for the latest one.",
       "expired": "This invitation has expired. Ask the school for a new link.",
       "declined": "This invitation was declined."
+    },
+    "signOut": "Sign out and create a parent account",
+    "errors": {
+      "INVITATION_NOT_FOUND": "This invitation link is not valid. Open the full link the school sent you.",
+      "INVITATION_EXPIRED": "This invitation has expired. Ask the school for a new link.",
+      "INVITATION_ACCEPTED": "This invitation has already been used.",
+      "INVITATION_REVOKED": "This link was replaced. Ask the school for the latest one.",
+      "INVITATION_DECLINED": "This invitation was declined.",
+      "MEMBERSHIP_CONFLICT": "This account is a staff account at this school. Create a new account with another email for the parent app.",
+      "PLAN_READ_ONLY": "This school is read-only right now. Please contact the school.",
+      "generic": "Something went wrong. Please try again."
     }
   }
 }

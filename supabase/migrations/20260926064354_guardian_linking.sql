@@ -19,6 +19,11 @@
 --     the active guardian_users link for the invitation's own student only.
 --   * public.revoke_guardian_link(ws, link) — owner/admin: status 'revoked';
 --     app.is_guardian_of reads status = 'active', so access ends at once.
+--   * The last revoked link also removes the parent's membership; the
+--     members guard lets that parent reactivate it only by accepting a new
+--     link. Parents no longer read workspace-visibility files or usage
+--     counters. app.accept_invitation / decline_invitation ignore guardian
+--     invitations (PR #78 review).
 --   * students gains a parent SELECT policy: a parent reads the rows of
 --     their linked children (the public columns; DOB and guardians stay in
 --     their private tables).
@@ -228,11 +233,12 @@ begin
   end if;
 
   -- One membership per person per school: a parent of a second child keeps
-  -- theirs. Anyone already in the school in another role (or removed) is
-  -- refused rather than silently turned into a parent.
+  -- theirs, and a parent removed when their last link was revoked comes
+  -- back. Anyone in the school in another role is refused rather than
+  -- silently turned into a parent.
   select m.* into v_member from public.workspace_members m
    where m.workspace_id = v_inv.workspace_id and m.user_id = v_uid;
-  if found and not (v_member.role = 'parent' and v_member.status = 'active') then
+  if found and not (v_member.role = 'parent' and v_member.status in ('active', 'removed')) then
     raise exception 'MEMBERSHIP_CONFLICT' using errcode = '22023';
   end if;
   if not found then
@@ -251,6 +257,13 @@ begin
   on conflict (guardian_id, user_id) do update
     set status = 'active', accepted_at = now(), revoked_at = null,
         invitation_id = excluded.invitation_id;
+
+  -- The link exists now, which is what lets the members guard accept this
+  -- person reactivating their own removed parent membership.
+  if found and v_member.status = 'removed' then
+    update public.workspace_members set status = 'active', invitation_id = v_inv.id
+     where id = v_member.id;
+  end if;
 
   update public.workspace_invitations
      set status = 'accepted', accepted_by = v_uid, accepted_at = now()
@@ -280,23 +293,36 @@ volatile
 security definer
 set search_path = ''
 as $$
+declare
+  v_user uuid;
 begin
   if auth.uid() is null or not app.has_role(p_workspace_id, array['owner', 'admin']) then
     raise exception 'FORBIDDEN' using errcode = '42501';
   end if;
+  select gu.user_id into v_user from public.guardian_users gu
+   where gu.id = p_link_id and gu.workspace_id = p_workspace_id;
+  if not found then
+    raise exception 'LINK_NOT_FOUND' using errcode = '22023';
+  end if;
   update public.guardian_users
      set status = 'revoked', revoked_at = now()
-   where id = p_link_id and workspace_id = p_workspace_id and status <> 'revoked';
-  if not found and not exists (select 1 from public.guardian_users gu
-                                where gu.id = p_link_id and gu.workspace_id = p_workspace_id) then
-    raise exception 'LINK_NOT_FOUND' using errcode = '22023';
+   where id = p_link_id and status <> 'revoked';
+
+  -- The last link gone: the parent leaves the school too (audited on
+  -- workspace_members), so a leaked link keeps no workspace-level reach.
+  if not exists (select 1 from public.guardian_users gu
+                  where gu.workspace_id = p_workspace_id and gu.user_id = v_user
+                    and gu.status = 'active') then
+    update public.workspace_members set status = 'removed'
+     where workspace_id = p_workspace_id and user_id = v_user
+       and role = 'parent' and status = 'active';
   end if;
 end;
 $$;
 
 comment on function public.revoke_guardian_link(uuid, uuid) is
-  'F-AC-02 Part 4 (D-108): owner/admin. Revokes a parent''s link to a child; '
-  'idempotent. Raises FORBIDDEN, LINK_NOT_FOUND; PLAN_READ_ONLY from the '
+  'F-AC-02 Part 4 (D-108): owner/admin. Revokes a parent''s link to a child '
+  'and, with their last link, their parent membership; idempotent. Raises FORBIDDEN, LINK_NOT_FOUND; PLAN_READ_ONLY from the '
   'table guard.';
 
 revoke all on function public.revoke_guardian_link(uuid, uuid) from public, anon;
@@ -311,3 +337,231 @@ create policy students_select_guardian on public.students
   using (deleted_at is null
          and app.has_role(workspace_id, array['parent'])
          and app.is_guardian_of(id));
+
+-- ---------------------------------------------------------------------
+-- The members guard: a parent may reactivate their own removed parent
+-- membership only while they hold an active guardian link in that school,
+-- which only accept_guardian_invitation writes (no client grant). Otherwise
+-- identical to 20260917010100_identity.sql.
+-- ---------------------------------------------------------------------
+create or replace function app.tg_workspace_members_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_uid         uuid := auth.uid();
+  v_actor_role  text;
+  v_other_owner int;
+begin
+  if tg_op = 'UPDATE' then
+    if new.workspace_id is distinct from old.workspace_id
+       or new.user_id is distinct from old.user_id then
+      raise exception 'workspace_id and user_id are immutable on a membership'
+        using errcode = '42501';
+    end if;
+
+    -- lifecycle stamps, applied server-side so the client cannot forge them
+    if new.status = 'removed' and old.status is distinct from 'removed' then
+      new.removed_at := now();
+      new.removed_by := v_uid;
+    elsif new.status = 'active' and old.status is distinct from 'active' then
+      new.joined_at  := coalesce(new.joined_at, now());
+      new.removed_at := null;
+      new.removed_by := null;
+    end if;
+
+    -- D-108: a returning parent (see the comment above).
+    if new.user_id = v_uid
+       and old.role = 'parent' and new.role = 'parent'
+       and old.status = 'removed' and new.status = 'active'
+       and exists (select 1 from public.guardian_users gu
+                    where gu.workspace_id = new.workspace_id and gu.user_id = new.user_id
+                      and gu.status = 'active') then
+      return new;
+    end if;
+  end if;
+
+  -- ---- authorization: skipped for server-owned paths and platform staff --
+  if not (app.is_privileged_context() or app.is_platform_admin()) then
+
+    v_actor_role := app.member_role(new.workspace_id);
+
+    if tg_op = 'UPDATE' and (new.role is distinct from old.role
+                             or new.status is distinct from old.status) then
+
+      if new.user_id = v_uid then
+        raise exception 'members cannot change their own role or status'
+          using errcode = '42501';
+      end if;
+
+      if v_actor_role is null or v_actor_role not in ('owner', 'admin') then
+        raise exception 'only owners and admins can change a membership role or status'
+          using errcode = '42501';
+      end if;
+
+      if (new.role = 'owner' or old.role = 'owner') and v_actor_role <> 'owner' then
+        raise exception 'only an owner can grant or remove ownership'
+          using errcode = '42501';
+      end if;
+    end if;
+
+    if tg_op = 'INSERT'
+       and new.role = 'owner'
+       and new.user_id is distinct from v_uid
+       and v_actor_role is distinct from 'owner' then
+      raise exception 'only an owner can add another owner' using errcode = '42501';
+    end if;
+  end if;
+
+  -- ---- invariant: enforced for EVERY caller, including the server -------
+  -- A workspace must always have at least one active owner
+  -- (PRODUCT-DECISIONS 1.5: "last owner cannot leave/downgrade").
+  if tg_op = 'UPDATE'
+     and old.role = 'owner' and old.status = 'active'
+     and (new.role <> 'owner' or new.status <> 'active') then
+    v_other_owner := app.count_active_owners(new.workspace_id, old.id);
+    if v_other_owner = 0 then
+      raise exception 'a workspace must always have at least one active owner'
+        using errcode = '23514';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- Parents never see the school's internal files or its plan usage (lead
+-- decision, PR #78 review). The school's name, profile and calendar stay
+-- readable to an active parent.
+-- ---------------------------------------------------------------------
+drop policy if exists files_select_member on public.files;
+create policy files_select_member on public.files
+  for select to authenticated
+  using (
+    deleted_at is null
+    and (
+      (visibility = 'workspace' and app.has_role(workspace_id, array['owner', 'admin', 'teacher', 'staff']))
+      or owner_id = (select auth.uid())
+      or app.has_role(workspace_id, array['owner', 'admin'])
+      or (select app.is_platform_admin())
+    )
+  );
+
+drop policy if exists usage_counters_select on public.usage_counters;
+create policy usage_counters_select on public.usage_counters
+  for select to authenticated
+  using (
+    app.has_role(workspace_id, array['owner', 'admin', 'teacher', 'staff'])
+    or (select app.is_platform_admin())
+  );
+
+-- ---------------------------------------------------------------------
+-- A guardian invitation is accepted or declined only through the guardian
+-- path (PR #78 review): the member functions ignore it. Otherwise identical
+-- to 20260925300201_readonly_join_check.sql / 20260917010100_identity.sql.
+-- ---------------------------------------------------------------------
+create or replace function app.accept_invitation(p_token text)
+returns uuid
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid   uuid := auth.uid();
+  v_inv   public.workspace_invitations;
+  v_email text;
+  v_phone text;
+begin
+  if v_uid is null then
+    raise exception 'authentication required' using errcode = '42501';
+  end if;
+
+  select lower(p.email), p.phone into v_email, v_phone
+    from public.profiles p where p.id = v_uid;
+
+  select * into v_inv
+    from public.workspace_invitations i
+   where i.token_hash = app.hash_token(p_token)
+     and i.guardian_id is null
+     for update;
+
+  if not found then
+    raise exception 'invitation not found' using errcode = '22023';
+  end if;
+
+  if v_inv.status <> 'pending' then
+    raise exception 'invitation is already %', v_inv.status using errcode = '22023';
+  end if;
+
+  if v_inv.expires_at <= now() then
+    update public.workspace_invitations set status = 'expired' where id = v_inv.id;
+    raise exception 'invitation has expired' using errcode = '22023';
+  end if;
+
+  if v_inv.email is not null and lower(v_inv.email) is distinct from v_email then
+    raise exception 'this invitation is bound to a different email address'
+      using errcode = '42501';
+  end if;
+
+  if v_inv.email is null
+     and app.normalize_phone(v_inv.phone) is distinct from app.normalize_phone(v_phone) then
+    raise exception 'this invitation is bound to a different phone number'
+      using errcode = '42501';
+  end if;
+
+  -- D-301: a verified invitee may not join a read-only school.
+  if exists (select 1 from public.workspaces w
+              where w.id = v_inv.workspace_id and w.access_mode = 'read_only') then
+    raise exception 'PLAN_READ_ONLY'
+      using errcode = '42501',
+            detail  = 'This workspace is read-only. Ask the owner to upgrade.';
+  end if;
+
+  insert into public.workspace_members
+    (workspace_id, user_id, role, status, label_id, invitation_id, invited_by, joined_at, created_by)
+  values
+    (v_inv.workspace_id, v_uid, v_inv.role, 'active', v_inv.label_id, v_inv.id,
+     v_inv.invited_by, now(), v_uid)
+  on conflict (workspace_id, user_id) do update
+    set status        = 'active',
+        role          = case when workspace_members.role = 'owner' then 'owner'::public.member_role
+                             else excluded.role end,
+        label_id      = coalesce(excluded.label_id, workspace_members.label_id),
+        invitation_id = excluded.invitation_id,
+        joined_at     = coalesce(workspace_members.joined_at, now()),
+        removed_at    = null,
+        removed_by    = null;
+
+  update public.workspace_invitations
+     set status = 'accepted', accepted_by = v_uid, accepted_at = now()
+   where id = v_inv.id;
+
+  return v_inv.workspace_id;
+end;
+$$;
+
+create or replace function app.decline_invitation(p_token text)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_inv public.workspace_invitations;
+begin
+  select * into v_inv from public.workspace_invitations i
+   where i.token_hash = app.hash_token(p_token) and i.status = 'pending'
+     and i.guardian_id is null
+     for update;
+  if not found then
+    raise exception 'invitation not found' using errcode = '22023';
+  end if;
+  update public.workspace_invitations
+     set status = 'declined', declined_at = now()
+   where id = v_inv.id;
+end;
+$$;

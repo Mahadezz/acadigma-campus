@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-02 Part 4 (demo cut) — guardian linking
--- (20260926035028_guardian_linking.sql, D-108)
+-- (20260926064354_guardian_linking.sql, D-108)
 --
 --   A. invite_guardian: owner/admin only, own school's guardian only; the
 --      raw token is never stored; a new link replaces the old one.
@@ -14,12 +14,15 @@
 --      reads exactly those students.
 --   E. Someone already in the school in another role is refused.
 --   F. Revoke: owner/admin only; a revoked link hides the child and the
---      published result at once.
+--      published result at once; the last one removes the membership (no
+--      school, file or student reads), and only a new link brings it back.
+--      Parents never read workspace files or usage counters. The member
+--      invitation functions ignore guardian invitations.
 --   G. Rate limit (60 guardian invitations an hour per school) and a
 --      read-only school.
 -- =====================================================================
 begin;
-select plan(44);
+select plan(59);
 
 create schema if not exists tests;
 
@@ -342,6 +345,64 @@ select is((select count(*)::int from public.results), 0, 'and no longer reads L1
 select is((select count(*)::int from public.guardian_users where status = 'revoked'), 1,
   'P can see their own link was revoked');
 select tests.logout();
+
+-- An active parent reads the school but none of its internal files or usage.
+insert into public.files (workspace_id, owner_id, path, original_name, mime_type, size_bytes, visibility)
+values ('38000000-0000-4000-b000-000000000001', '38000000-0000-4000-a000-000000000001',
+        'w/notice.pdf', 'notice.pdf', 'application/pdf', 10, 'workspace');
+select tests.login('38000000-0000-4000-a000-000000000002');
+select is((select count(*)::int from public.files), 1, 'a teacher reads the workspace file');
+select tests.logout();
+select tests.login('38000000-0000-4000-a000-000000000003');
+select is((select count(*)::int from public.workspaces where id = '38000000-0000-4000-b000-000000000001'),
+  1, 'an active parent reads the school');
+select is((select count(*)::int from public.files), 0, 'an active parent reads no workspace-visibility file');
+select is((select count(*)::int from public.usage_counters), 0, 'an active parent reads no usage counters');
+select tests.logout();
+
+-- Revoking the last link removes the parent from the school.
+create temp table links3 as select tests.link('L3') as l3;
+grant all on links3 to authenticated;
+select tests.login('38000000-0000-4000-a000-000000000001');
+select lives_ok($$select public.revoke_guardian_link('38000000-0000-4000-b000-000000000001', (select l3 from links3))$$,
+  'the owner revokes P''s last link');
+select tests.logout();
+select is((select status::text from public.workspace_members
+            where user_id = '38000000-0000-4000-a000-000000000003'
+              and workspace_id = '38000000-0000-4000-b000-000000000001'), 'removed',
+  'with the last link gone, P''s membership is removed');
+select tests.login('38000000-0000-4000-a000-000000000003');
+select is((select count(*)::int from public.workspaces where id = '38000000-0000-4000-b000-000000000001'),
+  0, 'after the revoke P reads 0 workspaces of the school');
+select is((select count(*)::int from public.files), 0, 'and 0 files');
+select is((select count(*)::int from public.students), 0, 'and 0 students');
+select throws_ok($$update public.workspace_members set status = 'active'
+                    where user_id = '38000000-0000-4000-a000-000000000003'
+                      and workspace_id = '38000000-0000-4000-b000-000000000001'$$,
+  '42501', null, 'P cannot reactivate their own membership without a link');
+select tests.logout();
+
+-- Invited again, P comes back through the guardian path only.
+select tests.login('38000000-0000-4000-a000-000000000001');
+select tests.invite('p3-again', 'L3');
+select tests.logout();
+select set_config('request.jwt.claims',
+  '{"sub":"38000000-0000-4000-a000-000000000003","role":"authenticated"}', true);
+select throws_ok($$select app.accept_invitation(tests.tok('p3-again'))$$, '22023', 'invitation not found',
+  'the member path cannot accept a guardian invitation');
+select throws_ok($$select app.decline_invitation(tests.tok('p3-again'))$$, '22023', 'invitation not found',
+  'nor decline one');
+select tests.logout();
+select tests.login('38000000-0000-4000-a000-000000000003');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('p3-again'))$$,
+  'a removed parent accepts a new link');
+select results_eq($$select student_code from public.students order by 1$$, array['L3'],
+  'and reads L3 again');
+select tests.logout();
+select is((select status::text from public.workspace_members
+            where user_id = '38000000-0000-4000-a000-000000000003'
+              and workspace_id = '38000000-0000-4000-b000-000000000001'), 'active',
+  'P''s membership is active again');
 
 -- =====================================================================
 -- G. Rate limit and read-only

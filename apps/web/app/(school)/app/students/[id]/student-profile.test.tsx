@@ -124,7 +124,6 @@ describe("StudentProfile", () => {
           {
             id: "l1",
             guardianId: "g1",
-            status: "active",
             accountName: "Karim U",
             accountEmail: "karim@example.com",
             acceptedAt: "2026-09-26T00:00:00Z",

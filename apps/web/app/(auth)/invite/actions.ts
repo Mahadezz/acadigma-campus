@@ -26,7 +26,9 @@ import {
 import { createClient } from "@/lib/supabase/server"
 import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie"
 
-const BAD_LINK = apiError("not_found", "This invitation link is not valid.")
+const BAD_LINK = apiError("not_found", "This invitation link is not valid.", {
+  fieldErrors: { _root: ["INVITATION_NOT_FOUND"] },
+})
 
 export async function previewInvitation(
   input: unknown
