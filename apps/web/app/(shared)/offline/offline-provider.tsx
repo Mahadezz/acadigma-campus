@@ -10,6 +10,7 @@ import type { Messages } from "@/lib/i18n"
 import {
   cachePageForOffline,
   hasOfflineState,
+  purgeOnSignOut,
   runOfflineCheck,
 } from "@/lib/offline/check"
 import { useOnline } from "@/lib/offline/use-online"
@@ -43,7 +44,8 @@ const SHELL_PATH = /^\/(app|family|personal)(\/|$)/
  *   is signed in, where, with which role — any change wipes the page cache.
  *   Skipped for a visitor with nothing cached and nothing remembered (the
  *   marketing site), so they never call the API.
- * - The same check on arriving at `/login`, where every sign-out ends.
+ * - The same check on entering a shell from outside it (sign-in, invite,
+ *   new school), and an unconditional wipe on arriving at `/login`.
  * - **The in-app navigation copy**: a signed-in page reached by a client-side
  *   navigation is stored for offline reading too (`cachePageForOffline`).
  * - **The offline banner** (DESIGN-SYSTEM §3.10, offline state only in Part 1).
@@ -57,7 +59,7 @@ export function OfflineProvider({
 }) {
   const online = useOnline()
   const pathname = usePathname()
-  const firstPath = React.useRef(pathname)
+  const prevPath = React.useRef<string | null>(null)
 
   React.useEffect(() => {
     if (!online) return
@@ -69,13 +71,18 @@ export function OfflineProvider({
   }, [online])
 
   React.useEffect(() => {
-    // Every way out of a session ends on /login (sign-out anywhere, an
-    // expired session): check there too, without waiting for a reload.
-    if (pathname === "/login") void runOfflineCheck()
+    const prev = prevPath.current
+    prevPath.current = pathname
+    // Sign-outs and expired sessions end on /login: wipe there without
+    // asking the server, so a failed check cannot leave the pages behind.
+    if (pathname === "/login") void purgeOnSignOut()
     // The first page load is cached by the worker itself.
-    if (pathname === firstPath.current) return
-    firstPath.current = ""
-    if (SHELL_PATH.test(pathname)) cachePageForOffline(location.href)
+    if (prev === null) return
+    if (!SHELL_PATH.test(pathname)) return
+    // Arriving in a shell from outside it (sign-in, accepting an invite,
+    // creating a school) can mean a new user or workspace: check first.
+    if (!SHELL_PATH.test(prev)) void runOfflineCheck()
+    cachePageForOffline(location.href)
   }, [pathname])
 
   return (

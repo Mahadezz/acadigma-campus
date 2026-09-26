@@ -9,6 +9,7 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { OnlineOnly } from "@/app/(shared)/offline/online-only"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
+import { purgeOnSignOut } from "@/lib/offline/check"
 
 import { signOut } from "../actions"
 
@@ -94,7 +95,14 @@ export function InviteAccept({
             variant="outline"
             className="h-11 w-full"
             disabled={signingOut}
-            onClick={() => startSignOut(() => signOut("/invite"))}
+            onClick={() =>
+              startSignOut(async () => {
+                // F-ID-11 §4.7 (D-308): this sign-out ends on /register,
+                // not /login, so it wipes the offline page cache itself.
+                await purgeOnSignOut()
+                await signOut("/invite")
+              })
+            }
           >
             {t.signOut}
           </Button>

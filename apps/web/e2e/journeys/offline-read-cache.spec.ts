@@ -37,7 +37,7 @@ const cachedUrls = (page: Page) =>
     return (await cache.keys()).map((r) => new URL(r.url).pathname)
   })
 
-test("opened pages read offline, generate buttons need internet, sign-out wipes the cache", async ({
+test("opened pages read offline, generate buttons need internet, workspace switch and sign-out wipe the cache", async ({
   page,
   context,
 }, testInfo) => {
@@ -89,8 +89,31 @@ test("opened pages read offline, generate buttons need internet, sign-out wipes 
   await expect(page.getByRole("button", { name: /Retry/ })).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 
-  // AC8: sign out (online) → no acadigma-data-* cache is left.
+  // §5.8: a workspace switch leaves none of the old workspace's pages.
   await context.setOffline(false)
+  await page.goto("/app/classes")
+  await expect
+    .poll(() => cachedUrls(page))
+    .toEqual(expect.arrayContaining(["/app/classes"]))
+  await page.getByRole("button", { name: /switch workspace/i }).click()
+  await page
+    .getByRole("dialog", { name: "Switch workspace" })
+    .getByRole("button", { name: /Personal/ })
+    .click()
+  await expect(page).toHaveURL("/personal")
+  await expect
+    .poll(async () =>
+      (await cachedUrls(page)).filter((p) => p.startsWith("/app"))
+    )
+    .toEqual([])
+  await page.getByRole("button", { name: /switch workspace/i }).click()
+  await page
+    .getByRole("dialog", { name: "Switch workspace" })
+    .getByRole("button", { name: /Model School/ })
+    .click()
+  await page.waitForURL(/\/app/)
+
+  // AC8: sign out (online) → no acadigma-data-* cache is left.
   await page.goto("/app/classes")
   await page.getByRole("button", { name: "Account menu" }).click()
   await page.getByRole("menuitem", { name: "Log out" }).click()
