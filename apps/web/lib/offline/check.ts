@@ -10,6 +10,7 @@ import {
   type OfflineSnapshot,
   type SessionCheck,
 } from "./purge"
+import { othersExpired } from "./outbox"
 import { PURGE_MESSAGE } from "./purge-guard"
 
 /**
@@ -147,31 +148,36 @@ export async function runOfflineCheck(
 }
 
 /**
- * §4.8, the outbox half (D-309), kept apart from the page wipe: another
- * user's outbox is never sent or shown to this user (it is kept, and only
- * counted, while it holds work; deleted once empty), and this user's items for a workspace they are no longer an
- * active member of are deleted. A role change keeps them — they replay under
- * the new role, where the server decides. Signed out keeps everything: an
- * expired session resumes for the same user (§4.6).
+ * §4.8, the outbox half (D-309, D-310), kept apart from the page wipe. On
+ * every check that gives a verdict:
+ *
+ * - Every outbox but the signed-in user's own is kept for its owner — never
+ *   sent, shown or deleted by whoever is here, only counted — until that
+ *   owner signs in, or until all of it is two weeks old (`othersExpired`).
+ *   So an expired session keeps its queue for the same user (§4.6), and a
+ *   phone nobody signs in to again does not keep children's names forever.
+ * - A deleted or banned account's outbox goes at once: it can never be sent.
+ * - The signed-in user's items for a workspace they are no longer an active
+ *   member of go. A role change keeps them — they replay under the new role,
+ *   where the server decides.
  */
-async function purgeOutboxes(
-  check: Extract<SessionCheck, { kind: "signed_in" }>
-): Promise<void> {
-  if (typeof indexedDB === "undefined") return
+async function purgeOutboxes(check: SessionCheck): Promise<void> {
+  if (typeof indexedDB === "undefined" || check.kind === "unknown") return
+  const me = check.kind === "signed_in" ? check.userId : null
   const users = await outboxUserIds()
-  // Another teacher's unsent work is an official record: kept while it
-  // holds anything (only counted, never shown), deleted once empty. The
-  // choice to delete it is Part 2b's (§4.6); review, #89.
   let waiting = 0
   for (const id of users) {
-    if (id === check.userId) continue
-    const n = (await outboxStore(id).list()).length
-    if (n > 0) waiting += n
-    else await deleteOutbox(id)
+    if (id === me) continue
+    const theirs =
+      check.kind === "revoked" && id === check.userId
+        ? []
+        : await outboxStore(id).list()
+    if (othersExpired(theirs)) await deleteOutbox(id)
+    else waiting += theirs.length
   }
   others = waiting
   // No outbox of theirs here: nothing to open (opening would create one).
-  if (users.includes(check.userId)) {
+  if (check.kind === "signed_in" && users.includes(check.userId)) {
     const store = outboxStore(check.userId)
     for (const item of await store.list()) {
       if (!check.activeWorkspaceIds.includes(item.workspaceId)) {
@@ -193,9 +199,7 @@ export async function checkSession(
   opts: { switchedTo?: string } = {}
 ): Promise<{ purged: boolean; check: SessionCheck }> {
   const check = await fetchSessionCheck()
-  if (check.kind === "signed_in") {
-    await purgeOutboxes(check).catch(() => undefined)
-  }
+  await purgeOutboxes(check).catch(() => undefined)
   const decision = decidePurge(readSnapshot(), check)
   if (
     opts.switchedTo &&

@@ -161,6 +161,7 @@ export type Database = {
           academic_year_id: string
           bulk_marked_at: string | null
           bulk_marked_by: string | null
+          captured_at: string | null
           created_at: string
           created_by: string | null
           date: string
@@ -171,8 +172,10 @@ export type Database = {
           id: string
           late_count: number
           present_count: number
+          queued_offline: boolean
           section_id: string
           status: Database["public"]["Enums"]["attendance_session_status"]
+          synced_late: boolean
           taken_at: string
           taken_by: string | null
           updated_at: string
@@ -183,6 +186,7 @@ export type Database = {
           academic_year_id: string
           bulk_marked_at?: string | null
           bulk_marked_by?: string | null
+          captured_at?: string | null
           created_at?: string
           created_by?: string | null
           date: string
@@ -193,8 +197,10 @@ export type Database = {
           id?: string
           late_count?: number
           present_count?: number
+          queued_offline?: never
           section_id: string
           status?: Database["public"]["Enums"]["attendance_session_status"]
+          synced_late?: boolean
           taken_at?: string
           taken_by?: string | null
           updated_at?: string
@@ -205,6 +211,7 @@ export type Database = {
           academic_year_id?: string
           bulk_marked_at?: string | null
           bulk_marked_by?: string | null
+          captured_at?: string | null
           created_at?: string
           created_by?: string | null
           date?: string
@@ -215,8 +222,10 @@ export type Database = {
           id?: string
           late_count?: number
           present_count?: number
+          queued_offline?: never
           section_id?: string
           status?: Database["public"]["Enums"]["attendance_session_status"]
+          synced_late?: boolean
           taken_at?: string
           taken_by?: string | null
           updated_at?: string
