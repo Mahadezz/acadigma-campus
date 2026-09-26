@@ -7,7 +7,12 @@ import { useRouter } from "next/navigation"
 
 import { ChevronLeftIcon } from "lucide-react"
 
-import type { ExamDetail, ExamPaper, TeacherOption } from "@acadigma/contracts"
+import type {
+  ExamDetail,
+  ExamPaper,
+  PublishCandidate,
+  TeacherOption,
+} from "@acadigma/contracts"
 import {
   nextExamStatus,
   papersLocked,
@@ -28,8 +33,15 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
-import { computeResults, setExamStatus, updateExamSubject } from "../actions"
+import {
+  computeResults,
+  publishResults,
+  setExamStatus,
+  updateExamSubject,
+} from "../actions"
 import { dateRange, examDateFormatter } from "../format"
+
+import { PublishSheet } from "./publish-sheet"
 
 type T = Messages["exams"]
 
@@ -44,6 +56,7 @@ export function ExamDetailView({
   canWrite,
   canCompute,
   canReadResults,
+  publishCandidates,
   teachers,
 }: {
   t: T
@@ -54,12 +67,16 @@ export function ExamDetailView({
   canCompute: boolean
   /** results.read; RLS narrows a teacher to their own class. */
   canReadResults: boolean
+  /** results.publish on a marks_locked exam: the publish sheet's students
+   * (D-306). Null otherwise: "Publish" then moves the status directly. */
+  publishCandidates: PublishCandidate[] | null
   teachers: TeacherOption[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [reversing, setReversing] = useState(false)
+  const [publishing, setPublishing] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const next = nextExamStatus(exam.status)
   const back = reversalFrom(exam.status)
@@ -79,6 +96,26 @@ export function ExamDetailView({
         return
       }
       setReversing(false)
+      router.refresh()
+    })
+  }
+
+  function publish(withhold: { studentId: string; reason: string }[]) {
+    setError(null)
+    setNotice(null)
+    startTransition(async () => {
+      const result = await publishResults({ examId: exam.id, withhold })
+      if (!result.ok) {
+        setPublishing(false)
+        setError(result.error.message || t.error)
+        return
+      }
+      setPublishing(false)
+      setNotice(
+        t.publish.done
+          .replace("{n}", String(result.data.published))
+          .replace("{withheld}", String(result.data.withheld))
+      )
       router.refresh()
     })
   }
@@ -165,7 +202,11 @@ export function ExamDetailView({
             <Button
               className="h-11"
               disabled={pending}
-              onClick={() => move(next)}
+              onClick={() =>
+                next === "published" && publishCandidates
+                  ? setPublishing(true)
+                  : move(next)
+              }
             >
               {t.advance[next as keyof T["advance"]]}
             </Button>
@@ -181,6 +222,17 @@ export function ExamDetailView({
             </Button>
           ) : null}
         </div>
+      ) : null}
+
+      {publishCandidates ? (
+        <PublishSheet
+          t={t}
+          open={publishing}
+          onOpenChange={setPublishing}
+          candidates={publishCandidates}
+          pending={pending}
+          onConfirm={publish}
+        />
       ) : null}
 
       {back ? (

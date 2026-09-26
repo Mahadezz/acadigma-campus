@@ -15,10 +15,12 @@ import {
   createExamInputSchema,
   err,
   planReadOnlyApiError,
+  publishResultsInputSchema,
   setExamStatusInputSchema,
   updateExamSubjectInputSchema,
   type ApiError,
   type ComputeResultsSummary,
+  type PublishResultsSummary,
   type Result,
 } from "@acadigma/contracts"
 import { requireWritable, type WorkspaceContext } from "@acadigma/db"
@@ -28,7 +30,10 @@ import {
   setExamStatus as setExamStatusRepo,
   updateExamSubject as updateExamSubjectRepo,
 } from "@acadigma/db/repositories/exams"
-import { computeResults as computeResultsRepo } from "@acadigma/db/repositories/results"
+import {
+  computeResults as computeResultsRepo,
+  publishResults as publishResultsRepo,
+} from "@acadigma/db/repositories/results"
 import { can } from "@acadigma/domain"
 import { checkExamTransition } from "@acadigma/domain/academic"
 
@@ -154,6 +159,40 @@ export async function computeResults(
   if (!writable.ok) return err(planReadOnlyApiError(writable.error))
 
   const result = await computeResultsRepo(ctx, supabase, parsed.data.examId)
+  if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`, "layout")
+  return result
+}
+
+/**
+ * F-AC-06 Part 7 (D-306) — §7 `publishResults`: parse -> context -> policy
+ * (`results.publish`) -> requireWritable -> `public.publish_results`, which
+ * refuses unless marks are complete and every result is computed and
+ * complete, then freezes and publishes every result, withholding the listed
+ * students. Unpublishing is the exam's "Unpublish" step (`setExamStatus`
+ * with a reason).
+ */
+export async function publishResults(
+  input: unknown
+): Promise<Result<PublishResultsSummary, ApiError>> {
+  const parsed = publishResultsInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+
+  const ctx = await requireWorkspace()
+  if (!can(ctx.role, "results.publish")) {
+    return err(
+      apiError("forbidden", "Only an owner or admin can publish results.")
+    )
+  }
+  const supabase = await createClient()
+  const writable = await requireWritable(ctx, supabase)
+  if (!writable.ok) return err(planReadOnlyApiError(writable.error))
+
+  const result = await publishResultsRepo(
+    ctx,
+    supabase,
+    parsed.data.examId,
+    parsed.data.withhold
+  )
   if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`, "layout")
   return result
 }

@@ -120,3 +120,12 @@ export const reportCardParamsSchema = z.object({
   examId: uuidSchema,
 })
 export type ReportCardParams = z.infer<typeof reportCardParamsSchema>
+
+/** F-AC-10 results tab (D-306): one published result of a parent's child,
+ * read from `results.frozen_payload` — never recomputed. */
+export type FamilyResult = {
+  examId: string
+  studentId: string
+  publishedAt: string
+  card: ReportCardDto
+}

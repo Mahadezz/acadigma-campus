@@ -4,9 +4,13 @@ import {
   apiError,
   err,
   ok,
+  reportCardDtoSchema,
   type ApiError,
   type ComputeResultsSummary,
   type AttendanceStatus,
+  type FamilyResult,
+  type PublishCandidate,
+  type PublishResultsSummary,
   type ReportCardDto,
   type Result,
   type SectionResults,
@@ -220,6 +224,23 @@ export async function getReportCard(
   studentId: string,
   examId: string
 ): Promise<Result<ReportCardDto, ApiError>> {
+  // A published result prints from its frozen payload (§5.14, D-306): what
+  // the family was shown, whatever changed since. A parent can only ever
+  // reach this branch — RLS shows them published results only.
+  const frozen = await client
+    .from("results")
+    .select("frozen_payload")
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("exam_id", examId)
+    .eq("student_id", studentId)
+    .maybeSingle()
+  if (frozen.error) return err(UNAVAILABLE)
+  if (!frozen.data) return err(NOT_FOUND)
+  if (frozen.data.frozen_payload !== null) {
+    const card = reportCardDtoSchema.safeParse(frozen.data.frozen_payload)
+    return card.success ? ok(card.data) : err(UNAVAILABLE)
+  }
+
   const { data, error } = await client
     .from("results")
     .select(
@@ -352,4 +373,157 @@ export async function getReportCard(
       belowMinimum: percent !== null && percent * 100 < rules.min_attendance_bp,
     },
   })
+}
+
+const PUBLISH_ERRORS: Record<string, ApiError> = {
+  FORBIDDEN: apiError(
+    "forbidden",
+    "Only an owner or admin can publish results."
+  ),
+  EXAM_NOT_FOUND: apiError("not_found", "That exam does not exist."),
+  MARKS_NOT_LOCKED: apiError(
+    "conflict",
+    "Results can be published only from Marks locked.",
+    { fieldErrors: { _root: ["MARKS_NOT_LOCKED"] } }
+  ),
+  MARKS_INCOMPLETE: apiError(
+    "conflict",
+    "Every student in every paper needs a mark, or Absent or Exempt, before results can be published.",
+    { fieldErrors: { _root: ["MARKS_INCOMPLETE"] } }
+  ),
+  NOT_COMPUTED: apiError(
+    "conflict",
+    "Compute results before publishing them.",
+    { fieldErrors: { _root: ["NOT_COMPUTED"] } }
+  ),
+  INCOMPLETE_PRESENT: apiError(
+    "conflict",
+    "Some results are incomplete. Compute results again, then publish.",
+    { fieldErrors: { _root: ["INCOMPLETE_PRESENT"] } }
+  ),
+  VALIDATION: apiError(
+    "validation_failed",
+    "Each withheld student needs a reason.",
+    { fieldErrors: { withhold: ["VALIDATION"] } }
+  ),
+  PLAN_READ_ONLY: apiError(
+    "forbidden",
+    "This school is read-only. Upgrade to publish results."
+  ),
+}
+
+/**
+ * §7 publishResults (D-306): freezes every result of the exam and publishes
+ * it; the withheld students' results stay hidden from their families.
+ */
+export async function publishResults(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  examId: string,
+  withhold: { studentId: string; reason: string }[]
+): Promise<Result<PublishResultsSummary, ApiError>> {
+  const { data, error } = await client.rpc("publish_results", {
+    p_workspace_id: ctx.workspaceId,
+    p_exam_id: examId,
+    p_withhold: withhold.map((w) => ({
+      student_id: w.studentId,
+      reason: w.reason,
+    })),
+  })
+  if (error) {
+    const known = Object.hasOwn(PUBLISH_ERRORS, error.message)
+      ? PUBLISH_ERRORS[error.message]
+      : undefined
+    return err(known ?? UNAVAILABLE)
+  }
+  const summary = z
+    .object({ published: z.number(), withheld: z.number() })
+    .safeParse(data)
+  return summary.success ? ok(summary.data) : err(UNAVAILABLE)
+}
+
+/** The publish sheet's list: every student with a result in the exam. */
+export async function listPublishCandidates(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  examId: string
+): Promise<Result<PublishCandidate[], ApiError>> {
+  const { data, error } = await client
+    .from("results")
+    .select(
+      "student_id, result_status, enrollments(roll_number), students(full_name), sections(name, grade_levels(name))"
+    )
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("exam_id", examId)
+  if (error) return err(UNAVAILABLE)
+  const rows = z
+    .array(
+      z.object({
+        student_id: z.string(),
+        result_status: resultRow.shape.result_status,
+        enrollments: z.object({ roll_number: z.number().nullable() }),
+        students: z.object({ full_name: z.string() }),
+        sections: z.object({
+          name: z.string(),
+          grade_levels: z.object({ name: z.string() }),
+        }),
+      })
+    )
+    .safeParse(data ?? [])
+  if (!rows.success) return err(UNAVAILABLE)
+  return ok(
+    rows.data
+      .map((r) => ({
+        studentId: r.student_id,
+        fullName: r.students.full_name,
+        sectionLabel: sectionDisplayName(
+          r.sections.grade_levels.name,
+          r.sections.name
+        ),
+        rollNumber: r.enrollments.roll_number,
+        status: r.result_status,
+      }))
+      .sort(
+        (a, b) =>
+          a.sectionLabel.localeCompare(b.sectionLabel) ||
+          (a.rollNumber ?? Infinity) - (b.rollNumber ?? Infinity)
+      )
+  )
+}
+
+/**
+ * F-AC-10 results tab (D-306): the caller's children's published results,
+ * newest first, from their frozen payloads. RLS returns a parent only their
+ * own linked children's published, non-withheld results.
+ */
+export async function listFamilyResults(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient
+): Promise<Result<FamilyResult[], ApiError>> {
+  const { data, error } = await client
+    .from("results")
+    .select("exam_id, student_id, published_at, frozen_payload")
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("published", true)
+    .order("published_at", { ascending: false })
+  if (error) return err(UNAVAILABLE)
+  const rows = z
+    .array(
+      z.object({
+        exam_id: z.string(),
+        student_id: z.string(),
+        published_at: z.string(),
+        frozen_payload: reportCardDtoSchema,
+      })
+    )
+    .safeParse(data ?? [])
+  if (!rows.success) return err(UNAVAILABLE)
+  return ok(
+    rows.data.map((r) => ({
+      examId: r.exam_id,
+      studentId: r.student_id,
+      publishedAt: r.published_at,
+      card: r.frozen_payload,
+    }))
+  )
 }

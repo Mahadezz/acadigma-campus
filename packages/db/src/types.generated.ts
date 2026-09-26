@@ -1254,6 +1254,74 @@ export type Database = {
           },
         ]
       }
+      guardian_users: {
+        Row: {
+          accepted_at: string | null
+          created_by: string | null
+          guardian_id: string
+          id: string
+          invited_at: string
+          revoked_at: string | null
+          status: Database["public"]["Enums"]["guardian_link_status"]
+          student_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_by?: string | null
+          guardian_id: string
+          id?: string
+          invited_at?: string
+          revoked_at?: string | null
+          status?: Database["public"]["Enums"]["guardian_link_status"]
+          student_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_by?: string | null
+          guardian_id?: string
+          id?: string
+          invited_at?: string
+          revoked_at?: string | null
+          status?: Database["public"]["Enums"]["guardian_link_status"]
+          student_id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guardian_users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_users_guardian_fkey"
+            columns: ["guardian_id", "student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "guardians"
+            referencedColumns: ["id", "student_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "guardian_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guardian_users_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guardians: {
         Row: {
           created_at: string
@@ -2167,17 +2235,22 @@ export type Database = {
           enrollment_id: string
           exam_id: string
           failed_subjects: number
+          frozen_payload: Json | null
           gpa: number | null
           gpa_without_optional: number | null
           id: string
           letter: string | null
           percentage: number | null
+          published: boolean
+          published_at: string | null
+          published_by: string | null
           result_status: Database["public"]["Enums"]["result_status"]
           section_id: string
           section_rank: number | null
           student_id: string
           total_full: number
           total_obtained: number
+          withheld_reason: string | null
           workspace_id: string
         }
         Insert: {
@@ -2186,17 +2259,22 @@ export type Database = {
           enrollment_id: string
           exam_id: string
           failed_subjects: number
+          frozen_payload?: Json | null
           gpa?: number | null
           gpa_without_optional?: number | null
           id?: string
           letter?: string | null
           percentage?: number | null
+          published?: boolean
+          published_at?: string | null
+          published_by?: string | null
           result_status: Database["public"]["Enums"]["result_status"]
           section_id: string
           section_rank?: number | null
           student_id: string
           total_full: number
           total_obtained: number
+          withheld_reason?: string | null
           workspace_id: string
         }
         Update: {
@@ -2205,17 +2283,22 @@ export type Database = {
           enrollment_id?: string
           exam_id?: string
           failed_subjects?: number
+          frozen_payload?: Json | null
           gpa?: number | null
           gpa_without_optional?: number | null
           id?: string
           letter?: string | null
           percentage?: number | null
+          published?: boolean
+          published_at?: string | null
+          published_by?: string | null
           result_status?: Database["public"]["Enums"]["result_status"]
           section_id?: string
           section_rank?: number | null
           student_id?: string
           total_full?: number
           total_obtained?: number
+          withheld_reason?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -2246,6 +2329,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "exam_sections"
             referencedColumns: ["exam_id", "section_id"]
+          },
+          {
+            foreignKeyName: "results_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "results_section_fkey"
@@ -3864,6 +3954,10 @@ export type Database = {
         Returns: undefined
       }
       pre_request: { Args: never; Returns: undefined }
+      publish_results: {
+        Args: { p_exam_id: string; p_withhold?: Json; p_workspace_id: string }
+        Returns: Json
+      }
       save_attendance: {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
@@ -3952,6 +4046,7 @@ export type Database = {
         | "delete"
       file_visibility: "private" | "workspace" | "public"
       grade_stage: "early" | "primary" | "secondary" | "higher"
+      guardian_link_status: "invited" | "active" | "revoked"
       guardian_relation:
         | "father"
         | "mother"
@@ -4196,6 +4291,7 @@ export const Constants = {
       ],
       file_visibility: ["private", "workspace", "public"],
       grade_stage: ["early", "primary", "secondary", "higher"],
+      guardian_link_status: ["invited", "active", "revoked"],
       guardian_relation: [
         "father",
         "mother",
