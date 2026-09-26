@@ -6,7 +6,7 @@ import type { GuardianRelation } from "./students"
 
 /**
  * F-AC-02 Part 4 (demo cut, D-108) — guardian links
- * (`supabase/migrations/20260926064354_guardian_linking.sql`).
+ * (`supabase/migrations/20260926065723_guardian_linking.sql`).
  */
 
 export const inviteGuardianInputSchema = z

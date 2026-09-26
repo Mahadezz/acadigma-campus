@@ -1,6 +1,6 @@
 /**
  * F-AC-02 Part 4 demo cut (D-108) — guardian links. The four functions in
- * `20260926064354_guardian_linking.sql` do every check; this maps their
+ * `20260926065723_guardian_linking.sql` do every check; this maps their
  * named errors. Previewing and accepting a link run before the caller is a
  * member of the school, so they take no `WorkspaceContext` (like creating a
  * school); everything else does.
