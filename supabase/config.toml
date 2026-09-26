@@ -26,6 +26,16 @@ major_version = 17
 enabled = true
 schema_paths = []
 
+# The default path (./seed.sql) does not exist — seed.sql lives in its own
+# ./seed/ directory alongside demo-class-6-ka.sql, a manual runbook script (needs
+# a real school's workspace id/name set first) that must NOT be auto-applied.
+# Without this block `supabase start`/`db reset` silently seeded nothing at all
+# (confirmed on PR #77's own CI run: "WARN: no files matched pattern:
+# supabase/seed.sql"), contradicting seed.sql's own header comment.
+[db.seed]
+enabled = true
+sql_paths = ["./seed/seed.sql"]
+
 [db.pooler]
 enabled = false
 
