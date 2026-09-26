@@ -192,9 +192,11 @@ select ok(not app.can_read_student_private('39000000-0000-4000-b000-000000000001
 select tests.logout();
 
 select is((select count(*)::int from public.workspace_members
-            where user_id = '39000000-0000-4000-a000-000000000003'), 1, 'T2 still has one membership');
+            where user_id = '39000000-0000-4000-a000-000000000003'
+              and workspace_id = '39000000-0000-4000-b000-000000000001'), 1, 'T2 still has one membership');
 select is((select role::text || '/' || status::text from public.workspace_members
-            where user_id = '39000000-0000-4000-a000-000000000003'), 'teacher/active',
+            where user_id = '39000000-0000-4000-a000-000000000003'
+              and workspace_id = '39000000-0000-4000-b000-000000000001'), 'teacher/active',
   'T2 is still an active teacher');
 
 -- T3, a teacher with no link, sees nothing through the family path.
@@ -211,7 +213,8 @@ select lives_ok($$select public.revoke_guardian_link('39000000-0000-4000-b000-00
   'the owner revokes T2''s link');
 select tests.logout();
 select is((select role::text || '/' || status::text from public.workspace_members
-            where user_id = '39000000-0000-4000-a000-000000000003'), 'teacher/active',
+            where user_id = '39000000-0000-4000-a000-000000000003'
+              and workspace_id = '39000000-0000-4000-b000-000000000001'), 'teacher/active',
   'revoking a teacher''s last link leaves their membership alone');
 select tests.login('39000000-0000-4000-a000-000000000003');
 select is(tests.family(), '{}'::text[], 'after the revoke T2 sees nothing through the family path');
@@ -250,7 +253,8 @@ select throws_ok($$select public.accept_guardian_invitation(tests.tok('t2c'))$$,
   'a removed teacher is refused, not reactivated');
 select tests.logout();
 select is((select role::text || '/' || status::text from public.workspace_members
-            where user_id = '39000000-0000-4000-a000-000000000003'), 'teacher/removed',
+            where user_id = '39000000-0000-4000-a000-000000000003'
+              and workspace_id = '39000000-0000-4000-b000-000000000001'), 'teacher/removed',
   'T2 stays a removed teacher');
 
 -- =====================================================================
@@ -304,7 +308,8 @@ select is((select count(*)::int from public.audit_events
               and actor_id = '39000000-0000-4000-a000-000000000002'),
   1, 'the revoke is audited with the class teacher as the actor');
 select is((select status::text from public.workspace_members
-            where user_id = '39000000-0000-4000-a000-000000000006'), 'removed',
+            where user_id = '39000000-0000-4000-a000-000000000006'
+              and workspace_id = '39000000-0000-4000-b000-000000000001'), 'removed',
   'with a pure parent''s last link gone, their parent membership is removed');
 
 -- The same 60/h school limit applies to the class teacher.

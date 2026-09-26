@@ -70,7 +70,8 @@ create or replace function tests.tok(p_label text) returns text language sql as 
   select token from toks where label = p_label
 $fn$;
 
-create or replace function tests.gid(p_code text) returns uuid language sql as $fn$
+-- Security definer: the lookup is fixture plumbing, not the caller's reach.
+create or replace function tests.gid(p_code text) returns uuid language sql security definer as $fn$
   select g.id from public.guardians g join public.students st on st.id = g.student_id
    where st.student_code = p_code and st.workspace_id in
      ('38000000-0000-4000-b000-000000000001', '38000000-0000-4000-b000-000000000002')
