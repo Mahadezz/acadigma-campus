@@ -122,10 +122,15 @@ test("every tab renders without error, and every interactive element is >= 56x56
     await expect(page.getByRole("tabpanel")).toBeVisible()
   }
 
+  // The shell's own "Skip to content" link is `sr-only` until keyboard
+  // focus — deliberately invisible, exempt from a pointer-sized-target
+  // rule the same way `basic-home-tap-targets.spec.ts` already exempts it
+  // (found running this test for real, review, 2026-09-27).
   const targets = page
     .getByRole("link")
     .or(page.getByRole("button"))
     .or(page.getByRole("tab"))
+    .filter({ hasNotText: "Skip to content" })
   const count = await targets.count()
   expect(count).toBeGreaterThan(0)
   for (let i = 0; i < count; i++) {

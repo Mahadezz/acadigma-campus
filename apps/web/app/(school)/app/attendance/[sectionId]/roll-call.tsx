@@ -6,12 +6,7 @@ import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-import {
-  ArrowLeftIcon,
-  CheckCheckIcon,
-  Loader2Icon,
-  Undo2Icon,
-} from "lucide-react"
+import { ArrowLeftIcon, CheckCheckIcon, Undo2Icon } from "lucide-react"
 
 import type {
   ApiError,
@@ -33,36 +28,17 @@ import type { Locale } from "@/lib/locale"
 import { saveAttendanceSession } from "../actions"
 import { fill } from "../format"
 
-// `next/dynamic`'s `loading` callback runs at module scope, before any
-// locale-aware `t` prop exists, so it cannot read the reader's own
-// language the way every other string on this screen does. English only,
-// for a state that is normally on screen for well under a second (the
-// chunk starts fetching the moment this tab mounts, per the comment
-// below) — ponytail: add a `useSyncExternalStore`-backed locale reader if
-// this component ever needs more than one sr-only word.
-const LOADING_LABEL = "Loading…"
-
 const ConfirmSheet = dynamic(
   () =>
     import("@acadigma/ui/primitives/confirm-sheet").then((m) => m.ConfirmSheet),
   {
     ssr: false,
-    // Review fix (react): a teacher on a slow or offline connection taps
-    // Save and sees nothing until this chunk resolves — a disabled button
-    // with a spinner in its place, matching `OnlineOnly`'s own "the tap
-    // registered" pattern (F-ID-11 §4.9), rather than silence.
-    loading: () => (
-      <Button
-        variant="outline"
-        disabled
-        size="lg"
-        className="min-h-14 w-full sm:w-auto"
-      >
-        <Loader2Icon className="animate-spin" aria-hidden="true" />
-        {/* Review fix (BLOCKER, axe): icon-only was not an accessible name. */}
-        <span className="sr-only">{LOADING_LABEL}</span>
-      </Button>
-    ),
+    // Review fix (lead): `ConfirmSheet` only ever opens after Save is
+    // tapped — it renders nothing at all while `open` is false, so a
+    // visible `loading` fallback showed a stray disabled button on every
+    // Attendance tab load, before Save was ever pressed. `null` matches
+    // what the resolved component itself renders in that state.
+    loading: () => null,
   }
 )
 
@@ -248,6 +224,8 @@ export function RollCall({
     readOnly || counts.unmarked > 0 || (!isSchoolDay && !anyway) || pending
 
   const bigButton = basic ? "min-h-14 text-base" : "h-11"
+  // See the header's own comment: the class hub already has the page's `<h1>`.
+  const TitleTag = basic ? "p" : "h1"
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
@@ -263,14 +241,19 @@ export function RollCall({
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">{dateLabel}</p>
-          <h1
+          {/* Review fix (lead): in the class hub (`basic`), `class-hub-view.tsx`'s
+           * own header already has the page's one `<h1>` with this same
+           * title — a second `<h1>` here duplicated it. The plain
+           * `/app/attendance/[sectionId]` page (`basic` false) keeps its
+           * own `<h1>`, unchanged. */}
+          <TitleTag
             className={cn(
               "font-bold tracking-tight",
               basic ? "text-2xl" : "text-xl"
             )}
           >
             {title}
-          </h1>
+          </TitleTag>
         </div>
         {!readOnly && students.length > 0 ? (
           beforeBulk ? (
@@ -346,7 +329,14 @@ export function RollCall({
                   studentName={name}
                   locale={locale}
                   disabled={readOnly || pending}
-                  className="w-full sm:w-72 sm:shrink-0"
+                  // Review fix (lead): 5 segments at basic size's min-w-16
+                  // need >= 320px; `sm:w-72` (288px) clipped "Half day"
+                  // under the toggle's own `overflow-hidden`. Default size's
+                  // min-w-14 (280px total) still fits `sm:w-72` unchanged.
+                  className={cn(
+                    "w-full sm:shrink-0",
+                    basic ? "sm:w-80" : "sm:w-72"
+                  )}
                   size={basic ? "basic" : "default"}
                 />
               </li>

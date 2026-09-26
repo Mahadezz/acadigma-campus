@@ -148,11 +148,12 @@ export function ClassHubView({
   }
 
   return (
-    // Review fix (BLOCKER, found running the real journey): `max-w-2xl` here
-    // squeezed `RollCall`'s own `max-w-5xl` two-column desktop grid — a
-    // child's max-width can only narrow an ancestor's, never widen past it
-    // — clipping the 5-segment `AttendanceToggle` below its 56px minimum
-    // (AC9). Matches `RollCall`'s own width so nothing constrains it.
+    // Review fix (lead, follow-up): tried reverting this to `max-w-2xl`
+    // once `roll-call.tsx`'s toggle got its own `sm:w-80` — a real
+    // screenshot at 1280px showed why not: the 2-column grid's ~304px
+    // column cannot fit a 320px `shrink-0` toggle, so the name div
+    // (`min-w-0`, free to shrink) collapsed to nothing and every student's
+    // name vanished. `max-w-5xl` (matching `RollCall`'s own width) stays.
     <div className="mx-auto flex max-w-5xl flex-col gap-4">
       <header>
         <h1 className="text-2xl font-bold tracking-tight">
@@ -164,7 +165,14 @@ export function ClassHubView({
       </header>
 
       <Tabs value={tab} onValueChange={changeTab}>
-        <TabsList className="bg-muted grid h-auto grid-cols-4 gap-1 rounded-lg p-1">
+        {/* Review fix (lead): `TabsList`'s own `group-data-[orientation=
+         * horizontal]/tabs:h-9` (packages/ui/src/components/tabs.tsx) has
+         * higher specificity than a plain `h-auto` utility here (an
+         * attribute-selector rule beats a class-only one), so the fixed
+         * 36px box clipped the icon+label content below it. `h-auto!`
+         * (Tailwind's `!important` suffix) is a caller-side override —
+         * packages/ui itself is untouched. */}
+        <TabsList className="bg-muted grid h-auto! grid-cols-4 gap-1 rounded-lg p-1">
           {tabs.map((id) => {
             const Icon = TAB_ICONS[id]
             return (
