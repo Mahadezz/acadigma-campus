@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@acadigma/ui/components/button"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { OnlineOnly } from "@/app/(shared)/offline/online-only"
+
 import { createReportRun } from "./actions"
 
 /**
@@ -62,14 +64,16 @@ export function GenerateReportCardBulkButton({
 
   return (
     <div className="flex flex-col gap-2">
-      <Button
-        onClick={onClick}
-        disabled={pending}
-        variant="outline"
-        className="w-full sm:w-auto"
-      >
-        {pending ? t.generating : t.generateReportCardBulk}
-      </Button>
+      <OnlineOnly>
+        <Button
+          onClick={onClick}
+          disabled={pending}
+          variant="outline"
+          className="w-full sm:w-auto"
+        >
+          {pending ? t.generating : t.generateReportCardBulk}
+        </Button>
+      </OnlineOnly>
       {error && (
         <InlineAlert tone="error" className="max-w-md">
           {error}

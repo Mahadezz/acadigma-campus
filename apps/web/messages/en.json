@@ -1631,5 +1631,12 @@
       "PLAN_READ_ONLY": "This school is read-only right now. Please contact the school.",
       "generic": "Something went wrong. Please try again."
     }
+  },
+  "offline": {
+    "banner": "You're offline — showing pages saved on this phone",
+    "lastUpdated": "Last updated {time}",
+    "today": "today",
+    "needsInternet": "Needs internet",
+    "needsInternetHint": "This is made on the server. Connect to the internet to use it."
   }
 }

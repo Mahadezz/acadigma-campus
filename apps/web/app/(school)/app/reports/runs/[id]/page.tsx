@@ -10,6 +10,7 @@ import {
   type ToneStatusChipProps,
 } from "@acadigma/ui/primitives/status-chip"
 
+import { OnlineOnly } from "@/app/(shared)/offline/online-only"
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
@@ -80,14 +81,17 @@ export default async function ReportRunPage({
       </p>
 
       {run.data.status === "ready" && (
-        <a
-          href={`/api/pdf/${run.data.id}`}
-          target="_blank"
-          rel="noreferrer"
-          className={DOWNLOAD_LINK_CLASSNAME}
-        >
-          {r.detail.download}
-        </a>
+        // F-ID-11 §4.9: the PDF is served fresh by the server, never cached.
+        <OnlineOnly>
+          <a
+            href={`/api/pdf/${run.data.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className={DOWNLOAD_LINK_CLASSNAME}
+          >
+            {r.detail.download}
+          </a>
+        </OnlineOnly>
       )}
 
       {run.data.status === "failed" && (

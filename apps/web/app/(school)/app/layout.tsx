@@ -10,6 +10,7 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { Logo } from "@acadigma/ui/primitives/logo"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
 
+import { LastUpdated } from "@/app/(shared)/offline/last-updated"
 import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
 import { UserMenu } from "@/app/(shared)/workspace/user-menu"
 import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
@@ -68,6 +69,11 @@ export default async function SchoolLayout({
     getCachedSchoolProfile(ctx.workspaceId),
   ])
 
+  // F-ID-11 §4.2 (D-308): the render time travels with a cached copy of this
+  // page, so the stamp can tell a cached page from a fresh one.
+  // eslint-disable-next-line react-hooks/purity -- the render time is the value
+  const lastUpdated = <LastUpdated renderedAt={Date.now()} locale={locale} />
+
   const readOnlyBanner = writable.ok ? null : (
     // F-CM-06 Part 4 (D-62): a Pro trial past trial_ends_at (or any other
     // access_mode=read_only cause) shows here, on every screen. D-300: every
@@ -117,6 +123,7 @@ export default async function SchoolLayout({
         }
         addPhoneLabel={s.help.addPhoneLink}
       >
+        {lastUpdated}
         {readOnlyBanner}
         {children}
       </BasicShellWrapper>
@@ -204,6 +211,7 @@ export default async function SchoolLayout({
         />
       }
     >
+      {lastUpdated}
       {readOnlyBanner}
       {children}
     </AppShell>
