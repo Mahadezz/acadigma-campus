@@ -342,6 +342,10 @@
         "publishedOn": "Published {date}",
         "emptyTitle": "No results published yet",
         "emptyDescription": "When your child's school publishes an exam result, it appears here."
+      },
+      "children": {
+        "title": "Your children",
+        "code": "Student ID {code}"
       }
     },
     "userMenu": {
@@ -1416,6 +1420,24 @@
       "call": "Call {name}",
       "noGuardians": "No guardians yet.",
       "locked": "Only the class teacher and school admins can see date of birth and guardian contacts."
+    },
+    "access": {
+      "title": "Parent app",
+      "none": "No parent has the app for this student yet.",
+      "invite": "Invite {name} to the parent app",
+      "linked": "Linked",
+      "unknownAccount": "A parent account",
+      "revoke": "Remove access",
+      "revokeTitle": "Remove {account}'s access?",
+      "revokeBody": "They will no longer see {student}'s results. You can invite them again later.",
+      "cancel": "Cancel",
+      "linkTitle": "Send this link to {name}",
+      "linkHelp": "It works once, for {student} only, until {date}. Whoever opens it first can accept it, so send it only to {name}.",
+      "linkLabel": "Invitation link",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "whatsapp": "Send on WhatsApp",
+      "whatsappText": "Your child's school invites you to see {student}'s results on Acadigma Campus. Open this link: {url}"
     }
   },
   "marks": {
@@ -1482,6 +1504,28 @@
     },
     "userMenu": {
       "switchToBasicMode": "Switch to basic mode"
+    }
+  },
+  "invite": {
+    "title": "Parent app invitation",
+    "subtitle": "See your child's results from your phone.",
+    "noToken": "This link is incomplete. Open the full link the school sent you.",
+    "signedOut": "Sign in, or create an account, to accept this invitation.",
+    "signIn": "Sign in",
+    "register": "Create an account",
+    "afterRegister": "After you create your account and confirm your email, open the school's link again.",
+    "checking": "Checking the link…",
+    "preview": "{school} invites you, as {student}'s {relation}, to the parent app.",
+    "whatYouSee": "You will see {student}'s published exam results and report cards. Only this child is linked.",
+    "accept": "Accept",
+    "accepting": "Accepting…",
+    "alreadyAccepted": "You have already accepted this invitation.",
+    "open": "Open the parent app",
+    "status": {
+      "accepted": "This invitation has already been used.",
+      "revoked": "This link was replaced. Ask the school for the latest one.",
+      "expired": "This invitation has expired. Ask the school for a new link.",
+      "declined": "This invitation was declined."
     }
   }
 }

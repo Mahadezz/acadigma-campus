@@ -1260,6 +1260,7 @@ export type Database = {
           created_by: string | null
           guardian_id: string
           id: string
+          invitation_id: string | null
           invited_at: string
           revoked_at: string | null
           status: Database["public"]["Enums"]["guardian_link_status"]
@@ -1272,6 +1273,7 @@ export type Database = {
           created_by?: string | null
           guardian_id: string
           id?: string
+          invitation_id?: string | null
           invited_at?: string
           revoked_at?: string | null
           status?: Database["public"]["Enums"]["guardian_link_status"]
@@ -1284,6 +1286,7 @@ export type Database = {
           created_by?: string | null
           guardian_id?: string
           id?: string
+          invitation_id?: string | null
           invited_at?: string
           revoked_at?: string | null
           status?: Database["public"]["Enums"]["guardian_link_status"]
@@ -1305,6 +1308,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "guardians"
             referencedColumns: ["id", "student_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "guardian_users_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_invitations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "guardian_users_user_id_fkey"
@@ -3480,6 +3490,7 @@ export type Database = {
           declined_at: string | null
           email: string | null
           expires_at: string
+          guardian_id: string | null
           id: string
           invited_by: string
           label_id: string | null
@@ -3491,6 +3502,7 @@ export type Database = {
           revoked_by: string | null
           role: Database["public"]["Enums"]["member_role"]
           status: Database["public"]["Enums"]["invitation_status"]
+          student_id: string | null
           token_hash: string
           token_prefix: string
           updated_at: string
@@ -3504,6 +3516,7 @@ export type Database = {
           declined_at?: string | null
           email?: string | null
           expires_at?: string
+          guardian_id?: string | null
           id?: string
           invited_by: string
           label_id?: string | null
@@ -3515,6 +3528,7 @@ export type Database = {
           revoked_by?: string | null
           role?: Database["public"]["Enums"]["member_role"]
           status?: Database["public"]["Enums"]["invitation_status"]
+          student_id?: string | null
           token_hash: string
           token_prefix: string
           updated_at?: string
@@ -3528,6 +3542,7 @@ export type Database = {
           declined_at?: string | null
           email?: string | null
           expires_at?: string
+          guardian_id?: string | null
           id?: string
           invited_by?: string
           label_id?: string | null
@@ -3539,6 +3554,7 @@ export type Database = {
           revoked_by?: string | null
           role?: Database["public"]["Enums"]["member_role"]
           status?: Database["public"]["Enums"]["invitation_status"]
+          student_id?: string | null
           token_hash?: string
           token_prefix?: string
           updated_at?: string
@@ -3551,6 +3567,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_invitations_guardian_fkey"
+            columns: ["guardian_id", "student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "guardians"
+            referencedColumns: ["id", "student_id", "workspace_id"]
           },
           {
             foreignKeyName: "workspace_invitations_invited_by_fkey"
@@ -3969,6 +3992,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_guardian_invitation: { Args: { p_token: string }; Returns: Json }
       admit_student: {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
@@ -3989,8 +4013,13 @@ export type Database = {
         Returns: Json
       }
       expire_pro_trials: { Args: never; Returns: number }
+      guardian_invitation_preview: { Args: { p_token: string }; Returns: Json }
       import_student_batch: {
         Args: { p_batch_id: string; p_limit?: number; p_workspace_id: string }
+        Returns: Json
+      }
+      invite_guardian: {
+        Args: { p_guardian_id: string; p_workspace_id: string }
         Returns: Json
       }
       list_my_workspaces: {
@@ -4026,6 +4055,10 @@ export type Database = {
       publish_results: {
         Args: { p_exam_id: string; p_withhold?: Json; p_workspace_id: string }
         Returns: Json
+      }
+      revoke_guardian_link: {
+        Args: { p_link_id: string; p_workspace_id: string }
+        Returns: undefined
       }
       save_attendance: {
         Args: { p_input: Json; p_workspace_id: string }

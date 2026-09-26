@@ -39,6 +39,9 @@ export const ACTIONS = [
   "students.write",
   // F-AC-02 §2 / §4.7: bulk import from a spreadsheet (D-106).
   "students.import",
+  // F-AC-02 §2 / Part 4 (D-108): invite a guardian to the parent app and
+  // revoke a parent's link — owner/admin.
+  "students.guardian.invite",
   "marks.read",
   "marks.write",
   // F-AC-06 §2: grade scales, pass mark, GPA rules — owner/admin.
@@ -168,6 +171,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "results.read",
     "results.compute",
     "results.publish",
+    "students.guardian.invite",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -225,6 +229,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "results.read",
     "results.compute",
     "results.publish",
+    "students.guardian.invite",
     "reports.read",
     "messages.send",
     "ai.use",

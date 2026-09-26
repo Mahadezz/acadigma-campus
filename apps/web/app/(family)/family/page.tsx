@@ -1,6 +1,7 @@
 import { HeartHandshakeIcon } from "lucide-react"
 
-import type { FamilyResult } from "@acadigma/contracts"
+import type { FamilyChild, FamilyResult } from "@acadigma/contracts"
+import { listFamilyChildren } from "@acadigma/db/repositories/guardian-links"
 import { listFamilyResults } from "@acadigma/db/repositories/results"
 import { can } from "@acadigma/domain"
 import { Badge } from "@acadigma/ui/components/badge"
@@ -37,16 +38,31 @@ export default async function FamilyHomePage() {
   const ctx = await requireShell("family")
   const { t, locale } = await getMessages()
 
-  const results = can(ctx.role, "family.results.read")
-    ? await listFamilyResults(ctx, await createClient())
-    : null
+  const isParent = can(ctx.role, "family.results.read")
+  const client = isParent ? await createClient() : null
+  const [results, children] = client
+    ? await Promise.all([
+        listFamilyResults(ctx, client),
+        listFamilyChildren(ctx, client),
+      ])
+    : [null, null]
 
   if (results && !results.ok) {
     return <InlineAlert tone="error">{results.error.message}</InlineAlert>
   }
+  // F-AC-02 Part 4 (D-108): the children this account is linked to.
+  const childList =
+    children?.ok && children.data.length > 0 ? (
+      <Children
+        t={t.workspace.family.children}
+        kids={children.data}
+        bn={locale === "bn"}
+      />
+    ) : null
   if (!results || results.data.length === 0) {
     return (
       <>
+        {childList}
         <h2 className="sr-only">{t.workspace.family.emptyTitle}</h2>
         <EmptyState
           icon={<HeartHandshakeIcon />}
@@ -70,6 +86,7 @@ export default async function FamilyHomePage() {
   })
   return (
     <div className="mx-auto max-w-2xl space-y-4">
+      {childList}
       <h2 className="text-lg font-semibold tracking-tight">{tr.title}</h2>
       <ul className="space-y-3">
         {results.data.map((r) => (
@@ -83,6 +100,34 @@ export default async function FamilyHomePage() {
         ))}
       </ul>
     </div>
+  )
+}
+
+function Children({
+  t,
+  kids,
+  bn,
+}: {
+  t: Messages["workspace"]["family"]["children"]
+  kids: FamilyChild[]
+  bn: boolean
+}) {
+  return (
+    <section className="mx-auto mb-4 max-w-2xl space-y-2">
+      <h2 className="text-lg font-semibold tracking-tight">{t.title}</h2>
+      <ul className="space-y-2">
+        {kids.map((k) => (
+          <li key={k.id} className="bg-card rounded-lg border p-3">
+            <p className="font-medium">
+              {bn && k.fullNameBn ? k.fullNameBn : k.fullName}
+            </p>
+            <p className="text-muted-foreground text-xs tabular-nums">
+              {t.code.replace("{code}", k.studentCode)}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

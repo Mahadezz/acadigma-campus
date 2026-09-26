@@ -6,7 +6,11 @@ import Link from "next/link"
 
 import { ArrowLeftIcon, LockIcon, PhoneIcon } from "lucide-react"
 
-import type { RosterStudent, StudentPrivate } from "@acadigma/contracts"
+import type {
+  GuardianLink,
+  RosterStudent,
+  StudentPrivate,
+} from "@acadigma/contracts"
 import { formatIsoDate } from "@acadigma/domain"
 import { ageOn } from "@acadigma/domain/academic"
 import { Badge } from "@acadigma/ui/components/badge"
@@ -24,6 +28,8 @@ import type { Locale } from "@/lib/locale"
 
 import { classLabel } from "../format"
 
+import { GuardianAccess } from "./guardian-access"
+
 /**
  * F-AC-02 §6 "Student profile" (D-103). `details` is null when RLS hid the
  * private block: the guardians card then shows a locked note, and the date
@@ -36,6 +42,7 @@ export function StudentProfile({
   details,
   privateError,
   today,
+  links = null,
 }: {
   t: Messages["students"]
   locale: Locale
@@ -43,6 +50,8 @@ export function StudentProfile({
   details: StudentPrivate | null
   privateError: boolean
   today: string
+  /** Owner/admin only (F-AC-02 Part 4, D-108); null hides parent access. */
+  links?: GuardianLink[] | null
 }) {
   const primaryName =
     locale === "bn" && s.fullNameBn ? s.fullNameBn : s.fullName
@@ -176,6 +185,15 @@ export function StudentProfile({
               })}
             </ul>
           )}
+          {details && links ? (
+            <GuardianAccess
+              t={t.access}
+              locale={locale}
+              studentName={primaryName}
+              guardians={details.guardians}
+              links={links}
+            />
+          ) : null}
         </CardContent>
       </Card>
     </div>
