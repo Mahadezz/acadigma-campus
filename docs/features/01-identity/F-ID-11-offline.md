@@ -3,7 +3,7 @@
 |                  |                                                                                                                                               |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Area             | platform                                                                                                                                      |
-| Status           | Part 1 built (D-308, PR #83); Parts 2a–5 planned — D-71                                                                                       |
+| Status           | Part 1 built (D-308, PR #83); Part 2a built (D-309, PR #89); Parts 2b–5 planned — D-71                                                        |
 | Owner branch     | `feat/platform-offline`                                                                                                                       |
 | Depends on       | F-ID-01 (sessions, sign-out), F-ID-03 (membership status, `WorkspaceContext`), F-AC-03 (attendance save, D-104), F-AC-06 Part 3 (marks entry) |
 | Offline          | this spec defines the rule every other spec declares against (§5.1)                                                                           |
@@ -224,3 +224,16 @@ Deviations (D-308):
 - **Not built in Part 1:** the warm-up of the teacher's class pages (§4.2 — owned by **Part 5**, with the storage quota it spends; the navigation copy covers "pages I opened" until then), `storage.persist()` and the quota banner (Part 5), failed-request offline detection (Part 2a, with the outbox), SMS/AI buttons (those screens do not exist yet; they use `OnlineOnly` when they ship), the role-changed e2e case (the rule is unit-tested).
 
 **For Parts 2a/2b (review note):** in Part 1 "wipe the page cache" and "forget the user" happen together (`purgeOnSignOut`). With the outbox they must split: a wipe of the page cache (sign-out, `/login`, workspace switch, revocation) never touches queued writes by itself — the outbox half of the purge follows its own §4.6/§4.8 rules (pending-items confirmation on sign-out, same-user resume, different-user purge confirmation). In particular Part 2a must **not** add the outbox wipe to the unconditional `/login` wipe: an expired session also lands on `/login`, and §4.6 keeps that user's queued work for them.
+
+### Status — Part 2a (D-309, PR #89)
+
+Built: the per-user IndexedDB outbox (`acadigma-<user_id>`, native API, no dependency) with the §4.4 outcome table, the §5.2 key rules (new key after each save or enqueue; replace a pending item, keep its base; a save made while one is sending queues behind it and is rebased when it lands), the §5.5 item limit (500), replay on open, `online` and foreground (serial, oldest first, one tab at a time; the store lock is never held during a send), the roll call on the outbox (queues offline, on a request that never came back — same key — or behind a waiting save of the same class; reopened offline it shows the queued roll; the conflict or refusal shows live on the screen), the pending chip and queue sheet (Waiting / Needs your choice / Needs attention; Send now, Try again, Show what I entered, confirmed Delete), the 7-day banner, the sign-out question on every sign-out control, and the outbox half of the §4.8 purge (other users' outboxes, and this user's items for a workspace they left; a role change keeps them). Replays carry `queuedFor`; `saveAttendanceSession` refuses them under any other user or workspace (`WRONG_ACCOUNT`). `save_attendance` unchanged. Also in this PR: the #83 re-check fixes (purge to every worker; no double wipe on a switch) and the #85 review item (a revoked guardian link or a 403/404 page purges the cached copy). Tests: `outbox.test.ts`, `check-outbox.test.ts`, `purge-guard.test.ts`, `check.test.ts`, the session route, the roll call and the action; `attendance-replay.integration.test.ts` against real PostgREST (a replay returns the stored result, a stale base is `CONFLICT`, a reused key is refused); Playwright `offline-roll-call` (sync once, and a colleague's save surfaced as a conflict) at 360×800 and 1280×800 with axe.
+
+Deviations (D-309):
+
+- Three quick retries follow the `online` event (it fires before the network carries traffic); free when nothing waits.
+- `queued_offline` in the audit row (AC-2) moves to Part 2b with `captured_at`, so `save_attendance` stays unchanged here.
+- A different user's outbox is deleted on the new user's first check, without the §4.6 confirmation (Part 2b).
+- The conflict sheet is Part 2b; 2a shows the conflict and offers Delete.
+- `OUTBOX_KINDS` stays in `apps/web/lib/offline/outbox.ts` until a second feature registers; the queue sheet is a dialog on desktop (`FormSheet`).
+- "A failed request counts as offline" (§4.1) covers saves only: a thrown request queues the roll call; the banner still follows `navigator.onLine`.

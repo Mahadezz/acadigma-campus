@@ -23,13 +23,14 @@ import { randomUUID } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
+import type { SaveAttendanceInput } from "@acadigma/contracts"
+
 import { saveAttendance } from "./attendance"
 import { createSchoolWorkspace } from "./school"
 
 import type { AcadigmaSupabaseClient } from "../client"
 import type { Database } from "../types.generated"
 import type { WorkspaceContext } from "../workspace-context"
-import type { SaveAttendanceInput } from "@acadigma/contracts"
 
 const URL = process.env.DB_LOCAL_SUPABASE_URL ?? "http://127.0.0.1:54321"
 const ANON_KEY = process.env.DB_LOCAL_SUPABASE_ANON_KEY
@@ -169,7 +170,10 @@ describe.skipIf(!RUN)(
 
     afterAll(async () => {
       if (ctx?.workspaceId) {
-        await serviceClient.from("workspaces").delete().eq("id", ctx.workspaceId)
+        await serviceClient
+          .from("workspaces")
+          .delete()
+          .eq("id", ctx.workspaceId)
       }
       if (userId) await serviceClient.auth.admin.deleteUser(userId)
     })
@@ -229,7 +233,11 @@ describe.skipIf(!RUN)(
       const replay = await saveAttendance(
         userClient,
         ctx,
-        input(randomUUID(), ["present", "present", "present"], loaded!.updated_at)
+        input(
+          randomUUID(),
+          ["present", "present", "present"],
+          loaded!.updated_at
+        )
       )
       expect(!replay.ok && replay.error.fieldErrors?._root).toEqual([
         "CONFLICT",
