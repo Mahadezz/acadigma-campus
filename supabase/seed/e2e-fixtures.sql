@@ -277,3 +277,131 @@ update public.sections s
    and m.workspace_id = s.workspace_id
    and m.user_id = '5eed0000-0000-4000-a000-000000000002'
    and s.class_teacher_id is null;
+
+-- ---------------------------------------------------------------------
+-- 6. Widen the two IP-keyed throttle buckets for this database only
+--    (D-76). `register`/`loginByIp` in the real
+--    `public.throttle_record_failure` (latest definition:
+--    supabase/migrations/20260925300303_throttle_per_user_keys.sql) are
+--    tuned for one real person at one IP -- `loginByIp` alone is 30
+--    attempts per 15 minutes before a full HOUR block. Every Playwright
+--    worker in this suite signs in from the exact same IP (the runner's
+--    loopback address), so the full suite's legitimate sign-ins (each
+--    journey signs in at least once, several more than once) blow past
+--    30 well before the run finishes, and once `loginByIp` blocks, EVERY
+--    later journey's sign-in fails with "Too many attempts" -- indistin-
+--    guishable, from the browser, from a real bug (found the hard way:
+--    this lane's second full run, after fixing the GoTrue-level limit
+--    below, went from 55 to 90 failures because more legitimate sign-ins
+--    could now be attempted before GoTrue itself cut them off first).
+--    `register` is the same shape (IP-keyed) and register-verify.spec.ts's
+--    own AC2 case adds to it every run.
+--
+--    `create or replace function` here installs a version of the SAME
+--    function with only these two buckets' thresholds widened, in THIS
+--    database only -- supabase/seed/*.sql is never applied to the hosted
+--    project by any CI workflow (only `supabase/migrations/*.sql` is, via
+--    `supabase db push`, D-73's db.yml), so production's real limits are
+--    untouched. `loginByEmail` is deliberately left at its real value
+--    (see the inline comment below) -- rate-limit.spec.ts depends on it
+--    still tripping for real. Keep this in sync with the migration's
+--    function body if that one changes the LOGIC (not just numbers) -- a
+--    future CI run that behaves unexpectedly differently from local dev
+--    is exactly what would reveal a drift, not a silent gap.
+-- ---------------------------------------------------------------------
+create or replace function public.throttle_record_failure(
+  p_bucket text,
+  p_key    text)
+returns table (blocked boolean, retry_after_seconds integer)
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_row            public.auth_throttle;
+  v_max_attempts   integer;
+  v_window_seconds integer;
+  v_block_seconds  integer;
+  v_key            text;
+begin
+  if p_key like 'user:%' and split_part(p_key, ':', 2) <> p_bucket then
+    raise exception 'throttle key does not match bucket' using errcode = '22023';
+  end if;
+
+  v_key := app.throttle_key(
+    case when p_bucket in ('changePassword', 'eiinCheck', 'createSchool')
+         then 'user:' || p_bucket
+         else p_key
+    end);
+
+  select l.max_attempts, l.window_seconds, l.block_seconds
+    into v_max_attempts, v_window_seconds, v_block_seconds
+  from (values
+    -- bucket,                 max_attempts, window_seconds, block_seconds
+    -- Only the two IP-keyed buckets every journey's sign-in/registration
+    -- shares (one IP for the whole suite) are widened, to 2000 -- far
+    -- above anything one CI run can reach. `loginByEmail` is UNCHANGED:
+    -- it is keyed per email, rate-limit.spec.ts uses a fresh random email
+    -- every run precisely so it never shares this bucket with any other
+    -- test, and its own assertion (the 6th wrong password rate-limits)
+    -- depends on this bucket's real 5-per-window threshold actually
+    -- tripping. Every other bucket is per-user (`user:<bucket>`, D-101)
+    -- or low-volume enough in this suite that it was never the problem.
+    ('register',                2000, 3600,  3600),
+    ('loginByEmail',               5,  900,   900),
+    ('loginByIp',                2000,  900,  3600),
+    ('passwordResetRequest',       5,  3600,  3600),
+    ('passwordResetSubmit',       10,  3600,  3600),
+    ('resendVerification',         5,  3600,  3600),
+    ('changePassword',            10,  3600,  3600),
+    ('eiinCheck',                 30,   900,   900),
+    ('createSchool',              30,   900,   900)
+  ) as l(bucket, max_attempts, window_seconds, block_seconds)
+  where l.bucket = p_bucket;
+
+  if v_max_attempts is null then
+    raise exception 'unrecognised throttle bucket: %', p_bucket using errcode = '22023';
+  end if;
+
+  insert into public.auth_throttle (key, window_started_at, attempts)
+  values (v_key, now(), 1)
+  on conflict (key) do update
+    set attempts = case
+          when (auth_throttle.blocked_until is not null and auth_throttle.blocked_until <= now())
+            or (auth_throttle.blocked_until is null
+                and auth_throttle.window_started_at < now() - make_interval(secs => v_window_seconds))
+            then 1
+          else auth_throttle.attempts + 1
+        end,
+        window_started_at = case
+          when (auth_throttle.blocked_until is not null and auth_throttle.blocked_until <= now())
+            or (auth_throttle.blocked_until is null
+                and auth_throttle.window_started_at < now() - make_interval(secs => v_window_seconds))
+            then now()
+          else auth_throttle.window_started_at
+        end,
+        blocked_until = case
+          when auth_throttle.blocked_until is not null and auth_throttle.blocked_until <= now()
+            then null
+          else auth_throttle.blocked_until
+        end
+  returning * into v_row;
+
+  if v_row.attempts > v_max_attempts then
+    update public.auth_throttle
+       set blocked_until = greatest(
+             coalesce(blocked_until, now()),
+             now() + make_interval(secs => v_block_seconds))
+     where key = v_key
+     returning * into v_row;
+  end if;
+
+  return query select
+    (v_row.blocked_until is not null and v_row.blocked_until > now()),
+    greatest(
+      0,
+      ceil(extract(epoch from (coalesce(v_row.blocked_until, now()) - now())))::integer
+    );
+end;
+$$;
