@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { createSectionInputSchema, createSubjectInputSchema } from "./structure"
+import {
+  createSectionInputSchema,
+  createSubjectInputSchema,
+  setSectionSubjectsInputSchema,
+} from "./structure"
 
 const GRADE = "5f0c2a1e-8b7d-4c3a-9e6f-1a2b3c4d5e6f"
 
@@ -51,5 +55,38 @@ describe("createSubjectInputSchema", () => {
       createSubjectInputSchema.safeParse({ ...base, category: "sports" })
         .success
     ).toBe(false)
+  })
+})
+
+describe("setSectionSubjectsInputSchema", () => {
+  const SUBJECT = "6a0c2a1e-8b7d-4c3a-9e6f-1a2b3c4d5e6f"
+
+  it("accepts a list with and without teachers, and an empty list", () => {
+    for (const subjects of [
+      [{ subjectId: SUBJECT, teacherId: GRADE }],
+      [{ subjectId: SUBJECT, teacherId: null }],
+      [],
+    ]) {
+      expect(
+        setSectionSubjectsInputSchema.safeParse({ sectionId: GRADE, subjects })
+          .success
+      ).toBe(true)
+    }
+  })
+
+  it("rejects a subject twice, a missing teacher key and unknown keys", () => {
+    for (const subjects of [
+      [
+        { subjectId: SUBJECT, teacherId: null },
+        { subjectId: SUBJECT, teacherId: GRADE },
+      ],
+      [{ subjectId: SUBJECT }],
+      [{ subjectId: SUBJECT, teacherId: null, workspaceId: GRADE }],
+    ]) {
+      expect(
+        setSectionSubjectsInputSchema.safeParse({ sectionId: GRADE, subjects })
+          .success
+      ).toBe(false)
+    }
   })
 })

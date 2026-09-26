@@ -2384,6 +2384,75 @@ export type Database = {
           },
         ]
       }
+      section_subjects: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          section_id: string
+          subject_id: string
+          teacher_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          section_id: string
+          subject_id: string
+          teacher_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          section_id?: string
+          subject_id?: string
+          teacher_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "section_subjects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_subjects_section_fkey"
+            columns: ["section_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "section_subjects_subject_fkey"
+            columns: ["subject_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "section_subjects_teacher_fkey"
+            columns: ["teacher_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "section_subjects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sections: {
         Row: {
           academic_year_id: string
@@ -3882,6 +3951,10 @@ export type Database = {
         Returns: Json
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
+      set_section_subjects: {
+        Args: { p_section_id: string; p_subjects: Json; p_workspace_id: string }
+        Returns: number
+      }
       student_import_existing: {
         Args: { p_workspace_id: string }
         Returns: Json

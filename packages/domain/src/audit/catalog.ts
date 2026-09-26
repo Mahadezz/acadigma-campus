@@ -597,6 +597,8 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "marks",
   // F-AC-02 §4.7 (D-106) — 20260925300316_student_import_batches.sql.
   "student_import_batches",
+  // F-AC-01 Part 5 demo cut (D-107) — 20260926021923_section_subjects.sql.
+  "section_subjects",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -670,6 +672,10 @@ export const GENERIC_TABLE_NOUNS: Readonly<
     en: "a student import",
     bn: "একটি শিক্ষার্থী আমদানি",
   },
+  section_subjects: {
+    en: "a class's subject and teacher",
+    bn: "একটি শাখার বিষয় ও শিক্ষক",
+  },
 }
 
 /**
@@ -684,6 +690,8 @@ const GENERIC_SEVERITY_OVERRIDES: Readonly<
   grade_bands: { update: "info", delete: "info" },
   // A re-save touches the session every morning (20260925300309_attendance.sql).
   attendance_sessions: { update: "info" },
+  // Taking a subject off a section is routine (20260926021923_section_subjects.sql).
+  section_subjects: { delete: "notable" },
 }
 
 const GENERIC_VERBS = {
