@@ -103,22 +103,31 @@ select app.attach_require_writable('public.section_subjects');
 create trigger created_by_immutable before update on public.section_subjects
   for each row execute function app.tg_created_by_immutable();
 
-insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
-values
-  ('section_subjects.insert', 'info',
-    '{actor} created a section subjects record',
-    '{actor} একটি section subjects রেকর্ড তৈরি করেছেন', true),
-  ('section_subjects.update', 'notable',
-    '{actor} updated a section subjects record ({fields})',
-    '{actor} একটি section subjects রেকর্ড হালনাগাদ করেছেন ({fields})', true),
-  ('section_subjects.delete', 'notable',
-    '{actor} deleted a section subjects record',
-    '{actor} একটি section subjects রেকর্ড মুছে ফেলেছেন', true)
-on conflict (action) do update
-  set severity    = excluded.severity,
-      sentence_en = excluded.sentence_en,
-      sentence_bn = excluded.sentence_bn,
-      is_generic  = excluded.is_generic;
+do $$
+declare
+  v_table  text;
+  v_tables text[] := array['section_subjects'];
+begin
+  foreach v_table in array v_tables loop
+    insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
+    values
+      (v_table || '.insert', 'info',
+        '{actor} created a ' || replace(v_table, '_', ' ') || ' record',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড তৈরি করেছেন', true),
+      (v_table || '.update', 'notable',
+        '{actor} updated a ' || replace(v_table, '_', ' ') || ' record ({fields})',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড হালনাগাদ করেছেন ({fields})', true),
+      (v_table || '.delete', 'critical',
+        '{actor} deleted a ' || replace(v_table, '_', ' ') || ' record',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড মুছে ফেলেছেন', true)
+    on conflict (action) do update
+      set severity    = excluded.severity,
+          sentence_en = excluded.sentence_en,
+          sentence_bn = excluded.sentence_bn,
+          is_generic  = excluded.is_generic;
+  end loop;
+end
+$$;
 
 alter table public.section_subjects enable row level security;
 

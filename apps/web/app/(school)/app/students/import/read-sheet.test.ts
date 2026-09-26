@@ -7,11 +7,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { readSheetFile } from "./read-sheet"
 
+import type * as ReadExcel from "read-excel-file/node"
+
 // Spy on what read-excel-file is handed, still parsing with the real one:
 // the guard must pass it a rebuilt zip, never the uploaded bytes.
 const parsed = vi.hoisted(() => [] as Uint8Array[])
 vi.mock("read-excel-file/node", async (importOriginal) => {
-  const real = await importOriginal<typeof import("read-excel-file/node")>()
+  const real = await importOriginal<typeof ReadExcel>()
   return {
     ...real,
     readSheet: (input: Uint8Array, ...rest: unknown[]) => {
