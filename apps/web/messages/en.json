@@ -1025,6 +1025,8 @@
     "error": "Could not generate this report. Try again.",
     "generateReportCard": "Report card",
     "generateReportCardBulk": "Print all report cards",
+    "generateAttendanceRegister": "Print this month's register",
+    "generateMarkSheet": "Print mark sheet",
     "empty": "No reports generated yet.",
     "recent": "Recent runs",
     "status": {

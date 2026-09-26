@@ -7,6 +7,7 @@ import {
   type ApiError,
   type ComputeResultsSummary,
   type AttendanceStatus,
+  type MarkSheetDto,
   type ReportCardDto,
   type Result,
   type SectionResults,
@@ -351,5 +352,130 @@ export async function getReportCard(
       percent,
       belowMinimum: percent !== null && percent * 100 < rules.min_attendance_bp,
     },
+  })
+}
+
+/**
+ * F-OP-03 Part 6 (D-208) — the exam mark sheet's data: every already-computed
+ * `results`/`result_subject_lines` row for the section, reshaped from "one
+ * row per student, subjects as a list" (`SectionResults`) to "one column per
+ * paper" (`MarkSheetDto`). No grading/averaging happens here beyond simple
+ * arithmetic on already-computed per-line numbers (§5.1's "one grading
+ * truth" rule): `letter`/`gradePoint`/`gpa`/`rank`/`passed` all come straight
+ * from `results`.
+ *
+ * `getSectionResults` returns `rows: []` both when the section genuinely has
+ * no students and when `compute_results` has never been run for this exam —
+ * the mark sheet cannot tell those apart from here, so both surface as
+ * `results_not_computed` (spec: "otherwise 'results not computed'"). An
+ * individual student whose OWN result is `incomplete`/`withheld` still gets
+ * a row (D-305 item 5: `compute_results` writes one per student), which is
+ * how the template prints "অসম্পূর্ণ" for that student alone rather than
+ * failing the whole sheet.
+ */
+export async function getMarkSheetData(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  examId: string,
+  sectionId: string
+): Promise<Result<MarkSheetDto, ApiError>> {
+  const section = await getSectionResults(ctx, client, examId, sectionId)
+  if (!section.ok) return section
+  if (section.data.rows.length === 0) {
+    return err(
+      apiError(
+        "not_found",
+        "Compute results for this exam before printing a mark sheet.",
+        { fieldErrors: { _root: ["RESULTS_NOT_COMPUTED"] } }
+      )
+    )
+  }
+
+  // The header row: every paper that appears on any student's sheet, in the
+  // same alphabetical order `toRow` already sorts each student's lines in.
+  const subjectOrder: string[] = []
+  const subjectMeta = new Map<
+    string,
+    { subjectNameEn: string; subjectNameBn: string; fullMarks: number }
+  >()
+  for (const row of section.data.rows) {
+    for (const line of row.lines) {
+      if (!subjectMeta.has(line.subjectName)) {
+        subjectOrder.push(line.subjectName)
+        subjectMeta.set(line.subjectName, {
+          subjectNameEn: line.subjectName,
+          subjectNameBn: line.subjectNameBn ?? line.subjectName,
+          fullMarks: line.fullMarks,
+        })
+      }
+    }
+  }
+  subjectOrder.sort((a, b) => a.localeCompare(b))
+  const subjects = subjectOrder.map((name) => subjectMeta.get(name)!)
+
+  const students = section.data.rows.map((row) => {
+    const bySubject = new Map(row.lines.map((l) => [l.subjectName, l]))
+    return {
+      studentId: row.studentId,
+      rollNumber: row.rollNumber,
+      studentNameEn: row.fullName,
+      studentNameBn: row.fullNameBn ?? row.fullName,
+      lines: subjectOrder.map((name) => {
+        const line = bySubject.get(name)
+        return {
+          subjectNameEn: name,
+          status: line?.status ?? null,
+          obtained: line?.obtained ?? null,
+          letter: line?.letter ?? null,
+        }
+      }),
+      totalObtained: row.totalObtained,
+      totalFull: row.totalFull,
+      percentage: row.percentage,
+      gpa: row.gpa,
+      letter: row.letter,
+      result: row.status,
+      rank: row.sectionRank,
+    }
+  })
+
+  const columnStats = subjectOrder.map((name) => {
+    let appeared = 0
+    let passCount = 0
+    const marks: number[] = []
+    for (const row of section.data.rows) {
+      const line = row.lines.find((l) => l.subjectName === name)
+      // "no mark row at all" excludes the subject from appeared/average
+      // (spec §5.3); exempt is likewise excluded everywhere (§5.9).
+      if (!line || line.status === null || line.status === "exempt") continue
+      appeared += 1
+      if (line.obtained !== null) marks.push(line.obtained)
+      if (line.passed) passCount += 1
+    }
+    const average =
+      marks.length === 0
+        ? null
+        : roundHalfUp(
+            marks.reduce((sum, m) => sum + m, 0) / marks.length,
+            2
+          )
+    return {
+      subjectNameEn: name,
+      highest: marks.length === 0 ? null : Math.max(...marks),
+      lowest: marks.length === 0 ? null : Math.min(...marks),
+      average,
+      passCount,
+      appeared,
+      passRate: appeared === 0 ? null : roundHalfUp((100 * passCount) / appeared, 1),
+    }
+  })
+
+  return ok({
+    sectionLabel: section.data.sectionLabel,
+    examNameEn: section.data.examName,
+    examNameBn: section.data.examName,
+    subjects,
+    students,
+    columnStats,
   })
 }

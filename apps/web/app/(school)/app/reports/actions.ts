@@ -1,11 +1,11 @@
 "use server"
 
 /**
- * F-OP-03 Parts 1-5 — `createReportRun` (§7). Three report kinds exist:
- * `'sample'` (the pipeline's own proof, D-205), `'report_card'` (D-206,
- * fixture-backed until F-AC-06 marks entry lands — see
- * `report-card-data.ts`'s seam comment), and `'report_card_bulk'` (D-207,
- * same fixture, one merged PDF per section per exam).
+ * F-OP-03 Parts 1-6 — `createReportRun` (§7). Five report kinds exist:
+ * `'sample'` (the pipeline's own proof, D-205), `'report_card'` (D-206),
+ * `'report_card_bulk'` (D-207, one merged PDF per section per exam),
+ * `'attendance_register'` and `'mark_sheet'` (D-208, Part 6 — the monthly
+ * register and the exam mark sheet, both from real F-AC-03/F-AC-06 data).
  *
  * Shape, every write action (CLAUDE.md, ARCHITECTURE §5): parse -> resolve
  * context -> policy (`can`) -> plan entitlement -> `requireWritable` (D-300)
@@ -28,6 +28,8 @@ import {
   planReadOnlyApiError,
   reportRunInputSchema,
   type ApiError,
+  type AttendanceRegisterParams,
+  type MarkSheetParams,
   type ReportCardBulkParams,
   type ReportCardParams,
   type ReportRun,
@@ -39,6 +41,7 @@ import {
   type AcadigmaSupabaseClient,
   type WorkspaceContext,
 } from "@acadigma/db"
+import { getAttendanceRegister } from "@acadigma/db/repositories/attendance-register"
 import {
   createReportRun as createReportRunRepo,
   createReportRunItems,
@@ -47,10 +50,13 @@ import {
   markReportRunReady,
   markReportRunRendering,
 } from "@acadigma/db/repositories/reports"
+import { getMarkSheetData } from "@acadigma/db/repositories/results"
 import { getSchoolProfile } from "@acadigma/db/repositories/settings"
 import { can } from "@acadigma/domain"
 import { renderHeaderLine } from "@acadigma/domain/settings"
 import {
+  AttendanceRegisterDocument,
+  MarkSheetDocument,
   renderPdfToBuffer,
   ReportCardDocument,
   SampleDocument,
@@ -332,6 +338,142 @@ async function renderReportCardBulkRun(
   )
 }
 
+/**
+ * Renders the monthly attendance register and moves the run to
+ * ready/failed. Same shape as `renderReportCardRun` — the one extra step is
+ * `getAttendanceRegister` (`@acadigma/db`), read through the CALLER's RLS
+ * client, same rule as every other kind's academic data.
+ */
+async function renderAttendanceRegisterRun(
+  runId: string,
+  ctx: WorkspaceContext,
+  params: AttendanceRegisterParams,
+  supabase: AcadigmaSupabaseClient
+): Promise<void> {
+  const startedAt = Date.now()
+  await withServiceRole(
+    `report-runs: render attendance_register run ${runId}`,
+    async (service) => {
+      const rendering = await markReportRunRendering(service, runId)
+      if (!rendering.ok) return
+
+      const run = await getReportRun(service, ctx, runId)
+      if (!run.ok) {
+        await markReportRunFailed(
+          service,
+          runId,
+          "run_not_found",
+          run.error.message
+        )
+        return
+      }
+
+      const data = await getAttendanceRegister(
+        supabase,
+        ctx,
+        params.sectionId,
+        params.month
+      )
+      if (!data.ok) {
+        await markReportRunFailed(service, runId, "no_data", data.error.message)
+        return
+      }
+
+      const branding = await readBranding(service, ctx)
+
+      try {
+        await renderPdfToBuffer(
+          AttendanceRegisterDocument({
+            locale: run.data.locale,
+            ...branding,
+            ...data.data,
+            generatedAt: new Date(),
+          })
+        )
+        await markReportRunReady(service, runId, 1, Date.now() - startedAt)
+      } catch (renderError) {
+        await markReportRunFailed(
+          service,
+          runId,
+          "render_error",
+          renderError instanceof Error
+            ? renderError.message
+            : "Unknown render error"
+        )
+      }
+    }
+  )
+}
+
+/**
+ * Renders the exam mark sheet and moves the run to ready/failed. Same shape
+ * as `renderReportCardRun` — the one extra step is `getMarkSheetData`
+ * (`@acadigma/db/repositories/results`), read through the CALLER's RLS
+ * client. An exam whose results were never computed surfaces here as
+ * `no_data` (D-208: "results not computed" is a run failure, not an inline
+ * banner — see that function's header comment).
+ */
+async function renderMarkSheetRun(
+  runId: string,
+  ctx: WorkspaceContext,
+  params: MarkSheetParams,
+  supabase: AcadigmaSupabaseClient
+): Promise<void> {
+  const startedAt = Date.now()
+  await withServiceRole(
+    `report-runs: render mark_sheet run ${runId}`,
+    async (service) => {
+      const rendering = await markReportRunRendering(service, runId)
+      if (!rendering.ok) return
+
+      const run = await getReportRun(service, ctx, runId)
+      if (!run.ok) {
+        await markReportRunFailed(
+          service,
+          runId,
+          "run_not_found",
+          run.error.message
+        )
+        return
+      }
+
+      const data = await getMarkSheetData(
+        ctx,
+        supabase,
+        params.examId,
+        params.sectionId
+      )
+      if (!data.ok) {
+        await markReportRunFailed(service, runId, "no_data", data.error.message)
+        return
+      }
+
+      const branding = await readBranding(service, ctx)
+
+      try {
+        await renderPdfToBuffer(
+          MarkSheetDocument({
+            locale: run.data.locale,
+            ...branding,
+            ...data.data,
+            generatedAt: new Date(),
+          })
+        )
+        await markReportRunReady(service, runId, 1, Date.now() - startedAt)
+      } catch (renderError) {
+        await markReportRunFailed(
+          service,
+          runId,
+          "render_error",
+          renderError instanceof Error
+            ? renderError.message
+            : "Unknown render error"
+        )
+      }
+    }
+  )
+}
+
 export async function createReportRun(
   input: unknown
 ): Promise<Result<ReportRun, ApiError>> {
@@ -377,13 +519,22 @@ export async function createReportRun(
         parsed.data.params,
         supabase
       )
-    } else {
+    } else if (parsed.data.params.kind === "report_card_bulk") {
       await renderReportCardBulkRun(
         created.data.id,
         ctx,
         parsed.data.params,
         supabase
       )
+    } else if (parsed.data.params.kind === "attendance_register") {
+      await renderAttendanceRegisterRun(
+        created.data.id,
+        ctx,
+        parsed.data.params,
+        supabase
+      )
+    } else {
+      await renderMarkSheetRun(created.data.id, ctx, parsed.data.params, supabase)
     }
     const refreshed = await getReportRun(supabase, ctx, created.data.id)
     revalidatePath(REPORTS_PATH)

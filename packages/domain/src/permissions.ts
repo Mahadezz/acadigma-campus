@@ -123,6 +123,18 @@ export const ACTIONS = [
   // is the same interim as report.render.report_card (D-206): not enforced
   // yet while the render source is a fixture, so a plain teacher grant.
   "report.render.report_card_bulk",
+  // F-OP-03 Part 6 (D-208): the monthly attendance register and the exam
+  // mark sheet. Spec §2 grants both to owner/admin and "own sections"/"own
+  // section-subjects" teachers only — narrower than the report card's staff
+  // grant, so staff gets neither (unlike report.render.report_card). The
+  // row-scoping the spec names is already the existing table RLS: attendance
+  // reads are not narrowed to "own sections" yet (any teacher may read any
+  // section, D-105's own precedent), and mark-sheet data already narrows to
+  // a teacher's own class-teacher sections via `results`' RLS
+  // (`app.can_read_results`, D-305) — so a plain role grant here is honest,
+  // not an interim cut the way the report card's teacher grant was.
+  "report.render.attendance_register",
+  "report.render.mark_sheet",
   // Academic structure (F-AC-01 §2, D-102): owner/admin/teacher/staff read,
   // owner/admin write. Parents see structure only through their portal.
   "academics.structure.read",
@@ -192,6 +204,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "report.render.sample",
     "report.render.report_card",
     "report.render.report_card_bulk",
+    "report.render.attendance_register",
+    "report.render.mark_sheet",
     "academics.structure.read",
     "academics.section.write",
     "academics.subject.write",
@@ -249,6 +263,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "report.render.sample",
     "report.render.report_card",
     "report.render.report_card_bulk",
+    "report.render.attendance_register",
+    "report.render.mark_sheet",
     "academics.structure.read",
     "academics.section.write",
     "academics.subject.write",
@@ -282,6 +298,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "report.render.sample",
     "report.render.report_card",
     "report.render.report_card_bulk",
+    "report.render.attendance_register",
+    "report.render.mark_sheet",
     "academics.structure.read",
     "exams.read",
     "results.read",

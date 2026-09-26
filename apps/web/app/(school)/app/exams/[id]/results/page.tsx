@@ -127,6 +127,15 @@ export default async function ExamResultsPage({
               }
             : null
         }
+        markSheet={
+          can(ctx.role, "report.render.mark_sheet")
+            ? {
+                generate: t.reports.generateMarkSheet,
+                generating: t.reports.generating,
+                error: t.reports.error,
+              }
+            : null
+        }
       />
     </div>
   )

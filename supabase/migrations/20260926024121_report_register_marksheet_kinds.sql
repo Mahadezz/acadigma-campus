@@ -1,0 +1,25 @@
+-- =====================================================================
+-- F-OP-03 Part 6 (attendance register + exam mark sheet, demo cut) — D-208.
+--
+-- Adds two report_kind values (additive, forward-only, same pattern as
+-- 20260925300313_report_card_kind.sql / 20260926022716_report_card_bulk_kind.sql):
+--   'attendance_register' — one section, one month, students x calendar days
+--   'mark_sheet'           — one section x exam, students x papers from `results`
+--
+-- No shape change to report_runs/report_run_items and no RLS change: both
+-- kinds are single-item, synchronous renders (D-205's precedent) that write
+-- no report_run_items row, exactly like 'sample'/'report_card'. The existing
+-- report_runs_select/report_runs_insert policies (300313, 022716) already
+-- gate by role via ACTION_FOR_KIND at the application layer; nothing here
+-- needs a per-kind RLS clause because neither kind is staff-visible (spec
+-- §2: staff gets neither report.render.attendance_register nor
+-- report.render.mark_sheet) and the existing policies do not special-case
+-- kinds beyond the 'report_card' staff carve-out already shipped.
+--
+-- `attendance_register_signoffs` (spec §3.1a) is explicitly NOT built here —
+-- see D-208: it is real schema/RLS/state-machine work (sign, countersign,
+-- reopen, the PERIOD_LOCKED guard on attendance_records) that the task
+-- scoped out of this demo cut, not a "tiny" follow-up.
+-- =====================================================================
+alter type public.report_kind add value if not exists 'attendance_register';
+alter type public.report_kind add value if not exists 'mark_sheet';
