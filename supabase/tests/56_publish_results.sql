@@ -308,7 +308,7 @@ select tests.logout();
 select tests.login('56000000-0000-4000-a000-000000000004');
 select is((select string_agg(st.student_code, ',') from public.results r
              join public.students st on st.id = r.student_id),
-  null, 'a parent cannot read the students table (the card carries the names)');
+  'S1', 'a parent reads only their own linked child''s student row (D-108)');
 select is((select count(*)::int from public.results), 1, 'a parent reads exactly one published result');
 select is((select r.frozen_payload ->> 'studentCode' from public.results r), 'S1', 'their own child''s');
 select is((select count(*)::int from public.result_subject_lines), 2, 'and its lines');
