@@ -18,12 +18,17 @@ vi.mock("@/lib/workspace", () => ({
 
 const mockRequireWritable = vi.fn()
 const mockAdmit = vi.fn()
+const mockInvite = vi.fn()
+const mockRevoke = vi.fn()
 vi.mock("@acadigma/db", () => ({
   requireWritable: (...a: unknown[]) => mockRequireWritable(...a),
   admitStudent: (...a: unknown[]) => mockAdmit(...a),
+  inviteGuardian: (...a: unknown[]) => mockInvite(...a),
+  revokeGuardianLink: (...a: unknown[]) => mockRevoke(...a),
 }))
 
-const { quickAdmitStudent } = await import("./actions")
+const { quickAdmitStudent, inviteGuardian, revokeGuardianLink } =
+  await import("./actions")
 
 const INPUT = {
   idempotencyKey: "5f0c2a1e-8b7d-4c3a-9e6f-1a2b3c4d5e6f",
@@ -78,5 +83,35 @@ describe("quickAdmitStudent", () => {
     const result = await quickAdmitStudent(INPUT)
     expect(!result.ok && result.error.code).toBe("payment_required")
     expect(mockAdmit).not.toHaveBeenCalled()
+  })
+})
+
+describe("inviteGuardian / revokeGuardianLink (D-108)", () => {
+  const ID = "6a1d3b2f-9c8e-4d4b-8f70-2b3c4d5e6f7a"
+
+  it("invites through the repository for an admin", async () => {
+    mockInvite.mockResolvedValue({
+      ok: true,
+      data: { token: "t", expiresAt: "2026-10-26T00:00:00Z" },
+    })
+    const result = await inviteGuardian({ guardianId: ID })
+    expect(result.ok).toBe(true)
+    expect(mockInvite.mock.calls[0]?.[2]).toBe(ID)
+  })
+
+  it("refuses a teacher, bad input and a read-only school", async () => {
+    expect((await inviteGuardian({ guardianId: "nope" })).ok).toBe(false)
+    ctx.role = "teacher"
+    const forbidden = await revokeGuardianLink({ linkId: ID })
+    expect(!forbidden.ok && forbidden.error.code).toBe("forbidden")
+    ctx.role = "owner"
+    mockRequireWritable.mockResolvedValue({
+      ok: false,
+      error: { code: "PLAN_READ_ONLY", reason: null },
+    })
+    const readOnly = await inviteGuardian({ guardianId: ID })
+    expect(!readOnly.ok && readOnly.error.code).toBe("payment_required")
+    expect(mockInvite).not.toHaveBeenCalled()
+    expect(mockRevoke).not.toHaveBeenCalled()
   })
 })

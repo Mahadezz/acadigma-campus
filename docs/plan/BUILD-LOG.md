@@ -4,6 +4,102 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-09-26 — PR #79 — feat(academics): F-AC-06 Part 4 — submit, lock/unlock, entry window, marks progress (D-307)
+
+- **Lane:** billing
+- **Shipped:** The non-offline half of marks Part 4 (the offline queue moved to F-ID-11 Part 3, D-71). `exam_subjects` gains an entry window (opens on its date, closes 7 days after the later of that date and the exam's end); a teacher writing outside it is refused, an owner/admin may write late with a required reason (`edited_after_window`, now sticky). `submit_exam_subject` (the paper's own teacher or an owner/admin, not the class teacher) warns on missing students instead of blocking, with a "Submit anyway" confirm. `lock_exam_subject`/`unlock_exam_subject` (owner/admin, new `marks.lock`) lock a submitted paper and unlock with a reason; unlocking a `marks_locked` exam drops it back to `marks_entry` so the existing trigger clears stale results. Exam page gets a "Marks progress" list (n/N marked, status badge, Lock/Unlock) and per-paper entry dates.
+- **Decisions:** D-307.
+- **Migrations:** `20260926063741_marks_submit_lock.sql` — applied to production; db workflow run 36224749283 succeeded.
+- **Review/incidents:** review found a direct-UPDATE path that could unlock a paper and skip the published/locked guards — closed with a transaction-local flag only `unlock_exam_subject` sets; made `edited_after_window` sticky instead of clearing on the next in-window write; added a "don't write student details here" note to every reason field; fixed the default close date (7 days after the exam's own end, not the paper's, so early papers don't lock before the last one is sat); added a migration backfill so no paper already mid-entry gets locked out on deploy; added a "Reopen 7 days" action after a window closes. Deferred: notifications (F-ID-07 has no delivery), "Request unlock" for teachers, a per-school window length, the offline queue (F-ID-11 Part 3).
+
+## 2026-09-26 — PR #81 — chore(infra): Vercel deploys main only (D-74)
+
+- **Lane:** lead
+- **Shipped:** Docs/infra-only. `apps/web/vercel.json` sets `git.deploymentEnabled` to `main` only. D-70 had already stopped Vercel from _building_ other branches (`ignoreCommand`), but every branch push was still _creating_ a deployment that then got cancelled — and cancelled deployments still count against the Hobby plan's daily deployment limit. About 100 builder WIP pushes on 2026-09-25/26 used the quota up and rate-limited real `main` merges. This stops branch pushes from creating a deployment at all; `main` is unaffected.
+- **Decisions:** D-74.
+- **Migrations:** none.
+- **Review/incidents:** none noted. Consequence: PRs no longer get a Vercel preview check (it was never a required check, and previews were unused — CI already runs Playwright against its own build).
+
+## 2026-09-26 — PR #72 — feat(design): F-ID-10 Part 2 — basic-mode home, shell and Help
+
+- **Lane:** design
+- **Shipped:** The real basic-mode home (F-ID-10 Part 2, D-403/404/405): `/app/home` replaces Part 1's placeholder with a today strip, one block per class the teacher is assigned to (via `listMySections`, #73's function — swapped in for this PR's own interim once #73 merged mid-PR), an "All classes" block for owner/admin, and an essentials row. The reduced-chrome `BasicShell` now wraps the whole `/app` shell in basic mode, not only the home page, so a class tap into the existing roll-call screen still opens inside basic chrome. New `/app/classes/all`. Found and fixed a real bundle-size bug (a Server Component importing the `Button` component pulls in the whole `radix-ui` package): `/app/home` was 276 kB gzipped, over the 250 kB budget, 195 kB after.
+- **Decisions:** D-405.
+- **Migrations:** none — every read goes through already-shipped, already RLS-protected repositories/RPCs.
+- **Review/incidents:** review found basic mode had silently dropped Sign out and the language switch (they lived only in the full shell's `UserMenu`, which basic mode replaces) — added both to the essentials row. Dropped the "Profile" link (pointed at a page with no basic-mode chrome, a dead end on a 360px phone). Made the Help sheet's close button a full-width 56px bilingual "Go back" instead of a small English-only "✕". Deduplicated a school-profile query the layout was fetching twice. Moved `buttonVariants` into a radix-free file so the earlier bundle-size fix's hand-copied button classes could be replaced with the real, drift-free variants. Fixed two now-stale Playwright specs (not yet run in CI, OQ-27).
+
+## 2026-09-26 — PR #74 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets "version packages" release PR, merged — bumps package versions and `CHANGELOG`s for the changesets accumulated up to and including PR #71 (F-AC-06 Parts 5 and 7 results/publish D-305/D-306, F-AC-01 section subjects D-107, F-OP-03 Part 5 bulk report cards D-207).
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-26 — PR #75 — feat(academics): F-AC-06 Part 7 — publish results, freeze, withhold, parent read, demo cut (D-306)
+
+- **Lane:** billing
+- **Shipped:** Publishing results to families. "Publish" on a `marks_locked` exam opens a sheet to withhold named students with a reason; `publish_results` refuses until every result is computed and complete, then freezes each student's report card in SQL (`app.result_card_payload`) so a later rename can never change what a family was shown, and logs `results.published`. Unpublishing (with a reason) hides results again, keeps the frozen payload, and is audited. New `guardian_users` (parent↔child links; RLS lets a user read their own, no client write grant yet — the invite flow that creates rows is F-AC-02 Part 4) and `app.is_guardian_of` redefined against it. `/family` lists a parent's linked children's published, non-withheld results from the frozen payload with a "Download report card" link.
+- **Decisions:** D-306.
+- **Migrations:** `20260926023537_publish_results.sql` — applied to production; db workflow run 36213705658 succeeded.
+- **Review/incidents:** review found `getReportCard` should only use the frozen payload while a result is published-and-not-withheld (an unpublished result now prints live data again); restricted the download filename to safe characters; found the freeze was including a withheld student's marks (RLS can't hide columns per role) and fixed it to freeze only names/class/exam with everything else null, reached through a new `public.family_results` definer function instead of a raw table read; added plain-language copy naming the publish effect and disabled reasons ("Compute results first", "n results incomplete"). Declined: seeding a demo guardian link (the owner cancelled it; F-AC-02 Part 4 builds real linking as D-108). Honest limit: no parent can be linked to a child in the product yet, so there is no end-to-end parent view until that Part ships.
+
+## 2026-09-26 — PR #77 — ci: real-PostgREST integration job + docs-only prettier fix (D-73)
+
+- **Lane:** lead
+- **Shipped:** Docs/CI-only. New `db-integration` CI job: starts a real local Supabase stack (CLI 2.117.0, matching `db.yml`) and runs every `*.integration.test.ts` in the workspace against real PostgREST — closing the exact gap #61 fell through (vitest mocks the Supabase client; pgTAP runs against bare Postgres with no PostgREST in front of it). Gated by a new `changes.dbIntegration` output. Also fixes the separate gap #57/#70 hit: a docs-only PR skips the whole `lint` job (prettier included), so `changes` now runs `prettier --check` on changed `.md` files itself when the PR is docs-only. Along the way, found and fixed a real seeding gap: `supabase/config.toml` had no `[db.seed]` block, so `supabase start`/`db reset` were silently seeding nothing anywhere, not just in CI.
+- **Decisions:** D-73.
+- **Migrations:** none.
+- **Review/incidents:** none beyond the seeding gap described above, which this PR's own first CI run surfaced and fixed. Not done here (recorded as next step in D-73): the skip-gated Playwright journeys (OQ-27) still don't run in CI — that needs a second app build against the local stack plus a seeded account. `db-integration` is a real gate today but not yet added to branch protection, pending a few real runs to confirm its runtime.
+
+## 2026-09-26 — PR #71 — feat(operations): F-OP-03 Part 5 — bulk report cards (print half only), demo cut (D-207)
+
+- **Lane:** operations
+- **Shipped:** One merged A4 PDF of every student's report card in a section for one exam (roll or name order, duplex padding so every card starts on an odd page). New `report_card_bulk` report kind on the existing run pipeline, synchronous like D-205; a per-student render failure is recorded as a `report_run_items` row without failing the whole run. New `report.render.report_card_bulk` (owner/admin/teacher, not staff). Also closes a security LOW from #63's review: `report_runs`/`report_run_items` SELECT now restricts staff to `report_card` runs at the RLS layer itself, not only at insert time.
+- **Decisions:** D-207.
+- **Migrations:** `20260926022716_report_card_bulk_kind.sql` — applied to production; db workflow run 36211981224 succeeded.
+- **Review/incidents:** this PR started against a fixture (F-AC-06 Part 5/#68 was still open) behind a narrow, named seam, same pattern D-206 set; once #68 merged, review moved the button onto the real results preview with real ids, fixed sort-by-roll to treat a null roll number correctly (D-305 made it nullable), made an all-failed run still write its `report_run_items` so the reason is visible, and made a failed items-write mark the run failed instead of falsely succeeding. pgTAP gained a positive case (staff can still see their own `report_card` run after the tightened policy).
+
+## 2026-09-26 — PR #73 — feat(academics): F-AC-01 section subjects and teachers, demo cut (D-107)
+
+- **Lane:** identity
+- **Shipped:** New `section_subjects` (section × subject × teacher, one teacher per subject in this cut) and `public.set_section_subjects` to replace a section's whole subject list in one transaction. `/app/classes` gets a Subjects sheet per section (tick a subject, pick its teacher). New `listMySections` returns the sections a member teaches (as class teacher, subject teacher, or both) for the basic-mode home. `create_exam` now defaults each paper's teacher from `section_subjects`.
+- **Decisions:** D-107.
+- **Migrations:** `20260926021923_section_subjects.sql` — applied to production; db workflow run 36211682243 succeeded.
+- **Review/incidents:** review found a security MEDIUM (D-300, "removing access always works"): removing a member who taught a subject failed in a read-only school because the release trigger tripped the read-only guard — fixed by letting the guard through for an update that only clears a teacher assignment, the same exception already made for member removal. A security LOW let another school's member id leak through to a foreign-key error instead of a clean refusal — fixed. A second LOW let a subject already assigned before it was archived force the admin to drop it just to change anything else — fixed to keep it. UI fixes: the sheet asks before discarding unsaved changes, lists current subjects first so rows don't jump, and its footer stays reachable at 360px (a shared `FormSheet` pattern).
+
+## 2026-09-26 — PR #68 — feat(academics): F-AC-06 Part 5 — result computation and rank in SQL (D-305)
+
+- **Lane:** billing
+- **Shipped:** `results` and `result_subject_lines` plus `public.compute_results` (owner/admin, only on a marks-locked exam with complete marks): reads the exam's frozen grading snapshot, bands each paper's percentage, passes only when the mark clears the pass line AND the band isn't a fail band, zeroes GPA on any F, ranks each section by GPA/total/percentage. Recompute replaces the exam's results in one transaction; unlocking marks clears them. New `/app/exams/[id]/results` preview. Implements the seam #63 (report card) left open: `getReportCardData` now reads real results instead of a fixture, and the fixture is deleted. A TypeScript reference (`computeResults`) is held to the same 10-student golden fixture as the SQL, in both pgTAP and vitest.
+- **Decisions:** D-305.
+- **Migrations:** `20260925300318_results.sql` — applied to production; db workflow run 36209625669 succeeded.
+- **Review/incidents:** review kept "incomplete" (no GPA/rank) for a student with an unmarked paper instead of blocking the whole exam; kept the AND rule for pass/fail rather than OR; made roll number and attendance percentage nullable on the report card instead of required; added a `results.cleared` audit event; excluded archived sections from a class teacher's read; added a screen-reader label to rank and a visible "(Fail)" marker on a failed paper. Deferred: `grade_rank`, `published`/`frozen_payload` and parent read (shipped two PRs later in #75), force-absent, the 4th-subject rule, idempotency keys and rate limits on `computeResults`.
+
+## 2026-09-26 — PR #69 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets "version packages" release PR, merged — bumps package versions and `CHANGELOG`s for the changesets accumulated up to and including PR #66 (student import D-106, basic-mode display prefs D-403/404, the report card template D-206).
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-26 — PR #66 — feat(academics): F-AC-02 §4.7 bulk student import, demo cut (D-106)
+
+- **Lane:** identity
+- **Shipped:** `/app/students/import` (owner/admin): download a bilingual CSV/Excel template, upload a register, see a stored preview ("40 rows · 37 ready · 3 with problems", each bad row with line, column and plain-English/Bangla reason), then import the valid rows. Every row goes through `public.import_student_batch` → `public.admit_student` — no second writer — idempotent per batch and row. Class/section matched by name in the current year; an unknown one is a row error, never created. Parses CSV with `papaparse` and `.xlsx` with `read-excel-file`, server-side only.
+- **Decisions:** D-106.
+- **Migrations:** `20260925300316_student_import_batches.sql` — applied to production; db workflow run 36208270166 succeeded.
+- **Review/incidents:** a security re-check found the 1 MB upload limit does not bound zip decompression (a `.xlsx` can expand a thousandfold) — fixed by reading the zip's central directory directly and refusing any entry declaring more than 10 MB unpacked, before `read-excel-file` ever sees the bytes. An earlier draft's test data used the unassigned 010 phone range; the lead reversed that for fixtures (valid-format numbers instead) and accepted LOW risk for the SQL demo seed, with a standing rule that the SMS sender must never message a demo-flagged workspace. Deferred: errors-as-CSV download, duplicate-student warnings, "update existing by code", rate limits.
+
+## 2026-09-25 — PR #64 — feat(design): F-ID-10 Part 1 — display settings (text size, basic-mode switch)
+
+- **Lane:** design
+- **Shipped:** `user_preferences` gains `ui_mode` (`full|basic`) and `text_size` (`normal|large|xlarge`) — added to the table F-ID-01/02 already created, not a new one (a review-time correction: the spec assumed the table didn't exist yet). Cookie mirrors and a server-rendered `<html data-text-size data-ui-mode>` give a no-flash first paint. `/app/settings/display` (text-size radio cards, basic-mode switch, hidden for staff), "Switch to basic mode" in the user menu, and a minimal `/app/home` placeholder so the round trip works end to end before Part 2's real home ships.
+- **Decisions:** D-403, D-404.
+- **Migrations:** `20260925300315_user_preferences_ui.sql` — applied to production; db workflow run 36198913510 succeeded.
+- **Review/incidents:** D-404 corrected the plan mid-flight: `user_preferences` already existed (eight other columns, full-CRUD RLS including delete) from earlier identity work, so this PR adds two columns and rides the existing RLS rather than creating a new table or narrowing an already-shipped grant. `/app/home` in this Part is a deliberate placeholder, not a partial build of Part 2's real home — its own copy says the class-by-class home is coming later.
+
 ## 2026-09-25 — PR #63 — feat(operations): F-OP-03 Part 3 — report card template on the PDF engine (D-206)
 
 - **Lane:** operations

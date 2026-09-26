@@ -15,7 +15,14 @@ export const metadata: Metadata = {
   title: "Create an account",
 }
 
-export default async function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>
+}) {
+  // Only the guardian invitation may be the post-verification destination
+  // (D-108); anything else keeps the default, /onboarding.
+  const next = (await searchParams).next === "/invite" ? "/invite" : undefined
   const supabase = await createClient()
   const {
     data: { user },
@@ -30,7 +37,10 @@ export default async function RegisterPage() {
       subtitle={t.auth.register.subtitle}
       footer={
         <>
-          <a href="/login" className="block text-center">
+          <a
+            href={next ? "/login?next=/invite" : "/login"}
+            className="block text-center"
+          >
             {t.auth.register.alreadyHaveAccount}
           </a>
           <LanguageToggle current={locale} />
@@ -40,7 +50,13 @@ export default async function RegisterPage() {
       <RegisterForm
         t={{ ...t.auth.register, strength: t.auth.passwordStrength }}
         network={t.auth.network}
+        next={next}
       />
+      {next ? (
+        <p className="text-muted-foreground mt-4 text-center text-sm">
+          {t.auth.register.noEmailHelp}
+        </p>
+      ) : null}
     </AuthCard>
   )
 }

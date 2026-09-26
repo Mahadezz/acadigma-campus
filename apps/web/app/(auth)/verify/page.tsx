@@ -19,9 +19,10 @@ export const metadata: Metadata = {
 export default async function VerifyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string; error?: string }>
+  searchParams: Promise<{ email?: string; error?: string; next?: string }>
 }) {
-  const { email, error } = await searchParams
+  const { email, error, next: rawNext } = await searchParams
+  const next = rawNext === "/invite" ? "/invite" : undefined
   const { locale, t } = await getMessages()
 
   if (error === "link_expired") {
@@ -36,6 +37,7 @@ export default async function VerifyPage({
             email={email}
             t={t.auth.verify}
             network={t.auth.network}
+            next={next}
           />
         ) : (
           <Button asChild className="h-12 w-full">
@@ -71,7 +73,12 @@ export default async function VerifyPage({
         </p>
       </div>
       {email ? (
-        <ResendForm email={email} t={t.auth.verify} network={t.auth.network} />
+        <ResendForm
+          email={email}
+          t={t.auth.verify}
+          network={t.auth.network}
+          next={next}
+        />
       ) : null}
     </AuthCard>
   )

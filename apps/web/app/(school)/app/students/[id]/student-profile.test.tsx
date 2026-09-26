@@ -1,10 +1,16 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import bn from "@/messages/bn.json"
 import en from "@/messages/en.json"
 
 import { StudentProfile } from "./student-profile"
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh() {} }) }))
+vi.mock("../actions", () => ({
+  inviteGuardian: vi.fn(),
+  revokeGuardianLink: vi.fn(),
+}))
 
 const student = {
   id: "33333333-3333-4333-8333-333333333333",
@@ -86,5 +92,61 @@ describe("StudentProfile", () => {
     expect(screen.getByText("ষষ্ঠ শ্রেণি – ক")).toBeTruthy()
     expect(screen.getByText(/2014/)).toBeTruthy()
     expect(screen.getByText(/12 বছর 6 মাস/)).toBeTruthy()
+  })
+
+  it("offers an invite for an unlinked guardian and lists linked accounts (D-108)", async () => {
+    const { rerender } = render(
+      <StudentProfile
+        t={en.students}
+        locale="en"
+        student={student}
+        details={details}
+        privateError={false}
+        today="2026-09-25"
+        links={[]}
+      />
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "Invite Karim Uddin to the parent app",
+      })
+    ).toBeTruthy()
+
+    rerender(
+      <StudentProfile
+        t={en.students}
+        locale="en"
+        student={student}
+        details={details}
+        privateError={false}
+        today="2026-09-25"
+        links={[
+          {
+            id: "l1",
+            guardianId: "g1",
+            accountName: "Karim U",
+            accountEmail: "karim@example.com",
+            acceptedAt: "2026-09-26T00:00:00Z",
+          },
+        ]}
+      />
+    )
+    expect(screen.queryByRole("button", { name: /Invite Karim/ })).toBeNull()
+    expect(await screen.findByText("Karim U")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Remove access" })).toBeTruthy()
+  })
+
+  it("shows no parent access block without the permission", () => {
+    render(
+      <StudentProfile
+        t={en.students}
+        locale="en"
+        student={student}
+        details={details}
+        privateError={false}
+        today="2026-09-25"
+      />
+    )
+    expect(screen.queryByText(en.students.access.title)).toBeNull()
   })
 })

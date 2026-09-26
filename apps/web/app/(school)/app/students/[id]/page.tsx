@@ -1,7 +1,11 @@
 import { forbidden, notFound } from "next/navigation"
 
 import { uuidSchema } from "@acadigma/contracts"
-import { getRosterStudent, getStudentPrivate } from "@acadigma/db"
+import {
+  getRosterStudent,
+  getStudentPrivate,
+  listGuardianLinks,
+} from "@acadigma/db"
 import { can, todayIn } from "@acadigma/domain"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -35,11 +39,14 @@ export default async function StudentProfilePage({
   const { t: all, locale } = await getMessages()
   const t = all.students
   const supabase = await createClient()
-  const [student, privateBlock] = await Promise.all([
+  const [student, privateBlock, links] = await Promise.all([
     getRosterStudent(supabase, ctx, id),
     can(ctx.role, "students.read_sensitive")
       ? getStudentPrivate(supabase, ctx, id)
       : Promise.resolve({ ok: true as const, data: null }),
+    can(ctx.role, "students.guardian.invite")
+      ? listGuardianLinks(ctx, supabase, id)
+      : Promise.resolve(null),
   ])
 
   if (!student.ok) {
@@ -59,6 +66,7 @@ export default async function StudentProfilePage({
       details={privateBlock.ok ? privateBlock.data : null}
       privateError={!privateBlock.ok}
       today={todayIn()}
+      links={links?.ok ? links.data : null}
     />
   )
 }

@@ -131,6 +131,10 @@ with allowed as (
     ('public.import_student_batch(uuid, uuid, integer)'),  -- F-AC-02 §4.7, D-106
     ('public.student_import_existing(uuid)'),  -- F-AC-02 §4.7, D-106
     ('public.set_section_subjects(uuid, uuid, jsonb)'),  -- F-AC-01 Part 5 demo cut, D-107
+    ('public.invite_guardian(uuid, uuid)'),  -- F-AC-02 Part 4 demo cut, D-108
+    ('public.guardian_invitation_preview(text)'),  -- F-AC-02 Part 4 demo cut, D-108
+    ('public.accept_guardian_invitation(text)'),  -- F-AC-02 Part 4 demo cut, D-108
+    ('public.revoke_guardian_link(uuid, uuid)'),  -- F-AC-02 Part 4 demo cut, D-108
     ('public.attendance_register(uuid, uuid, date)'),  -- F-OP-03 Part 6 review, D-208
     ('public.can_read_results(uuid, uuid)')  -- F-OP-03 Part 6 review, D-208
   ) as a(sig)

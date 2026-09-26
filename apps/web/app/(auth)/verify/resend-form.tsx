@@ -19,8 +19,11 @@ export function ResendForm({
   email,
   t,
   network,
+  next,
 }: {
   email: string
+  /** D-108: keeps a guardian's sign-up headed back to /invite. */
+  next?: "/invite"
   t: Messages["auth"]["verify"]
   network: Messages["auth"]["network"]
 }) {
@@ -36,7 +39,7 @@ export function ResendForm({
     setErrorTone("error")
     startTransition(async () => {
       try {
-        const result = await requestEmailVerification({ email })
+        const result = await requestEmailVerification({ email, next })
         if (!result.ok) {
           setError(result.error.message)
           return
