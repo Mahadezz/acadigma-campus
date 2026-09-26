@@ -2556,6 +2556,69 @@ export type Database = {
           },
         ]
       }
+      student_import_batches: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_count: number
+          error_rows: number
+          filename: string
+          finished_at: string | null
+          id: string
+          report: Json
+          status: Database["public"]["Enums"]["import_status"]
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_count?: number
+          error_rows: number
+          filename: string
+          finished_at?: string | null
+          id?: string
+          report: Json
+          status?: Database["public"]["Enums"]["import_status"]
+          total_rows: number
+          updated_at?: string
+          valid_rows: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_count?: number
+          error_rows?: number
+          filename?: string
+          finished_at?: string | null
+          id?: string
+          report?: Json
+          status?: Database["public"]["Enums"]["import_status"]
+          total_rows?: number
+          updated_at?: string
+          valid_rows?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_import_batches_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_private_details: {
         Row: {
           created_at: string
@@ -3560,6 +3623,10 @@ export type Database = {
         Returns: Json
       }
       expire_pro_trials: { Args: never; Returns: number }
+      import_student_batch: {
+        Args: { p_batch_id: string; p_limit?: number; p_workspace_id: string }
+        Returns: Json
+      }
       list_my_workspaces: {
         Args: never
         Returns: {
@@ -3608,6 +3675,10 @@ export type Database = {
         Returns: Json
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
+      student_import_existing: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       switch_workspace: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -3693,6 +3764,7 @@ export type Database = {
         | "weather"
         | "emergency"
       holiday_source: "seed" | "manual" | "import"
+      import_status: "preview" | "importing" | "completed"
       invitation_channel: "email" | "phone"
       invitation_status:
         | "pending"
@@ -3937,6 +4009,7 @@ export const Constants = {
         "emergency",
       ],
       holiday_source: ["seed", "manual", "import"],
+      import_status: ["preview", "importing", "completed"],
       invitation_channel: ["email", "phone"],
       invitation_status: [
         "pending",
