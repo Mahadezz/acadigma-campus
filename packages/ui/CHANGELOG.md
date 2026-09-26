@@ -1,5 +1,18 @@
 # @acadigma/ui
 
+## 0.4.0
+
+### Minor Changes
+
+- 9e5421e: F-ID-10 Part 1 (D-403, D-404): basic-mode display preferences. `user_preferences.ui_mode`/`text_size` (added to the existing table, not a new one), `updateUiPreferences`/`getUiPreferences`, non-httpOnly cookie mirrors, `<html data-text-size data-ui-mode>` rendered server-side for a no-flash first paint, `/app/settings/display` (text-size radio cards + basic-mode switch, hidden for staff), "Switch to basic mode" in the full app's user menu, and a minimal `/app/home` placeholder so turning basic mode on and switching back both work end to end. The class-by-class home and class hub are F-ID-10 Parts 2-3.
+
+### Patch Changes
+
+- Updated dependencies [07780bc]
+- Updated dependencies [9e5421e]
+- Updated dependencies [4a954d2]
+  - @acadigma/domain@0.6.0
+
 ## 0.3.2
 
 ### Patch Changes
