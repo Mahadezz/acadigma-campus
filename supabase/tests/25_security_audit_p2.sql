@@ -346,14 +346,14 @@ select is(
 -- F. SECURITY DEFINER sweep
 -- =====================================================================
 select is(
-  (select coalesce(array_agg(p.oid::regprocedure::text order by 1), '{}')
+  (select coalesce(array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text), '{}')
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where p.prosecdef and n.nspname in ('app', 'public')
       and not coalesce('search_path=""' = any (p.proconfig) or 'search_path=' = any (p.proconfig), false)),
   '{}'::text[], 'F1: every SECURITY DEFINER function pins search_path to empty');
 
 select is(
-  (select coalesce(array_agg(p.oid::regprocedure::text order by 1), '{}')
+  (select coalesce(array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text), '{}')
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname in ('app', 'public')
       and (p.proacl is null or exists (select 1 from aclexplode(p.proacl) a
@@ -361,7 +361,7 @@ select is(
   '{}'::text[], 'F2: no function in app/public is executable by PUBLIC');
 
 select is(
-  (select coalesce(array_agg(p.proname::text order by 1), '{}')
+  (select coalesce(array_agg(p.proname::text order by p.proname), '{}')
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'app'
       and p.proname in ('log_audit_event', 'notify', 'record_consent', 'next_id',
@@ -373,7 +373,7 @@ select is(
 -- SECURITY INVOKER caller needs it, or it checks the caller itself. A new
 -- entry here is a deliberate review decision, not a default.
 select is(
-  (select coalesce(array_agg(p.proname::text order by 1), '{}')
+  (select coalesce(array_agg(p.proname::text order by p.proname), '{}')
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'app' and p.prosecdef
       and has_function_privilege('authenticated', p.oid, 'execute')),
