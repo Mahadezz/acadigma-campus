@@ -143,7 +143,9 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
     // sr-only description (same pattern HelpSheet already uses), so two
     // matches is correct here, not a bug.
     expect(
-      screen.getAllByText("Save attendance for Class 6 – ক? 2 present, 1 absent.")
+      screen.getAllByText(
+        "Save attendance for Class 6 – ক? 2 present, 1 absent."
+      )
     ).toHaveLength(2)
     fireEvent.click(screen.getByRole("button", { name: "Yes, save" }))
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
@@ -158,14 +160,23 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
   })
 
   it("offers Undo after editing an already-saved session, and Undo re-saves the previous values as one edit", async () => {
-    render(<RollCall {...BASE} sessionUpdatedAt="t0" basic basicCopy={basicCopy} />)
+    render(
+      <RollCall {...BASE} sessionUpdatedAt="t0" basic basicCopy={basicCopy} />
+    )
     fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
     fireEvent.click(screen.getByRole("button", { name: "Yes, save" }))
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
     await screen.findByText(basicCopy.undoToast)
+    // The Undo button is disabled while a save transition is in flight; wait
+    // for the first save's `pending` flag to actually clear before clicking,
+    // rather than racing it (flaky under a slower/instrumented test run).
+    const undoButton = screen.getByRole("button", {
+      name: basicCopy.undo,
+    }) as HTMLButtonElement
+    await vi.waitFor(() => expect(undoButton.disabled).toBe(false))
 
-    fireEvent.click(screen.getByRole("button", { name: basicCopy.undo }))
+    fireEvent.click(undoButton)
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
     // The undo re-save carries the ORIGINAL (all-unmarked) statuses, not the
     // values this save just wrote — restoring what was on the server before.

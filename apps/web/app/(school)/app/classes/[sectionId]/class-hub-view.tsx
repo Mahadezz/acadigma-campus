@@ -2,44 +2,77 @@
 
 import * as React from "react"
 
+import dynamic from "next/dynamic"
+
 import {
+  BookMarkedIcon,
   ClipboardCheckIcon,
-  NotebookPenIcon,
   PrinterIcon,
   UsersIcon,
+  type LucideIcon,
 } from "lucide-react"
 
-import type { RollCallStudent, RosterStudent, SectionPaper, SectionPrintExam } from "@acadigma/contracts"
+import type {
+  RollCallStudent,
+  RosterStudent,
+  SectionPaper,
+  SectionPrintExam,
+} from "@acadigma/contracts"
+import { cn } from "@acadigma/ui/lib/utils"
 import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
-import { StatusChip, type ToneStatusChipProps } from "@acadigma/ui/primitives/status-chip"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@acadigma/ui/components/tabs"
 
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
-import { GenerateReportCardBulkButton } from "../../reports/generate-report-card-bulk-button"
-import { GenerateReportCardButton } from "../../reports/generate-report-card-button"
 import { RollCall } from "../../attendance/[sectionId]/roll-call"
 
-import { fill, pluralize } from "./format"
+import { pluralize } from "./format"
+
+// §5.5's bundle budget (150 kB for a hub tab) plus D-405 item 8's Radix-
+// barrel cost (any `Button` import pulls the whole `radix-ui` package) push
+// Marks/Students/Print out of the page's initial JS: a teacher opens
+// Attendance first almost every time (§4.5), so only that tab loads eagerly.
+// `ssr: false` is required, not optional, for the split to actually shrink
+// first-load JS — with SSR on, Next still ships the chunk for hydration and
+// `check-bundle-budget.mjs` (and `next build`'s own "First Load JS" column)
+// counts it anyway; none of these three tabs need to render on the server
+// (each is empty until its own data is real, and none affects the initial
+// paint the way Attendance does).
+const MarksTab = dynamic(() => import("./marks-tab").then((m) => m.MarksTab), {
+  ssr: false,
+})
+const StudentsTab = dynamic(
+  () => import("./students-tab").then((m) => m.StudentsTab),
+  { ssr: false }
+)
+const PrintTab = dynamic(() => import("./print-tab").then((m) => m.PrintTab), {
+  ssr: false,
+})
 
 type ClassHubTabId = "attendance" | "marks" | "students" | "print"
 const TAB_STORAGE_KEY = (sectionId: string) => `class-hub-tab:${sectionId}`
 
-const PAPER_STATUS_TONE: Record<SectionPaper["status"], ToneStatusChipProps["tone"]> = {
-  pending: "neutral",
-  entering: "pending",
-  submitted: "positive",
-  locked: "info",
+const TAB_ICONS: Record<ClassHubTabId, LucideIcon> = {
+  attendance: ClipboardCheckIcon,
+  marks: BookMarkedIcon,
+  students: UsersIcon,
+  print: PrinterIcon,
 }
+const TAB_IDS: readonly ClassHubTabId[] = [
+  "attendance",
+  "marks",
+  "students",
+  "print",
+]
 
 /**
- * F-ID-10 §4.5/§8 Part 3 — the class hub's four tabs, all pre-fetched
+ * F-ID-10 §4.5/§8 Part 3 — the class hub's four tabs, pre-fetched
  * server-side by `page.tsx` and switched here client-side (no navigation,
- * so tab switching stays under the §5.5 INP budget). The last-used tab is
- * remembered per class in `localStorage` (§4.5, "a convenience only" — a
- * read/write failure there never blocks rendering).
+ * so tab switching stays under the §5.5 INP budget once a tab's own chunk
+ * has loaded). The last-used tab is remembered per class in `localStorage`
+ * (§4.5, "a convenience only" — a read/write failure there never blocks
+ * rendering).
  */
 export function ClassHubView({
   t,
@@ -73,9 +106,21 @@ export function ClassHubView({
   const [tab, setTab] = React.useState<ClassHubTabId>("attendance")
 
   React.useEffect(() => {
+    // Reading a value from an external system (localStorage) on mount is one
+    // of the two documented valid uses of an Effect (react.dev/learn/
+    // you-might-not-need-an-effect) — synchronizing with a browser API, not
+    // deriving state from props/state. It also has to run after hydration:
+    // the server has no localStorage, so the SSR/first-paint tab must be the
+    // fixed default ("attendance") to avoid a hydration mismatch.
     try {
       const stored = window.localStorage.getItem(TAB_STORAGE_KEY(sectionId))
-      if (stored === "attendance" || stored === "marks" || stored === "students" || stored === "print") {
+      if (
+        stored === "attendance" ||
+        stored === "marks" ||
+        stored === "students" ||
+        stored === "print"
+      ) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
         setTab(stored)
       }
     } catch {
@@ -103,40 +148,52 @@ export function ClassHubView({
         </p>
       </header>
 
-      <Tabs value={tab} onValueChange={changeTab}>
-        <TabsList className="bg-muted grid h-auto w-full grid-cols-4 gap-1 p-1">
-          <TabsTrigger
-            value="attendance"
-            className="flex min-h-14 flex-col gap-1 py-2 text-sm data-[state=active]:shadow-sm"
-          >
-            <ClipboardCheckIcon className="size-7" aria-hidden="true" />
-            {s.tabs.attendance}
-          </TabsTrigger>
-          <TabsTrigger
-            value="marks"
-            className="flex min-h-14 flex-col gap-1 py-2 text-sm data-[state=active]:shadow-sm"
-          >
-            <NotebookPenIcon className="size-7" aria-hidden="true" />
-            {s.tabs.marks}
-          </TabsTrigger>
-          <TabsTrigger
-            value="students"
-            className="flex min-h-14 flex-col gap-1 py-2 text-sm data-[state=active]:shadow-sm"
-          >
-            <UsersIcon className="size-7" aria-hidden="true" />
-            {s.tabs.students}
-          </TabsTrigger>
-          <TabsTrigger
-            value="print"
-            className="flex min-h-14 flex-col gap-1 py-2 text-sm data-[state=active]:shadow-sm"
-          >
-            <PrinterIcon className="size-7" aria-hidden="true" />
-            {s.tabs.print}
-          </TabsTrigger>
-        </TabsList>
+      {/*
+       * Hand-rolled instead of `@acadigma/ui/components/tabs` (Radix): the
+       * whole 4-tab switcher is one `role="tablist"` of plain buttons plus
+       * one conditionally-rendered panel — Radix's `Tabs` adds nothing this
+       * needs (no roving-tabindex keyboard grid, no nested/orientation
+       * cases) but does add its own JS to every hub load, which pushed this
+       * route over the §5.5/BUILDER-BRIEF 250 kB gzipped budget.
+       */}
+      <div
+        role="tablist"
+        className="bg-muted grid grid-cols-4 gap-1 rounded-lg p-1"
+      >
+        {TAB_IDS.map((id) => {
+          const Icon = TAB_ICONS[id]
+          const selected = tab === id
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              id={`class-hub-tab-${id}`}
+              aria-selected={selected}
+              aria-controls={`class-hub-panel-${id}`}
+              onClick={() => changeTab(id)}
+              className={cn(
+                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-md py-2 text-sm font-medium transition-colors",
+                selected
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground"
+              )}
+            >
+              <Icon className="size-7" aria-hidden />
+              {s.tabs[id]}
+            </button>
+          )
+        })}
+      </div>
 
-        <TabsContent value="attendance" className="pt-2">
-          {attendance ? (
+      <div
+        role="tabpanel"
+        id={`class-hub-panel-${tab}`}
+        aria-labelledby={`class-hub-tab-${tab}`}
+        className="pt-2"
+      >
+        {tab === "attendance" ? (
+          attendance ? (
             <RollCall
               t={t.attendance.roll}
               locale={locale}
@@ -160,127 +217,21 @@ export function ClassHubView({
             />
           ) : (
             <EmptyState title={t.classes.errors.generic} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="marks" className="pt-2">
-          {papers.length === 0 ? (
-            <EmptyState title={s.marks.empty} />
-          ) : (
-            <ul className="divide-border divide-y border-y">
-              {papers.map((paper) => (
-                <li key={paper.examSubjectId}>
-                  <a
-                    href={`/app/marks/${paper.examSubjectId}`}
-                    className="hover:bg-muted/50 flex min-h-16 flex-col justify-center gap-1 px-2 py-3"
-                  >
-                    <span className="flex items-center justify-between gap-2 text-base font-medium">
-                      <BnEnText
-                        text={
-                          locale === "bn" && paper.subjectNameBn
-                            ? paper.subjectNameBn
-                            : paper.subjectName
-                        }
-                      />
-                      <StatusChip tone={PAPER_STATUS_TONE[paper.status]}>
-                        {paper.status === "pending"
-                          ? s.marks.statusPending
-                          : paper.status === "entering"
-                            ? s.marks.statusEntering
-                            : paper.status === "submitted"
-                              ? s.marks.statusSubmitted
-                              : s.marks.statusLocked}
-                      </StatusChip>
-                    </span>
-                    <span className="text-muted-foreground text-sm">
-                      {paper.examName} ·{" "}
-                      {fill(s.marks.entered, {
-                        done: paper.marksDone,
-                        total: paper.enrolled,
-                      })}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </TabsContent>
-
-        <TabsContent value="students" className="pt-2">
-          {students.length === 0 ? (
-            <EmptyState title={s.students.empty} />
-          ) : (
-            <ul className="divide-border divide-y border-y">
-              {students.map((student) => {
-                const name =
-                  locale === "bn" && student.fullNameBn
-                    ? student.fullNameBn
-                    : student.fullName
-                return (
-                  <li
-                    key={student.id}
-                    className="flex min-h-14 items-center gap-3 px-2 py-2"
-                  >
-                    <span className="text-muted-foreground w-14 shrink-0 text-right text-sm tabular-nums">
-                      {student.rollNumber !== null
-                        ? fill(s.students.roll, { roll: student.rollNumber })
-                        : "—"}
-                    </span>
-                    <BnEnText text={name} className="truncate text-base" />
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </TabsContent>
-
-        <TabsContent value="print" className="pt-2 space-y-4">
-          {!latestExam ? (
-            <EmptyState title={s.print.empty} />
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-base font-semibold">
-                  {fill(s.print.heading, { examName: latestExam.examName })}
-                </h2>
-                <GenerateReportCardBulkButton
-                  t={t.reports}
-                  sectionId={sectionId}
-                  examId={latestExam.examId}
-                  locale={locale}
-                />
-              </div>
-              {students.length === 0 ? (
-                <EmptyState title={s.students.empty} />
-              ) : (
-                <ul className="divide-border divide-y border-y">
-                  {students.map((student) => {
-                    const name =
-                      locale === "bn" && student.fullNameBn
-                        ? student.fullNameBn
-                        : student.fullName
-                    return (
-                      <li
-                        key={student.id}
-                        className="flex min-h-14 items-center justify-between gap-3 px-2 py-2"
-                      >
-                        <BnEnText text={name} className="truncate text-base" />
-                        <GenerateReportCardButton
-                          t={t.reports}
-                          studentId={student.id}
-                          examId={latestExam.examId}
-                          locale={locale}
-                          studentName={name}
-                        />
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+          )
+        ) : tab === "marks" ? (
+          <MarksTab t={s} locale={locale} papers={papers} />
+        ) : tab === "students" ? (
+          <StudentsTab t={s} locale={locale} students={students} />
+        ) : (
+          <PrintTab
+            t={t}
+            locale={locale}
+            sectionId={sectionId}
+            latestExam={latestExam}
+            students={students}
+          />
+        )}
+      </div>
     </div>
   )
 }

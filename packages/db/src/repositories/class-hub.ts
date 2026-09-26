@@ -222,7 +222,10 @@ export async function getLatestSectionExam(
     exams: { starts_on: string | null } | null
   })[]
 
-  const byExam = new Map<string, { name: string; status: string; startsOn: string | null }>()
+  const byExam = new Map<
+    string,
+    { name: string; status: string; startsOn: string | null }
+  >()
   for (const r of rows) {
     if (!r.exams) continue
     byExam.set(r.exam_id, {

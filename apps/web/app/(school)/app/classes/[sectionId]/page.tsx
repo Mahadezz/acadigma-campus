@@ -1,7 +1,12 @@
 import { forbidden, notFound } from "next/navigation"
 
 import { studentSearchQuerySchema, uuidSchema } from "@acadigma/contracts"
-import { getAttendanceDay, getClassesOverview, getRollCall, listRoster } from "@acadigma/db"
+import {
+  getAttendanceDay,
+  getClassesOverview,
+  getRollCall,
+  listRoster,
+} from "@acadigma/db"
 import {
   getClassHub,
   getLatestSectionExam,
@@ -104,7 +109,8 @@ export default async function ClassHubPage({
     (isManager ||
       editWindowOpen(day.data.date, day.data.today, day.data.editWindowDays))
 
-  const gradeName = locale === "bn" ? hub.data.section.gradeNameBn : hub.data.section.gradeName
+  const gradeName =
+    locale === "bn" ? hub.data.section.gradeNameBn : hub.data.section.gradeName
   const title = sectionDisplayName(gradeName, hub.data.section.name)
 
   return (

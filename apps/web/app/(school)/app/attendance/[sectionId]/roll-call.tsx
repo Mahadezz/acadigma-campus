@@ -362,10 +362,7 @@ export function RollCall({
               </p>
               <Button
                 type="button"
-                className={cn(
-                  "h-14 min-w-32",
-                  basic ? "text-lg" : "text-base"
-                )}
+                className={cn("h-14 min-w-32", basic ? "text-lg" : "text-base")}
                 onClick={basic ? () => setConfirmOpen(true) : save}
                 disabled={blocked}
               >

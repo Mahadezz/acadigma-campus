@@ -1,7 +1,7 @@
 import { z } from "zod"
 
-import { uuidSchema } from "../common"
 import { examSubjectStatusSchema } from "../academics/exams"
+import { uuidSchema } from "../common"
 
 /**
  * F-ID-10 Part 3 (§4.5, §7 `getClassHub`) — the class hub: one section's
