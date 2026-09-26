@@ -37,6 +37,8 @@ export const ACTIONS = [
   "attendance.write",
   "students.read",
   "students.write",
+  // F-AC-02 §2 / §4.7: bulk import from a spreadsheet (D-106).
+  "students.import",
   "marks.read",
   "marks.write",
   // F-AC-06 §2: grade scales, pass mark, GPA rules — owner/admin.
@@ -138,6 +140,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "attendance.write",
     "students.read",
     "students.write",
+    "students.import",
     "marks.read",
     "marks.write",
     "timetable.read",
@@ -194,6 +197,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "attendance.write",
     "students.read",
     "students.write",
+    "students.import",
     "marks.read",
     "marks.write",
     "timetable.read",

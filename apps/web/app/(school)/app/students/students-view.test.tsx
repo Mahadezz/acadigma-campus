@@ -44,6 +44,7 @@ describe("StudentsView", () => {
         query={{ page: 1 }}
         sections={sections}
         canAdmit
+        canImport
       />
     )
     expect(
@@ -54,6 +55,9 @@ describe("StudentsView", () => {
     expect(screen.getAllByText("STU-2026-00001").length).toBeGreaterThan(0)
     expect(screen.getAllByText("Class 6 – ক").length).toBeGreaterThan(0)
     expect(screen.getByRole("button", { name: "Admit student" })).toBeTruthy()
+    expect(
+      screen.getByRole("link", { name: "Import" }).getAttribute("href")
+    ).toBe("/app/students/import")
   })
 
   it("shows no admit control to a role that cannot admit", () => {
@@ -66,6 +70,7 @@ describe("StudentsView", () => {
         query={{ page: 1 }}
         sections={sections}
         canAdmit={false}
+        canImport={false}
       />
     )
     expect(screen.queryByRole("button", { name: "Admit student" })).toBeNull()
@@ -81,6 +86,7 @@ describe("StudentsView", () => {
         query={{ page: 1, q: "রহিম" }}
         sections={sections}
         canAdmit={false}
+        canImport={false}
       />
     )
     expect(screen.getAllByRole("link", { name: /রহিম উদ্দিন/ })[0]).toBeTruthy()
@@ -100,6 +106,7 @@ describe("StudentsView", () => {
         query={{ page: 1, q: "zz" }}
         sections={sections}
         canAdmit
+        canImport
       />
     )
     expect(screen.getByText("No students match your search.")).toBeTruthy()
