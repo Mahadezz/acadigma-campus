@@ -1572,5 +1572,12 @@
     "userMenu": {
       "switchToBasicMode": "Switch to basic mode"
     }
+  },
+  "offline": {
+    "banner": "You're offline — showing pages saved on this phone",
+    "lastUpdated": "Last updated {time}",
+    "today": "today",
+    "needsInternet": "Needs internet",
+    "needsInternetHint": "This is made on the server. Connect to the internet to use it."
   }
 }

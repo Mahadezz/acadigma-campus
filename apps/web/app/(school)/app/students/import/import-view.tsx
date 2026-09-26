@@ -26,6 +26,7 @@ import { Input } from "@acadigma/ui/components/input"
 import { Label } from "@acadigma/ui/components/label"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { OnlineOnly } from "@/app/(shared)/offline/online-only"
 import type { Messages } from "@/lib/i18n"
 
 import { commitStudentImport, previewStudentImport } from "./actions"
@@ -248,14 +249,18 @@ export function ImportView({
           ) : null}
           <div className="flex flex-col gap-2 sm:flex-row">
             {ready > 0 ? (
-              <Button
-                type="button"
-                className="h-11"
-                disabled={pending}
-                onClick={() => commit(batch.id)}
-              >
-                {pending ? t.importing : fill(t.importButton, { count: ready })}
-              </Button>
+              <OnlineOnly>
+                <Button
+                  type="button"
+                  className="h-11"
+                  disabled={pending}
+                  onClick={() => commit(batch.id)}
+                >
+                  {pending
+                    ? t.importing
+                    : fill(t.importButton, { count: ready })}
+                </Button>
+              </OnlineOnly>
             ) : null}
             <Button asChild variant="outline" className="h-11">
               <Link href="/app/students/import">{t.another}</Link>

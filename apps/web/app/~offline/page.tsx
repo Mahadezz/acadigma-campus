@@ -2,6 +2,8 @@ import { WifiOffIcon } from "lucide-react"
 
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 
+import { RetryButton } from "./retry-button"
+
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -9,8 +11,9 @@ export const metadata: Metadata = {
 }
 
 /**
- * Served by the service worker when a navigation fails and nothing is cached.
- * Deliberately static: it has to render with no network and no session.
+ * Served by the service worker when a navigation fails and the page was never
+ * opened on this phone (F-ID-11 §4.2). Deliberately static — it has to render
+ * with no network and no session — so it speaks both languages at once.
  */
 export default function OfflinePage() {
   return (
@@ -20,8 +23,9 @@ export default function OfflinePage() {
     >
       <EmptyState
         icon={<WifiOffIcon />}
-        title="You are offline"
-        description="Acadigma will pick up where you left off as soon as you have a connection. Anything you saved on this device is still here."
+        title="This needs internet the first time · প্রথমবার ইন্টারনেট দরকার"
+        description="You are offline and this page has not been opened on this phone yet. Pages you opened before still work. · আপনি অফলাইনে, আর এই পাতাটি এই ফোনে আগে খোলা হয়নি। আগে খোলা পাতাগুলো এখনও দেখা যাবে।"
+        action={<RetryButton />}
       />
     </main>
   )

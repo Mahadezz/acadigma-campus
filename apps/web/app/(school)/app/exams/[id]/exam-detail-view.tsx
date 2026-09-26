@@ -28,6 +28,7 @@ import {
 } from "@acadigma/ui/components/native-select"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { OnlineOnly } from "@/app/(shared)/offline/online-only"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
@@ -158,6 +159,23 @@ export function ExamDetailView({
     canReadResults &&
     ["marks_locked", "published", "archived"].includes(exam.status)
 
+  const nextButton = next ? (
+    <Button
+      className="h-11"
+      disabled={pending || (next === "published" && publishBlock !== null)}
+      aria-describedby={
+        next === "published" && publishBlock ? "publish-block" : undefined
+      }
+      onClick={() =>
+        next === "published" && publishCandidates
+          ? setPublishing(true)
+          : move(next)
+      }
+    >
+      {t.advance[next as keyof T["advance"]]}
+    </Button>
+  ) : null
+
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <Link
@@ -211,26 +229,12 @@ export function ExamDetailView({
 
       {canWrite && (next || back) ? (
         <div className="flex flex-wrap items-center gap-2">
-          {next ? (
-            <Button
-              className="h-11"
-              disabled={
-                pending || (next === "published" && publishBlock !== null)
-              }
-              aria-describedby={
-                next === "published" && publishBlock
-                  ? "publish-block"
-                  : undefined
-              }
-              onClick={() =>
-                next === "published" && publishCandidates
-                  ? setPublishing(true)
-                  : move(next)
-              }
-            >
-              {t.advance[next as keyof T["advance"]]}
-            </Button>
-          ) : null}
+          {next === "published" ? (
+            // F-ID-11 §4.9: publishing sends results out; never offline.
+            <OnlineOnly>{nextButton}</OnlineOnly>
+          ) : (
+            nextButton
+          )}
           {next === "published" && publishBlock ? (
             <p id="publish-block" className="text-muted-foreground text-sm">
               {publishBlock}

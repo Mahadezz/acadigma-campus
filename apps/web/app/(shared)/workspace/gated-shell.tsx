@@ -5,6 +5,8 @@ import { TopBar } from "@acadigma/ui/primitives/top-bar"
 import { getMessages } from "@/lib/i18n"
 import { requireShell } from "@/lib/workspace"
 
+import { LastUpdated } from "../offline/last-updated"
+
 import { listMyWorkspaces } from "./actions"
 import { UserMenu } from "./user-menu"
 import { WorkspaceSwitcher } from "./workspace-switcher"
@@ -58,6 +60,9 @@ export async function GatedShell({
         />
       }
     >
+      {/* F-ID-11 §4.2 (D-308): the render time travels with a cached copy. */}
+      {/* eslint-disable-next-line react-hooks/purity -- the render time is the value */}
+      <LastUpdated renderedAt={Date.now()} locale={locale} />
       {children}
     </AppShell>
   )
