@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 
 import { saveAttendanceSession } from "@/app/(school)/app/attendance/actions"
 
-import { checkSession, snapshotUserId } from "./check"
+import { checkSession } from "./check"
 import {
   enqueue,
   replay,
@@ -17,7 +17,6 @@ import {
   notifyOutboxChanged,
   outboxEvents,
   outboxStore,
-  outboxUserIds,
 } from "./outbox-db"
 
 /**
@@ -165,26 +164,20 @@ export function deleteItem(userId: string, id: string): Promise<void> {
   return storeLock(() => liveStore(userId).remove(id))
 }
 
-/** Every outbox on this device (the last-seen user where it cannot be listed). */
-async function deviceUsers(): Promise<string[]> {
-  const listed = await outboxUserIds()
-  if (listed.length > 0) return listed
-  const last = snapshotUserId()
-  return last ? [last] : []
+/**
+ * What the signed-in user has waiting, for the sign-out question (§4.7).
+ * Only their own outbox: another teacher's queue on a shared phone is theirs
+ * to send or delete, never counted or wiped by someone else's sign-out.
+ */
+export async function countQueued(userId: string | null): Promise<number> {
+  if (!userId) return 0
+  return (await outboxStore(userId).list()).length
 }
 
-/** Everything waiting on this device, for the sign-out question (§4.7). */
-export async function countQueued(): Promise<number> {
-  const users = await deviceUsers()
-  let n = 0
-  for (const id of users) n += (await outboxStore(id).list()).length
-  return n
-}
-
-/** Sign-out (§4.7): every outbox on this device goes with the session. */
-export async function deleteAllOutboxes(): Promise<void> {
-  const users = await deviceUsers()
-  await Promise.all(users.map(deleteOutbox))
+/** Sign-out (§4.7): the signed-in user's outbox goes with their session. */
+export async function deleteOwnOutbox(userId: string | null): Promise<void> {
+  if (!userId) return
+  await storeLock(() => deleteOutbox(userId))
   changed()
 }
 

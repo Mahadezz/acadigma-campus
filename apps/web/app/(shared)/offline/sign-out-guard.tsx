@@ -8,7 +8,7 @@ import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { purgeOnSignOut, snapshotUserId } from "@/lib/offline/check"
 import {
   countQueued,
-  deleteAllOutboxes,
+  deleteOwnOutbox,
   sendQueued,
 } from "@/lib/offline/outbox-client"
 
@@ -17,9 +17,11 @@ import { useOfflineCopy } from "./offline-provider"
 /**
  * F-ID-11 §4.7 (D-308, D-309): every sign-out control goes through this.
  * With changes still on the phone it first asks "Stay and send / Sign out
- * and delete them"; signing out wipes every outbox and every data cache
- * before the session ends. (The unconditional wipe on arriving at /login
- * clears pages only: an expired session keeps its queue, §4.6.)
+ * and delete them"; signing out wipes the user's own outbox and every data
+ * cache before the session ends. Another teacher's queue on a shared phone
+ * is neither counted nor deleted (D-309). (The unconditional wipe on
+ * arriving at /login clears pages only: an expired session keeps its
+ * queue, §4.6.)
  */
 export function useGuardedSignOut(signOutNow: () => Promise<void>): {
   request: () => void
@@ -31,14 +33,14 @@ export function useGuardedSignOut(signOutNow: () => Promise<void>): {
   const getCopy = useOfflineCopy()
 
   async function finish() {
-    await deleteAllOutboxes().catch(() => undefined)
+    await deleteOwnOutbox(snapshotUserId()).catch(() => undefined)
     await purgeOnSignOut()
     await signOutNow()
   }
 
   function request() {
     start(async () => {
-      const n = await countQueued().catch(() => 0)
+      const n = await countQueued(snapshotUserId()).catch(() => 0)
       if (n > 0) setWaiting(n)
       else await finish()
     })
