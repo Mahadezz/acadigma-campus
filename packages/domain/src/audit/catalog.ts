@@ -538,6 +538,21 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn: "{actor} নম্বর আনলক করে একটি পরীক্ষার ফলাফল মুছে ফেলেছেন ({n})",
     isGeneric: false,
   },
+  // F-AC-06 Part 7 (D-306) — publishing and unpublishing an exam's results.
+  {
+    action: "results.published",
+    severity: "notable",
+    sentenceEn: "{actor} published an exam's results ({n})",
+    sentenceBn: "{actor} একটি পরীক্ষার ফলাফল প্রকাশ করেছেন ({n})",
+    isGeneric: false,
+  },
+  {
+    action: "results.unpublished",
+    severity: "notable",
+    sentenceEn: "{actor} unpublished an exam's results ({n})",
+    sentenceBn: "{actor} একটি পরীক্ষার ফলাফল প্রকাশ বাতিল করেছেন ({n})",
+    isGeneric: false,
+  },
 ]
 
 /**
@@ -597,6 +612,8 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "marks",
   // F-AC-02 §4.7 (D-106) — 20260925300316_student_import_batches.sql.
   "student_import_batches",
+  // F-AC-06 Part 7 (D-306) — 20260925300321_publish_results.sql.
+  "guardian_users",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -656,6 +673,10 @@ export const GENERIC_TABLE_NOUNS: Readonly<
     bn: "একজন শিক্ষার্থীর ব্যক্তিগত তথ্য",
   },
   guardians: { en: "a guardian", bn: "একজন অভিভাবক" },
+  guardian_users: {
+    en: "a parent's link to a child",
+    bn: "সন্তানের সাথে অভিভাবকের সংযোগ",
+  },
   enrollments: { en: "an enrolment", bn: "একটি ভর্তি" },
   attendance_sessions: {
     en: "a class's attendance",
