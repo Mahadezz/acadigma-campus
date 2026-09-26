@@ -55,8 +55,8 @@ export function GenerateMarkSheetButton({
   }
 
   return (
-    <OnlineOnly>
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
+      <OnlineOnly>
         <Button
           onClick={onClick}
           disabled={pending}
@@ -65,12 +65,12 @@ export function GenerateMarkSheetButton({
         >
           {pending ? t.generating : t.generate}
         </Button>
-        {error && (
-          <InlineAlert tone="error" className="max-w-md">
-            {error}
-          </InlineAlert>
-        )}
-      </div>
-    </OnlineOnly>
+      </OnlineOnly>
+      {error && (
+        <InlineAlert tone="error" className="max-w-md">
+          {error}
+        </InlineAlert>
+      )}
+    </div>
   )
 }

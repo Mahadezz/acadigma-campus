@@ -31,10 +31,12 @@ describe("decidePurge (F-ID-11 §4.8)", () => {
     expect(decidePurge(null, { kind: "signed_out" }).purge).toBe(true)
   })
 
-  it("remembers the user on the first check after a sign-in, without wiping what they just opened", () => {
-    // /login's own check (signed out) already wiped the cache and the snapshot.
+  it("purges on the first check with no snapshot: the cache may be another user's", () => {
+    // Security review HIGH 1: a 503 check (no snapshot written), then a
+    // session that ends without /login and a new user via the auth callback
+    // — or cleared localStorage — leaves a filled cache and no snapshot.
     expect(decidePurge(null, { kind: "signed_in", ...TEACHER })).toEqual({
-      purge: false,
+      purge: true,
       next: TEACHER,
     })
   })

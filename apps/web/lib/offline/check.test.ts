@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { purgeDataCaches, purgeOnSignOut, runOfflineCheck } from "./check"
+import {
+  purgeDataCaches,
+  purgeOnSignOut,
+  runOfflineCheck,
+  serverClockOffset,
+} from "./check"
+import { PURGE_MESSAGE } from "./purge-guard"
 
 import type { OfflineSnapshot, SessionCheck } from "./purge"
 
@@ -96,5 +102,46 @@ describe("offline cache purge (browser side)", () => {
     respond({ kind: "signed_in", ...TEACHER })
     expect(await runOfflineCheck()).toBe(false)
     expect(left()).toContain("acadigma-data-pages")
+  })
+
+  it("asks the worker to purge first, so page writes in flight are refused", async () => {
+    const seen: { type: string; cachesLeft: string[] }[] = []
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        controller: {
+          postMessage: (data: { type: string }, [port]: MessagePort[]) => {
+            seen.push({ type: data.type, cachesLeft: left() })
+            port!.postMessage("purged")
+          },
+        },
+      },
+    })
+    await purgeDataCaches()
+    expect(seen).toEqual([
+      {
+        type: PURGE_MESSAGE,
+        cachesLeft: [
+          "acadigma-data-pages",
+          "acadigma-static",
+          "serwist-precache-v2",
+        ],
+      },
+    ])
+    expect(left()).not.toContain("acadigma-data-pages")
+  })
+
+  it("learns the server clock from the check's Date header", async () => {
+    const ahead = new Date(Date.now() + 5 * 60_000).toUTCString()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { kind: "signed_in", ...TEACHER },
+          { headers: { date: ahead } }
+        )
+      )
+    )
+    await runOfflineCheck()
+    expect(Math.abs(serverClockOffset() - 5 * 60_000)).toBeLessThan(2000)
   })
 })

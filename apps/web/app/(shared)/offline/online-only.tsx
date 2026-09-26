@@ -27,10 +27,11 @@ export function OnlineOnly({
   className?: string
 }) {
   const online = useOnline()
-  const copy = useOfflineCopy()
+  const getCopy = useOfflineCopy()
   const hintId = React.useId()
 
   if (online) return <>{children}</>
+  const copy = getCopy()
 
   return (
     <div className={className}>

@@ -4,6 +4,7 @@ import {
   type OfflineSnapshot,
   type SessionCheck,
 } from "./purge"
+import { PURGE_MESSAGE } from "./purge-guard"
 
 /**
  * Browser side of the F-ID-11 Part 1 cache purge (D-308). Every function is
@@ -28,12 +29,33 @@ function writeSnapshot(next: OfflineSnapshot | null): void {
     if (next) localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(next))
     else localStorage.removeItem(SNAPSHOT_KEY)
   } catch {
-    // Storage unavailable: the next check simply purges again.
+    // Storage unavailable: no snapshot is ever read back, so every check
+    // purges (decidePurge) — safe; the device just keeps nothing offline.
   }
 }
 
-/** Deletes every `acadigma-data-*` cache. */
+/**
+ * Asks the worker to purge first: it marks every page write in flight as
+ * stale before deleting (`purge-guard.ts`), which the page cannot do. Gives up
+ * after 2 s (a busy or dying worker); the page's own delete still runs.
+ */
+function purgeInWorker(): Promise<void> {
+  const worker =
+    typeof navigator === "undefined"
+      ? null
+      : navigator.serviceWorker?.controller
+  if (!worker) return Promise.resolve()
+  return new Promise((resolve) => {
+    const channel = new MessageChannel()
+    channel.port1.onmessage = () => resolve()
+    setTimeout(resolve, 2000)
+    worker.postMessage({ type: PURGE_MESSAGE }, [channel.port2])
+  })
+}
+
+/** Deletes every `acadigma-data-*` cache, through the worker first. */
 export async function purgeDataCaches(): Promise<void> {
+  await purgeInWorker()
   if (typeof caches === "undefined") return
   const names = await caches.keys()
   await Promise.all(
@@ -49,9 +71,36 @@ export async function purgeOnSignOut(): Promise<void> {
   await purgeDataCaches().catch(() => undefined)
 }
 
+const CLOCK_KEY = "acadigma-clock-offset"
+
+/** Server clock minus this device's, from a response's `Date` header. */
+function rememberServerClock(date: string | null): void {
+  const server = date ? Date.parse(date) : NaN
+  if (Number.isNaN(server)) return
+  try {
+    localStorage.setItem(CLOCK_KEY, String(server - Date.now()))
+  } catch {
+    // No storage: "Last updated" falls back to the device clock.
+  }
+}
+
+/**
+ * How far the server's clock is ahead of this device's (ms; 0 if unknown), so
+ * "Last updated" compares a server render time with server time — a phone
+ * whose clock is off would otherwise stamp a fresh page or miss a stale one.
+ */
+export function serverClockOffset(): number {
+  try {
+    return Number(localStorage.getItem(CLOCK_KEY)) || 0
+  } catch {
+    return 0
+  }
+}
+
 async function fetchSessionCheck(): Promise<SessionCheck> {
   try {
     const res = await fetch("/api/offline/session", { cache: "no-store" })
+    rememberServerClock(res.headers.get("date"))
     if (!res.ok) return { kind: "unknown" }
     return (await res.json()) as SessionCheck
   } catch {

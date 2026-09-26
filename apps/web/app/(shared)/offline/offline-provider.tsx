@@ -17,22 +17,19 @@ import { useOnline } from "@/lib/offline/use-online"
 
 export type OfflineCopy = Messages["offline"]
 
-/**
- * The root layout always provides the reader's language; this English default
- * only serves components rendered outside it (unit tests).
- */
-const OfflineCopyContext = React.createContext<OfflineCopy>({
-  banner: "You're offline — showing pages saved on this phone",
-  lastUpdated: "Last updated {time}",
-  today: "today",
-  needsInternet: "Needs internet",
-  needsInternetHint:
-    "This is made on the server. Connect to the internet to use it.",
-})
+const OfflineCopyContext = React.createContext<OfflineCopy | null>(null)
 
-/** The offline copy in the reader's language (root layout → Providers). */
-export function useOfflineCopy(): OfflineCopy {
-  return React.useContext(OfflineCopyContext)
+/**
+ * The offline copy in the reader's language (root layout → Providers). Read
+ * it only when showing offline text: a component rendered online outside the
+ * provider (unit tests) never needs it.
+ */
+export function useOfflineCopy(): () => OfflineCopy {
+  const copy = React.useContext(OfflineCopyContext)
+  return () => {
+    if (!copy) throw new Error("offline copy used outside OfflineProvider")
+    return copy
+  }
 }
 
 const SHELL_PATH = /^\/(app|family|personal)(\/|$)/
@@ -64,8 +61,12 @@ export function OfflineProvider({
   React.useEffect(() => {
     if (!online) return
     void (async () => {
-      if (SHELL_PATH.test(location.pathname) || (await hasOfflineState())) {
-        await runOfflineCheck()
+      const inShell = SHELL_PATH.test(location.pathname)
+      if (!inShell && !(await hasOfflineState())) return
+      // A purge also took this page's own copy: store it again (the user
+      // now in the snapshot is the one looking at it).
+      if ((await runOfflineCheck()) && inShell) {
+        cachePageForOffline(location.href)
       }
     })()
   }, [online])
@@ -80,23 +81,32 @@ export function OfflineProvider({
     if (prev === null) return
     if (!SHELL_PATH.test(pathname)) return
     // Arriving in a shell from outside it (sign-in, accepting an invite,
-    // creating a school) can mean a new user or workspace: check first.
-    if (!SHELL_PATH.test(prev)) void runOfflineCheck()
-    cachePageForOffline(location.href)
+    // creating a school) can mean a new user or workspace: check first, and
+    // copy the page only after, so a purge does not throw the copy away.
+    const href = location.href
+    if (SHELL_PATH.test(prev)) cachePageForOffline(href)
+    else void runOfflineCheck().then(() => cachePageForOffline(href))
   }, [pathname])
 
   return (
     <OfflineCopyContext.Provider value={copy}>
-      {online ? null : (
-        <div
-          role="status"
-          aria-live="polite"
-          className="bg-warning-soft text-warning-ink border-warning sticky top-0 z-[100] flex min-h-9 items-center gap-2 border-b px-4 py-1.5 text-sm"
-        >
-          <WifiOffIcon className="size-4 shrink-0" aria-hidden="true" />
-          {copy.banner}
-        </div>
-      )}
+      {/* Always mounted, so screen readers announce the text when it appears. */}
+      <div
+        role="status"
+        aria-live="polite"
+        className={
+          online
+            ? "sr-only"
+            : "bg-warning-soft text-warning-ink border-warning sticky top-0 z-[100] flex min-h-9 items-center gap-2 border-b px-4 py-1.5 text-sm"
+        }
+      >
+        {online ? null : (
+          <>
+            <WifiOffIcon className="size-4 shrink-0" aria-hidden="true" />
+            {copy.banner}
+          </>
+        )}
+      </div>
       {children}
     </OfflineCopyContext.Provider>
   )

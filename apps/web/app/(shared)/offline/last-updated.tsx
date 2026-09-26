@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation"
 import { HistoryIcon } from "lucide-react"
 
 import { toIntlLocale, type Locale } from "@/lib/locale"
+import { serverClockOffset } from "@/lib/offline/check"
 import { useOnline } from "@/lib/offline/use-online"
 
 import { useOfflineCopy } from "./offline-provider"
@@ -32,7 +33,7 @@ export function LastUpdated({
   renderedAt: number
   locale: Locale
 }) {
-  const copy = useOfflineCopy()
+  const getCopy = useOfflineCopy()
   const online = useOnline()
   const pathname = usePathname()
   const [firstPath] = React.useState(pathname)
@@ -44,10 +45,12 @@ export function LastUpdated({
 
   // Only after hydration: the server has no idea when the browser loaded it.
   if (!hydrated || pathname !== firstPath) return null
-  // When this document was loaded, by the browser's clock.
-  const loadedAt = performance.timeOrigin
+  // When this document was loaded, on the server's clock (the device clock
+  // corrected by the last check's `Date` header), like `renderedAt`.
+  const loadedAt = performance.timeOrigin + serverClockOffset()
   if (online && loadedAt - renderedAt < FRESH_MS) return null
 
+  const copy = getCopy()
   const at = new Date(renderedAt)
   const intl = toIntlLocale(locale)
   const time = at.toLocaleTimeString(intl, {

@@ -106,10 +106,11 @@ export function WorkspaceSwitcher({
         // the instant the tenant changes.
         queryClient.clear()
         // F-ID-11 §5.8 (D-308): cached pages carry no workspace in their
-        // URL, so they all go — whether or not the check below gets through
-        // — and the check then remembers the new workspace.
+        // URL, so they all go before the new workspace opens. The check that
+        // records the new workspace is not awaited: on a bad connection it
+        // would hold the switch, and the wipe above already made it safe.
         await purgeDataCaches()
-        await runOfflineCheck()
+        void runOfflineCheck()
         setOpen(false)
         router.push(result.data.landingRoute)
       } catch {

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
+import { createClient } from "@supabase/supabase-js"
 
 import { expectNoA11yViolations } from "../axe"
 
@@ -24,6 +25,10 @@ test.beforeEach(() => {
     "E2E_OWNER_EMAIL / E2E_OWNER_PASSWORD are not set"
   )
 })
+
+/** `supabase/seed/seed.sql`: the seeded school and its teacher. */
+const SEED_SCHOOL = "5eed0000-0000-4000-b000-000000000001"
+const SEED_TEACHER = "5eed0000-0000-4000-a000-000000000002"
 
 const dataCaches = (page: Page) =>
   page.evaluate(async () =>
@@ -127,4 +132,61 @@ test("opened pages read offline, generate buttons need internet, workspace switc
     page.getByText(/This needs internet the first time/)
   ).toBeVisible()
   await context.setOffline(false)
+})
+
+/**
+ * §4.8 / AC-9 (security review): a teacher removed from the school keeps no
+ * school page cached — the next open, online, finds the membership gone and
+ * wipes.
+ * Removes and restores the seeded teacher with the local service-role key,
+ * so it runs on one viewport only (the two would race on the same row).
+ */
+test("a removed member's next open leaves no school page cached", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "phone", "mutates a shared seeded row")
+  test.skip(
+    !process.env.SUPABASE_SERVICE_ROLE_KEY,
+    "SUPABASE_SERVICE_ROLE_KEY is not set (local stack only)"
+  )
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+    { auth: { persistSession: false } }
+  )
+  const setStatus = async (status: "active" | "removed") => {
+    const { error } = await admin
+      .from("workspace_members")
+      .update({ status })
+      .eq("workspace_id", SEED_SCHOOL)
+      .eq("user_id", SEED_TEACHER)
+    expect(error).toBeNull()
+  }
+
+  await page.goto("/login")
+  await page.getByLabel("Email").fill("teacher@acadigma.test")
+  await page.getByLabel("Password").fill("password123")
+  await page.getByRole("button", { name: "Sign in" }).click()
+  await page.waitForURL(/\/app/)
+  await page.waitForFunction(() => navigator.serviceWorker?.controller != null)
+  await page.goto("/app/classes")
+  await expect
+    .poll(async () => (await cachedUrls(page)).length, { timeout: 15_000 })
+    .toBeGreaterThan(0)
+
+  try {
+    await setStatus("removed")
+    await page.reload()
+    // She lands in her own personal workspace, whose page may be cached
+    // afresh; nothing from the school may remain.
+    await expect
+      .poll(
+        async () =>
+          (await cachedUrls(page)).filter((p) => p.startsWith("/app")),
+        { timeout: 15_000 }
+      )
+      .toEqual([])
+  } finally {
+    await setStatus("active")
+  }
 })
