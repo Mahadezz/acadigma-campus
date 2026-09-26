@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-06 Part 4, non-offline half (demo cut) — submit, lock,
--- unlock and the entry window (20260926063128_marks_submit_lock.sql, D-307)
+-- unlock and the entry window (20260926063741_marks_submit_lock.sql, D-307)
 --
 --   A. submit_exam_subject: only the paper's teacher or owner/admin (not
 --      the class teacher, another subject's teacher, staff or another
