@@ -50,6 +50,13 @@ export const returnToSchema = z.string().max(2048).optional()
 // Part 2 — register + email verification
 // ---------------------------------------------------------------------------
 
+/**
+ * Where a new account lands after confirming its email. Only the guardian
+ * invitation page is allowed (D-108); anything else is refused, and the
+ * default is /onboarding.
+ */
+export const afterVerifySchema = z.literal("/invite").optional()
+
 export const registerWithPasswordInputSchema = z.object({
   fullName: fullNameSchema,
   email: emailSchema,
@@ -59,6 +66,7 @@ export const registerWithPasswordInputSchema = z.object({
       message: "You must accept the Terms and Privacy Policy.",
     }),
   }),
+  next: afterVerifySchema,
 })
 export type RegisterWithPasswordInput = z.infer<
   typeof registerWithPasswordInputSchema
@@ -74,6 +82,7 @@ export type RegisterWithPasswordOutput = z.infer<
 
 export const resendVerificationInputSchema = z.object({
   email: emailSchema,
+  next: afterVerifySchema,
 })
 export type ResendVerificationInput = z.infer<
   typeof resendVerificationInputSchema

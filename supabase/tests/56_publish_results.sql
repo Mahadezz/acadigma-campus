@@ -312,7 +312,7 @@ select tests.logout();
 select tests.login('56000000-0000-4000-a000-000000000004');
 select is((select string_agg(st.student_code, ',') from public.results r
              join public.students st on st.id = r.student_id),
-  null, 'a parent cannot read the students table (the card carries the names)');
+  'S1', 'a parent reads only their own linked child''s student row (D-108)');
 select is((select count(*)::int from public.results), 1, 'a parent reads exactly one published result');
 select is((select r.frozen_payload ->> 'studentCode' from public.results r), 'S1', 'their own child''s');
 select is((select count(*)::int from public.result_subject_lines), 2, 'and its lines');
@@ -371,6 +371,11 @@ select tests.login('56000000-0000-4000-a000-000000000004');
 select is((select count(*)::int from public.results), 0, 'a parent removed from the school reads nothing');
 select tests.logout();
 update public.workspace_members set status = 'active'
+ where user_id = '56000000-0000-4000-a000-000000000004'
+   and workspace_id = '56000000-0000-4000-b000-000000000001';
+-- Removing the membership revoked the parent's link too (D-108); the
+-- fixture restores both.
+update public.guardian_users set status = 'active', revoked_at = null
  where user_id = '56000000-0000-4000-a000-000000000004'
    and workspace_id = '56000000-0000-4000-b000-000000000001';
 

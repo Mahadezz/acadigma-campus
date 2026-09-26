@@ -87,6 +87,7 @@ export async function registerWithPassword(
     email,
     password,
     termsAccepted,
+    next,
   }: RegisterWithPasswordInput = parsed.data
   void termsAccepted // literal(true) already enforced by the schema
 
@@ -122,7 +123,7 @@ export async function registerWithPassword(
     password,
     options: {
       data: { full_name: fullName },
-      emailRedirectTo: `${origin}/api/auth/callback?type=email&next=/onboarding`,
+      emailRedirectTo: `${origin}/api/auth/callback?type=email&next=${next ?? "/onboarding"}`,
     },
   })
 
@@ -174,7 +175,7 @@ export async function requestEmailVerification(
   if (!parsed.success) {
     return err(apiError("validation_failed", "Enter a valid email address."))
   }
-  const { email }: ResendVerificationInput = parsed.data
+  const { email, next }: ResendVerificationInput = parsed.data
 
   const supabase = await createClient()
   const key = throttleKey("resend-verify", email)
@@ -199,7 +200,7 @@ export async function requestEmailVerification(
     type: "signup",
     email,
     options: {
-      emailRedirectTo: `${origin}/api/auth/callback?type=email&next=/onboarding`,
+      emailRedirectTo: `${origin}/api/auth/callback?type=email&next=${next ?? "/onboarding"}`,
     },
   })
 
@@ -371,7 +372,7 @@ export async function signInWithPassword(
  * caches — 4.10, the fix for the prototype's logout never clearing
  * `activeWorkspaceId`. The cookie clear happens here; the client clears its own
  * in-memory caches in the component that calls this action. */
-export async function signOut(): Promise<void> {
+export async function signOut(next?: unknown): Promise<void> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -401,7 +402,9 @@ export async function signOut(): Promise<void> {
   cookieStore.delete(UI_MODE_COOKIE)
   cookieStore.delete(TEXT_SIZE_COOKIE)
 
-  redirect("/login")
+  // D-108: a staff account that opened a guardian link signs out to create
+  // a separate parent account; nothing else is an allowed destination.
+  redirect(next === "/invite" ? "/register?next=/invite" : "/login")
 }
 
 // ---------------------------------------------------------------------------
