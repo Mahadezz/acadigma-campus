@@ -429,6 +429,24 @@ jobs:
       (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # D-76 follow-up: nearly every journey signs in as the ONE seeded
+    # owner@acadigma.test and reads/writes the ONE seeded Class 6 -- ক
+    # section (today's attendance, ui_mode/text_size preferences, exam and
+    # marks state, ...). Two tests running concurrently against that same
+    # account/section produce exactly the kind of failure a real bug does
+    # (a dashboard assertion of "no attendance yet" loses a race against
+    # another test that just marked it) -- confirmed for real on this PR's
+    # own local runs, and flagged again by the design lane (#82: basic-
+    # class-hub.spec.ts marks attendance on the same shared section). A
+    # single worker removes every intra-run race, at the cost of no
+    # in-run parallelism; sharding gets the wall time back by running 4
+    # such single-worker instances at once, each against its OWN fresh,
+    # isolated local Supabase stack (a matrix job is a separate runner —
+    # no state is shared between shards, only within one).
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
       NODE_ENV: production
       PLAYWRIGHT_PORT: "3110"
@@ -498,14 +516,19 @@ jobs:
 
       # playwright.config.ts starts `next start --port 3110` (PLAYWRIGHT_PORT
       # above) and waits for it; both the phone and desktop projects run,
-      # every journey un-skipped by the env this job just set.
-      - name: Playwright (live Supabase, every journey)
-        run: pnpm test:e2e
+      # every journey un-skipped by the env this job just set. --workers=1
+      # (overrides the config's CI default of 2) and --shard split this
+      # shard's quarter of the suite into one strictly sequential run.
+      # `pnpm --filter ... exec playwright` (not the nested `test:e2e`
+      # script two package.json files deep) so these flags reach the
+      # playwright binary directly, with no script-arg-forwarding ambiguity.
+      - name: Playwright (live Supabase, every journey, shard ${{ matrix.shard }}/4, single worker)
+        run: pnpm --filter @acadigma/web exec playwright test --workers=1 --shard=${{ matrix.shard }}/4
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: playwright-report-live
+          name: playwright-report-live-${{ matrix.shard }}
           path: apps/web/playwright-report/
           retention-days: 30
 
