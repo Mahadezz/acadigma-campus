@@ -9,11 +9,21 @@
  *
  * Set `OPS_REGISTER_OUTPUT_DIR` to also write both PDFs to disk for a
  * manual pymupdf check (opt-in — CI does not have an `F:\` drive).
+ *
+ * `beforeAll` below renders a throwaway, 1-student register once before
+ * either budget is timed: the first `renderPdfToBuffer` call in a process
+ * pays for `@react-pdf/renderer`'s cold module init and the Bangla font
+ * file's first load, which is a fixed one-time cost, not part of what the
+ * 4 s/5 s budgets are meant to measure (flaky in CI on a slow first run —
+ * D-76 security-and-testing lane). `performance.now()` replaces `Date.now()`
+ * for the timed measurements themselves — sub-millisecond resolution, and
+ * immune to wall-clock adjustments `Date.now()` is not.
  */
 import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { performance } from "node:perf_hooks"
 
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 
 import type { AttendanceRegisterDto, MarkSheetDto } from "@acadigma/contracts"
 
@@ -163,12 +173,44 @@ async function writeIfRequested(name: string, buffer: Buffer) {
   await writeFile(join(process.env.OPS_REGISTER_OUTPUT_DIR, name), buffer)
 }
 
+// Pays for @react-pdf/renderer's cold module init and the Bangla font's
+// first load once, outside either budget below (see the file header).
+beforeAll(async () => {
+  await renderPdfToBuffer(
+    AttendanceRegisterDocument({
+      locale: "bn",
+      ...BRANDING,
+      className: "Class 6",
+      sectionName: "ক",
+      year: 2026,
+      month: 1,
+      days: [{ date: "2026-01-01", dayOfMonth: 1, isSchoolDay: true, sessionTaken: true }],
+      students: [
+        {
+          studentId: "00000000-0000-0000-0000-000000000001",
+          rollNumber: 1,
+          studentNameEn: "Warm Up",
+          studentNameBn: "ওয়ার্ম আপ",
+          cells: ["present"],
+          presentEquivalent: 1,
+          recordedDays: 1,
+          percent: 100,
+        },
+      ],
+      incompleteDaysCount: 0,
+      totalSchoolDays: 1,
+      policy: { lateCountsPresent: true, halfDayCountsPresent: true },
+      generatedAt: GENERATED_AT,
+    })
+  )
+}, REGISTER_BUDGET_MS + MARK_SHEET_BUDGET_MS)
+
 describe("attendance register — performance budget (§10, D-208)", () => {
   it(
     `renders a ${STUDENT_COUNT}-student, 31-day (${buildRegisterDto().totalSchoolDays} school day) register within ${REGISTER_BUDGET_MS}ms`,
     async () => {
       const dto = buildRegisterDto()
-      const started = Date.now()
+      const started = performance.now()
       const buffer = await renderPdfToBuffer(
         AttendanceRegisterDocument({
           locale: "bn",
@@ -177,10 +219,10 @@ describe("attendance register — performance budget (§10, D-208)", () => {
           generatedAt: GENERATED_AT,
         })
       )
-      const durationMs = Date.now() - started
+      const durationMs = performance.now() - started
       // eslint-disable-next-line no-console -- the number this test exists to report
       console.log(
-        `[register-perf] ${STUDENT_COUNT} students x ${dto.days.length} days (${dto.totalSchoolDays} school days): ${durationMs}ms, ${buffer.byteLength} bytes`
+        `[register-perf] ${STUDENT_COUNT} students x ${dto.days.length} days (${dto.totalSchoolDays} school days): ${durationMs.toFixed(1)}ms, ${buffer.byteLength} bytes`
       )
       expect(durationMs).toBeLessThan(REGISTER_BUDGET_MS)
       await writeIfRequested("register-40x31-bn.pdf", buffer)
@@ -194,7 +236,7 @@ describe("mark sheet — performance budget (D-208)", () => {
     `renders a ${STUDENT_COUNT}-student, ${SUBJECTS.length}-paper mark sheet within ${MARK_SHEET_BUDGET_MS}ms`,
     async () => {
       const dto = buildMarkSheetDto()
-      const started = Date.now()
+      const started = performance.now()
       const buffer = await renderPdfToBuffer(
         MarkSheetDocument({
           locale: "bn",
@@ -203,10 +245,10 @@ describe("mark sheet — performance budget (D-208)", () => {
           generatedAt: GENERATED_AT,
         })
       )
-      const durationMs = Date.now() - started
+      const durationMs = performance.now() - started
       // eslint-disable-next-line no-console -- the number this test exists to report
       console.log(
-        `[mark-sheet-perf] ${STUDENT_COUNT} students x ${SUBJECTS.length} papers: ${durationMs}ms, ${buffer.byteLength} bytes`
+        `[mark-sheet-perf] ${STUDENT_COUNT} students x ${SUBJECTS.length} papers: ${durationMs.toFixed(1)}ms, ${buffer.byteLength} bytes`
       )
       expect(durationMs).toBeLessThan(MARK_SHEET_BUDGET_MS)
       await writeIfRequested("mark-sheet-40x6-bn.pdf", buffer)
