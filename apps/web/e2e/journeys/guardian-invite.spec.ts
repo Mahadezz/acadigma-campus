@@ -263,3 +263,83 @@ test("a new parent signs up from the link and lands back on it", async ({
   await removeAccess(page, profileUrl)
   await parentContext.close()
 })
+
+/**
+ * D-109: a teacher of the school who is also a parent there. The same link,
+ * accepted by the teacher's own account, adds the child without touching the
+ * teacher's membership: /family shows only that child, the switcher's
+ * "School app" goes back to /app and "My children" returns to /family; once
+ * the owner removes the access, /family sends the teacher back to /app.
+ * Needs a verified teacher of the owner's school (`E2E_TEACHER_*`).
+ */
+test("a teacher who is also a parent sees only their own child and keeps the school app", async ({
+  page,
+  browser,
+}, testInfo) => {
+  test.skip(
+    !process.env.E2E_TEACHER_EMAIL || !process.env.E2E_TEACHER_PASSWORD,
+    "E2E_TEACHER_* are not set"
+  )
+  test.setTimeout(240_000)
+  const examName = `Teacher-parent ${testInfo.project.name} ${Date.now()}`
+  const code = `STU-2026-0000${testInfo.project.name === "phone" ? 5 : 6}`
+
+  await page.goto("/login")
+  await signIn(
+    page,
+    process.env.E2E_OWNER_EMAIL ?? "",
+    process.env.E2E_OWNER_PASSWORD ?? ""
+  )
+  await expect(page).toHaveURL(/\/app(\/.*)?$/)
+  await publishAnExam(page, examName)
+  const { profileUrl, studentName, inviteUrl } = await inviteFor(page, code)
+
+  const teacherContext = await browser.newContext({
+    viewport: page.viewportSize(),
+  })
+  const teacher = await teacherContext.newPage()
+  await teacher.goto("/login")
+  await signIn(
+    teacher,
+    process.env.E2E_TEACHER_EMAIL ?? "",
+    process.env.E2E_TEACHER_PASSWORD ?? ""
+  )
+  // Signed in (the landing is whichever workspace was last active).
+  await expect(teacher).not.toHaveURL(/\/login/)
+  await teacher.goto(inviteUrl)
+  await expect(teacher.getByText(studentName).first()).toBeVisible()
+  await teacher.getByRole("button", { name: "Accept" }).click()
+
+  await expect(teacher).toHaveURL(/\/family$/)
+  // Only their own child, although as a teacher they read all 40 students.
+  await expect(
+    teacher
+      .locator("section", {
+        has: teacher.getByRole("heading", { name: "Your children" }),
+      })
+      .getByRole("listitem")
+  ).toHaveCount(1)
+  await expect(teacher.getByText(new RegExp(examName)).first()).toBeVisible()
+  const resultNames = await teacher.locator("main li h3").allTextContents()
+  expect(new Set(resultNames)).toEqual(new Set([studentName]))
+  await expectNoA11yViolations(teacher, testInfo)
+  await teacher.screenshot({
+    path: testInfo.outputPath(`teacher-family-${testInfo.project.name}.png`),
+    fullPage: true,
+  })
+
+  // Back to the school app, and to the children again, from the switcher.
+  await teacher.getByRole("button", { name: /^Switch workspace/ }).click()
+  await teacher.getByRole("link", { name: "School app" }).click()
+  await expect(teacher).toHaveURL(/\/app(\/.*)?$/)
+  await teacher.getByRole("button", { name: /^Switch workspace/ }).click()
+  await expectNoA11yViolations(teacher, testInfo)
+  await teacher.getByRole("link", { name: "My children" }).click()
+  await expect(teacher).toHaveURL(/\/family$/)
+
+  // The owner removes the access: the teacher keeps the school app only.
+  await removeAccess(page, profileUrl)
+  await teacher.goto("/family")
+  await expect(teacher).toHaveURL(/\/app(\/.*)?$/)
+  await teacherContext.close()
+})

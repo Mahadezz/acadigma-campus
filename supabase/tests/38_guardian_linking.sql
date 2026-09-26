@@ -12,7 +12,8 @@
 --      guardian (the composite FK), even when written directly.
 --   D. A parent of two children: one membership, two links; the parent
 --      reads exactly those students.
---   E. Someone already in the school in another role is refused.
+--   E. An active teacher of the school accepts a link and stays a teacher
+--      (D-109; 39_guardian_followups.sql covers the rest).
 --   F. Revoke: owner/admin only; a revoked link hides the child and the
 --      published result at once; the last one removes the membership (no
 --      school, file or student reads), and only a new link brings it back.
@@ -69,7 +70,8 @@ create or replace function tests.tok(p_label text) returns text language sql as 
   select token from toks where label = p_label
 $fn$;
 
-create or replace function tests.gid(p_code text) returns uuid language sql as $fn$
+-- Security definer: the lookup is fixture plumbing, not the caller's reach.
+create or replace function tests.gid(p_code text) returns uuid language sql security definer as $fn$
   select g.id from public.guardians g join public.students st on st.id = g.student_id
    where st.student_code = p_code and st.workspace_id in
      ('38000000-0000-4000-b000-000000000001', '38000000-0000-4000-b000-000000000002')
@@ -304,18 +306,18 @@ select throws_ok($$select tests.invite('again', 'L1')$$, '22023', 'GUARDIAN_ALRE
   'a linked guardian is not invited again');
 
 -- =====================================================================
--- E. Someone already in the school in another role
+-- E. An active teacher of the school who is also a parent (D-109)
 -- =====================================================================
 select tests.invite('p4', 'L4');
 select tests.logout();
 select tests.login('38000000-0000-4000-a000-000000000002');
-select throws_ok($$select public.accept_guardian_invitation(tests.tok('p4'))$$, '22023', 'MEMBERSHIP_CONFLICT',
-  'a teacher of the school is not silently turned into a parent');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('p4'))$$,
+  'a teacher of the school accepts a link to their own child (D-109)');
 select tests.logout();
 select is((select role::text from public.workspace_members
             where user_id = '38000000-0000-4000-a000-000000000002'
               and workspace_id = '38000000-0000-4000-b000-000000000001'), 'teacher',
-  'the teacher is still a teacher');
+  'the teacher is still a teacher, not turned into a parent');
 
 -- =====================================================================
 -- F. Revoke
