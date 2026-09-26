@@ -63,8 +63,17 @@ export async function getReportCardData(
  * returns, the same seam every other caller uses. Today the only known
  * section is the fixture's own Class 6-ক (`FIXTURE_SECTION_ID`), so this is
  * fixture-only in exactly the same way and for exactly the same reason as
- * `getReportCardData` — deleted alongside it once F-AC-06 Part 5 lands and
- * a real `enrollments`-backed roster query takes its place.
+ * `getReportCardData` — deleted alongside it once F-AC-06 Part 5 lands.
+ *
+ * The real body is `getSectionResults(ctx, client, examId, sectionId)`
+ * (`@acadigma/db/repositories/results`, F-AC-06 Part 5, D-305): its
+ * `rows[].studentId`, in the order `getSectionResults` already returns them.
+ * That function does NOT filter out a student with no roll number — it is
+ * `getReportCardData`/`getReportCard` that refuses to print one (D-305: "a
+ * student without a roll number ... has no card to print"). This function
+ * must keep returning every roster id unfiltered so that refusal reaches
+ * `renderReportCardBulkPdf` as a per-student `failed` item (with the seam's
+ * own message) rather than the student being silently missing from the run.
  */
 export async function getReportCardBulkStudentIds(
   // Unused by the fixture; the real query reads through them.

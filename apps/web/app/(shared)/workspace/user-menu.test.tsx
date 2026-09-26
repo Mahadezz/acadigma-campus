@@ -5,8 +5,13 @@ const mockUpdateLocale = vi.fn(async () => ({
   ok: true,
   data: { locale: "bn" },
 }))
+const mockUpdateUiPreferences = vi.fn(async () => ({
+  ok: true,
+  data: { uiMode: "basic", textSize: "normal" },
+}))
 vi.mock("./actions", () => ({
   updateLocale: mockUpdateLocale,
+  updateUiPreferences: mockUpdateUiPreferences,
 }))
 
 const mockSignOut = vi.fn(async () => undefined)
@@ -15,8 +20,9 @@ vi.mock("@/app/(auth)/actions", () => ({
 }))
 
 const mockRefresh = vi.fn()
+const mockPush = vi.fn()
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: mockRefresh }),
+  useRouter: () => ({ refresh: mockRefresh, push: mockPush }),
 }))
 
 const { UserMenu } = await import("./user-menu")
@@ -27,6 +33,7 @@ const T = {
   bn: "বাংলা",
   en: "English",
   signOut: "Log out",
+  switchToBasicMode: "Switch to basic mode",
 }
 
 /**
@@ -80,5 +87,32 @@ describe("UserMenu", () => {
     })
 
     expect(mockUpdateLocale).toHaveBeenCalledWith("bn")
+  })
+
+  it("has no basic-mode switch item when showBasicModeSwitch is not passed (personal/family shells)", async () => {
+    render(<UserMenu locale="en" t={T} />)
+    await openMenu(screen.getByRole("button", { name: "Account menu" }))
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Switch to basic mode" })
+    ).toBeNull()
+  })
+
+  it("switches to basic mode and navigates to /app/home (F-ID-10 §4.2, D-403)", async () => {
+    render(<UserMenu locale="en" t={T} showBasicModeSwitch />)
+    await openMenu(screen.getByRole("button", { name: "Account menu" }))
+
+    const item = await screen.findByRole("menuitem", {
+      name: "Switch to basic mode",
+    })
+
+    await act(async () => {
+      fireEvent.pointerDown(item)
+      fireEvent.pointerUp(item)
+      fireEvent.click(item)
+    })
+
+    expect(mockUpdateUiPreferences).toHaveBeenCalledWith({ uiMode: "basic" })
+    expect(mockPush).toHaveBeenCalledWith("/app/home")
   })
 })

@@ -154,12 +154,12 @@
       "successMessage": "Your password was changed."
     },
     "passwordStrength": {
-      "label": "Password strength",
       "0": "Too weak",
       "1": "Weak",
       "2": "Fair",
       "3": "Good",
       "4": "Strong",
+      "label": "Password strength",
       "too_short": "Must be at least 12 characters.",
       "too_long": "That password is too long.",
       "too_common": "This password is too common.",
@@ -279,22 +279,22 @@
         "madrasah": "Madrasah"
       },
       "days": {
-        "6": "Sat",
-        "7": "Sun",
         "1": "Mon",
         "2": "Tue",
         "3": "Wed",
         "4": "Thu",
-        "5": "Fri"
+        "5": "Fri",
+        "6": "Sat",
+        "7": "Sun"
       },
       "daysFull": {
-        "6": "Saturday",
-        "7": "Sunday",
         "1": "Monday",
         "2": "Tuesday",
         "3": "Wednesday",
         "4": "Thursday",
-        "5": "Friday"
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
       }
     }
   },
@@ -361,10 +361,69 @@
     "switchWorkspace": "Switch workspace"
   },
   "dashboard": {
-    "today": "Today · {date}",
-    "noPlan": "No plan",
-    "workspaceResolvedTitle": "Workspace resolved",
-    "workspaceResolvedDescription": "Membership was verified against workspace_members before this screen rendered. Role {role}, workspace {workspaceId}."
+    "eyebrowToday": "Today",
+    "eyebrowSetup": "Setup",
+    "eyebrowPeople": "People",
+    "eyebrowActivity": "Activity",
+    "plan": {
+      "title": "Plan",
+      "trialDaysLeft": "{days} days left in your trial",
+      "trialOneDayLeft": "1 day left in your trial",
+      "trialLastDay": "Your trial ends today",
+      "trialEnded": "Your trial has ended",
+      "readOnly": "Read-only",
+      "active": "Active",
+      "noPlan": "No plan"
+    },
+    "people": {
+      "title": "Members",
+      "total": "{count} active",
+      "roles": {
+        "owner": "Owners",
+        "admin": "Admins",
+        "teacher": "Teachers",
+        "staff": "Office staff",
+        "parent": "Parents"
+      }
+    },
+    "staff": {
+      "title": "Staff directory",
+      "count": "{count} staff records",
+      "empty": "No staff records yet"
+    },
+    "checklist": {
+      "title": "Finish setting up your school",
+      "progress": "{done} of {total} done",
+      "done": "Done",
+      "todo": "To do",
+      "steps": {
+        "school_profile": "Add your school's letterhead and logo",
+        "academic_year": "Set up the academic year and classes",
+        "teachers": "Invite your teachers",
+        "staff_records": "Add staff records",
+        "students": "Add students"
+      }
+    },
+    "attendance": {
+      "title": "Today's attendance",
+      "emptyTitle": "No attendance taken yet",
+      "emptyDescription": "When teachers take today's register, present, absent and late counts show here.",
+      "marked": "{done} of {total} classes marked",
+      "rate": "{rate}% present so far",
+      "open": "Open attendance",
+      "none": "No classes yet"
+    },
+    "results": {
+      "title": "Exam results",
+      "emptyTitle": "No results yet",
+      "emptyDescription": "Results show here once marks are entered and published for an exam."
+    },
+    "activity": {
+      "title": "Recent activity",
+      "viewAll": "Open the audit trail",
+      "empty": "Nothing has changed in this workspace yet."
+    },
+    "loadError": "The dashboard could not load. Refresh to try again."
   },
   "attendance": {
     "title": "Attendance",
@@ -836,6 +895,11 @@
         "title": "Grading",
         "description": "Grade bands, letters and grade points",
         "keywords": "grade scale gpa letter band point pass fail a+ bangladesh"
+      },
+      "display": {
+        "title": "Display",
+        "description": "Text size and basic mode",
+        "keywords": "text size font large extra basic mode accessibility"
       }
     },
     "notSet": "Not set",
@@ -979,71 +1043,6 @@
       "failedNote": "This report failed to render."
     }
   },
-  "dashboard": {
-    "eyebrowToday": "Today",
-    "eyebrowSetup": "Setup",
-    "eyebrowPeople": "People",
-    "eyebrowActivity": "Activity",
-    "plan": {
-      "title": "Plan",
-      "trialDaysLeft": "{days} days left in your trial",
-      "trialOneDayLeft": "1 day left in your trial",
-      "trialLastDay": "Your trial ends today",
-      "trialEnded": "Your trial has ended",
-      "readOnly": "Read-only",
-      "active": "Active",
-      "noPlan": "No plan"
-    },
-    "people": {
-      "title": "Members",
-      "total": "{count} active",
-      "roles": {
-        "owner": "Owners",
-        "admin": "Admins",
-        "teacher": "Teachers",
-        "staff": "Office staff",
-        "parent": "Parents"
-      }
-    },
-    "staff": {
-      "title": "Staff directory",
-      "count": "{count} staff records",
-      "empty": "No staff records yet"
-    },
-    "checklist": {
-      "title": "Finish setting up your school",
-      "progress": "{done} of {total} done",
-      "done": "Done",
-      "todo": "To do",
-      "steps": {
-        "school_profile": "Add your school's letterhead and logo",
-        "academic_year": "Set up the academic year and classes",
-        "teachers": "Invite your teachers",
-        "staff_records": "Add staff records",
-        "students": "Add students"
-      }
-    },
-    "attendance": {
-      "title": "Today's attendance",
-      "emptyTitle": "No attendance taken yet",
-      "emptyDescription": "When teachers take today's register, present, absent and late counts show here.",
-      "marked": "{done} of {total} classes marked",
-      "rate": "{rate}% present so far",
-      "open": "Open attendance",
-      "none": "No classes yet"
-    },
-    "results": {
-      "title": "Exam results",
-      "emptyTitle": "No results yet",
-      "emptyDescription": "Results show here once marks are entered and published for an exam."
-    },
-    "activity": {
-      "title": "Recent activity",
-      "viewAll": "Open the audit trail",
-      "empty": "Nothing has changed in this workspace yet."
-    },
-    "loadError": "The dashboard could not load. Refresh to try again."
-  },
   "shell": {
     "signedInAs": "Signed in as {role}",
     "roles": {
@@ -1185,6 +1184,80 @@
     "publishBlocked": "Every student in every paper needs a mark, or Absent or Exempt, before results can be published."
   },
   "students": {
+    "importButton": "Import",
+    "import": {
+      "title": "Import students",
+      "lead": "Bring your whole register in at once from Excel or a CSV file. Nothing is saved until you check the preview and choose Import.",
+      "step1": "1. Download the template",
+      "step1Hint": "One row per student. Keep the header row. Class and section must match your Classes page, for example Class 6 and ক. Dates as 2014-03-09 or 09/03/2014.",
+      "template": "Download template (CSV)",
+      "step2": "2. Upload your file",
+      "fileLabel": "Excel (.xlsx) or CSV file",
+      "fileHint": "Up to 2,000 students and 1 MB.",
+      "check": "Check file",
+      "checking": "Checking…",
+      "previewHeading": "3. Check the preview",
+      "summary": "{total} rows · {valid} ready · {errors} with problems",
+      "problemsHeading": "Rows with problems",
+      "problemsHint": "Fix the rows marked below and upload again; students already imported are skipped.",
+      "line": "Line {line}",
+      "importButton": "Import {count} students",
+      "importing": "Importing…",
+      "another": "Upload a different file",
+      "done": "{count} students imported.",
+      "failedHeading": "Rows the school's rules refused",
+      "viewStudents": "Go to students",
+      "nothingValid": "No row is ready to import. Fix the problems and upload the file again.",
+      "ignoredColumns": "These columns are not in the template and were ignored: {columns}",
+      "columns": {
+        "first_name": "First name",
+        "last_name": "Last name",
+        "full_name_bn": "Bangla name",
+        "date_of_birth": "Date of birth",
+        "gender": "Gender",
+        "class": "Class",
+        "section": "Section",
+        "roll_number": "Roll number",
+        "guardian_relation": "Guardian relation",
+        "guardian_name": "Guardian's name",
+        "guardian_phone": "Guardian's mobile"
+      },
+      "rowErrors": {
+        "required": "missing",
+        "too_long": "too long",
+        "invalid_date": "not a real date — use 2014-03-09 or 09/03/2014",
+        "future_date": "in the future",
+        "invalid_gender": "use male, female or other",
+        "unknown_class": "no such class in this school",
+        "unknown_section": "no such section in that class this year",
+        "invalid_roll": "use a number from 1 to 9999",
+        "duplicate_roll": "used twice for this section in the file",
+        "invalid_relation": "use father, mother, brother, sister, uncle, aunt, grandparent, legal guardian or other",
+        "invalid_phone": "not a Bangladeshi mobile number, for example 01712345678",
+        "already_admitted": "Already on the roster: {code}",
+        "duplicate_in_file": "The same student appears earlier in this file.",
+        "VALIDATION": "The school's rules refused this row.",
+        "ROLL_TAKEN": "That roll number is already taken in this section.",
+        "SECTION_NOT_FOUND": "That section no longer exists.",
+        "SECTION_ARCHIVED": "That section has been archived.",
+        "YEAR_CLOSED": "That section is not in the current academic year.",
+        "IDEMPOTENCY_KEY_REUSED": "This row was already imported with different details."
+      },
+      "fileErrors": {
+        "no_file": "Choose a file first.",
+        "wrong_type": "Upload an Excel (.xlsx) or CSV file.",
+        "too_large": "The file is larger than 1 MB. Split it into two files.",
+        "unreadable": "This file could not be read. Save it again as .xlsx or CSV and try again.",
+        "empty": "The file has no students in it.",
+        "too_many_rows": "The file has more than 2,000 students. Split it into two files.",
+        "missing_columns": "These columns are missing: {columns}. Start from the template."
+      },
+      "errors": {
+        "expired": "This preview is more than a day old. Upload the file again.",
+        "readOnly": "This school is read-only right now, so nothing can be imported.",
+        "generic": "Something went wrong. Try again — rows already imported are never added twice."
+      }
+    },
     "title": "Students",
     "admit": "Admit student",
     "searchLabel": "Search by name or student ID",
@@ -1308,6 +1381,32 @@
       "ROSTER_CHANGED": "The class list changed. Reload the page.",
       "generic": "Not saved. Your marks are still here — try again.",
       "readOnly": "The school is view-only right now, so nothing can be changed."
+    }
+  },
+  "basicMode": {
+    "settings": {
+      "title": "Display",
+      "description": "Text size and basic mode",
+      "textSizeLabel": "Text size",
+      "normal": "Normal",
+      "large": "Large",
+      "xlarge": "Extra large",
+      "sampleText": "Sample text at this size",
+      "basicModeLabel": "Basic mode",
+      "basicModeDescription": "Bigger buttons, one screen per class. You can switch back any time.",
+      "basicModeComingSoon": "This turns basic mode on for your account. The class-by-class home screen is coming in a later update.",
+      "switchOn": "Turn on",
+      "switchOff": "Turn off",
+      "saved": "Saved",
+      "saveError": "Could not save. Please try again."
+    },
+    "home": {
+      "title": "Basic mode",
+      "message": "Basic mode is on. Your class-by-class home screen is coming in a later update.",
+      "switchToFullApp": "Switch to full app"
+    },
+    "userMenu": {
+      "switchToBasicMode": "Switch to basic mode"
     }
   }
 }

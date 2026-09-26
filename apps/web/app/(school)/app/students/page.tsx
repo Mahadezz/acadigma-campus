@@ -72,6 +72,7 @@ export default async function StudentsPage({
       query={query}
       sections={sections}
       canAdmit={can(ctx.role, "students.write")}
+      canImport={can(ctx.role, "students.import")}
     />
   )
 }

@@ -22,15 +22,22 @@ const mockCallOrder: string[] = []
 /** Tracks every `cookies().delete(...)` call, name included — the fix under
  * test for both `signInWithPassword` and `resetPassword` (F-ID-03 review:
  * a stale `acadigma_workspace` cookie from a previous session on a shared
- * device must not survive into a newly-minted one). */
+ * device must not survive into a newly-minted one), and for `signOut` /
+ * `signInWithPassword` again (shared-device review fix below: the two
+ * display-preference cookies get the same treatment). */
 const mockCookieDelete = vi.fn()
+/** Tracks every `cookies().set(...)` call — the shared-device review fix's
+ * other half: `signInWithPassword` must write `acadigma_ui_mode` /
+ * `acadigma_text_size` from the signing-in user's own stored row so a stale
+ * cookie left by whoever used this device before does not outrank it. */
+const mockCookieSet = vi.fn()
 
 vi.mock("next/headers", () => ({
   headers: vi.fn(async () => new Headers()),
   cookies: vi.fn(async () => ({
     getAll: () => [],
     get: () => undefined,
-    set: () => {},
+    set: mockCookieSet,
     delete: mockCookieDelete,
   })),
 }))
@@ -48,6 +55,7 @@ const mockSignOut = vi.fn()
 const mockRpc = vi.fn()
 const mockSignInWithPassword = vi.fn()
 const mockMaybeSingleProfile = vi.fn()
+const mockGetUser = vi.fn()
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
@@ -56,6 +64,7 @@ vi.mock("@/lib/supabase/server", () => ({
       updateUser: mockUpdateUser,
       signOut: mockSignOut,
       signInWithPassword: mockSignInWithPassword,
+      getUser: mockGetUser,
     },
     rpc: mockRpc,
     from: (table: string) => {
@@ -71,6 +80,21 @@ vi.mock("@/lib/supabase/server", () => ({
       throw new Error(`fake supabase client: unexpected table "${table}"`)
     },
   })),
+}))
+
+const mockLogAuthEvent = vi.fn()
+
+vi.mock("@/lib/audit", () => ({
+  logAuthEvent: mockLogAuthEvent,
+}))
+
+/** Shared-device review fix: `signInWithPassword` reads the signing-in
+ * user's own stored `user_preferences` row to overwrite a possibly-stale
+ * cookie pair. */
+const mockFetchUiPreferences = vi.fn()
+
+vi.mock("@acadigma/db/repositories/ui-preferences", () => ({
+  fetchUiPreferences: mockFetchUiPreferences,
 }))
 
 const mockThrottleStatus = vi.fn()
@@ -102,7 +126,7 @@ vi.mock("@acadigma/domain/auth", async (importOriginal) => {
   }
 })
 
-const { resetPassword, signInWithPassword } = await import("./actions")
+const { resetPassword, signInWithPassword, signOut } = await import("./actions")
 
 const FAKE_USER = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -152,6 +176,20 @@ beforeEach(() => {
   mockResolveLandingRoute.mockImplementation(async () => {
     mockCallOrder.push("resolveLandingRoute")
     return "/app"
+  })
+  mockCookieSet.mockImplementation((name: string, value: string) => {
+    mockCallOrder.push(`cookieSet:${name}=${value}`)
+  })
+  mockGetUser.mockImplementation(async () => {
+    mockCallOrder.push("getUser")
+    return { data: { user: FAKE_USER } }
+  })
+  mockLogAuthEvent.mockImplementation(async () => {
+    mockCallOrder.push("logAuthEvent")
+  })
+  mockFetchUiPreferences.mockImplementation(async () => {
+    mockCallOrder.push("fetchUiPreferences")
+    return { ok: true, data: { uiMode: "basic", textSize: "xlarge" } }
   })
 })
 
@@ -284,5 +322,71 @@ describe("signInWithPassword (F-ID-03 review: stale workspace cookie on a shared
 
     expect(result.ok).toBe(false)
     expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_workspace")
+  })
+
+  it("writes acadigma_ui_mode/acadigma_text_size from the signed-in user's own stored row (shared-device review fix)", async () => {
+    mockFetchUiPreferences.mockImplementation(async () => {
+      mockCallOrder.push("fetchUiPreferences")
+      return { ok: true, data: { uiMode: "basic", textSize: "large" } }
+    })
+
+    await expect(
+      signInWithPassword({
+        email: "person@test.local",
+        password: "whatever-they-typed",
+        remember: true,
+      })
+    ).rejects.toThrow("NEXT_REDIRECT")
+
+    expect(mockFetchUiPreferences).toHaveBeenCalledWith(
+      expect.anything(),
+      FAKE_USER.id
+    )
+    expect(mockCookieSet).toHaveBeenCalledWith(
+      "acadigma_ui_mode",
+      "basic",
+      expect.objectContaining({ path: "/" })
+    )
+    expect(mockCookieSet).toHaveBeenCalledWith(
+      "acadigma_text_size",
+      "large",
+      expect.objectContaining({ path: "/" })
+    )
+    // Overwrites, not merely fills a gap -- a stale cookie from the PREVIOUS
+    // person's session must lose, not win, so the write must not be
+    // conditional on the old cookie being absent/invalid.
+    expect(
+      mockCallOrder.indexOf("cookieDelete:acadigma_workspace")
+    ).toBeLessThan(mockCallOrder.indexOf("cookieSet:acadigma_ui_mode=basic"))
+  })
+
+  it("does not fail sign-in when the preferences row cannot be read", async () => {
+    mockFetchUiPreferences.mockImplementation(async () => {
+      mockCallOrder.push("fetchUiPreferences")
+      return {
+        ok: false,
+        error: { code: "dependency_unavailable", message: "down" },
+      }
+    })
+
+    await expect(
+      signInWithPassword({
+        email: "person@test.local",
+        password: "whatever-they-typed",
+        remember: true,
+      })
+    ).rejects.toThrow("NEXT_REDIRECT")
+
+    expect(mockCookieSet).not.toHaveBeenCalled()
+  })
+})
+
+describe("signOut (review fix: shared-device display-preference leak)", () => {
+  it("deletes the workspace cookie and both display-preference cookies", async () => {
+    await expect(signOut()).rejects.toThrow("NEXT_REDIRECT")
+
+    expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_workspace")
+    expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_ui_mode")
+    expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_text_size")
   })
 })

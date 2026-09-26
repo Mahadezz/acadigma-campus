@@ -47,9 +47,15 @@ type Branding = Pick<
  * once per student, exactly as the single-card path (D-206) already does —
  * renders each to its own single-document PDF, sorts by the requested
  * order, and merges with duplex padding (`mergeReportCardBulkPdf`,
- * `packages/pdf`). A student whose data lookup or render throws is recorded
- * as a `failed` item and excluded from the merge; the run still succeeds
- * for every other student (§4 W2 "a failed student fails only their item").
+ * `packages/pdf`). A student whose seam call fails for ANY reason (missing
+ * data today; once F-AC-06 Part 5 lands, also a real result with no roll
+ * number — `getReportCard` itself refuses to print one, D-305) is recorded
+ * as a `failed` item carrying the seam's own message, and excluded from the
+ * merge; the run still succeeds for every other student (§4 W2 "a failed
+ * student fails only their item"). This function never pre-filters the
+ * roster before calling the seam — every id `getReportCardBulkStudentIds`
+ * returns is attempted, so a student who cannot get a card is named, never
+ * silently dropped.
  *
  * Synchronous, like every kind this pipeline has shipped so far (D-205) —
  * no chunking, no drainer, no Realtime progress. Shared by the render step

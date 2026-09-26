@@ -24,6 +24,7 @@ import {
   type ChangePasswordInput,
   type ChangePasswordOutput,
 } from "@acadigma/contracts"
+import { fetchUiPreferences } from "@acadigma/db/repositories/ui-preferences"
 import { safeReturnTo, checkPassword } from "@acadigma/domain/auth"
 
 import { logAuthEvent } from "@/lib/audit"
@@ -41,6 +42,11 @@ import {
   USER_THROTTLE_KEYS,
 } from "@/lib/throttle"
 import { throttledMessage } from "@/lib/throttle-copy"
+import {
+  TEXT_SIZE_COOKIE,
+  UI_MODE_COOKIE,
+  UI_PREFS_COOKIE_OPTS,
+} from "@/lib/ui-preferences"
 import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie"
 
 /**
@@ -295,6 +301,27 @@ export async function signInWithPassword(
   const cookieStore = await cookies()
   cookieStore.delete(WORKSPACE_COOKIE)
 
+  // Review fix (BLOCKER, shared-device leak): the display-preference cookies
+  // need the same treatment as `WORKSPACE_COOKIE` above, in the opposite
+  // direction. `getUiPreferences()` prefers a valid cookie over the stored
+  // row (that is what gives the very first paint no flash), so a stale
+  // `basic`/`xlarge` cookie left on this device by whoever was signed in
+  // before would otherwise outrank THIS user's real row — the next person on
+  // a shared school phone/tablet would inherit a stranger's basic mode and
+  // text size, and `/app` would redirect them to `/app/home` for it.
+  // Overwriting both cookies with this user's actual row as soon as the
+  // credential exchange has succeeded closes that gap; `signOut()` closes
+  // the other half by deleting them outright.
+  const uiPrefs = await fetchUiPreferences(supabase, data.user.id)
+  if (uiPrefs.ok) {
+    cookieStore.set(UI_MODE_COOKIE, uiPrefs.data.uiMode, UI_PREFS_COOKIE_OPTS)
+    cookieStore.set(
+      TEXT_SIZE_COOKIE,
+      uiPrefs.data.textSize,
+      UI_PREFS_COOKIE_OPTS
+    )
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("suspended_at, onboarding_completed_at")
@@ -353,6 +380,14 @@ export async function signOut(): Promise<void> {
   // claimed this happened here; it did not.
   const cookieStore = await cookies()
   cookieStore.delete(WORKSPACE_COOKIE)
+
+  // Review fix (BLOCKER, shared-device leak): same reasoning as
+  // `WORKSPACE_COOKIE` above, for the display-preference cookies.
+  // `getUiPreferences()` prefers a cookie over the stored row, so leaving
+  // these behind on a shared device would hand the next person to sign in
+  // this account's basic mode / text size before their own row ever loads.
+  cookieStore.delete(UI_MODE_COOKIE)
+  cookieStore.delete(TEXT_SIZE_COOKIE)
 
   redirect("/login")
 }

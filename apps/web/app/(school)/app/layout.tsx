@@ -114,7 +114,11 @@ export default async function SchoolLayout({
                   ...t.workspace.userMenu,
                   ...t.auth.languageToggle,
                   signOut: t.auth.logout.button,
+                  switchToBasicMode: t.basicMode.userMenu.switchToBasicMode,
                 }}
+                // F-ID-10 §2 note 4 (D-403): hidden for staff, who have no
+                // classes.
+                showBasicModeSwitch={ctx.role !== "staff"}
               />
             </>
           }
