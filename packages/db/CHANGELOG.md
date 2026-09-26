@@ -1,5 +1,17 @@
 # @acadigma/db
 
+## 0.10.0
+
+### Minor Changes
+
+- c5091fe: Guardian follow-ups (D-109). A teacher or staff member who is also a parent at their own school can accept a guardian link: they keep their staff membership and get the family view of their own child only (`/family`, "My children" and "School app" in the workspace switcher, the report-card download). The class teacher of a student's current section can now invite that student's guardians to the parent app and remove a linked account (F-ID-04 OQ-6), 60 invitations an hour per inviter, and never accepts a link they issued themselves; another section's students, other teachers and staff are refused. Revoking a staff member's link never touches their staff membership; revoking a pure parent's last link still removes their parent membership.
+
+### Patch Changes
+
+- c6e6af2: `listPublishCandidates` pages through `results` so an exam with more than 1,000 students is no longer cut off at PostgREST's `max_rows` (D-75). Generated types follow the `staff_documents` composite file FK.
+- Updated dependencies [c5091fe]
+  - @acadigma/domain@0.10.0
+
 ## 0.9.0
 
 ### Minor Changes

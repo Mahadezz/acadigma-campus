@@ -1,5 +1,21 @@
 # @acadigma/web
 
+## 0.10.0
+
+### Minor Changes
+
+- c5091fe: Guardian follow-ups (D-109). A teacher or staff member who is also a parent at their own school can accept a guardian link: they keep their staff membership and get the family view of their own child only (`/family`, "My children" and "School app" in the workspace switcher, the report-card download). The class teacher of a student's current section can now invite that student's guardians to the parent app and remove a linked account (F-ID-04 OQ-6), 60 invitations an hour per inviter, and never accepts a link they issued themselves; another section's students, other teachers and staff are refused. Revoking a staff member's link never touches their staff membership; revoking a pure parent's last link still removes their parent membership.
+- 33a3507: F-ID-11 Part 1 (D-308): pages you opened in the school, family and personal apps now open without internet, with "Last updated 09:12 today" and an offline banner; a page never opened says it needs internet the first time, with Retry. Report cards, the attendance register and mark sheet, PDFs, Publish, student import, Create school and guardian invitations show "Needs internet / ইন্টারনেট দরকার" while offline instead of failing. Saved pages are wiped on sign-out, on a workspace switch, and when the account's session, membership or role changes. The service worker no longer caches API responses or page data under the old generic cache names, and deletes those caches. Saved pages expire after 14 days and are cleared when a new version of the app is installed.
+
+### Patch Changes
+
+- Updated dependencies [c5091fe]
+- Updated dependencies [c6e6af2]
+  - @acadigma/domain@0.10.0
+  - @acadigma/db@0.10.0
+  - @acadigma/pdf@0.5.1
+  - @acadigma/ui@0.5.2
+
 ## 0.9.0
 
 ### Minor Changes
