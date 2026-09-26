@@ -2,7 +2,8 @@
 
 /**
  * F-AC-01 demo cut (D-102) — `createSection`, `archiveSection`,
- * `createSubject`, `seedStarterSubjects` (§7). Shape: parse → workspace
+ * `createSubject`, `seedStarterSubjects` (§7), and `setSectionSubjects`
+ * (Part 5 demo cut, D-107). Shape: parse → workspace
  * context → `can()` → `requireWritable` (D-300) → repository → revalidate.
  * RLS (T2) and the table triggers re-check every rule below.
  */
@@ -17,6 +18,7 @@ import {
   createSubjectInputSchema,
   err,
   planReadOnlyApiError,
+  setSectionSubjectsInputSchema,
   type ApiError,
   type Result,
   type Section,
@@ -27,6 +29,7 @@ import {
   createSubjects,
   listSubjects,
   requireWritable,
+  setSectionSubjects as setSectionSubjectsRepo,
   type WorkspaceContext,
 } from "@acadigma/db"
 import { can, type Action } from "@acadigma/domain"
@@ -125,6 +128,23 @@ export async function seedStarterSubjects(): Promise<
   }))
 
   const result = await createSubjects(supabase, ctx, missing)
+  if (result.ok) revalidatePath(CLASSES_PATH)
+  return result
+}
+
+/** §4.3 (demo cut, D-107): the section's subjects and each one's teacher,
+ * saved as one list from the section's Subjects sheet. */
+export async function setSectionSubjects(
+  input: unknown
+): Promise<Result<{ count: number }, ApiError>> {
+  const parsed = setSectionSubjectsInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+
+  const gate = await gateWrite("academics.section.write")
+  if (!gate.ok) return gate
+  const { ctx, supabase } = gate.data
+
+  const result = await setSectionSubjectsRepo(supabase, ctx, parsed.data)
   if (result.ok) revalidatePath(CLASSES_PATH)
   return result
 }

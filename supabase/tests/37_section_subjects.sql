@@ -101,13 +101,13 @@ values
 -- ---------------------------------------------------------------------
 select tests.login('37000000-0000-4000-a000-000000000001');
 select is(
-  public.set_section_subjects('37000000-0000-4000-c000-000000000021', jsonb_build_array(
+  public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', jsonb_build_array(
     jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000031',
                        'teacher_id', '37000000-0000-4000-d000-000000000002'),
     jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000032', 'teacher_id', null))),
   2, 'the owner gives Class 6 – A two subjects');
 select is(
-  public.set_section_subjects('37000000-0000-4000-c000-000000000021', jsonb_build_array(
+  public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', jsonb_build_array(
     jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000031', 'teacher_id', null),
     jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000033',
                        'teacher_id', '37000000-0000-4000-d000-000000000002'))),
@@ -123,7 +123,7 @@ select is(
 
 select tests.login('37000000-0000-4000-a000-000000000001');
 select throws_ok(
-  $$select public.set_section_subjects('37000000-0000-4000-c000-000000000022', '[]'::jsonb)$$,
+  $$select public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000022', '[]'::jsonb)$$,
   'P0002', 'SECTION_NOT_FOUND', 'an archived section''s subjects cannot be set');
 
 -- ---------------------------------------------------------------------
@@ -136,12 +136,12 @@ select throws_ok(
   '23505', 'duplicate key value violates unique constraint "section_subjects_section_subject_key"',
   'a subject appears once per section');
 select throws_ok(
-  $$select public.set_section_subjects('37000000-0000-4000-c000-000000000021', jsonb_build_array(
+  $$select public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', jsonb_build_array(
       jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000032',
                          'teacher_id', '37000000-0000-4000-d000-000000000003')))$$,
   '22023', 'MEMBER_NOT_ELIGIBLE', 'a parent member cannot teach a subject');
 select throws_ok(
-  $$select public.set_section_subjects('37000000-0000-4000-c000-000000000021', jsonb_build_array(
+  $$select public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', jsonb_build_array(
       jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000034', 'teacher_id', null)))$$,
   '23503', 'insert or update on table "section_subjects" violates foreign key constraint "section_subjects_subject_fkey"',
   'a section cannot take another school''s subject');
@@ -160,7 +160,7 @@ select is(
     where workspace_id = '37000000-0000-4000-b000-000000000001'),
   0, 'isolation: another school''s owner sees none of these rows');
 select throws_ok(
-  $$select public.set_section_subjects('37000000-0000-4000-c000-000000000021', '[]'::jsonb)$$,
+  $$select public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', '[]'::jsonb)$$,
   'P0002', 'SECTION_NOT_FOUND', 'isolation: another school''s owner cannot find the section');
 select throws_ok(
   $$insert into public.section_subjects (workspace_id, section_id, subject_id, teacher_id, created_by)
@@ -183,7 +183,7 @@ select is(
     where workspace_id = '37000000-0000-4000-b000-000000000001'),
   2, 'a teacher reads the school''s section subjects');
 select throws_ok(
-  $$select public.set_section_subjects('37000000-0000-4000-c000-000000000021', jsonb_build_array(
+  $$select public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', jsonb_build_array(
       jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000032',
                          'teacher_id', '37000000-0000-4000-d000-000000000002')))$$,
   '42501', 'new row violates row-level security policy for table "section_subjects"',
@@ -207,7 +207,7 @@ select is(
 select tests.logout();
 
 select ok(not has_table_privilege('anon', 'public.section_subjects', 'select')
-          and not has_function_privilege('anon', 'public.set_section_subjects(uuid, jsonb)', 'execute'),
+          and not has_function_privilege('anon', 'public.set_section_subjects(uuid, uuid, jsonb)', 'execute'),
   'anon has no privilege on section_subjects or set_section_subjects');
 
 -- ---------------------------------------------------------------------
@@ -261,7 +261,7 @@ select is(
 update public.workspaces set access_mode = 'read_only' where id = '37000000-0000-4000-b000-000000000001';
 select tests.login('37000000-0000-4000-a000-000000000001');
 select throws_ok(
-  $$select public.set_section_subjects('37000000-0000-4000-c000-000000000021', jsonb_build_array(
+  $$select public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', jsonb_build_array(
       jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000032',
                          'teacher_id', '37000000-0000-4000-d000-000000000005')))$$,
   '42501', 'PLAN_READ_ONLY', 'a read-only school cannot change its section subjects');

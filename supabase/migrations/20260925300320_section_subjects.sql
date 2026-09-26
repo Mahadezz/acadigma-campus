@@ -158,7 +158,8 @@ grant select, insert, update, delete on public.section_subjects to authenticated
 -- in the list are taken off; the rest are added or have their teacher
 -- changed. SECURITY INVOKER: RLS and the triggers above decide.
 -- ---------------------------------------------------------------------
-create or replace function public.set_section_subjects(p_section_id uuid, p_subjects jsonb)
+create or replace function public.set_section_subjects(
+  p_workspace_id uuid, p_section_id uuid, p_subjects jsonb)
 returns integer
 language plpgsql
 volatile
@@ -171,7 +172,7 @@ declare
 begin
   select s.workspace_id into v_ws
     from public.sections s
-   where s.id = p_section_id and s.archived_at is null;
+   where s.id = p_section_id and s.workspace_id = p_workspace_id and s.archived_at is null;
   if v_ws is null then
     raise exception 'SECTION_NOT_FOUND' using errcode = 'P0002';
   end if;
@@ -194,12 +195,12 @@ begin
 end;
 $$;
 
-comment on function public.set_section_subjects(uuid, jsonb) is
+comment on function public.set_section_subjects(uuid, uuid, jsonb) is
   'F-AC-01 Part 5 demo cut (D-107). SECURITY INVOKER. p_subjects = '
   '[{subject_id, teacher_id|null}]; replaces the section''s subject list.';
 
-revoke all on function public.set_section_subjects(uuid, jsonb) from public, anon;
-grant execute on function public.set_section_subjects(uuid, jsonb) to authenticated;
+revoke all on function public.set_section_subjects(uuid, uuid, jsonb) from public, anon;
+grant execute on function public.set_section_subjects(uuid, uuid, jsonb) to authenticated;
 
 -- ---------------------------------------------------------------------
 -- create_exam: each paper's teacher defaults to the section's subject

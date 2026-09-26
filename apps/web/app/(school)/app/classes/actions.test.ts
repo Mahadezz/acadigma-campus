@@ -24,16 +24,23 @@ const mockCreateSection = vi.fn()
 const mockArchive = vi.fn()
 const mockCreateSubjects = vi.fn()
 const mockListSubjects = vi.fn()
+const mockSetSectionSubjects = vi.fn()
 vi.mock("@acadigma/db", () => ({
   requireWritable: (...a: unknown[]) => mockRequireWritable(...a),
   createSection: (...a: unknown[]) => mockCreateSection(...a),
   archiveSection: (...a: unknown[]) => mockArchive(...a),
   createSubjects: (...a: unknown[]) => mockCreateSubjects(...a),
   listSubjects: (...a: unknown[]) => mockListSubjects(...a),
+  setSectionSubjects: (...a: unknown[]) => mockSetSectionSubjects(...a),
 }))
 
-const { archiveSection, createSection, createSubject, seedStarterSubjects } =
-  await import("./actions")
+const {
+  archiveSection,
+  createSection,
+  createSubject,
+  seedStarterSubjects,
+  setSectionSubjects,
+} = await import("./actions")
 
 const GRADE = "5f0c2a1e-8b7d-4c3a-9e6f-1a2b3c4d5e6f"
 
@@ -45,6 +52,7 @@ beforeEach(() => {
   mockArchive.mockResolvedValue({ ok: true, data: { id: "s" } })
   mockCreateSubjects.mockResolvedValue({ ok: true, data: { created: 1 } })
   mockListSubjects.mockResolvedValue({ ok: true, data: [] })
+  mockSetSectionSubjects.mockResolvedValue({ ok: true, data: { count: 1 } })
 })
 
 describe("createSection", () => {
@@ -122,5 +130,44 @@ describe("seedStarterSubjects", () => {
     const result = await seedStarterSubjects()
     expect(!result.ok && result.error.code).toBe("forbidden")
     expect(mockCreateSubjects).not.toHaveBeenCalled()
+  })
+})
+
+describe("setSectionSubjects (D-107)", () => {
+  const input = {
+    sectionId: GRADE,
+    subjects: [{ subjectId: GRADE, teacherId: null }],
+  }
+
+  it("a teacher cannot assign subjects", async () => {
+    ctx.role = "teacher"
+    const result = await setSectionSubjects(input)
+    expect(!result.ok && result.error.code).toBe("forbidden")
+    expect(mockSetSectionSubjects).not.toHaveBeenCalled()
+  })
+
+  it("a read-only school cannot assign subjects (D-300)", async () => {
+    mockRequireWritable.mockResolvedValue({
+      ok: false,
+      error: { code: "PLAN_READ_ONLY", reason: null },
+    })
+    const result = await setSectionSubjects(input)
+    expect(!result.ok && result.error.code).toBe("payment_required")
+    expect(mockSetSectionSubjects).not.toHaveBeenCalled()
+  })
+
+  it("rejects a subject listed twice before resolving anything", async () => {
+    const result = await setSectionSubjects({
+      sectionId: GRADE,
+      subjects: [input.subjects[0], input.subjects[0]],
+    })
+    expect(!result.ok && result.error.code).toBe("validation_failed")
+    expect(mockRequireWritable).not.toHaveBeenCalled()
+  })
+
+  it("saves for an admin", async () => {
+    const result = await setSectionSubjects(input)
+    expect(result).toEqual({ ok: true, data: { count: 1 } })
+    expect(mockSetSectionSubjects).toHaveBeenCalledWith({}, ctx, input)
   })
 })
