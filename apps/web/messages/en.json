@@ -1461,7 +1461,6 @@
       "allClasses": "All classes",
       "allClassesDescription": "Every class at your school",
       "switchToFullApp": "Switch to full app",
-      "profile": "Profile",
       "settingsLabel": "Settings",
       "helpLabel": "Help",
       "homeLabel": "Home"
@@ -1471,11 +1470,13 @@
       "callSchoolOffice": "Call school office ({phone})",
       "noPhoneYet": "Your school office has not added a phone number yet.",
       "addPhoneLink": "Add school phone number",
+      "goBack": "ফিরে যান / Go back",
       "routes": {
         "home": [
           "This is your basic-mode home. Each block below is one of your classes.",
           "Tap a class to take today's roll call.",
-          "Use Switch to full app any time to see everything else."
+          "Use Switch to full app any time to see everything else.",
+          "To enter marks: Switch to full app → Exams."
         ],
         "default": [
           "You're in basic mode. Tap Home any time to get back to your classes."

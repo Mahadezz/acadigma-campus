@@ -2,7 +2,6 @@ import { BellIcon } from "lucide-react"
 
 import { planReadOnlyApiError } from "@acadigma/contracts"
 import { requireWritable } from "@acadigma/db"
-import { getSchoolProfile } from "@acadigma/db/repositories/settings"
 import { getNavConfig, type NavConfig } from "@acadigma/domain/nav"
 import { Button } from "@acadigma/ui/components/button"
 import { AppShell } from "@acadigma/ui/primitives/app-shell"
@@ -15,6 +14,7 @@ import { UserMenu } from "@/app/(shared)/workspace/user-menu"
 import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
 import { getMessages } from "@/lib/i18n"
 import { onlyImplemented } from "@/lib/implemented-routes"
+import { getCachedSchoolProfile } from "@/lib/school-profile"
 import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
 import { createClient } from "@/lib/supabase/server"
 import { getUiPreferences } from "@/lib/ui-preferences"
@@ -52,9 +52,19 @@ export default async function SchoolLayout({
   const { t, locale } = await getMessages()
 
   const client = await createClient()
-  const [writable, ui] = await Promise.all([
+  // Review fix (SHOULD): `getSchoolProfile` used to run only after this
+  // `Promise.all` resolved, and only in the basic-mode branch below — a
+  // second, sequential round trip on top of it (a request waterfall). It
+  // depends on neither `writable` nor `ui`, only `ctx`/`client`, both
+  // already resolved above, so it starts alongside them instead. Full mode
+  // never reads `profile`, but the query is cheap (single indexed row) and
+  // `getCachedSchoolProfile` (keyed on `ctx.workspaceId`) means a page that
+  // also needs it in this request — `home/page.tsx`'s empty state — reuses
+  // this result rather than paying for it twice.
+  const [writable, ui, profileResult] = await Promise.all([
     requireWritable(ctx, client),
     getUiPreferences(),
+    getCachedSchoolProfile(ctx.workspaceId),
   ])
 
   const readOnlyBanner = writable.ok ? null : (
@@ -77,8 +87,9 @@ export default async function SchoolLayout({
   // for why that is deliberate rather than a narrower "only /app/home" check.
   // §2 note 4: hidden for `staff`, who have no classes.
   if (ui.uiMode === "basic" && ctx.role !== "staff") {
-    const profile = await getSchoolProfile(client, ctx)
-    const phone = profile.ok ? profile.data.fields.contact_phone : null
+    const phone = profileResult.ok
+      ? profileResult.data.fields.contact_phone
+      : null
     const s = t.basicMode
     return (
       <BasicShellWrapper
@@ -97,6 +108,7 @@ export default async function SchoolLayout({
         phone={phone}
         callLabel={s.help.callSchoolOffice.replace("{phone}", phone ?? "")}
         noPhoneLine={s.help.noPhoneYet}
+        goBackLabel={s.help.goBack}
         addPhoneHref={
           ctx.role === "owner" || ctx.role === "admin"
             ? "/app/settings/school"

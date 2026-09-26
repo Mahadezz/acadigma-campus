@@ -58,13 +58,18 @@ test("basic home shows the All classes block for an owner, essentials row, and e
   const allClasses = page.getByRole("link", { name: /All classes/ })
   await expect(allClasses).toBeVisible()
 
-  // §4.4.3 essentials row.
-  await expect(page.getByRole("link", { name: /Profile/ })).toBeVisible()
+  // §4.4.3 essentials row (review fix, PR #72: Profile dropped — no real
+  // profile screen exists to link to — Sign out and the language switch
+  // added, replacing the UserMenu this shell no longer renders).
   await expect(page.getByRole("link", { name: /Settings/ })).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: /বাংলা|English/ })
+  ).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Switch to full app" })
   ).toBeVisible()
   await expect(page.getByRole("button", { name: "Help" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Log out" })).toBeVisible()
 
   // §5.1: every link/button on the page is >= 56x56px. No bottom nav is
   // rendered in basic mode, so this is genuinely every interactive element

@@ -3,7 +3,7 @@ import Link from "next/link"
 import { GraduationCapIcon } from "lucide-react"
 
 import { getBasicHome } from "@acadigma/db/repositories/basic-home"
-import { getSchoolProfile } from "@acadigma/db/repositories/settings"
+import { buttonVariants } from "@acadigma/ui/components/button-variants"
 import { ClassBlock } from "@acadigma/ui/primitives/class-block"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
@@ -11,6 +11,7 @@ import type { SimpleLinkRenderer } from "@acadigma/ui/primitives/link-renderer"
 import { TodayStrip } from "@acadigma/ui/primitives/today-strip"
 
 import { getMessages } from "@/lib/i18n"
+import { getCachedSchoolProfile } from "@/lib/school-profile"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
@@ -28,14 +29,22 @@ const renderLink: SimpleLinkRenderer = ({ href, className, children }) => (
 )
 
 /**
- * Primary/`lg` `Button` classes, inlined for the same reason
- * `essentials-row.tsx`'s `OUTLINE_BUTTON_CLASSNAME` is — see that file's
- * docblock. Only the empty state's Call school office link needs it here;
- * every other button-shaped element on this page already goes through
+ * `buttonVariants` from the radix-free `components/button-variants` path —
+ * see `essentials-row.tsx`'s docblock. Only the empty state's Call school
+ * office link and the error state's Retry link need it here; every other
+ * button-shaped element on this page already goes through
  * `ClassBlock`/`TodayStrip`, which style themselves without `Button`.
  */
-const PRIMARY_BUTTON_CLASSNAME =
-  "inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-6 text-sm font-medium whitespace-nowrap text-primary-foreground transition-all outline-none hover:bg-primary/90 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+const PRIMARY_BUTTON_CLASSNAME = buttonVariants({
+  variant: "default",
+  size: "lg",
+  className: "min-h-14 text-base",
+})
+const OUTLINE_BUTTON_CLASSNAME = buttonVariants({
+  variant: "outline",
+  size: "lg",
+  className: "min-h-14 text-base",
+})
 
 /**
  * F-ID-10 §4.4/§6 `/app/home` — the real basic-mode home (Part 2). Today
@@ -43,8 +52,9 @@ const PRIMARY_BUTTON_CLASSNAME =
  * `getBasicHome`, an "All classes" block for owner/admin (§4.4 footnote ¹,
  * AC16), then the essentials row. Every read goes through `getBasicHome`
  * (itself built only from already-shipped repositories/RLS, D-405) — this
- * page adds one more query beyond that, `getSchoolProfile`, only for the
- * empty state's Call school office link.
+ * page adds one more query beyond that, `getSchoolProfile` (via
+ * `getCachedSchoolProfile`, review fix — see that module's docblock), only
+ * for the empty state's Call school office link.
  */
 export default async function BasicHomePage() {
   const ctx = await requireShell("school")
@@ -55,8 +65,11 @@ export default async function BasicHomePage() {
   const home = await getBasicHome(supabase, ctx)
   if (!home.ok) {
     return (
-      <div className="mx-auto max-w-md">
-        <InlineAlert tone="error">{home.error.message}</InlineAlert>
+      <div className="mx-auto flex max-w-md flex-col items-start gap-4">
+        <InlineAlert tone="error">{t.classes.errors.generic}</InlineAlert>
+        <Link href="/app/home" className={OUTLINE_BUTTON_CLASSNAME}>
+          {t.common.actions.retry}
+        </Link>
       </div>
     )
   }
@@ -85,7 +98,7 @@ export default async function BasicHomePage() {
   }))
 
   const noClasses = data.classes.length === 0 && !data.showAllClasses
-  const profile = noClasses ? await getSchoolProfile(supabase, ctx) : null
+  const profile = noClasses ? await getCachedSchoolProfile(ctx.workspaceId) : null
   const phone = profile?.ok ? profile.data.fields.contact_phone : null
 
   return (
@@ -161,10 +174,12 @@ export default async function BasicHomePage() {
 
       <EssentialsRow
         t={{
-          profile: s.profile,
           settingsLabel: s.settingsLabel,
           switchToFullApp: s.switchToFullApp,
+          signOut: t.auth.logout.button,
+          languageToggle: t.auth.languageToggle,
         }}
+        locale={locale}
       />
     </div>
   )

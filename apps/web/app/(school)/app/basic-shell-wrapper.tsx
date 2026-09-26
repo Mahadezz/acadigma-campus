@@ -45,6 +45,7 @@ export function BasicShellWrapper({
   noPhoneLine,
   addPhoneHref,
   addPhoneLabel,
+  goBackLabel,
   children,
 }: {
   homeHref: string
@@ -59,6 +60,7 @@ export function BasicShellWrapper({
   noPhoneLine: string
   addPhoneHref?: string
   addPhoneLabel?: string
+  goBackLabel: string
   children: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -80,6 +82,7 @@ export function BasicShellWrapper({
         noPhoneLine,
         addPhoneHref,
         addPhoneLabel,
+        goBackLabel,
       }}
     >
       {children}

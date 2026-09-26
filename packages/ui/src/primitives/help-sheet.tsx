@@ -5,6 +5,7 @@ import { PhoneIcon } from "lucide-react"
 import { Button } from "../components/ui/button"
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -31,6 +32,15 @@ export type HelpSheetProps = {
   /** Owner/admin only (§4.7): a link to add the number. */
   addPhoneHref?: string
   addPhoneLabel?: string
+  /**
+   * Review fix (SHOULD, PR #72): `SheetContent`'s own default close control
+   * is a 16px "X" with an English-only sr-only "Close" — not something the
+   * §1 persona (an older teacher on a 360px phone, possibly in বাংলা) can
+   * reliably see or hear. This replaces it with a full-width 56px button in
+   * the footer, so closing Help is exactly as discoverable as everything
+   * else in this sheet.
+   */
+  goBackLabel: string
 }
 
 export function HelpSheet({
@@ -43,10 +53,15 @@ export function HelpSheet({
   noPhoneLine,
   addPhoneHref,
   addPhoneLabel,
+  goBackLabel,
 }: HelpSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[85vh] gap-0">
+      <SheetContent
+        side="bottom"
+        className="max-h-[85vh] gap-0"
+        showCloseButton={false}
+      >
         <SheetHeader>
           <SheetTitle className="text-lg">{title}</SheetTitle>
           <SheetDescription className="sr-only">{title}</SheetDescription>
@@ -74,13 +89,18 @@ export function HelpSheet({
                   asChild
                   variant="outline"
                   size="lg"
-                  className="min-h-14"
+                  className="min-h-14 text-base"
                 >
                   <a href={addPhoneHref}>{addPhoneLabel}</a>
                 </Button>
               ) : null}
             </div>
           )}
+          <SheetClose asChild>
+            <Button variant="outline" size="lg" className="min-h-14 text-base">
+              {goBackLabel}
+            </Button>
+          </SheetClose>
         </SheetFooter>
       </SheetContent>
     </Sheet>

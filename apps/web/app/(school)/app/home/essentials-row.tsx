@@ -1,57 +1,76 @@
 import Link from "next/link"
 
-import { SettingsIcon, UserIcon } from "lucide-react"
+import { LogOutIcon, SettingsIcon } from "lucide-react"
 
+import { buttonVariants } from "@acadigma/ui/components/button-variants"
+
+import { signOut } from "@/app/(auth)/actions"
+import type { Locale } from "@/lib/locale"
+
+import { LanguageSwitchButton } from "./language-switch-button"
 import { SwitchToFullAppButton } from "./switch-to-full-app-button"
 
 /**
- * Outline/`lg` `Button` classes, inlined rather than imported from
- * `@acadigma/ui/components/button` — same reasoning and the same ~80 kB as
- * `(school)/app/reports/runs/[id]/page.tsx`'s `DOWNLOAD_LINK_CLASSNAME`:
- * that module's `Slot` import (for `asChild`) is not needed for a plain
- * link, and importing it from a Server Component (this file has no "use
- * client") pulled the whole `radix-ui` package into `/app/home`'s
- * first-load JS, over `check-bundle-budget.mjs`'s 250 kB budget.
- * `Button`/`buttonVariants` themselves are otherwise untouched
- * (design-lane owned, DESIGN-SYSTEM/LANES.md).
+ * `buttonVariants` (not `Button`) is imported from the radix-free
+ * `components/button-variants` path — see that file's docblock — so this
+ * Server Component's classes stay computed from the real, current variants
+ * instead of a literal string that silently drifts from them (review fix,
+ * PR #72: the old inlined copy predated D-57's `active:translate-y-px`
+ * press feedback and the `aria-invalid`/disabled states, so it looked like
+ * a plain button rather than this app's real one). `text-base` (not the
+ * variants' default `text-sm`) matches §5.1's basic-mode body size.
  */
-const OUTLINE_BUTTON_CLASSNAME =
-  "inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-md border bg-background px-6 text-sm font-medium whitespace-nowrap shadow-flat transition-all outline-none hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+const ROW_BUTTON_CLASSNAME = buttonVariants({
+  variant: "outline",
+  size: "lg",
+  className: "min-h-14 text-base",
+})
 
 /**
- * F-ID-10 §4.4.3 "Essentials row": Profile · Settings · Help · Switch to
- * full app. Help is deliberately not repeated here (D-405) — it already
+ * F-ID-10 §4.4.3 "Essentials row": Settings · Language · Switch to full app
+ * · Sign out. Help is deliberately not repeated here (D-405) — it already
  * sits in `BasicShell`'s top bar on every basic screen including this one
  * (§4.7), and a second button opening the identical sheet would be a
  * redundant control, not a second feature.
  *
- * "Profile" has no dedicated screen yet (none exists anywhere in the app,
- * basic or full) — links to `/account/security`, the closest existing
- * personal-account page, until a real profile screen is built (D-405).
+ * Review fix (BLOCKER, PR #72): basic mode replaces the whole shell below
+ * `AppShell`'s `TopBar` (`(school)/app/layout.tsx`), so its `UserMenu` —
+ * the only place with Sign out and the language switch — disappeared with
+ * it. Both are now here instead, icon + label, `min-h-14` like every other
+ * item in this row. "Profile" is dropped (was D-405 item 6's placeholder
+ * link to `/account/security`, a layout-less dead end with no Home button
+ * of its own) rather than given a shell — no real profile screen exists
+ * anywhere in this app yet to link to (see D-405's review addendum).
  * "Settings" reuses `/app/settings`, which already routes a teacher/staff
  * to the read-only overview and an owner/admin to the full grouped list —
  * no basic-specific settings screen was in this Part's file list.
  */
 export function EssentialsRow({
   t,
+  locale,
 }: {
   t: {
-    profile: string
     settingsLabel: string
     switchToFullApp: string
+    signOut: string
+    languageToggle: { bn: string; en: string }
   }
+  locale: Locale
 }) {
   return (
     <div className="flex flex-wrap gap-3">
-      <Link href="/account/security" className={OUTLINE_BUTTON_CLASSNAME}>
-        <UserIcon className="size-7" aria-hidden="true" />
-        {t.profile}
-      </Link>
-      <Link href="/app/settings" className={OUTLINE_BUTTON_CLASSNAME}>
+      <Link href="/app/settings" className={ROW_BUTTON_CLASSNAME}>
         <SettingsIcon className="size-7" aria-hidden="true" />
         {t.settingsLabel}
       </Link>
+      <LanguageSwitchButton locale={locale} labels={t.languageToggle} />
       <SwitchToFullAppButton label={t.switchToFullApp} />
+      <form action={signOut}>
+        <button type="submit" className={ROW_BUTTON_CLASSNAME}>
+          <LogOutIcon className="size-7" aria-hidden="true" />
+          {t.signOut}
+        </button>
+      </form>
     </div>
   )
 }
