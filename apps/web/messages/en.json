@@ -312,7 +312,8 @@
       "createOrJoin": "Create or join a workspace",
       "switchError": "Could not switch workspaces. Check your connection.",
       "myChildren": "My children",
-      "schoolApp": "School app"
+      "schoolApp": "School app",
+      "alsoParent": "You are also a parent here"
     },
     "personal": {
       "shellTitle": "Personal workspace",

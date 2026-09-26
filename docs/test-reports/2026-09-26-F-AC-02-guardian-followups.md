@@ -6,7 +6,7 @@
 | Part    | D-108 follow-ups: staff who are also parents; class-teacher invites (F-ID-04 OQ-6)                 |
 | Spec    | `docs/features/02-academics/F-AC-02-students-and-admission.md` §2, §11; `F-AC-10-parent-portal.md` |
 | PR      | #85                                                                                                |
-| Status  | **PASS** (CI run 36262166718, head 2bf6652)                                                        |
+| Status  | **PASS** (local pgTAP, integration and journeys on this head; CI in §3)                            |
 | Date    | 2026-09-26                                                                                         |
 | Run by  | Identity lane builder (Claude)                                                                     |
 
@@ -24,7 +24,9 @@ A teacher or staff member whose child studies at their school accepts a guardian
 | a removed teacher is refused, not reactivated, by a guardian link                  | `39` A (`MEMBERSHIP_CONFLICT`)                             |
 | the class teacher invites and revokes for their section's student, audited         | `39` B; integration test                                   |
 | another section's student, another teacher and staff are refused                   | `39` B (`FORBIDDEN`)                                       |
-| the 60/h school limit applies to the class teacher                                 | `39` B (`RATE_LIMITED`)                                    |
+| the 60/h limit is per inviter: a class teacher who used theirs up blocks no one    | `39` D (`RATE_LIMITED`, then the owner still invites)      |
+| the inviter cannot accept their own link; it stays pending for the guardian        | `39` D (`FORBIDDEN`)                                       |
+| a soft-deleted student's links are hidden from the class teacher                   | `39` D                                                     |
 | a class teacher's revoke never removes a staff membership                          | `39` C                                                     |
 | a class teacher's revoke never removes a parent who still has another link         | `39` C                                                     |
 | a class teacher cannot revoke outside their own section                            | `39` C (`FORBIDDEN`)                                       |
@@ -36,11 +38,12 @@ A teacher or staff member whose child studies at their school accepts a guardian
 
 ## 2. Environment
 
-|          |                                                                                                     |
-| -------- | --------------------------------------------------------------------------------------------------- |
-| Branch   | `feat/academics-guardian-followups`, merged with `origin/main` at `f438896`                         |
-| Database | CI `db` job (Postgres, every migration applied); the local Docker stack was down after a PC restart |
-| OS       | Windows 11, Node 24, pnpm 10                                                                        |
+|          |                                                                                           |
+| -------- | ----------------------------------------------------------------------------------------- |
+| Branch   | `feat/academics-guardian-followups`, merged with `origin/main` at `f438896`               |
+| Database | local Supabase stack (`supabase db reset`, CLI 2.117) and the CI `db` job                 |
+| App      | `next build` + `next start` on port 3101 against the local stack (`PLAYWRIGHT_PORT=3101`) |
+| OS       | Windows 11, Node 24, pnpm 10                                                              |
 
 ---
 
@@ -52,11 +55,12 @@ A teacher or staff member whose child studies at their school accepts a guardian
 
 ### Database (pgTAP)
 
-`39_guardian_followups.sql` **52 assertions** (was 39; section C added in the PR #85 fix round). The previous builder ran 39/39 and `38` locally before the PC restart. CI `db` job (run 36262166718): **46 files, 1350 assertions, PASS**, including `38` and `39` (52/52). The first CI run of the fix round failed 43/52 on a test bug (a membership probe without a school filter matched the personal workspace too); fixed in 2bf6652.
+`39_guardian_followups.sql` **58 assertions**: A teacher-parent, B class-teacher invites, C escalation (first fix round), D the review fixes (self-invite, soft delete, per-inviter limit). **Local, second fix round** (`supabase db reset`, whole suite): the new D cases were written first and failed against the unfixed migration (6 of 58: self-accept succeeded, the teacher then held a link, the invitation became `accepted`, 2 links of the deleted student were visible, the limit cascade), then **58/58** after the fix; `38` 66/66, `56`, `12` pass; every file passes except the two local-harness ones (§5). CI `db` (first fix round, run 36262166718): 46 files, 1350 assertions, PASS with `39` at 52/52. CI numbers for this head: see the PR's CI report.
 
-### Integration and end to end
+### Integration and end to end (local, this head)
 
-`packages/db/src/repositories/guardian-links.integration.test.ts` (5 cases) and the journey "a teacher who is also a parent sees only their own child and keeps the school app" passed locally for the previous builder (journeys 6/6 on port 3101). In CI the journey is skip-gated (OQ-27; `E2E_TEACHER_*`). CI `db-integration` (run 36262166718): **4 files, 12 tests passed**, `guardian-links.integration.test.ts` 5/5. CI `unit`: 152 files passed, 4 skipped.
+- `guardian-links.integration.test.ts` against the local PostgREST: **5/5 passed**. CI `db-integration` (run 36262166718): 4 files, 12 tests passed.
+- `apps/web/e2e/journeys/guardian-invite.spec.ts`, `--workers=1`, port 3101, after the revoke-guard and switcher changes: **6/6 passed in 1.9 min** — admin invite → parent accepts: phone 20.9 s, desktop 21.2 s; new parent signs up from the link: phone 8.1 s, desktop 8.1 s; **teacher who is also a parent: phone 27.7 s, desktop 20.4 s** (accepts the owner's link, `/family` lists only their child, axe clean on `/family` and on the open switcher, "School app" → `/app`, "My children" → `/family`, owner removes access → `/family` sends them back to `/app`). In CI the journeys stay skip-gated (OQ-27).
 
 ### Gate (local)
 
@@ -68,8 +72,10 @@ A teacher or staff member whose child studies at their school accepts a guardian
 
 - Class-teacher reach is `app.can_read_student_private` (the current year's class teacher of the student's live section), checked inside both SECURITY DEFINER functions after the role check.
 - The members guard gets no self-service exception. Its one extra transition (parent `active → removed`, nothing else) needs the UPDATE to run inside a SECURITY DEFINER function **and** a link of that person revoked at `now()` with none left. `39` C forges the second proof as postgres and shows neither the parent (self-PATCH) nor a class teacher (direct PATCH) can use it.
+- The inviter can never accept their own link (PR #85 security review, MEDIUM): a class teacher cannot turn their temporary class-teacher reach into a permanent guardian link or lock the parent out.
 - A teacher-parent's staff reads are unchanged (`39` A counts students before and after); being a parent gives no class-teacher reach.
 
 ## 5. Known issues
 
-1. pgTAP was not run locally in this fix round (Docker down); CI `db` is the source of truth.
+1. Locally `22_school_eiin_availability.sql` and `51_readonly_join_and_seed.sql` fail only in the local harness (seed collision, psql `i`), as in D-108's report; both pass in CI.
+2. The journeys need seeded accounts (OQ-27); for this run: owner (school via `create_school_workspace`, BD grade scale, one subject on Class 6 – ক from `demo-class-6-ka.sql`), a verified teacher member, a verified parent.

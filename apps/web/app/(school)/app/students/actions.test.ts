@@ -101,7 +101,13 @@ describe("inviteGuardian / revokeGuardianLink (D-108, D-109)", () => {
 
   it("lets a teacher reach the database, which decides class teacher (D-109)", async () => {
     ctx.role = "teacher"
+    mockInvite.mockResolvedValue({
+      ok: true,
+      data: { token: "t", expiresAt: "2026-10-26T00:00:00Z" },
+    })
     mockRevoke.mockResolvedValue({ ok: true, data: null })
+    expect((await inviteGuardian({ guardianId: ID })).ok).toBe(true)
+    expect(mockInvite).toHaveBeenCalledTimes(1)
     expect((await revokeGuardianLink({ linkId: ID })).ok).toBe(true)
     expect(mockRevoke).toHaveBeenCalledTimes(1)
   })

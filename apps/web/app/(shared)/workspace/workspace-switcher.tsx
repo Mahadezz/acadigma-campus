@@ -20,6 +20,7 @@ import type { MembershipSummary } from "@acadigma/contracts"
 import { Avatar, AvatarFallback } from "@acadigma/ui/components/avatar"
 import { Badge } from "@acadigma/ui/components/badge"
 import { Button } from "@acadigma/ui/components/button"
+import { Separator } from "@acadigma/ui/components/separator"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -242,12 +243,23 @@ export function WorkspaceSwitcher({
           </ul>
 
           {shellLink ? (
-            <Button asChild variant="outline" className="w-full">
-              <Link href={shellLink.href} onClick={() => setOpen(false)}>
-                <HeartHandshakeIcon aria-hidden="true" />
-                {shellLink.label}
-              </Link>
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Separator />
+              <p className="text-muted-foreground px-1 text-xs font-medium">
+                {t.alsoParent}
+              </p>
+              <Button asChild variant="outline" className="w-full">
+                <Link href={shellLink.href} onClick={() => setOpen(false)}>
+                  {shellLink.href === "/app" ? (
+                    <SchoolIcon aria-hidden="true" />
+                  ) : (
+                    <HeartHandshakeIcon aria-hidden="true" />
+                  )}
+                  {shellLink.label}
+                </Link>
+              </Button>
+              <Separator />
+            </div>
           ) : null}
 
           <Button asChild variant="outline" className="w-full">

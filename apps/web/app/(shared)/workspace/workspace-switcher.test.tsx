@@ -63,6 +63,7 @@ const T = {
   switchError: "Could not switch workspaces. Check your connection.",
   myChildren: "My children",
   schoolApp: "School app",
+  alsoParent: "You are also a parent here",
 }
 
 const WORKSPACES: MembershipSummary[] = [
@@ -173,6 +174,7 @@ describe("WorkspaceSwitcher", () => {
     expect(
       screen.getByRole("link", { name: "My children" }).getAttribute("href")
     ).toBe("/family")
+    expect(screen.getByText("You are also a parent here")).toBeTruthy()
   })
 
   it("shows no shell link without one", async () => {

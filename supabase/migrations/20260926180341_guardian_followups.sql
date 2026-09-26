@@ -19,7 +19,7 @@
 --   2. Class-teacher invites (F-ID-04 OQ-6): the class teacher of the
 --      student's CURRENT section (app.can_read_student_private, the same
 --      rule that shows them the guardians) may invite and revoke for that
---      student, under the same 60/h school limit. The invitation insert and
+--      student, 60 invitations an hour per inviter. The invitation insert and
 --      the link update are audited by the generic table audit with the
 --      teacher as actor. The class teacher also reads that student's links
 --      (guardian_users_select), so the student page can show them.
@@ -74,12 +74,20 @@ comment on function public.family_results(uuid) is
   'guardian link (a parent, or staff who are also parents); empty otherwise.';
 
 -- The class teacher of the student's current section reads that student's
--- links (owner/admin are included in app.can_read_student_private).
+-- links (owner/admin are included in app.can_read_student_private), while
+-- the student is not soft-deleted.
 drop policy if exists guardian_users_select on public.guardian_users;
 create policy guardian_users_select on public.guardian_users
   for select to authenticated
   using (user_id = (select auth.uid())
-         or app.can_read_student_private(workspace_id, student_id));
+         or (app.can_read_student_private(workspace_id, student_id)
+             and exists (select 1 from public.students st
+                          where st.id = guardian_users.student_id
+                            and st.deleted_at is null)));
+
+-- The members guard's D-109 probe (a link of this person revoked at now()).
+create index if not exists guardian_users_revoked_probe_idx
+  on public.guardian_users (workspace_id, user_id) where status = 'revoked';
 
 -- ---------------------------------------------------------------------
 -- 2. invite_guardian: owner/admin, or the class teacher of the student's
@@ -122,10 +130,11 @@ begin
     raise exception 'GUARDIAN_ALREADY_LINKED' using errcode = '22023';
   end if;
 
-  -- ponytail: a per-school hourly count over the invitations index; a
-  -- per-user bucket in auth_throttle if one admin must not starve another.
+  -- 60 an hour per inviter in this school (D-109, PR #85 review): one
+  -- teacher using theirs up blocks no one else.
   if (select count(*) from public.workspace_invitations i
        where i.workspace_id = p_workspace_id and i.role = 'parent'
+         and i.invited_by = v_uid
          and i.created_at > now() - interval '1 hour') >= 60 then
     raise exception 'RATE_LIMITED' using errcode = '54000';
   end if;
@@ -153,7 +162,8 @@ comment on function public.invite_guardian(uuid, uuid) is
   'F-AC-02 Part 4 (D-108, D-109): owner/admin, or the class teacher of the '
   'student''s current section. A single-use guardian link for one child, 30 '
   'days; the raw token is returned once. Raises FORBIDDEN, GUARDIAN_NOT_FOUND, '
-  'GUARDIAN_ALREADY_LINKED, RATE_LIMITED; PLAN_READ_ONLY from the table guard.';
+  'GUARDIAN_ALREADY_LINKED, RATE_LIMITED (60 an hour per inviter); PLAN_READ_ONLY '
+  'from the table guard.';
 
 -- ---------------------------------------------------------------------
 -- revoke_guardian_link: the same rule. Otherwise identical to 20260926065723.
@@ -240,6 +250,11 @@ begin
   if v_inv.expires_at <= now() then
     raise exception 'INVITATION_EXPIRED' using errcode = '22023';
   end if;
+  -- D-109 (PR #85 review): the person who issued a link (a class teacher
+  -- now can) never accepts it; the link is for the guardian.
+  if v_inv.invited_by = v_uid then
+    raise exception 'FORBIDDEN' using errcode = '42501';
+  end if;
   if not exists (select 1 from public.students st
                   where st.id = v_inv.student_id and st.deleted_at is null) then
     raise exception 'INVITATION_NOT_FOUND' using errcode = '22023';
@@ -300,7 +315,8 @@ comment on function public.accept_guardian_invitation(text) is
   'F-AC-02 Part 4 (D-108, D-109): signed-in. Accepts a guardian link once, '
   'before it expires: an active guardian_users link to the invitation''s own '
   'student, plus a parent membership for someone not yet in the school (an '
-  'active member of any role keeps theirs unchanged). Raises FORBIDDEN, '
+  'active member of any role keeps theirs unchanged); never by the inviter. '
+  'Raises FORBIDDEN (not signed in, or the inviter), '
   'INVITATION_NOT_FOUND, INVITATION_EXPIRED, INVITATION_ACCEPTED, '
   'INVITATION_REVOKED, INVITATION_DECLINED, MEMBERSHIP_CONFLICT (a pending '
   'or removed staff membership), PLAN_READ_ONLY.';

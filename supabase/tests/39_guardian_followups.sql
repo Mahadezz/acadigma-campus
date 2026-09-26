@@ -15,9 +15,11 @@
 --   C. Escalation: a class teacher never removes staff, never a parent who
 --      still has another link, never acts outside their own section; the
 --      members guard's D-109 removal cannot be forged by a direct update.
+--   D. The inviter cannot accept their own link; a soft-deleted student's
+--      links are hidden from the class teacher; the 60/h limit is per inviter.
 -- =====================================================================
 begin;
-select plan(52);
+select plan(58);
 
 create schema if not exists tests;
 
@@ -383,16 +385,45 @@ select is((select role::text || '/' || status::text from public.workspace_member
             where user_id = '39000000-0000-4000-a000-000000000007' and workspace_id = '39000000-0000-4000-b000-000000000001'), 'parent/active',
   'the forged proof removed no one: only the SECURITY DEFINER path qualifies');
 
--- The same 60/h school limit applies to the class teacher.
+-- A class teacher cannot accept a guardian link they issued themselves
+-- (it would outlive their class-teacher access and lock the parent out).
+select tests.login('39000000-0000-4000-a000-000000000002');
+select tests.invite('self', 'A1');
+select throws_ok($$select public.accept_guardian_invitation(tests.tok('self'))$$, '42501', 'FORBIDDEN',
+  'the inviter cannot accept their own guardian link');
+select tests.logout();
+select is((select count(*)::int from public.guardian_users
+            where user_id = '39000000-0000-4000-a000-000000000002'), 0,
+  'the class teacher holds no guardian link');
+select is((select status::text from public.workspace_invitations
+            where token_hash = app.hash_token(tests.tok('self'))), 'pending',
+  'the link stays pending for the real guardian');
+
+-- A soft-deleted student's links are no longer readable by the class teacher.
+select tests.login('39000000-0000-4000-a000-000000000002');
+select ok((select count(*) from public.guardian_users where student_id = tests.sid('A2')) > 0,
+  'before deletion the class teacher reads A2''s links');
+select tests.logout();
+update public.students set deleted_at = now() where id = tests.sid('A2');
+select tests.login('39000000-0000-4000-a000-000000000002');
+select is((select count(*)::int from public.guardian_users where student_id = tests.sid('A2')), 0,
+  'after A2 is soft-deleted the class teacher reads none of its links');
+select tests.logout();
+
+-- The 60/h limit is per inviter: a teacher who used theirs up blocks no one else.
 insert into public.workspace_invitations (workspace_id, channel, phone, role, token_hash, token_prefix,
                                           invited_by, guardian_id, student_id, status)
 select '39000000-0000-4000-b000-000000000001', 'phone', '+8801700000000', 'parent',
-       app.hash_token('bulk39-' || n), 'bulk39-' || n, '39000000-0000-4000-a000-000000000001',
+       app.hash_token('bulk39-' || n), 'bulk39-' || n, '39000000-0000-4000-a000-000000000002',
        tests.gid('B1'), tests.sid('B1'), 'revoked'
   from generate_series(1, 60) n;
 select tests.login('39000000-0000-4000-a000-000000000002');
 select throws_ok($$select tests.invite('x', 'A1')$$, '54000', 'RATE_LIMITED',
   'the class teacher is refused after 60 guardian invitations in an hour');
+select tests.logout();
+select tests.login('39000000-0000-4000-a000-000000000001');
+select lives_ok($$select tests.invite('owner-after', 'B2')$$,
+  'the owner still invites: the class teacher''s limit is their own');
 select tests.logout();
 
 select * from finish();
