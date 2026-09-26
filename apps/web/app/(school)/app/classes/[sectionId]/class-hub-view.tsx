@@ -104,6 +104,9 @@ export function ClassHubView({
 }) {
   const s = t.basicMode.classHub
   const [tab, setTab] = React.useState<ClassHubTabId>("attendance")
+  const tabRefs = React.useRef<
+    Partial<Record<ClassHubTabId, HTMLButtonElement>>
+  >({})
 
   React.useEffect(() => {
     // Reading a value from an external system (localStorage) on mount is one
@@ -137,6 +140,31 @@ export function ClassHubView({
     }
   }
 
+  // WAI-ARIA APG "Tabs" pattern (automatic activation): only the selected
+  // tab is in the Tab order (roving tabindex below); Left/Right move focus
+  // between tabs and activate the newly focused one, Home/End jump to the
+  // first/last tab. This is the same keyboard contract Radix's `Tabs` gives
+  // for free — written by hand here only because Radix itself doesn't fit
+  // the route's bundle budget (see the note on the tablist below).
+  function onTabKeyDown(
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number
+  ) {
+    let nextIndex: number
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % TAB_IDS.length
+    else if (event.key === "ArrowLeft")
+      nextIndex = (index - 1 + TAB_IDS.length) % TAB_IDS.length
+    else if (event.key === "Home") nextIndex = 0
+    else if (event.key === "End") nextIndex = TAB_IDS.length - 1
+    else return
+    event.preventDefault()
+    // `nextIndex` is always within [0, TAB_IDS.length) by construction; the
+    // `?? tab` fallback exists only to satisfy `noUncheckedIndexedAccess`.
+    const nextId = TAB_IDS[nextIndex] ?? tab
+    changeTab(nextId)
+    tabRefs.current[nextId]?.focus()
+  }
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
       <header>
@@ -149,18 +177,22 @@ export function ClassHubView({
       </header>
 
       {/*
-       * Hand-rolled instead of `@acadigma/ui/components/tabs` (Radix): the
-       * whole 4-tab switcher is one `role="tablist"` of plain buttons plus
-       * one conditionally-rendered panel — Radix's `Tabs` adds nothing this
-       * needs (no roving-tabindex keyboard grid, no nested/orientation
-       * cases) but does add its own JS to every hub load, which pushed this
-       * route over the §5.5/BUILDER-BRIEF 250 kB gzipped budget.
+       * Hand-rolled instead of `@acadigma/ui/components/tabs` (Radix): a
+       * PR #82 review re-measured this (2026-09-27) after replacing this
+       * block with real shadcn `Tabs` — 251 kB gzipped, 1 kB over the
+       * §5.5/BUILDER-BRIEF 250 kB budget (`check-bundle-budget.mjs`),
+       * against 245 kB for this hand-rolled version. Radix's `Tabs` is not
+       * free here even though `RollCall`'s `Sheet`/`Checkbox` already pull
+       * in `radix-ui` for the eager Attendance tab — see D-406 item 7. The
+       * roving-tabindex/arrow-key handling below reproduces Radix `Tabs`'s
+       * own keyboard contract (WAI-ARIA APG "Tabs", automatic activation)
+       * by hand for the same reason.
        */}
       <div
         role="tablist"
         className="bg-muted grid grid-cols-4 gap-1 rounded-lg p-1"
       >
-        {TAB_IDS.map((id) => {
+        {TAB_IDS.map((id, index) => {
           const Icon = TAB_ICONS[id]
           const selected = tab === id
           return (
@@ -169,9 +201,14 @@ export function ClassHubView({
               type="button"
               role="tab"
               id={`class-hub-tab-${id}`}
+              ref={(el) => {
+                tabRefs.current[id] = el ?? undefined
+              }}
               aria-selected={selected}
               aria-controls={`class-hub-panel-${id}`}
+              tabIndex={selected ? 0 : -1}
               onClick={() => changeTab(id)}
+              onKeyDown={(event) => onTabKeyDown(event, index)}
               className={cn(
                 "flex min-h-14 flex-col items-center justify-center gap-1 rounded-md py-2 text-sm font-medium transition-colors",
                 selected

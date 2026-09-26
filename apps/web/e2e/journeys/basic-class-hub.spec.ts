@@ -61,6 +61,34 @@ test("the hub shows only the built tabs — no coming-soon tab (§9 AC6)", async
   await expect(page.getByRole("tab", { name: "Marks" })).toBeVisible()
   await expect(page.getByRole("tab", { name: "Students" })).toBeVisible()
   await expect(page.getByRole("tab", { name: "Print" })).toBeVisible()
+
+  // Keyboard: roving tabindex + arrow-key activation (WAI-ARIA APG "Tabs",
+  // automatic activation) — the same contract Radix `Tabs` gives for free,
+  // reproduced by hand here because Radix itself doesn't fit the route's
+  // bundle budget (§5.5, DECISION-LOG D-406 item 7).
+  const attendanceTab = page.getByRole("tab", { name: "Attendance" })
+  const marksTab = page.getByRole("tab", { name: "Marks" })
+  const printTab = page.getByRole("tab", { name: "Print" })
+  await attendanceTab.focus()
+  await expect(attendanceTab).toHaveAttribute("tabindex", "0")
+  await expect(marksTab).toHaveAttribute("tabindex", "-1")
+
+  await page.keyboard.press("ArrowRight")
+  await expect(marksTab).toBeFocused()
+  await expect(marksTab).toHaveAttribute("aria-selected", "true")
+  await expect(attendanceTab).toHaveAttribute("tabindex", "-1")
+
+  await page.keyboard.press("ArrowLeft")
+  await expect(attendanceTab).toBeFocused()
+  await expect(attendanceTab).toHaveAttribute("aria-selected", "true")
+
+  await page.keyboard.press("End")
+  await expect(printTab).toBeFocused()
+  await expect(printTab).toHaveAttribute("aria-selected", "true")
+
+  await page.keyboard.press("Home")
+  await expect(attendanceTab).toBeFocused()
+  await expect(attendanceTab).toHaveAttribute("aria-selected", "true")
 })
 
 test("takes the roll from inside the hub: confirm names the counts, nothing saves until Yes, save (§9 AC7)", async ({
