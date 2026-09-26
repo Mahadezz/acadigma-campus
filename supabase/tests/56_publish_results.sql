@@ -114,7 +114,8 @@ insert into public.sections (id, workspace_id, academic_year_id, grade_level_id,
 values
   ('56000000-0000-4000-c000-000000000021', '56000000-0000-4000-b000-000000000001',
    '56000000-0000-4000-c000-000000000001', '56000000-0000-4000-c000-000000000011', 'A',
-   (select m.id from public.workspace_members m where m.user_id = '56000000-0000-4000-a000-000000000002')),
+   (select m.id from public.workspace_members m where m.user_id = '56000000-0000-4000-a000-000000000002'
+      and m.workspace_id = '56000000-0000-4000-b000-000000000001')),
   ('56000000-0000-4000-c000-000000000022', '56000000-0000-4000-b000-000000000002',
    '56000000-0000-4000-c000-000000000002', '56000000-0000-4000-c000-000000000012', 'A', null);
 insert into public.subjects (id, workspace_id, name)
@@ -338,12 +339,14 @@ select throws_ok($$update public.guardian_users set status = 'active'$$, '42501'
 select tests.logout();
 
 update public.workspace_members set status = 'removed'
- where user_id = '56000000-0000-4000-a000-000000000004';
+ where user_id = '56000000-0000-4000-a000-000000000004'
+   and workspace_id = '56000000-0000-4000-b000-000000000001';
 select tests.login('56000000-0000-4000-a000-000000000004');
 select is((select count(*)::int from public.results), 0, 'a parent removed from the school reads nothing');
 select tests.logout();
 update public.workspace_members set status = 'active'
- where user_id = '56000000-0000-4000-a000-000000000004';
+ where user_id = '56000000-0000-4000-a000-000000000004'
+   and workspace_id = '56000000-0000-4000-b000-000000000001';
 
 -- =====================================================================
 -- E. Unpublish and republish
