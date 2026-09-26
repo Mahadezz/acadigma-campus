@@ -24,9 +24,13 @@
 --      teacher as actor. The class teacher also reads that student's links
 --      (guardian_users_select), so the student page can show them.
 --      A pure parent's last link revoked by a class teacher still removes
---      their parent membership: the members guard accepts that one removal
---      (not an addition) on a same-transaction proof (a link revoked at
---      now(), none left), since the teacher is not an owner/admin.
+--      their parent membership. The members guard is a trigger that judges
+--      the caller (auth.uid() and the `role` setting, which SECURITY
+--      DEFINER does not change, D-108 §5), so it would refuse a teacher.
+--      It accepts exactly that one removal (never an addition) when the
+--      UPDATE runs inside a SECURITY DEFINER function (current_user is not
+--      'authenticated') AND a link of that parent was revoked in this
+--      transaction with none left. A direct PATCH never qualifies.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -356,11 +360,15 @@ begin
     -- D-109: a parent whose last link was revoked in this same transaction
     -- (revoke_guardian_link, which a class teacher may call) leaves the
     -- school. Only active -> removed, only a parent, nothing else changed,
-    -- no active link left. guardian_users has no client write grant, so a
-    -- link revoked at now() proves a SECURITY DEFINER path ran in this
-    -- transaction; it only ever removes access.
+    -- no active link left. Two proofs, neither reachable by a client: the
+    -- UPDATE itself runs inside a SECURITY DEFINER function (current_user
+    -- is its owner; a direct PostgREST PATCH runs as 'authenticated'), and
+    -- a link of this person was revoked at now() (guardian_users has no
+    -- client write grant). It never grants, restores or re-roles anything
+    -- and never touches a staff membership.
     v_unlinked :=
-      old.role = 'parent' and new.role = 'parent'
+      current_user not in ('authenticated', 'anon')
+      and old.role = 'parent' and new.role = 'parent'
       and old.status = 'active' and new.status = 'removed'
       and to_jsonb(new) - array['status', 'removed_at', 'removed_by', 'updated_at']
         = to_jsonb(old) - array['status', 'removed_at', 'removed_by', 'updated_at']

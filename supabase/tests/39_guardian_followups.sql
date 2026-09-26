@@ -1,5 +1,5 @@
 -- =====================================================================
--- pgTAP · D-108 follow-ups (20260926071626_guardian_followups.sql, D-109)
+-- pgTAP · D-108 follow-ups (20260926180341_guardian_followups.sql, D-109)
 --
 --   A. A teacher who is also a parent at their own school: accepting a link
 --      adds the link and nothing else; through the family path they see
@@ -12,9 +12,12 @@
 --      student's current section invites and revokes for that student,
 --      audited, under the 60/h school limit; another section's student,
 --      another teacher and staff are refused.
+--   C. Escalation: a class teacher never removes staff, never a parent who
+--      still has another link, never acts outside their own section; the
+--      members guard's D-109 removal cannot be forged by a direct update.
 -- =====================================================================
 begin;
-select plan(39);
+select plan(52);
 
 create schema if not exists tests;
 
@@ -311,6 +314,71 @@ select is((select status::text from public.workspace_members
             where user_id = '39000000-0000-4000-a000-000000000006'
               and workspace_id = '39000000-0000-4000-b000-000000000001'), 'removed',
   'with a pure parent''s last link gone, their parent membership is removed');
+
+-- =====================================================================
+-- C. Escalation: a class teacher's revoke never removes staff, never a
+--    parent who still has another link, never reaches outside their own
+--    section, and the members guard's D-109 removal cannot be forged.
+-- =====================================================================
+select tests.mkuser('39000000-0000-4000-a000-000000000007', 'gf-parent2@test.local', 'Parent Q');
+select tests.login('39000000-0000-4000-a000-000000000001');
+select tests.invite('s', 'A1');
+select tests.invite('q-a', 'A2');
+select tests.invite('q-b', 'B1');
+select tests.logout();
+select tests.login('39000000-0000-4000-a000-000000000005');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('s'))$$, 'staff S accepts a link to A1');
+select tests.logout();
+select tests.login('39000000-0000-4000-a000-000000000007');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('q-a'))$$, 'Q accepts a link to A2');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('q-b'))$$, 'and a link to B1');
+select tests.logout();
+create temp table lx as
+  select tests.link('39000000-0000-4000-a000-000000000005', 'A1') as s_a1,
+         tests.link('39000000-0000-4000-a000-000000000007', 'A2') as q_a2,
+         tests.link('39000000-0000-4000-a000-000000000007', 'B1') as q_b1;
+grant all on lx to authenticated;
+
+select tests.login('39000000-0000-4000-a000-000000000002');
+select lives_ok($$select public.revoke_guardian_link('39000000-0000-4000-b000-000000000001', (select s_a1 from lx))$$,
+  'the class teacher of A revokes staff S''s link to A1');
+select lives_ok($$update public.workspace_members set status = 'removed'
+                   where user_id = '39000000-0000-4000-a000-000000000005'$$,
+  'a direct update of S''s membership by the class teacher changes nothing (RLS)');
+select tests.logout();
+select is((select role::text || '/' || status::text from public.workspace_members
+            where user_id = '39000000-0000-4000-a000-000000000005'), 'staff/active',
+  'a class teacher cannot remove a staff member: S stays active staff');
+
+select tests.login('39000000-0000-4000-a000-000000000002');
+select lives_ok($$select public.revoke_guardian_link('39000000-0000-4000-b000-000000000001', (select q_a2 from lx))$$,
+  'the class teacher of A revokes Q''s link to A2');
+select throws_ok($$select public.revoke_guardian_link('39000000-0000-4000-b000-000000000001', (select q_b1 from lx))$$,
+  '42501', 'FORBIDDEN', 'the class teacher of A cannot revoke Q''s link to B1 (outside their section)');
+select tests.logout();
+select is((select role::text || '/' || status::text from public.workspace_members
+            where user_id = '39000000-0000-4000-a000-000000000007'), 'parent/active',
+  'a parent who still has another link keeps their membership');
+select is((select status::text from public.guardian_users where id = (select q_b1 from lx)), 'active',
+  'and their link to B1');
+
+-- Forge the proof: Q's last link revoked at now() without the definer
+-- function removing the membership (as postgres, which no client can be).
+update public.guardian_users set status = 'revoked', revoked_at = now() where id = (select q_b1 from lx);
+select tests.login('39000000-0000-4000-a000-000000000007');
+select throws_ok($$update public.workspace_members set status = 'removed'
+                    where user_id = '39000000-0000-4000-a000-000000000007'$$,
+  '42501', 'members cannot change their own role or status',
+  'a parent cannot use a same-transaction revoked link to change their own membership');
+select tests.logout();
+select tests.login('39000000-0000-4000-a000-000000000002');
+select lives_ok($$update public.workspace_members set status = 'removed'
+                   where user_id = '39000000-0000-4000-a000-000000000007'$$,
+  'a class teacher''s direct update with the proof in place changes nothing');
+select tests.logout();
+select is((select role::text || '/' || status::text from public.workspace_members
+            where user_id = '39000000-0000-4000-a000-000000000007'), 'parent/active',
+  'the forged proof removed no one: only the SECURITY DEFINER path qualifies');
 
 -- The same 60/h school limit applies to the class teacher.
 insert into public.workspace_invitations (workspace_id, channel, phone, role, token_hash, token_prefix,
