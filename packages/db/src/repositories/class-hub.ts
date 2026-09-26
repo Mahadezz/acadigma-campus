@@ -222,29 +222,32 @@ export async function getLatestSectionExam(
     exams: { starts_on: string | null } | null
   })[]
 
-  const byExam = new Map<
-    string,
-    { name: string; status: string; startsOn: string | null }
-  >()
-  for (const r of rows) {
-    if (!r.exams) continue
-    byExam.set(r.exam_id, {
+  type Candidate = { examId: string; name: string; status: string; startsOn: string | null }
+  // Multiple rows can share one exam_id (one exam_subjects row per subject);
+  // reducing straight over `rows` needs no separate dedupe step, since a row
+  // sharing the current best's exam_id has identical status/startsOn (both
+  // are properties of the exam, not the subject) and so never wins the
+  // comparison below.
+  const latest = rows.reduce<Candidate | null>((best, r) => {
+    if (!r.exams) return best
+    const candidate: Candidate = {
+      examId: r.exam_id,
       name: r.exams.name,
       status: r.exams.status,
       startsOn: r.exams.starts_on,
-    })
-  }
-  const latest = [...byExam.entries()].sort(([, a], [, b]) => {
+    }
+    if (!best) return candidate
     // Published outranks merely-computed; within the same status, the most
     // recently started exam wins. Neither field is user input.
-    if (a.status !== b.status) return a.status === "published" ? -1 : 1
-    return (b.startsOn ?? "").localeCompare(a.startsOn ?? "")
-  })[0]
+    if (candidate.status !== best.status) {
+      return candidate.status === "published" ? candidate : best
+    }
+    return (candidate.startsOn ?? "") > (best.startsOn ?? "") ? candidate : best
+  }, null)
   if (!latest) return ok(null)
-  const [examId, exam] = latest
   return ok({
-    examId,
-    examName: exam.name,
-    status: exam.status as SectionPrintExam["status"],
+    examId: latest.examId,
+    examName: latest.name,
+    status: latest.status as SectionPrintExam["status"],
   })
 }

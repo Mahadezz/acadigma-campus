@@ -1619,8 +1619,7 @@
         "yesSave": "Yes, save",
         "goBack": "Go back",
         "undoToast": "Attendance saved.",
-        "undo": "Undo",
-        "undone": "Restored the previous attendance."
+        "undo": "Undo"
       },
       "marks": {
         "empty": "No papers assigned to you for this class yet.",
@@ -1636,7 +1635,8 @@
       },
       "print": {
         "empty": "No report cards are ready yet for this class.",
-        "heading": "{examName} report cards"
+        "heading": "{examName} report cards",
+        "registerHeading": "This month's register"
       }
     }
   },

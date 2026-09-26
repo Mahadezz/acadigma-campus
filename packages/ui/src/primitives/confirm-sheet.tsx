@@ -45,7 +45,14 @@ export function ConfirmSheet({
       <SheetContent side="bottom" className="gap-0" showCloseButton={false}>
         <SheetHeader>
           <SheetTitle className="text-lg text-balance">{title}</SheetTitle>
-          <SheetDescription className="sr-only">{title}</SheetDescription>
+          {/* Review fix (react): this used to repeat `title` verbatim, so a
+           * screen reader said the same sentence twice. Radix's Dialog logs
+           * a dev warning with no `Description` at all (the same tradeoff
+           * `HelpSheet` accepts); naming the two buttons here is genuinely
+           * distinct and reuses only already-localized props, no new copy. */}
+          <SheetDescription className="sr-only">
+            {confirmLabel} / {cancelLabel}
+          </SheetDescription>
         </SheetHeader>
         <SheetFooter>
           <Button

@@ -120,6 +120,8 @@ export default async function ClassHubPage({
       sectionId={sectionId}
       title={title}
       studentCount={hub.data.studentCount}
+      tabs={hub.data.tabs}
+      month={day.ok ? day.data.today.slice(0, 7) : null}
       attendance={
         day.ok && attendanceSection && rollCall?.ok
           ? {

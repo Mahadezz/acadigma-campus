@@ -10,9 +10,6 @@ import { uuidSchema } from "../common"
  * — §2 footnote ²/D-405).
  */
 
-export const classHubQuerySchema = z.object({ sectionId: uuidSchema })
-export type ClassHubQuery = z.infer<typeof classHubQuerySchema>
-
 /** §8 Part 3: only the tabs this Part actually ships. A later Part that
  * ships a class-shaped screen (routine, handouts, lesson plan…) adds its
  * own id here and its own entry in `CLASS_HUB_TABS`

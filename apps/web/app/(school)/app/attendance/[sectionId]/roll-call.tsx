@@ -6,7 +6,12 @@ import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-import { ArrowLeftIcon, CheckCheckIcon, Undo2Icon } from "lucide-react"
+import {
+  ArrowLeftIcon,
+  CheckCheckIcon,
+  Loader2Icon,
+  Undo2Icon,
+} from "lucide-react"
 
 import type {
   ApiError,
@@ -30,8 +35,26 @@ import { fill } from "../format"
 
 const ConfirmSheet = dynamic(
   () =>
-    import("@acadigma/ui/primitives/confirm-sheet").then((m) => m.ConfirmSheet),
-  { ssr: false }
+    import("@acadigma/ui/primitives/confirm-sheet").then(
+      (m) => m.ConfirmSheet
+    ),
+  {
+    ssr: false,
+    // Review fix (react): a teacher on a slow or offline connection taps
+    // Save and sees nothing until this chunk resolves — a disabled button
+    // with a spinner in its place, matching `OnlineOnly`'s own "the tap
+    // registered" pattern (F-ID-11 §4.9), rather than silence.
+    loading: () => (
+      <Button
+        variant="outline"
+        disabled
+        size="lg"
+        className="min-h-14 w-full sm:w-auto"
+      >
+        <Loader2Icon className="animate-spin" aria-hidden="true" />
+      </Button>
+    ),
+  }
 )
 
 type T = Messages["attendance"]["roll"]
@@ -88,7 +111,6 @@ export function RollCall({
     goBack: string
     undoToast: string
     undo: string
-    undone: string
   }
 }) {
   const router = useRouter()
