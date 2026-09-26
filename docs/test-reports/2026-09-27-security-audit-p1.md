@@ -80,7 +80,14 @@
 
 ### CI
 
-Filled in from the PR's CI run below.
+[Run 36263806282](https://github.com/Mahadezz/acadigma-campus/actions/runs/36263806282) on `8d4dd71` (draft; `e2e` and `lighthouse` are skipped on drafts and run once the PR is ready):
+
+| Job                                                                                                  | Result                                                                                                    |
+| ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `db`                                                                                                 | pass: append-only, order, generated types match, RLS coverage; pgTAP `Files=47, Tests=1319, Result: PASS` |
+| `db-integration`                                                                                     | pass: 4 files (`academics`, `attendance-register`, `marks`, `results`), all passed against real PostgREST |
+| `unit`                                                                                               | pass: 152 files passed, 4 skipped; coverage 87.47 / 78.25 / 86.79 / 90.11 %                               |
+| `typecheck`, `lint`, `build`, `contracts`, `security`, `changeset`, `docs-sync`, `sql-lint`, Semgrep | pass                                                                                                      |
 
 ---
 
