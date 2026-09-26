@@ -32,7 +32,9 @@ BUILD-LOG.md, HANDOFF-<date>.md) and memory note `acadigma-campus.md`.
      handover (section 6).
    - one-shot for any report the owner asked for (e.g. weekly report).
 4. Load the discipline skills yourself: `karpathy-guidelines`, `ponytail`.
-5. Tell the owner in plain English what is running and what (if anything)
+5. Ask the owner any question memory marks "ASK THE OWNER FIRST THING"
+   (e.g. the basic-mode spec) before anything else.
+6. Tell the owner in plain English what is running and what (if anything)
    is waiting on them. Then keep going without asking.
 
 ## 1. How work is organised
@@ -48,6 +50,11 @@ BUILD-LOG.md, HANDOFF-<date>.md) and memory note `acadigma-campus.md`.
   port** (Acadigma: lead 3100, identity 3101, ops 3102, billing 3103, design
   3104, +10 for a second builder in a lane; set `PLAYWRIGHT_PORT`), its own
   decision-number range and pgTAP file range (see LANES.md).
+- **Testing and security first (owner, 2026-09-27).** Keep a standing
+  security-and-testing lane that audits merged code (SECURITY DEFINER
+  functions, RLS, grants, row caps, server-action checks) with a failing
+  test before every fix. When a feature lane frees up, weigh hardening
+  work before its next feature. Go faster only where quality holds.
 - **No overstepping.** Before every merge run the lane-overlap check (files
   touched by more than one open PR must be zero outside shared append-only
   docs). When two lanes must touch one file, give each an explicit rule
@@ -137,8 +144,9 @@ to-dos, exact next steps. Refresh the memory "NEXT" line at the same time.
   tell the owner never to paste secrets in chat.
 - Never `git stash` in shared worktrees; never force-push `main`; never
   rewrite history on a branch another PR stacks on.
-- C: drive is full: set `TMP`/`TEMP`/`TMPDIR` to `F:\tmp` for every
-  pnpm/node/next/playwright command; never delete on C: without asking.
+- Disk: C: was full until 2026-09-25; the owner merged D: into it and it
+  now has ~100 GB free. Keeping `TMP`/`TEMP`/`TMPDIR` on `F:\tmp` for big
+  builds is still fine. Never delete on C: without asking.
 - Remove Windows worktrees with `git worktree remove` then PowerShell
   `Remove-Item -LiteralPath '\\?\F:\...' -Recurse -Force`.
 - Touching live data (seeding production, deleting accounts) needs the

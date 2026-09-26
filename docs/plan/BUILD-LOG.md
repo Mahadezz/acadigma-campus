@@ -4,6 +4,118 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-09-27 — PR #88 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR. It versions the packages changed by #85, #83 and #87.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-27 — PR #87 — test(security): audit of main — definer functions, RLS, max_rows truncation (D-75)
+
+- **Lane:** lead (the new security & testing lane, owner direction 2026-09-27)
+- **Shipped:** The first security audit of everything merged. Each fix has a test that failed first:
+  - F1: `tg_profiles_guard` refuses self-edits of `profiles.email`/`phone`. A user could set someone else's email, read their pending invitations and block their sign-up.
+  - F2: `staff_documents.file_id` is now a composite FK to `files(id, workspace_id)`, and a self-upload must use the caller's own file.
+  - F3: the publish sheet's `listPublishCandidates` stopped silently at 1,000 rows. It now uses keyset paging backed by `results_workspace_exam_id_idx`.
+  - F4: owner-role invitations are owner-only at the table level. A one-off sweep revokes pending owner invitations whose inviter isn't an owner.
+  - pgTAP `23_`/`24_`; #76's parent → `{"section": null}` case is kept as a regression test.
+- **Decisions:** D-75. It includes the lead decision: a plain index and a validated FK now, because the tables are near-empty; NOT VALID/CONCURRENTLY from the first real school.
+- **Migrations:** `20260926182848_security_audit_p1.sql`. Applied to production; the smoke test passed. The FK validated cleanly, so no existing row pointed at another school's file.
+- **Review/incidents:**
+  - The security review asked for keyset paging (offset paging could skip or repeat rows under a concurrent recompute) and the owner-invite sweep. Both were re-verified.
+  - The DB review's lock concerns were overruled with a recorded ceiling.
+  - Handed on as LOWs: L1 report_runs client status/file_id; L2 members' own joined_at/invited_by; L3 data_requests workspace check; L4 admin self-granted capabilities; L5 public file rows (fix before storage lands).
+  - Owner to confirm the hosted `enable_confirmations` and `max_rows` settings.
+
+## 2026-09-27 — PR #83 — feat(platform): F-ID-11 Part 1 — offline app shell, read cache and cache purge (D-308)
+
+- **Lane:** billing
+- **Shipped:**
+  - A serwist service worker (14.6 kB gz) caching `/app`, `/family` and `/personal` pages for offline reading, with a "Last updated" stamp corrected for clock skew.
+  - `OnlineOnly` wraps every generate/send control.
+  - A session check purges cached pages on sign-out, `/login`, a workspace switch, a removed member and a changed role.
+  - Purges go worker-first with an epoch guard, so no cache write lands after a wipe.
+  - Pages expire after 14 days. On each new worker version, every non-precache cache is dropped.
+- **Decisions:** D-308.
+- **Migrations:** none.
+- **Review/incidents:**
+  - The security review found a **HIGH**: a null snapshot plus a filled cache let user A's pages leak to user B via expiry and email-verify sign-in. The fix wipes whenever there is no snapshot.
+  - It also found a MEDIUM (an in-flight cache write landing after the wipe) and 3 LOWs. All were fixed and re-verified.
+  - The lead review fixed a lie-fi hang on switch, stale HTML after a deploy, clock skew, and route tests.
+  - 3 new LOWs (purge reaching every worker, no-controller pages, the double purge on switch) moved to Part 2a, where they're fixed in b0802c0.
+
+## 2026-09-27 — PR #85 — feat(academics): guardian follow-ups — staff who are parents, class-teacher invites (D-109)
+
+- **Lane:** identity
+- **Shipped:**
+  - Staff who are also guardians get a "You are also a parent here" link to `/family`, gated on an active guardian link.
+  - Class teachers can invite and revoke guardians for their own section.
+  - A narrow members-guard transition (parent membership active → removed) is allowed only inside a SECURITY DEFINER function and only when the person's last link was just revoked.
+- **Decisions:** D-109.
+- **Migrations:** `20260926180341_guardian_followups.sql`. Applied to production; the smoke test passed.
+- **Review/incidents:**
+  - The security review found a **MEDIUM**: a class teacher could accept their own guardian invite. That kept them reading the child's results after promotion and locked out the real parent. `accept_guardian_invitation` now refuses the inviter.
+  - Also fixed: the invite limit is per inviter, and soft-deleted students' links are hidden.
+  - The DB review added `guardian_users_revoked_probe_idx`.
+  - pgTAP `39_` is at 58/58, and the teacher-parent journey passed 6/6 on the local stack.
+  - Follow-up: a `guardian_users (workspace_id, student_id)` index.
+
+## 2026-09-27 — PR #86 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR, merged first thing after the owner's Windows 11 restart. It versions the packages changed by #78 and #76.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-26 — PR #76 — feat(operations): F-OP-03 Part 6 — attendance register + exam mark sheet, demo cut (D-208)
+
+- **Lane:** operations
+- **Shipped:**
+  - Two PDF kinds on the report-run pipeline: the monthly attendance register (landscape A4, every day as a column, non-school days greyed from the real calendar) and the exam mark sheet (from the computed `results`, one grading truth).
+  - `public.attendance_register` returns jsonb, which avoids PostgREST's silent 1,000-row cap: 40 students × 26 days = 1,040 records.
+  - New permissions `report.render.attendance_register` and `report.render.mark_sheet`.
+- **Decisions:** D-208.
+- **Migrations:** `20260926072044_report_register_marksheet_kinds.sql`. Applied to production.
+- **Review/incidents:**
+  - Found the PostgREST `max_rows` truncation, which became the lead's standing rule and the #87 audit item.
+  - Total = days present.
+  - Security LOW (a parent gets `{"section": null}`) was later covered by a regression test in #87.
+  - The register performance test flakes locally under load (1.7 s in CI against a 4 s budget); a warm-up fix is queued in #90.
+
+## 2026-09-26 — PR #80 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR for the changesets up to and including #78.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-26 — PR #78 — feat(academics): F-AC-02 Part 4 — guardian linking, demo cut (D-108)
+
+- **Lane:** identity
+- **Shipped:**
+  - Owner/admin invite a guardian to a student through a single-use link.
+  - Accepting it creates a parent membership plus a `guardian_users` link.
+  - Revoking removes the link, and removes the parent membership when it was their last link.
+  - Parents are excluded from workspace files and usage counters.
+  - The parent demo works end to end.
+- **Decisions:** D-108.
+- **Migrations:** `20260926065723_guardian_linking.sql`. Applied to production.
+- **Review/incidents:**
+  - The first security re-check found a **HIGH**: a members-guard self-service exception let a school-removed parent reactivate themselves. It was fixed with a same-transaction invitation proof and re-verified clean.
+  - Lesson: never add a self-service exception to a membership guard.
+
+## 2026-09-26 — PR #84 — docs(plan): BUILD-LOG entries for #64-#81 + missing changeset (D-74)
+
+- **Lane:** lead
+- **Shipped:** Docs only. BUILD-LOG entries for #64–#81, plus the `@acadigma/web` changeset that #81 was merged without.
+- **Decisions:** none new.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
 ## 2026-09-26 — PR #79 — feat(academics): F-AC-06 Part 4 — submit, lock/unlock, entry window, marks progress (D-307)
 
 - **Lane:** billing
