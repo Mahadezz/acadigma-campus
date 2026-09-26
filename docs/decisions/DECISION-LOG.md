@@ -1267,3 +1267,11 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 - The admin's late-reason field moved from the sticky bar to the header (the phone keypad covered it); window dates use the exam date format (Bangla month names, Western digits); Bangla labels "নম্বর দেওয়া শুরু" / "নম্বর দেওয়ার শেষ দিন"; the late help no longer says the dates are over (the admin may write before they open).
 
 **Consequences:** migration `20260926063128_marks_submit_lock.sql` (renamed to the real UTC time before ready); `supabase/tests/57_marks_submit_lock.sql` (53 assertions); `12_function_grants_invariant.sql` allow-lists the three new functions; `marks.integration.test.ts` runs the new columns and RPCs through real PostgREST (D-73). Deferred: notifications (F-ID-07), "Request unlock" for teachers, a per-school window length, the custody gate on lock (§5.16, Part 9), locking every paper when the exam locks, the offline queue (F-ID-11 Part 3).
+
+## D-74 — Vercel creates deployments for `main` only (`git.deploymentEnabled`), so branch pushes stop using the Hobby deploy quota · ACCEPTED · 2026-09-26
+
+**Context:** D-70 made Vercel _build_ `main` only through `ignoreCommand`, but every push to any branch still _created_ a deployment that was then cancelled. Cancelled deployments count toward the Hobby plan's daily deployment limit: on 2026-09-25/26 about 100 builder WIP pushes used the quota up, so several `main` merges were refused ("Deployment rate limited — retry in 24 hours") and production lagged until a later `main` deploy got through. The owner asked for a workaround instead of upgrading to Pro.
+
+**Decision (lead, under owner authorization 2026-09-26):** `apps/web/vercel.json` sets `"git": { "deploymentEnabled": { "*": false, "main": true } }`. Branch pushes (feature branches, `handoff/live`, the changesets branches) create no Vercel deployment at all; `main` deploys as before. `ignoreCommand` stays as a second guard.
+
+**Consequences:** no preview URLs for PRs, which we already didn't use (CI runs Playwright against its own build, D-70). The Vercel check on PRs disappears; it was never required. Pro stays optional: revisit only if `main` alone ever exceeds the daily limit.
