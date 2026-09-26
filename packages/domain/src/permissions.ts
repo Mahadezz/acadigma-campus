@@ -46,6 +46,10 @@ export const ACTIONS = [
   // F-AC-06 §2: the exam schedule and papers.
   "exams.read",
   "exams.write",
+  // F-AC-06 §2: results — read (RLS narrows teachers to the class teacher),
+  // compute owner/admin.
+  "results.read",
+  "results.compute",
   "timetable.read",
   "timetable.manage",
   // Workspace administration
@@ -150,6 +154,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "settings.grade_scale.write",
     "exams.read",
     "exams.write",
+    "results.read",
+    "results.compute",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -203,6 +209,8 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "settings.grade_scale.write",
     "exams.read",
     "exams.write",
+    "results.read",
+    "results.compute",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -267,6 +275,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "report.render.report_card",
     "academics.structure.read",
     "exams.read",
+    "results.read",
     "students.read_sensitive",
   ],
   // Office staff: sees the school, changes almost nothing.
@@ -286,6 +295,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "audit.read.self",
     "academics.structure.read",
     "exams.read",
+    "results.read",
     // F-OP-03 §2 (D-206, lead decision 2026-09-26): the office prints report
     // cards, so staff may open reports and render a report card — not the
     // spec's "—". No 'sample' render: that is the pipeline's own proof.

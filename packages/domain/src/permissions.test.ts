@@ -232,6 +232,8 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "settings.grade_scale.write": ["owner", "admin"],
     "exams.read": ["owner", "admin", "teacher", "staff"],
     "exams.write": ["owner", "admin"],
+    "results.read": ["owner", "admin", "teacher", "staff"],
+    "results.compute": ["owner", "admin"],
     "reports.read": [...rolesWithAction("reports.read")],
     "messages.send": [...rolesWithAction("messages.send")],
     "ai.use": [...rolesWithAction("ai.use")],
