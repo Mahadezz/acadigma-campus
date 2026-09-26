@@ -18,7 +18,8 @@
     "./repositories/marks": "./src/repositories/marks.ts",
     "./repositories/results": "./src/repositories/results.ts",
     "./repositories/ui-preferences": "./src/repositories/ui-preferences.ts",
-    "./repositories/basic-home": "./src/repositories/basic-home.ts"
+    "./repositories/basic-home": "./src/repositories/basic-home.ts",
+    "./repositories/class-hub": "./src/repositories/class-hub.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
