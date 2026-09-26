@@ -119,7 +119,7 @@ export function WorkspaceSwitcher({
         // records the new workspace is not awaited: on a bad connection it
         // would hold the switch, and the wipe above already made it safe.
         await purgeDataCaches()
-        void runOfflineCheck()
+        void runOfflineCheck({ switchedTo: workspace.workspaceId })
         setOpen(false)
         router.push(result.data.landingRoute)
       } catch {

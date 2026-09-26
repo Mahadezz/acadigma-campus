@@ -32,6 +32,23 @@ export async function saveAttendanceSession(
   if (!parsed.success) return err(apiErrorFromZod(parsed.error))
 
   const ctx = await requireWorkspace()
+  const { queuedFor } = parsed.data
+  if (
+    queuedFor &&
+    (queuedFor.userId !== ctx.userId ||
+      queuedFor.workspaceId !== ctx.workspaceId)
+  ) {
+    // F-ID-11 §5.8: the outbox waits for its own user and workspace.
+    return err(
+      apiError(
+        "conflict",
+        "This change belongs to another account or school.",
+        {
+          fieldErrors: { _root: ["WRONG_ACCOUNT"] },
+        }
+      )
+    )
+  }
   if (!can(ctx.role, "attendance.write")) {
     return err(
       apiError("forbidden", "You cannot take attendance here.", {

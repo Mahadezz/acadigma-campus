@@ -16,6 +16,12 @@ export type OfflineSnapshot = {
   /** The active workspace, or `null` when the user has no active membership. */
   workspaceId: string | null
   role: string | null
+  /**
+   * The students this user may see as a guardian in that workspace (sorted
+   * ids, comma-joined), or `null` when none: a revoked link changes neither
+   * the membership nor the role, only this (#85 review).
+   */
+  scope: string | null
 }
 
 /** What `/api/offline/session` answered just now. */
@@ -23,7 +29,10 @@ export type SessionCheck =
   | { kind: "signed_out" }
   /** Network error, timeout or 5xx: nothing is known, nothing changes. */
   | { kind: "unknown" }
-  | ({ kind: "signed_in" } & OfflineSnapshot)
+  | ({ kind: "signed_in" } & OfflineSnapshot & {
+        /** Every workspace the user is an active member of (the outbox purge). */
+        activeWorkspaceIds: string[]
+      })
 
 export type PurgeDecision = {
   purge: boolean
@@ -33,7 +42,11 @@ export type PurgeDecision = {
 
 export function decidePurge(
   stored: OfflineSnapshot | null,
-  check: SessionCheck
+  // Any SessionCheck; the outbox's workspace list plays no part here.
+  check:
+    | { kind: "signed_out" }
+    | { kind: "unknown" }
+    | ({ kind: "signed_in" } & OfflineSnapshot)
 ): PurgeDecision {
   if (check.kind === "unknown") return { purge: false, next: undefined }
   // Signed out or session revoked: nothing cached may outlive the session.
@@ -43,6 +56,7 @@ export function decidePurge(
     userId: check.userId,
     workspaceId: check.workspaceId,
     role: check.role,
+    scope: check.scope,
   }
   // No snapshot means the device cannot tell whose pages it holds (a check
   // that never got through, a session that ended without /login, cleared
@@ -51,7 +65,8 @@ export function decidePurge(
     stored === null ||
     stored.userId !== current.userId ||
     stored.workspaceId !== current.workspaceId ||
-    stored.role !== current.role
+    stored.role !== current.role ||
+    stored.scope !== current.scope
   // No active membership (removed / suspended) never keeps a cache.
   return { purge: changed || current.workspaceId === null, next: current }
 }
