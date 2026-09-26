@@ -29,7 +29,10 @@ export type SessionCheck =
   | { kind: "signed_out" }
   /** Network error, timeout or 5xx: nothing is known, nothing changes. */
   | { kind: "unknown" }
-  | ({ kind: "signed_in" } & OfflineSnapshot)
+  | ({ kind: "signed_in" } & OfflineSnapshot & {
+        /** Every workspace the user is an active member of (the outbox purge). */
+        activeWorkspaceIds: string[]
+      })
 
 export type PurgeDecision = {
   purge: boolean

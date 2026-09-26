@@ -12,17 +12,22 @@ vi.mock("@acadigma/db", () => ({
   resolveWorkspaceContext: (...args: unknown[]) => mockResolve(...args),
 }))
 const mockGetUser = vi.fn()
-/** `guardian_users` rows for the caller: `{ data, error }`. */
+/** `{ data, error }` for the caller's `guardian_users` / `workspace_members`. */
 const mockLinks = vi.fn()
-const linksQuery = {
-  select: () => linksQuery,
-  eq: () => linksQuery,
-  then: (resolve: (v: unknown) => void) => resolve(mockLinks()),
+const mockMembers = vi.fn()
+const query = (rows: () => unknown) => {
+  const q = {
+    select: () => q,
+    eq: () => q,
+    then: (resolve: (v: unknown) => void) => resolve(rows()),
+  }
+  return q
 }
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: { getUser: mockGetUser },
-    from: () => linksQuery,
+    from: (table: string) =>
+      query(table === "guardian_users" ? mockLinks : mockMembers),
   }),
 }))
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }))
@@ -44,6 +49,10 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } } })
   mockLinks.mockReturnValue({ data: [], error: null })
+  mockMembers.mockReturnValue({
+    data: [{ workspace_id: "w1" }, { workspace_id: "w9" }],
+    error: null,
+  })
 })
 
 describe("GET /api/offline/session", () => {
@@ -61,6 +70,7 @@ describe("GET /api/offline/session", () => {
         workspaceId: "w1",
         role: "teacher",
         scope: null,
+        activeWorkspaceIds: ["w1", "w9"],
       },
     })
   })
@@ -119,6 +129,7 @@ describe("GET /api/offline/session", () => {
       workspaceId: null,
       role: null,
       scope: null,
+      activeWorkspaceIds: ["w1", "w9"],
     })
   })
 
@@ -126,5 +137,16 @@ describe("GET /api/offline/session", () => {
     mockResolve.mockResolvedValue(fail("not_a_member"))
     mockGetUser.mockResolvedValue({ data: { user: null } })
     expect((await check()).body).toEqual({ kind: "signed_out" })
+  })
+})
+
+describe("GET /api/offline/session — memberships", () => {
+  it("a failed membership read is unknown, not a verdict", async () => {
+    mockResolve.mockResolvedValue({
+      ok: true,
+      data: { userId: "u1", workspaceId: "w1", role: "teacher" },
+    })
+    mockMembers.mockReturnValue({ data: null, error: { message: "down" } })
+    expect((await check()).status).toBe(503)
   })
 })

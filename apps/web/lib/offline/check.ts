@@ -1,3 +1,4 @@
+import { deleteOutbox, outboxStore, outboxUserIds } from "./outbox-db"
 import {
   DATA_CACHE_PREFIX,
   decidePurge,
@@ -132,7 +133,43 @@ async function fetchSessionCheck(): Promise<SessionCheck> {
 export async function runOfflineCheck(
   opts: { switchedTo?: string } = {}
 ): Promise<boolean> {
+  return (await checkSession(opts)).purged
+}
+
+/**
+ * §4.8, the outbox half (D-309), kept apart from the page wipe: another
+ * user's outbox on this device is deleted (a different user never sends or
+ * sees it), and this user's items for a workspace they are no longer an
+ * active member of are deleted. A role change keeps them — they replay under
+ * the new role, where the server decides. Signed out keeps everything: an
+ * expired session resumes for the same user (§4.6).
+ */
+async function purgeOutboxes(
+  check: Extract<SessionCheck, { kind: "signed_in" }>
+): Promise<void> {
+  if (typeof indexedDB === "undefined") return
+  const users = await outboxUserIds()
+  for (const id of users ?? []) {
+    if (id !== check.userId) await deleteOutbox(id)
+  }
+  // No outbox of theirs here: nothing to open (opening would create one).
+  if (users && !users.includes(check.userId)) return
+  const store = outboxStore(check.userId)
+  for (const item of await store.list()) {
+    if (!check.activeWorkspaceIds.includes(item.workspaceId)) {
+      await store.remove(item.id)
+    }
+  }
+}
+
+/** The check and both purges; what replay needs to know who may send. */
+export async function checkSession(
+  opts: { switchedTo?: string } = {}
+): Promise<{ purged: boolean; check: SessionCheck }> {
   const check = await fetchSessionCheck()
+  if (check.kind === "signed_in") {
+    await purgeOutboxes(check).catch(() => undefined)
+  }
   const decision = decidePurge(readSnapshot(), check)
   if (
     opts.switchedTo &&
@@ -143,7 +180,7 @@ export async function runOfflineCheck(
   }
   if (decision.purge) await purgeDataCaches().catch(() => undefined)
   if (decision.next !== undefined) writeSnapshot(decision.next)
-  return decision.purge
+  return { purged: decision.purge, check }
 }
 
 /** When the last check stored a user, or a data cache exists, there is something to guard. */
