@@ -99,9 +99,6 @@ describe("ClassesView", () => {
       screen.getByText("Class teacher: Nadia Rahman · Room 204")
     ).toBeTruthy()
     expect(screen.getByText("1 subject")).toBeTruthy()
-    expect(
-      screen.getByText("Class teacher: Nadia Rahman · Room 204")
-    ).toBeTruthy()
     expect(screen.getByText(en.classes.noSections)).toBeTruthy()
   })
 
