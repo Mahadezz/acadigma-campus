@@ -26,8 +26,6 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@acadigma/ui/components/native-select"
-import { Textarea } from "@acadigma/ui/components/textarea"
-import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
@@ -41,7 +39,9 @@ import {
 } from "../actions"
 import { dateRange, examDateFormatter } from "../format"
 
+import { MarksProgress } from "./marks-progress"
 import { PublishSheet } from "./publish-sheet"
+import { ReasonSheet } from "./reason-sheet"
 
 type T = Messages["exams"]
 
@@ -58,6 +58,7 @@ export function ExamDetailView({
   canReadResults,
   publishCandidates,
   teachers,
+  today,
 }: {
   t: T
   locale: Locale
@@ -71,6 +72,8 @@ export function ExamDetailView({
    * (D-306). Null otherwise: "Publish" then moves the status directly. */
   publishCandidates: PublishCandidate[] | null
   teachers: TeacherOption[]
+  /** The school's calendar day (ISO), for the progress rows' Closed badge. */
+  today: string
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -259,13 +262,25 @@ export function ExamDetailView({
       ) : null}
 
       {back ? (
-        <ReverseSheet
+        <ReasonSheet
           t={t}
+          id="exam-reverse-reason"
+          description={t.reasonHelp}
           open={reversing}
           onOpenChange={setReversing}
           title={t.reverse[back as keyof T["reverse"]]}
           pending={pending}
           onConfirm={(reason) => move(back, reason)}
+        />
+      ) : null}
+
+      {canWrite && locked ? (
+        <MarksProgress
+          t={t}
+          locale={locale}
+          exam={exam}
+          teachers={teachers}
+          today={today}
         />
       ) : null}
 
@@ -300,62 +315,6 @@ export function ExamDetailView({
   )
 }
 
-function ReverseSheet({
-  t,
-  open,
-  onOpenChange,
-  title,
-  pending,
-  onConfirm,
-}: {
-  t: T
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: string
-  pending: boolean
-  onConfirm: (reason: string) => void
-}) {
-  const [reason, setReason] = useState("")
-  return (
-    <FormSheet
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description={t.reasonHelp}
-      footer={
-        <>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11"
-            onClick={() => onOpenChange(false)}
-          >
-            {t.cancel}
-          </Button>
-          <Button
-            type="button"
-            className="h-11"
-            disabled={pending || reason.trim() === ""}
-            onClick={() => onConfirm(reason.trim())}
-          >
-            {t.confirm}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-2">
-        <Label htmlFor="exam-reverse-reason">{t.reason}</Label>
-        <Textarea
-          id="exam-reverse-reason"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          maxLength={500}
-        />
-      </div>
-    </FormSheet>
-  )
-}
-
 function PaperRow({
   t,
   paper,
@@ -386,10 +345,14 @@ function PaperRow({
   const [full, setFull] = useState(String(paper.fullMarks))
   const [pass, setPass] = useState(String(paper.passMarks))
   const [teacher, setTeacher] = useState(paper.teacherId ?? "")
+  const [opens, setOpens] = useState(paper.entryOpensOn ?? "")
+  const [closes, setCloses] = useState(paper.entryClosesOn ?? "")
   const [notice, setNotice] = useState<string | null>(null)
   const dirty =
     teacher !== (paper.teacherId ?? "") ||
     date !== (paper.examDate ?? "") ||
+    opens !== (paper.entryOpensOn ?? "") ||
+    closes !== (paper.entryClosesOn ?? "") ||
     full !== String(paper.fullMarks) ||
     pass !== String(paper.passMarks)
   const id = `paper-${paper.id}`
@@ -445,6 +408,8 @@ function PaperRow({
               fullMarks: Number(full),
               passMarks: Number(pass),
               teacherId: teacher || null,
+              entryOpensOn: opens || null,
+              entryClosesOn: closes || null,
             })
             setNotice(result.ok ? t.saved : result.error.message || t.error)
             if (result.ok) router.refresh()
@@ -466,6 +431,29 @@ function PaperRow({
               </NativeSelectOption>
             ))}
           </NativeSelect>
+        </div>
+        <div className="col-span-3 grid grid-cols-2 gap-2 sm:col-span-4">
+          <div className="space-y-1">
+            <Label htmlFor={`${id}-opens`}>{t.entryOpens}</Label>
+            <Input
+              id={`${id}-opens`}
+              type="date"
+              value={opens}
+              onChange={(e) => setOpens(e.target.value)}
+              className="h-11"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={`${id}-closes`}>{t.entryCloses}</Label>
+            <Input
+              id={`${id}-closes`}
+              type="date"
+              value={closes}
+              min={opens || undefined}
+              onChange={(e) => setCloses(e.target.value)}
+              className="h-11"
+            />
+          </div>
         </div>
         <div className="col-span-3 space-y-1 sm:col-span-1">
           <Label htmlFor={`${id}-date`}>{t.examDate}</Label>

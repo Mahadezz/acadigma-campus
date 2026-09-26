@@ -14,8 +14,9 @@ import {
   type Result,
   type SaveMarksInput,
   type SaveMarksResult,
+  type SubmitExamSubjectResult,
 } from "@acadigma/contracts"
-import { sectionDisplayName } from "@acadigma/domain/academic"
+import { marksEntryWindow, sectionDisplayName } from "@acadigma/domain/academic"
 
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
@@ -34,7 +35,10 @@ type PaperRow = {
   pass_marks: number | string
   status: string
   teacher_id: string | null
-  exams: { name: string; status: string }
+  exam_date: string | null
+  entry_opens_on: string | null
+  entry_closes_on: string | null
+  exams: { name: string; status: string; ends_on: string | null }
   subjects: { name: string; name_bn: string | null }
   sections: {
     name: string
@@ -58,6 +62,8 @@ type MarkRow = {
 export type MarkSheetWithAccess = MarkSheet & {
   /** Owner/admin, the paper's teacher or the section's class teacher. */
   canEnter: boolean
+  /** Owner/admin or the paper's own teacher (D-307). */
+  canSubmit: boolean
 }
 
 /**
@@ -74,7 +80,8 @@ export async function getMarkSheet(
       .from("exam_subjects")
       .select(
         "id, exam_id, section_id, full_marks, pass_marks, status, teacher_id, " +
-          "exams(name, status), subjects(name, name_bn), " +
+          "exam_date, entry_opens_on, entry_closes_on, " +
+          "exams(name, status, ends_on), subjects(name, name_bn), " +
           "sections(name, class_teacher_id, grade_levels(name))"
       )
       .eq("workspace_id", ctx.workspaceId)
@@ -114,12 +121,18 @@ export async function getMarkSheet(
     ((marks.data ?? []) as unknown as MarkRow[]).map((m) => [m.student_id, m])
   )
   const memberId = member.data?.id ?? null
+  const isAdmin = ctx.role === "owner" || ctx.role === "admin"
   const canEnter =
-    ctx.role === "owner" ||
-    ctx.role === "admin" ||
+    isAdmin ||
     (ctx.role === "teacher" &&
       memberId !== null &&
       (memberId === p.teacher_id || memberId === p.sections.class_teacher_id))
+  const window = marksEntryWindow({
+    examDate: p.exam_date,
+    entryOpensOn: p.entry_opens_on,
+    entryClosesOn: p.entry_closes_on,
+    examEndsOn: p.exams.ends_on,
+  })
 
   return ok({
     paperId: p.id,
@@ -136,6 +149,13 @@ export async function getMarkSheet(
     fullMarks: Number(p.full_marks),
     passMarks: Number(p.pass_marks),
     canEnter,
+    canSubmit:
+      isAdmin ||
+      (ctx.role === "teacher" &&
+        memberId !== null &&
+        memberId === p.teacher_id),
+    entryOpensOn: window.opensOn,
+    entryClosesOn: window.closesOn,
     rows: ((enrollments.data ?? []) as unknown as EnrollmentRow[]).map((e) => {
       const m = saved.get(e.students.id)
       return {
@@ -166,6 +186,28 @@ const SAVE_ERRORS: Record<string, ApiError> = {
   SUBJECT_LOCKED: apiError("forbidden", "This paper is locked.", {
     fieldErrors: { _root: ["SUBJECT_LOCKED"] },
   }),
+  OUTSIDE_ENTRY_WINDOW: apiError(
+    "forbidden",
+    "Marks entry for this paper is closed. Ask an admin.",
+    { fieldErrors: { _root: ["OUTSIDE_ENTRY_WINDOW"] } }
+  ),
+  REASON_REQUIRED: apiError("validation_failed", "Give a reason.", {
+    fieldErrors: { _root: ["REASON_REQUIRED"] },
+  }),
+  ALREADY_LOCKED: apiError("conflict", "This paper is already locked.", {
+    fieldErrors: { _root: ["ALREADY_LOCKED"] },
+  }),
+  NOT_SUBMITTED: apiError("conflict", "Only a submitted paper can be locked.", {
+    fieldErrors: { _root: ["NOT_SUBMITTED"] },
+  }),
+  NOT_LOCKED: apiError("conflict", "This paper is not locked.", {
+    fieldErrors: { _root: ["NOT_LOCKED"] },
+  }),
+  EXAM_PUBLISHED: apiError(
+    "conflict",
+    "Results are published. Unpublish them before unlocking a paper.",
+    { fieldErrors: { _root: ["EXAM_PUBLISHED"] } }
+  ),
   STUDENT_NOT_ENROLLED: apiError(
     "conflict",
     "The class list changed. Reload and try again.",
@@ -204,6 +246,7 @@ export async function saveMarks(
     p_input: {
       idempotency_key: input.idempotencyKey,
       exam_subject_id: input.examSubjectId,
+      late_reason: input.lateReason,
       entries: input.entries.map((e) => ({
         student_id: e.studentId,
         status: e.status,
@@ -212,12 +255,7 @@ export async function saveMarks(
       })),
     },
   })
-  if (error) {
-    const known = Object.hasOwn(SAVE_ERRORS, error.message)
-      ? SAVE_ERRORS[error.message]
-      : undefined
-    return err(known ?? UNAVAILABLE)
-  }
+  if (error) return err(fromDbError(error))
   const row = data as unknown as SaveJson
   return ok({
     saved: row.saved,
@@ -234,4 +272,107 @@ export async function saveMarks(
       updatedAt: m.updated_at,
     })),
   })
+}
+
+function fromDbError(error: { message: string }): ApiError {
+  return (
+    (Object.hasOwn(SAVE_ERRORS, error.message)
+      ? SAVE_ERRORS[error.message]
+      : undefined) ?? UNAVAILABLE
+  )
+}
+
+type SubmitJson = {
+  submitted: boolean
+  missing: {
+    student_id: string
+    full_name: string
+    full_name_bn: string | null
+    roll_number: number | null
+  }[]
+}
+
+/**
+ * §7 `submitExamSubject` (D-307): `public.submit_exam_subject` checks the
+ * paper's teacher or owner/admin. With students missing and no
+ * confirmation nothing changes and `submitted` is false (the warning).
+ */
+export async function submitExamSubject(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  paperId: string,
+  confirmIncomplete: boolean
+): Promise<Result<SubmitExamSubjectResult, ApiError>> {
+  const { data, error } = await client.rpc("submit_exam_subject", {
+    p_workspace_id: ctx.workspaceId,
+    p_exam_subject_id: paperId,
+    p_confirm_incomplete: confirmIncomplete,
+  })
+  if (error) return err(fromDbError(error))
+  const row = data as unknown as SubmitJson
+  return ok({
+    submitted: row.submitted,
+    missing: row.missing.map((m) => ({
+      studentId: m.student_id,
+      fullName: m.full_name,
+      fullNameBn: m.full_name_bn,
+      rollNumber: m.roll_number,
+    })),
+  })
+}
+
+/** §7 `lockExamSubject` (owner/admin, D-307): submitted -> locked. */
+export async function lockExamSubject(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  paperId: string
+): Promise<Result<void, ApiError>> {
+  const { error } = await client.rpc("lock_exam_subject", {
+    p_workspace_id: ctx.workspaceId,
+    p_exam_subject_id: paperId,
+  })
+  if (error) return err(fromDbError(error))
+  return ok(undefined)
+}
+
+/**
+ * §7 `unlockExamSubject` (owner/admin, D-307): locked -> submitted with a
+ * reason; on a marks_locked exam the exam returns to marks entry and its
+ * results are cleared.
+ */
+export async function unlockExamSubject(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  paperId: string,
+  reason: string
+): Promise<Result<void, ApiError>> {
+  const { error } = await client.rpc("unlock_exam_subject", {
+    p_workspace_id: ctx.workspaceId,
+    p_exam_subject_id: paperId,
+    p_reason: reason,
+  })
+  if (error) return err(fromDbError(error))
+  return ok(undefined)
+}
+
+/**
+ * "Reopen 7 days" (D-307 review): an owner/admin sets a paper's
+ * `entry_closes_on` (RLS: owner/admin write; audited as
+ * `exam_subjects.update`).
+ */
+export async function setEntryClosesOn(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  paperId: string,
+  closesOn: string
+): Promise<Result<void, ApiError>> {
+  const { data, error } = await client
+    .from("exam_subjects")
+    .update({ entry_closes_on: closesOn })
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("id", paperId)
+    .select("id")
+  if (error) return err(fromDbError(error))
+  if (!data || data.length === 0) return err(NOT_FOUND)
+  return ok(undefined)
 }

@@ -522,6 +522,28 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn: "{actor} একটি পরীক্ষার পেপারে নম্বর সংরক্ষণ করেছেন ({n})",
     isGeneric: false,
   },
+  // F-AC-06 Part 4 (D-307) — submit, lock and unlock a paper.
+  {
+    action: "marks.submitted",
+    severity: "info",
+    sentenceEn: "{actor} submitted an exam paper's marks",
+    sentenceBn: "{actor} একটি পরীক্ষার পেপারের নম্বর জমা দিয়েছেন",
+    isGeneric: false,
+  },
+  {
+    action: "marks.locked",
+    severity: "notable",
+    sentenceEn: "{actor} locked an exam paper's marks",
+    sentenceBn: "{actor} একটি পরীক্ষার পেপারের নম্বর লক করেছেন",
+    isGeneric: false,
+  },
+  {
+    action: "marks.unlocked",
+    severity: "notable",
+    sentenceEn: "{actor} unlocked an exam paper's marks ({reason})",
+    sentenceBn: "{actor} একটি পরীক্ষার পেপারের নম্বর আনলক করেছেন ({reason})",
+    isGeneric: false,
+  },
   // F-AC-06 Part 5 (D-305) — one event per compute_results run.
   {
     action: "results.computed",
