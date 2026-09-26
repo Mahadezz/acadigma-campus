@@ -10,6 +10,8 @@ import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
+import { schoolToday } from "../format"
+
 import { ExamDetailView } from "./exam-detail-view"
 
 import type { Metadata } from "next"
@@ -65,6 +67,7 @@ export default async function ExamPage({
       canReadResults={can(ctx.role, "results.read")}
       publishCandidates={candidates?.ok ? candidates.data : null}
       teachers={teachers?.ok ? teachers.data : []}
+      today={schoolToday()}
     />
   )
 }

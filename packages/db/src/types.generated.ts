@@ -805,6 +805,8 @@ export type Database = {
         Row: {
           created_at: string
           duration_minutes: number | null
+          entry_closes_on: string | null
+          entry_opens_on: string | null
           exam_date: string | null
           exam_id: string
           full_marks: number
@@ -813,6 +815,7 @@ export type Database = {
           section_id: string
           starts_at: string | null
           status: Database["public"]["Enums"]["exam_subject_status"]
+          status_reason: string | null
           subject_id: string
           teacher_id: string | null
           updated_at: string
@@ -821,6 +824,8 @@ export type Database = {
         Insert: {
           created_at?: string
           duration_minutes?: number | null
+          entry_closes_on?: string | null
+          entry_opens_on?: string | null
           exam_date?: string | null
           exam_id: string
           full_marks: number
@@ -829,6 +834,7 @@ export type Database = {
           section_id: string
           starts_at?: string | null
           status?: Database["public"]["Enums"]["exam_subject_status"]
+          status_reason?: string | null
           subject_id: string
           teacher_id?: string | null
           updated_at?: string
@@ -837,6 +843,8 @@ export type Database = {
         Update: {
           created_at?: string
           duration_minutes?: number | null
+          entry_closes_on?: string | null
+          entry_opens_on?: string | null
           exam_date?: string | null
           exam_id?: string
           full_marks?: number
@@ -845,6 +853,7 @@ export type Database = {
           section_id?: string
           starts_at?: string | null
           status?: Database["public"]["Enums"]["exam_subject_status"]
+          status_reason?: string | null
           subject_id?: string
           teacher_id?: string | null
           updated_at?: string
@@ -1260,6 +1269,7 @@ export type Database = {
           created_by: string | null
           guardian_id: string
           id: string
+          invitation_id: string | null
           invited_at: string
           revoked_at: string | null
           status: Database["public"]["Enums"]["guardian_link_status"]
@@ -1272,6 +1282,7 @@ export type Database = {
           created_by?: string | null
           guardian_id: string
           id?: string
+          invitation_id?: string | null
           invited_at?: string
           revoked_at?: string | null
           status?: Database["public"]["Enums"]["guardian_link_status"]
@@ -1284,6 +1295,7 @@ export type Database = {
           created_by?: string | null
           guardian_id?: string
           id?: string
+          invitation_id?: string | null
           invited_at?: string
           revoked_at?: string | null
           status?: Database["public"]["Enums"]["guardian_link_status"]
@@ -1305,6 +1317,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "guardians"
             referencedColumns: ["id", "student_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "guardian_users_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_invitations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "guardian_users_user_id_fkey"
@@ -1496,6 +1515,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          edited_after_window: boolean
           enrollment_id: string
           entered_by: string | null
           exam_subject_id: string
@@ -1509,6 +1529,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          edited_after_window?: boolean
           enrollment_id: string
           entered_by?: string | null
           exam_subject_id: string
@@ -1522,6 +1543,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          edited_after_window?: boolean
           enrollment_id?: string
           entered_by?: string | null
           exam_subject_id?: string
@@ -3480,6 +3502,7 @@ export type Database = {
           declined_at: string | null
           email: string | null
           expires_at: string
+          guardian_id: string | null
           id: string
           invited_by: string
           label_id: string | null
@@ -3491,6 +3514,7 @@ export type Database = {
           revoked_by: string | null
           role: Database["public"]["Enums"]["member_role"]
           status: Database["public"]["Enums"]["invitation_status"]
+          student_id: string | null
           token_hash: string
           token_prefix: string
           updated_at: string
@@ -3504,6 +3528,7 @@ export type Database = {
           declined_at?: string | null
           email?: string | null
           expires_at?: string
+          guardian_id?: string | null
           id?: string
           invited_by: string
           label_id?: string | null
@@ -3515,6 +3540,7 @@ export type Database = {
           revoked_by?: string | null
           role?: Database["public"]["Enums"]["member_role"]
           status?: Database["public"]["Enums"]["invitation_status"]
+          student_id?: string | null
           token_hash: string
           token_prefix: string
           updated_at?: string
@@ -3528,6 +3554,7 @@ export type Database = {
           declined_at?: string | null
           email?: string | null
           expires_at?: string
+          guardian_id?: string | null
           id?: string
           invited_by?: string
           label_id?: string | null
@@ -3539,6 +3566,7 @@ export type Database = {
           revoked_by?: string | null
           role?: Database["public"]["Enums"]["member_role"]
           status?: Database["public"]["Enums"]["invitation_status"]
+          student_id?: string | null
           token_hash?: string
           token_prefix?: string
           updated_at?: string
@@ -3551,6 +3579,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_invitations_guardian_fkey"
+            columns: ["guardian_id", "student_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "guardians"
+            referencedColumns: ["id", "student_id", "workspace_id"]
           },
           {
             foreignKeyName: "workspace_invitations_invited_by_fkey"
@@ -3969,6 +4004,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_guardian_invitation: { Args: { p_token: string }; Returns: Json }
       admit_student: {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
@@ -3976,6 +4012,14 @@ export type Database = {
       attendance_day: {
         Args: { p_date?: string; p_workspace_id: string }
         Returns: Json
+      }
+      attendance_register: {
+        Args: { p_month: string; p_section_id: string; p_workspace_id: string }
+        Returns: Json
+      }
+      can_read_results: {
+        Args: { p_section_id: string; p_workspace_id: string }
+        Returns: boolean
       }
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       compute_results: {
@@ -3999,8 +4043,13 @@ export type Database = {
           withheld: boolean
         }[]
       }
+      guardian_invitation_preview: { Args: { p_token: string }; Returns: Json }
       import_student_batch: {
         Args: { p_batch_id: string; p_limit?: number; p_workspace_id: string }
+        Returns: Json
+      }
+      invite_guardian: {
+        Args: { p_guardian_id: string; p_workspace_id: string }
         Returns: Json
       }
       list_my_workspaces: {
@@ -4013,6 +4062,10 @@ export type Database = {
           type: Database["public"]["Enums"]["workspace_type"]
           workspace_id: string
         }[]
+      }
+      lock_exam_subject: {
+        Args: { p_exam_subject_id: string; p_workspace_id: string }
+        Returns: undefined
       }
       log_auth_event: {
         Args: { p_action: string; p_after?: Json }
@@ -4036,6 +4089,10 @@ export type Database = {
       publish_results: {
         Args: { p_exam_id: string; p_withhold?: Json; p_workspace_id: string }
         Returns: Json
+      }
+      revoke_guardian_link: {
+        Args: { p_link_id: string; p_workspace_id: string }
+        Returns: undefined
       }
       save_attendance: {
         Args: { p_input: Json; p_workspace_id: string }
@@ -4063,6 +4120,14 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: Json
       }
+      submit_exam_subject: {
+        Args: {
+          p_confirm_incomplete?: boolean
+          p_exam_subject_id: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
       switch_workspace: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -4085,6 +4150,14 @@ export type Database = {
           blocked: boolean
           retry_after_seconds: number
         }[]
+      }
+      unlock_exam_subject: {
+        Args: {
+          p_exam_subject_id: string
+          p_reason: string
+          p_workspace_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
@@ -4161,7 +4234,12 @@ export type Database = {
       member_role: "owner" | "admin" | "teacher" | "staff" | "parent"
       member_status: "pending" | "active" | "removed"
       onboarding_path: "undecided" | "create_school" | "join_school"
-      report_kind: "sample" | "report_card" | "report_card_bulk"
+      report_kind:
+        | "sample"
+        | "report_card"
+        | "report_card_bulk"
+        | "attendance_register"
+        | "mark_sheet"
       report_locale: "bn" | "en"
       report_status: "queued" | "rendering" | "ready" | "failed" | "expired"
       result_status: "pass" | "fail" | "incomplete" | "withheld"
@@ -4409,7 +4487,13 @@ export const Constants = {
       member_role: ["owner", "admin", "teacher", "staff", "parent"],
       member_status: ["pending", "active", "removed"],
       onboarding_path: ["undecided", "create_school", "join_school"],
-      report_kind: ["sample", "report_card", "report_card_bulk"],
+      report_kind: [
+        "sample",
+        "report_card",
+        "report_card_bulk",
+        "attendance_register",
+        "mark_sheet",
+      ],
       report_locale: ["bn", "en"],
       report_status: ["queued", "rendering", "ready", "failed", "expired"],
       result_status: ["pass", "fail", "incomplete", "withheld"],

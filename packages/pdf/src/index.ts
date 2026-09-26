@@ -8,6 +8,7 @@ export {
 export {
   formatDate,
   formatDateTime,
+  formatMonthYear,
   formatNumber,
   type ReportLocale,
 } from "./format"
@@ -17,6 +18,14 @@ export {
   type ReportCardBulkPageRange,
 } from "./merge"
 export { renderPdfToBuffer } from "./render"
+export {
+  AttendanceRegisterDocument,
+  type AttendanceRegisterDocumentProps,
+} from "./templates/attendance-register"
+export {
+  MarkSheetDocument,
+  type MarkSheetDocumentProps,
+} from "./templates/mark-sheet"
 export {
   ReportCardDocument,
   type ReportCardDocumentProps,

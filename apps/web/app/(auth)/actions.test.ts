@@ -415,4 +415,15 @@ describe("signOut (review fix: shared-device display-preference leak)", () => {
     expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_ui_mode")
     expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_text_size")
   })
+
+  it("sends a guardian to sign-up only for /invite, anything else to /login (D-108)", async () => {
+    mockCallOrder.length = 0
+    await expect(signOut("/invite")).rejects.toThrow("NEXT_REDIRECT")
+    expect(mockCallOrder).toContain("redirect:/register?next=/invite")
+    mockCallOrder.length = 0
+    await expect(signOut("https://evil.example")).rejects.toThrow(
+      "NEXT_REDIRECT"
+    )
+    expect(mockCallOrder).toContain("redirect:/login")
+  })
 })

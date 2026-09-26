@@ -125,9 +125,18 @@ with allowed as (
     ('public.compute_results(uuid, uuid)'),  -- F-AC-06 Part 5, D-305
     ('public.publish_results(uuid, uuid, jsonb)'),  -- F-AC-06 Part 7, D-306
     ('public.family_results(uuid)'),  -- F-AC-10 results tab, D-306
+    ('public.submit_exam_subject(uuid, uuid, boolean)'),  -- F-AC-06 Part 4, D-307
+    ('public.lock_exam_subject(uuid, uuid)'),  -- F-AC-06 Part 4, D-307
+    ('public.unlock_exam_subject(uuid, uuid, text)'),  -- F-AC-06 Part 4, D-307
     ('public.import_student_batch(uuid, uuid, integer)'),  -- F-AC-02 §4.7, D-106
     ('public.student_import_existing(uuid)'),  -- F-AC-02 §4.7, D-106
-    ('public.set_section_subjects(uuid, uuid, jsonb)')  -- F-AC-01 Part 5 demo cut, D-107
+    ('public.set_section_subjects(uuid, uuid, jsonb)'),  -- F-AC-01 Part 5 demo cut, D-107
+    ('public.invite_guardian(uuid, uuid)'),  -- F-AC-02 Part 4 demo cut, D-108
+    ('public.guardian_invitation_preview(text)'),  -- F-AC-02 Part 4 demo cut, D-108
+    ('public.accept_guardian_invitation(text)'),  -- F-AC-02 Part 4 demo cut, D-108
+    ('public.revoke_guardian_link(uuid, uuid)'),  -- F-AC-02 Part 4 demo cut, D-108
+    ('public.attendance_register(uuid, uuid, date)'),  -- F-OP-03 Part 6 review, D-208
+    ('public.can_read_results(uuid, uuid)')  -- F-OP-03 Part 6 review, D-208
   ) as a(sig)
   union all
   select p.oid

@@ -104,7 +104,8 @@
       "submittingButton": "Creating account…",
       "alreadyHaveAccount": "Already have an account? Sign in",
       "errorEmailTaken": "This email already has an account — sign in or reset your password.",
-      "errorEmailTakenLoginLink": "Sign in"
+      "errorEmailTakenLoginLink": "Sign in",
+      "noEmailHelp": "No email? Ask the school office for help."
     },
     "verify": {
       "title": "Check your email",
@@ -345,6 +346,10 @@
         "withheld": "Result withheld: please contact the school.",
         "notLinkedTitle": "Your account isn't linked to a child yet",
         "notLinkedDescription": "Your account isn't linked to a child yet. Ask the school office."
+      },
+      "children": {
+        "title": "Your children",
+        "code": "Student ID {code}"
       }
     },
     "userMenu": {
@@ -1051,6 +1056,8 @@
     "error": "Could not generate this report. Try again.",
     "generateReportCard": "Report card",
     "generateReportCardBulk": "Print all report cards",
+    "generateAttendanceRegister": "Print this month's register",
+    "generateMarkSheet": "Print mark sheet",
     "empty": "No reports generated yet.",
     "recent": "Recent runs",
     "status": {
@@ -1261,7 +1268,28 @@
       "done": "Results published: {n} shown to families, {withheld} withheld.",
       "computeFirst": "Compute results first.",
       "incomplete": "{n} results incomplete. Compute results again once every mark is in."
-    }
+    },
+    "progressTitle": "Marks progress",
+    "progressSummary": "{submitted} of {total} papers submitted · {locked} locked",
+    "paperStatuses": {
+      "pending": "Not started",
+      "entering": "Entering",
+      "submitted": "Submitted",
+      "locked": "Locked"
+    },
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "unlockTitle": "Unlock {subject}",
+    "unlockHelp": "Say why. The marks can change again. If results were computed, the exam goes back to marks entry and its results are cleared. If the entry dates are over, change 'Marks close' so the teacher can edit.",
+    "lockedDone": "Locked.",
+    "unlockedDone": "Unlocked.",
+    "entryOpens": "Marks open",
+    "entryCloses": "Marks close",
+    "noStudentDetails": "Don't write student details here.",
+    "closesOn": "closes {date}",
+    "closed": "Closed",
+    "reopen": "Reopen 7 days",
+    "reopenedDone": "Marks entry reopened for 7 days."
   },
   "students": {
     "importButton": "Import",
@@ -1421,6 +1449,24 @@
       "call": "Call {name}",
       "noGuardians": "No guardians yet.",
       "locked": "Only the class teacher and school admins can see date of birth and guardian contacts."
+    },
+    "access": {
+      "title": "Parent app",
+      "none": "No parent has the app for this student yet.",
+      "invite": "Invite {name} to the parent app",
+      "linked": "Linked",
+      "unknownAccount": "A parent account",
+      "revoke": "Remove access",
+      "revokeTitle": "Remove {account}'s access?",
+      "revokeBody": "They will no longer see {student}'s results. You can invite them again later.",
+      "cancel": "Cancel",
+      "linkTitle": "Send this link to {name}",
+      "linkHelp": "It works once, for {student} only, until {date}. Whoever opens it first can accept it, so send it only to {name}. A new link cancels the earlier one.",
+      "linkLabel": "Invitation link",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "whatsapp": "Send on WhatsApp",
+      "whatsappText": "Your child's school invites you to see {student}'s results on Acadigma Campus. Open this link: {url}"
     }
   },
   "marks": {
@@ -1446,7 +1492,8 @@
       "notAssigned": "Only this paper's teacher, the class teacher or an admin can see and enter these marks.",
       "viewOnly": "You can view these marks, not change them.",
       "closed": "Marks entry is not open for this exam.",
-      "locked": "This paper is locked."
+      "locked": "This paper is locked.",
+      "window": "Marks entry for this paper is outside its dates. Ask an admin to change the dates."
     },
     "issues": {
       "NOT_A_NUMBER": "Type a number such as 45 or 32.5.",
@@ -1460,8 +1507,27 @@
       "SUBJECT_LOCKED": "This paper is locked.",
       "ROSTER_CHANGED": "The class list changed. Reload the page.",
       "generic": "Not saved. Your marks are still here — try again.",
-      "readOnly": "The school is view-only right now, so nothing can be changed."
-    }
+      "readOnly": "The school is view-only right now, so nothing can be changed.",
+      "OUTSIDE_ENTRY_WINDOW": "Marks entry for this paper is closed. Ask an admin.",
+      "REASON_REQUIRED": "Give a reason for changing marks outside the entry dates.",
+      "NOT_ASSIGNED_SUBMIT": "Only this paper's teacher or an admin can submit it."
+    },
+    "window": "Marks entry: {from} to {to}",
+    "windowFrom": "Marks entry from {from}",
+    "windowTo": "Marks entry until {to}",
+    "lateReason": "Reason for changing marks outside the entry dates",
+    "lateHelp": "This paper is outside its entry dates. Your change is saved with this reason and marked as outside the dates.",
+    "submit": "Submit marks",
+    "submitting": "Submitting…",
+    "submitHelp": "Submit when you have finished. An admin then locks the paper.",
+    "submitSaveFirst": "Save your changes before submitting.",
+    "submittedBadge": "Submitted",
+    "submittedNotice": "Marks submitted.",
+    "missingTitle": "{n} students have no mark yet",
+    "missingBody": "You can still submit. They stay missing until someone enters a mark or chooses Absent or Exempt.",
+    "submitAnyway": "Submit anyway",
+    "cancel": "Cancel",
+    "noStudentDetails": "Don't write student details here."
   },
   "basicMode": {
     "settings": {
@@ -1571,6 +1637,39 @@
         "empty": "No report cards are ready yet for this class.",
         "heading": "{examName} report cards"
       }
+    }
+  },
+  "invite": {
+    "title": "Parent app invitation",
+    "subtitle": "See your child's results from your phone.",
+    "noToken": "This link is incomplete. Open the full link the school sent you.",
+    "signedOut": "Sign in, or create an account, to accept this invitation.",
+    "signIn": "Sign in",
+    "register": "Create an account",
+    "afterRegister": "After you create your account and confirm your email, open the school's link again.",
+    "checking": "Checking the link…",
+    "preview": "{school} invites you, as {student}'s {relation}, to the parent app.",
+    "whatYouSee": "You will see {student}'s published exam results and report cards. Only this child is linked.",
+    "accept": "Accept",
+    "accepting": "Accepting…",
+    "alreadyAccepted": "You have already accepted this invitation.",
+    "open": "Open the parent app",
+    "status": {
+      "accepted": "This invitation has already been used.",
+      "revoked": "This link was replaced. Ask the school for the latest one.",
+      "expired": "This invitation has expired. Ask the school for a new link.",
+      "declined": "This invitation was declined."
+    },
+    "signOut": "Sign out and create a parent account",
+    "errors": {
+      "INVITATION_NOT_FOUND": "This invitation link is not valid. Open the full link the school sent you.",
+      "INVITATION_EXPIRED": "This invitation has expired. Ask the school for a new link.",
+      "INVITATION_ACCEPTED": "This invitation has already been used.",
+      "INVITATION_REVOKED": "This link was replaced. Ask the school for the latest one.",
+      "INVITATION_DECLINED": "This invitation was declined.",
+      "MEMBERSHIP_CONFLICT": "This account is a staff account at this school. Create a new account with another email for the parent app.",
+      "PLAN_READ_ONLY": "This school is read-only right now. Please contact the school.",
+      "generic": "Something went wrong. Please try again."
     }
   }
 }

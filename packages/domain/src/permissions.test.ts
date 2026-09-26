@@ -235,7 +235,9 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "results.read": ["owner", "admin", "teacher", "staff"],
     "results.compute": ["owner", "admin"],
     "results.publish": ["owner", "admin"],
+    "marks.lock": ["owner", "admin"],
     "family.results.read": ["parent"],
+    "students.guardian.invite": ["owner", "admin"],
     "reports.read": [...rolesWithAction("reports.read")],
     "messages.send": [...rolesWithAction("messages.send")],
     "ai.use": [...rolesWithAction("ai.use")],
@@ -255,6 +257,10 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "report.render.report_card_bulk": [
       ...rolesWithAction("report.render.report_card_bulk"),
     ],
+    // F-OP-03 Part 6 (D-208): asserted for real — owner/admin/teacher only,
+    // never staff (spec §2's matrix has "—" for both on the staff column).
+    "report.render.attendance_register": ["owner", "admin", "teacher"],
+    "report.render.mark_sheet": ["owner", "admin", "teacher"],
     // F-AC-01 §2 (D-102): asserted for real, not against the matrix itself.
     "academics.structure.read": ["owner", "admin", "teacher", "staff"],
     "academics.section.write": ["owner", "admin"],
