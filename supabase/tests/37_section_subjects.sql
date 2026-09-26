@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-01 Part 5 demo cut — section_subjects
--- (20260925300320_section_subjects.sql, D-107)
+-- (20260926021923_section_subjects.sql, D-107)
 --
 --   A. public.set_section_subjects adds, re-teachers and removes rows.
 --   B. Constraints: one row per (section, subject); an eligible teacher;
@@ -12,7 +12,7 @@
 --      READ-ONLY school still works and releases their assignments.
 -- =====================================================================
 begin;
-select plan(28);
+select plan(31);
 
 create schema if not exists tests;
 
@@ -266,9 +266,19 @@ select tests.login('37000000-0000-4000-a000-000000000001');
 select throws_ok(
   $$select public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', jsonb_build_array(
       jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000032', 'teacher_id', null)))$$,
-  '22023', 'SUBJECT_ARCHIVED', 'an archived subject cannot be given to a section');
+  '22023', 'SUBJECT_ARCHIVED', 'an archived subject cannot be newly given to a section');
 select tests.logout();
 update public.subjects set archived_at = null where id = '37000000-0000-4000-c000-000000000032';
+-- Maths was assigned before it was archived: it may stay in the list.
+update public.subjects set archived_at = now() where id = '37000000-0000-4000-c000-000000000031';
+select tests.login('37000000-0000-4000-a000-000000000001');
+select is(
+  public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', jsonb_build_array(
+    jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000031', 'teacher_id', null),
+    jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000033', 'teacher_id', null))),
+  2, 'a subject archived after it was assigned may stay in the saved list');
+select tests.logout();
+update public.subjects set archived_at = null where id = '37000000-0000-4000-c000-000000000031';
 
 -- Teacher A2 becomes class teacher of Class 6 – A and teaches its Maths.
 update public.sections set class_teacher_id = '37000000-0000-4000-d000-000000000005'
@@ -304,6 +314,22 @@ select is(
   (select count(*)::int from public.section_subjects
     where teacher_id = '37000000-0000-4000-d000-000000000005'),
   0, 'read-only removal: they stop teaching their subjects');
+
+-- The exemption is only for an update that clears the teacher and nothing else.
+select tests.login('37000000-0000-4000-a000-000000000001');
+select throws_ok(
+  $$update public.section_subjects
+       set teacher_id = null, subject_id = '37000000-0000-4000-c000-000000000032'
+     where section_id = '37000000-0000-4000-c000-000000000021'
+       and subject_id = '37000000-0000-4000-c000-000000000031'$$,
+  '42501', 'PLAN_READ_ONLY',
+  'read-only: clearing a subject''s teacher while changing another column is refused');
+select throws_ok(
+  $$update public.sections set class_teacher_id = null, room = 'X'
+     where id = '37000000-0000-4000-c000-000000000021'$$,
+  '42501', 'PLAN_READ_ONLY',
+  'read-only: clearing a class teacher while changing another column is refused');
+select tests.logout();
 
 select * from finish();
 rollback;

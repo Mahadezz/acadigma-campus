@@ -267,11 +267,16 @@ begin
     raise exception 'SECTION_NOT_FOUND' using errcode = 'P0002';
   end if;
 
+  -- Only a NEWLY added subject must be live: one assigned before it was
+  -- archived may stay, so the admin can still change anything else.
   if exists (
     select 1
       from jsonb_array_elements(p_subjects) e
       join public.subjects sub on sub.id = (e ->> 'subject_id')::uuid
-     where sub.archived_at is not null) then
+     where sub.archived_at is not null
+       and not exists (
+         select 1 from public.section_subjects ss
+          where ss.section_id = p_section_id and ss.subject_id = sub.id)) then
     raise exception 'SUBJECT_ARCHIVED' using errcode = '22023';
   end if;
 

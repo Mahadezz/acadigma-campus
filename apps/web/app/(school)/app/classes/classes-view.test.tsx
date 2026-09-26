@@ -141,6 +141,8 @@ describe("section subjects sheet (D-107)", () => {
         sectionId: "s1",
         subjects: [
           { subjectId: "sub1", teacherId: "m1" },
+          // Archived after it was assigned: hidden, but kept (D-107).
+          { subjectId: "sub-archived", teacherId: null },
           { subjectId: "sub2", teacherId: "m1" },
         ],
       })

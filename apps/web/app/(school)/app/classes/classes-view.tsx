@@ -545,14 +545,13 @@ function SectionSubjectsSheet({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  // subjectId -> teacherId ("" = no teacher); absent = not taken. Only
-  // live subjects: an archived one is dropped on the next save.
+  // subjectId -> teacherId ("" = no teacher); absent = not taken. A subject
+  // archived after it was assigned is not shown but stays in the saved list
+  // (the database refuses only a newly added archived subject).
   const [initial] = useState(
     () =>
       new Map(
-        (section?.subjects ?? [])
-          .filter((s) => subjects.some((live) => live.id === s.subjectId))
-          .map((s) => [s.subjectId, s.teacherId ?? ""])
+        (section?.subjects ?? []).map((s) => [s.subjectId, s.teacherId ?? ""])
       )
   )
   const [picked, setPicked] = useState<Map<string, string>>(
