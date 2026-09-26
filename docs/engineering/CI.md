@@ -19,15 +19,18 @@ Concurrency: `group: ${{ github.workflow }}-${{ github.ref }}`, `cancel-in-progr
 
 Draft PRs run every job except `e2e` and `lighthouse` — the expensive ones start when the PR is marked ready. That keeps the "push on the first commit" habit (HANDBOOK §2) cheap.
 
-**Job skipping (D-70) — fails closed by design.** A first job, `changes`, diffs the PR against its base (`git diff --no-renames --name-only <base>...HEAD`, no third-party action) and outputs two booleans, each **defaulting to the side that runs more, not less**:
+**Job skipping (D-70) — fails closed by design.** A first job, `changes`, diffs the PR against its base (`git diff --no-renames --name-only <base>...HEAD`, no third-party action) and outputs three booleans, each **defaulting to the side that runs more, not less**:
 
 - `app` is **`false` only when every changed file** matches a narrow docs/prose/dotfile-config allowlist (`docs/**`, any `*.md`, `.editorconfig`, `.gitattributes`, `.gitignore`). An empty diff, a file this allowlist doesn't recognise, or a rename that moved a code file into `docs/` (`--no-renames` keeps the old path as its own line, so it still counts) all leave `app=true`.
 - `db` is **`true` only when a changed file matches** `^(supabase/|\.github/)` — the narrow, opposite rule, since `db` is the expensive job and running it needlessly costs a full Postgres/pgTAP run for no correctness benefit.
-- `push` to `main` and `merge_group` always set both true — those runs are never partial (this PR's own run is a `push`-equivalent full run for the same reason).
+- `dbIntegration` (D-73) is **`true` only when a changed file matches** `^(supabase/|packages/db/|packages/contracts/|\.github/)` — the same narrow shape as `db`, plus the two packages the `db-integration` job (below) actually exercises.
+- `push` to `main` and `merge_group` always set all three true — those runs are never partial (this PR's own run is a `push`-equivalent full run for the same reason).
+- The `changes` job also runs `prettier --check` on the PR's changed `*.md` files itself, but **only when `app` is `false`** — a docs-only PR skips the whole `lint` job (prettier included), which is the gap `#57`/`#70` fell through onto `main`. A non-docs-only PR still gets its markdown checked by `lint` as before; this is not a second, redundant run for that case.
 
 Everything downstream reads these outputs instead of recomputing the diff, and every downstream `if` compares with **`!= 'false'`, never `== 'true'`** — so an empty/unset output (the `changes` job erroring before it writes anything) is treated as "run", not "skip":
 
 - `lint`, `typecheck`, `unit`, `contracts`, `build`, `security`, and `db` run unless the relevant output is the literal string `'false'`.
+- `db-integration` (D-73) runs unless `dbIntegration` is the literal string `'false'` — on drafts too, same as `db`/`unit`/`build`.
 - `e2e`, `lighthouse` run on `pull_request` (not draft) and on `merge_group` — never on `push` to `main`, since they already ran on the PR that merged — and only when `app` or `db` is not `'false'`.
 - Every one of the jobs above starts its `if` with **`!cancelled()`**. Without a status-check function in the expression, GitHub silently ANDs an implicit `success()` across every job named in `needs` — so even an `if` that explicitly reads `needs.changes.outputs.db != 'false'` would still auto-skip the moment `changes` (or, for `e2e`/`lighthouse`, `db`) reports anything other than `'success'`, including a legitimate `'skipped'` (actions/runner#491). `!cancelled()` removes that implicit gate, so the written condition — not GitHub's default — decides. `e2e` and `lighthouse` still explicitly require `needs.build.result == 'success'`, and `e2e` additionally requires `needs.db.result` to be `'success'` **or** `'skipped'` (never `'failure'`).
 - `changeset`, `docs-sync`, `report` and `guard` are unaffected — they either run unconditionally on every PR/push or already do their own contextual pass/fail (`changeset`/`docs-sync` pass automatically for a docs-only diff; see §2.10-2.11).
@@ -96,6 +99,21 @@ The authorization gate. Skipped only when the `changes` job's `db` output is the
 7. `pg_prove --verbose --ext .sql supabase/tests/*.sql`; the TAP output is tee'd to `pgtap.tap`, tailed into `$GITHUB_STEP_SUMMARY`, and uploaded as the `pgtap` artifact (14 days).
 
 Fails on: an edited historical migration, a migration that sorts before `main`'s newest, or any pgTAP assertion failure. Coverage gaps only warn until `supabase/tests/coverage.sql` exists. No shared-resource concurrency lock is needed — every run gets its own throwaway container.
+
+### `db-integration` → **`CI / db-integration`** (D-73)
+
+Closes the gap `db` and `unit` cannot: `unit`'s vitest suite mocks the Supabase client, so it never resolves a real PostgREST relationship, and `db` above runs pgTAP against bare `postgres:17` with no PostgREST in front of it at all. `#61` (`PGRST201` on `/app/classes` in production, an un-hinted `profiles` embed through `workspace_members`'s four foreign keys) passed CI through exactly this hole; the one e2e journey that opens `/app/classes` as a real owner is skip-gated on `E2E_LIVE_SUPABASE` + a seeded account (OQ-27, still open), which CI never sets.
+
+Skipped only when the `changes` job's `dbIntegration` output is `'false'` (§1) — true for `supabase/**`, `packages/db/**`, `packages/contracts/**`, or `.github/**` (so a CI workflow change tests itself). Runs on drafts, like `db`/`unit`/`build` — this is a correctness gate, not a polish pass like `e2e`/`lighthouse`.
+
+1. `supabase/setup-cli` pinned to the same CLI version `db.yml`'s `push` job uses (2.117.0).
+2. `supabase start` — a GitHub-hosted runner is always a fresh Postgres data volume, so this also applies every `supabase/migrations/*.sql` and `supabase/seed/*.sql` before PostgREST/GoTrue come up in front of them.
+3. `supabase status -o env` supplies the local anon/service keys as `DB_LOCAL_SUPABASE`, `DB_LOCAL_SUPABASE_URL`, `DB_LOCAL_SUPABASE_ANON_KEY`, `DB_LOCAL_SUPABASE_SERVICE_KEY` — the exact env shape `#61`'s own opt-in test (`packages/db/src/repositories/academics.integration.test.ts`) already documented for local, manual use. No secrets: these are fixed local-CLI keys for a stack this job tears down with the runner.
+4. Every `*.integration.test.ts` found anywhere in the workspace is passed as an explicit file argument to `vitest run` from the repo root (not `cd`-ing into each package and running its `test` script, which would reload the whole `projects` topology in `vitest.config.ts` and run every package's full suite). Each file already carries its own `describe.skipIf(!RUN)` guard keyed on `DB_LOCAL_SUPABASE`, so this job doesn't need to know which suites exist — a lane adding a new `*.integration.test.ts` anywhere is picked up automatically.
+
+**Runtime and required-check status:** measured on this job's own introducing PR — see that PR's checks for the actual number. Only added to §3's required list once a few runs confirm it stays reliably fast; until then it is a real gate (a red run still fails the PR) but not yet a branch-protection-required check, so a `db-integration` outage cannot itself block every merge before its stability is proven.
+
+**Not yet done (tracked at D-73, resolves OQ-27):** the skip-gated Playwright journeys (`E2E_LIVE_SUPABASE` + a seeded owner) still don't run anywhere in CI. Doing that against this same local stack needs three more things this PR didn't build: (a) a second `next build`/`next start` pointed at the local stack's `API_URL`/`ANON_KEY` instead of the production `NEXT_PUBLIC_SUPABASE_*` values baked into the `build` job's artifact, (b) a seeded owner account plus the minimal fixtures (a school, a section, a class-teacher assignment, …) each currently-skipped journey expects, and (c) running `pnpm test:e2e` scoped to those specs with `E2E_LIVE_SUPABASE=1` and `E2E_OWNER_EMAIL`/`E2E_OWNER_PASSWORD` set to the account from (b). None of that is wired up here — this job only proves the repository layer resolves real PostgREST correctly, not the UI on top of it.
 
 ### 2.4 `unit` → **`CI / unit`**
 
@@ -193,6 +211,8 @@ CI / docs-sync
 ```
 
 `CI / changes` (D-70) is required precisely because everything else's skip decision depends on it: every downstream job's `if` is written to run rather than skip when `changes` itself errors or is cancelled (§1 — fail closed), but a _required_ `CI / changes` still means a broken `changes` job blocks the merge outright instead of merely costing everyone a full, un-skipped run.
+
+`CI / db-integration` (D-73) is **not yet in this list.** It is a real gate today — a red run fails the PR like any other job — but is deliberately kept out of branch protection until a run of runs confirms it stays reliably fast (target: well under the §8 12-minute PR budget on its own). Add it here once that holds.
 
 Additional branch protection settings on `main`:
 
