@@ -118,7 +118,16 @@ verify_enabled = true
 
 [auth.rate_limit]
 # Blunts credential stuffing without locking out a school sharing one IP.
-sign_in_sign_ups = 30
+# Local-CLI only (D-53): this whole [auth] block is never pushed to the
+# hosted project by any CI workflow -- only manually, via
+# `supabase config push` -- so raising sign_in_sign_ups here has no
+# production effect. D-76: the e2e-live CI job's full Playwright suite
+# signs in ~90+ times from one IP (127.0.0.1) inside a few minutes; at 30
+# GoTrue itself (not this app's own auth_throttle table, which has its own,
+# separate per-key limits) started rejecting valid credentials with the
+# same generic "incorrect" message a real bad password gets, which looked
+# like a widespread app bug until traced to this default.
+sign_in_sign_ups = 1000
 token_refresh = 150
 email_sent = 10
 otp = 30

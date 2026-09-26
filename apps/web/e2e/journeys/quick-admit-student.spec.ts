@@ -31,6 +31,7 @@ test("owner admits a student, finds them and opens the profile", async ({
   await page.getByLabel("Email").fill(process.env.E2E_OWNER_EMAIL ?? "")
   await page.getByLabel("Password").fill(process.env.E2E_OWNER_PASSWORD ?? "")
   await page.getByRole("button", { name: "Sign in" }).click()
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"))
 
   await page.goto("/app/students")
   await expect(page.getByRole("heading", { name: "Students" })).toBeVisible()

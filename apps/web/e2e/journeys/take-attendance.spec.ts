@@ -32,6 +32,7 @@ test("owner marks all present, flips one absent and saves", async ({
   await page.getByLabel("Email").fill(process.env.E2E_OWNER_EMAIL ?? "")
   await page.getByLabel("Password").fill(process.env.E2E_OWNER_PASSWORD ?? "")
   await page.getByRole("button", { name: "Sign in" }).click()
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"))
 
   await page.goto("/app/attendance")
   await expect(
