@@ -75,8 +75,8 @@ async function publishAnExam(page: Page, name: string) {
   await expect(page.getByText(/Results computed: \d+ students/)).toBeVisible()
   await page.getByRole("button", { name: "Publish", exact: true }).click()
   await page
-    .getByRole("dialog", { name: "Publish results" })
-    .getByRole("button", { name: `Publish ${count} · withhold 0` })
+    .getByRole("dialog", { name: /^Publish .+ results for / })
+    .getByRole("button", { name: `Publish · parents will see ${count}` })
     .click()
   await expect(page.getByText("Published", { exact: true })).toBeVisible()
 }

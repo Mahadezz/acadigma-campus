@@ -94,7 +94,7 @@ describe("StudentProfile", () => {
     expect(screen.getByText(/12 বছর 6 মাস/)).toBeTruthy()
   })
 
-  it("offers an invite for an unlinked guardian and lists linked accounts (D-108)", () => {
+  it("offers an invite for an unlinked guardian and lists linked accounts (D-108)", async () => {
     const { rerender } = render(
       <StudentProfile
         t={en.students}
@@ -107,7 +107,7 @@ describe("StudentProfile", () => {
       />
     )
     expect(
-      screen.getByRole("button", {
+      await screen.findByRole("button", {
         name: "Invite Karim Uddin to the parent app",
       })
     ).toBeTruthy()
@@ -133,7 +133,7 @@ describe("StudentProfile", () => {
       />
     )
     expect(screen.queryByRole("button", { name: /Invite Karim/ })).toBeNull()
-    expect(screen.getByText("Karim U")).toBeTruthy()
+    expect(await screen.findByText("Karim U")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Remove access" })).toBeTruthy()
   })
 

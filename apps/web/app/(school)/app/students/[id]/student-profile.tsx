@@ -2,6 +2,7 @@
 
 // A client module only so the shared ui components tree-shake: imported
 // from a server component, their `radix-ui` barrel ships whole (+40 kB).
+import dynamic from "next/dynamic"
 import Link from "next/link"
 
 import { ArrowLeftIcon, LockIcon, PhoneIcon } from "lucide-react"
@@ -28,7 +29,11 @@ import type { Locale } from "@/lib/locale"
 
 import { classLabel } from "../format"
 
-import { GuardianAccess } from "./guardian-access"
+// Owner/admin only: its dialog and actions stay out of everyone else's
+// first load (the page's 250 kB budget).
+const GuardianAccess = dynamic(() =>
+  import("./guardian-access").then((m) => m.GuardianAccess)
+)
 
 /**
  * F-AC-02 §6 "Student profile" (D-103). `details` is null when RLS hid the
