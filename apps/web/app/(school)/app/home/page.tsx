@@ -98,7 +98,9 @@ export default async function BasicHomePage() {
   }))
 
   const noClasses = data.classes.length === 0 && !data.showAllClasses
-  const profile = noClasses ? await getCachedSchoolProfile(ctx.workspaceId) : null
+  const profile = noClasses
+    ? await getCachedSchoolProfile(ctx.workspaceId)
+    : null
   const phone = profile?.ok ? profile.data.fields.contact_phone : null
 
   return (

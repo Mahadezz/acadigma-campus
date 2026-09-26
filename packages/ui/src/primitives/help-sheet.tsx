@@ -75,9 +75,19 @@ export function HelpSheet({
         </div>
         <SheetFooter>
           {phone ? (
-            <Button asChild size="lg" className="min-h-14 gap-2 text-base">
+            // Review fix (found via the manual screenshot pass, PR #72): at
+            // 360px + Extra large text, `callLabel` (the office phone number
+            // interpolated into a full sentence) no longer fits one
+            // `whitespace-nowrap` line and was clipped past the button's own
+            // edge. `h-auto`/`py-3`/`whitespace-normal` let it wrap onto a
+            // second line instead, same `min-h-14` floor either way.
+            <Button
+              asChild
+              size="lg"
+              className="h-auto min-h-14 gap-2 py-3 text-base whitespace-normal"
+            >
               <a href={`tel:${phone}`}>
-                <PhoneIcon className="size-7" aria-hidden="true" />
+                <PhoneIcon className="size-7 shrink-0" aria-hidden="true" />
                 {callLabel}
               </a>
             </Button>

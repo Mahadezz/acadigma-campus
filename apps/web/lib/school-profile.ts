@@ -2,11 +2,10 @@ import "server-only"
 
 import { cache } from "react"
 
+import type { WorkspaceContext } from "@acadigma/db"
 import { getSchoolProfile } from "@acadigma/db/repositories/settings"
 
 import { createClient } from "@/lib/supabase/server"
-
-import type { WorkspaceContext } from "@acadigma/db"
 
 /**
  * Review fix (SHOULD, PR #72): `(school)/app/layout.tsx`'s basic-mode branch

@@ -22,3 +22,14 @@ owner/admin.
 Also: `signInWithPassword` now deletes both display-preference cookies
 (instead of leaving a stale one) when the signing-in user's preferences row
 cannot be read — closing the other half of #64's shared-device fix.
+
+**Review batch (D-405 addendum):** the essentials row gains Sign out and a
+language switch (basic mode has no `UserMenu`, which was the only other
+place either lived) and drops Profile (no dedicated screen exists to link
+to); `HelpSheet`'s close control is now a full-width "ফিরে যান / Go back"
+button, not a 16px English-only "✕"; `packages/ui`'s `buttonVariants` moves
+to a radix-free `components/button-variants.ts` so server files compute
+real button classes instead of a drifted literal-string copy; the basic-mode
+layout's `getSchoolProfile` request waterfall is fixed with a
+`React.cache()`-wrapped loader; the home error state is localised with a
+Retry link; the Help catalogue gets a marks-entry line.
