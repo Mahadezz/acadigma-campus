@@ -1,5 +1,26 @@
 # @acadigma/db
 
+## 0.6.0
+
+### Minor Changes
+
+- 07780bc: F-AC-02 §4.7 bulk student import, demo cut (D-106): owners and admins upload an Excel (.xlsx) or CSV register from a bilingual template, see every bad row by line and column in plain English or Bangla, and import the valid rows — each through `admit_student`, idempotent per batch and row — with the report kept in `student_import_batches`. Re-uploading a register skips students already on the roster; `.xlsx` files that would unpack too large are refused. New permission `students.import`.
+- 9e5421e: F-ID-10 Part 1 (D-403, D-404): basic-mode display preferences. `user_preferences.ui_mode`/`text_size` (added to the existing table, not a new one), `updateUiPreferences`/`getUiPreferences`, non-httpOnly cookie mirrors, `<html data-text-size data-ui-mode>` rendered server-side for a no-flash first paint, `/app/settings/display` (text-size radio cards + basic-mode switch, hidden for staff), "Switch to basic mode" in the full app's user menu, and a minimal `/app/home` placeholder so turning basic mode on and switching back both work end to end. The class-by-class home and class hub are F-ID-10 Parts 2-3.
+
+### Patch Changes
+
+- 4a954d2: F-OP-03 Part 3 (D-206) — the report card ("প্রগতিপত্র" / "Progress Report") on the Parts 1-2 PDF engine. New `ReportCardDocument` in `@acadigma/pdf`: one A4 portrait layout, Bengali (Hind Siliguri) + English, subject table with marks/grade/GPA, totals, attendance summary with a below-minimum warning line, class-teacher/guardian signature lines. Bengali numerals render on the card only (DESIGN-SYSTEM §1.6). Grade letters/GPA come from `@acadigma/domain`'s `bandFor`/`BD_GRADE_BANDS` (the #46/D-302 grade scale) — `packages/pdf` still contains no grade-band logic of its own (spec §5.1).
+
+  New `ReportCardDto`/`ReportCardParams` contracts (`@acadigma/contracts`). `report_kind` gains `'report_card'` (additive `alter type ... add value`, no shape change to `report_runs`; `42_report_card_kind.sql`). An incomplete or withheld result prints "অসম্পূর্ণ — ফলাফল স্থগিত" and hides totals, GPA, grade and rank; absent subjects print "অনুপস্থিত", the 4th subject and tied ranks are marked. New `report.render.report_card` permission (owner, admin, staff, teacher); the download route checks it too. `createReportRun` and `GET /api/pdf/[runId]` both render the new kind.
+
+  Real exam/marks data (F-AC-06 marks entry) is not on `main` yet, so the render source is a 40-student Class 6-ক fixture behind one seam function (`getReportCardData`) — swapping in the real `results` read (F-AC-06 Part 5) touches only that function's body, not the DTO, params or any caller. The fixture never serves in production, and the demo button is hidden there.
+
+- Updated dependencies [07780bc]
+- Updated dependencies [9e5421e]
+- Updated dependencies [4a954d2]
+  - @acadigma/contracts@0.6.0
+  - @acadigma/domain@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes
