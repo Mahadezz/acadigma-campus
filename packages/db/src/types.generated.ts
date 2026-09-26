@@ -3952,11 +3952,7 @@ export type Database = {
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
       set_section_subjects: {
-        Args: {
-          p_section_id: string
-          p_subjects: Json
-          p_workspace_id: string
-        }
+        Args: { p_section_id: string; p_subjects: Json; p_workspace_id: string }
         Returns: number
       }
       student_import_existing: {

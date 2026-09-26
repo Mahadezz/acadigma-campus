@@ -7,10 +7,12 @@
 --      composite FKs block another school's subject or teacher.
 --   C. RLS isolation + escalation (another school, teacher, parent, anon).
 --   D. create_exam defaults each paper's teacher from section_subjects.
---   E. A removed member stops teaching; read-only; audit; created_by.
+--   E. A removed member stops teaching; read-only; audit; created_by;
+--      an archived subject cannot be added; removing a teacher from a
+--      READ-ONLY school still works and releases their assignments.
 -- =====================================================================
 begin;
-select plan(24);
+select plan(28);
 
 create schema if not exists tests;
 
@@ -167,8 +169,8 @@ select throws_ok(
     values ('37000000-0000-4000-b000-000000000002', '37000000-0000-4000-c000-000000000023',
             '37000000-0000-4000-c000-000000000034', '37000000-0000-4000-d000-000000000002',
             '37000000-0000-4000-a000-000000000004')$$,
-  '23503', 'insert or update on table "section_subjects" violates foreign key constraint "section_subjects_teacher_fkey"',
-  'a row cannot name another school''s member as teacher');
+  '22023', 'MEMBER_NOT_ELIGIBLE',
+  'a row cannot name another school''s member as teacher (refused before the FK, no probing)');
 select throws_ok(
   $$insert into public.section_subjects (workspace_id, section_id, subject_id, created_by)
     values ('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021',
@@ -258,6 +260,23 @@ select is(
       and action in ('section_subjects.insert', 'section_subjects.update', 'section_subjects.delete')),
   6, 'every insert, teacher change and removal wrote an audit row (3 + 2 + 1)');
 
+-- An archived subject cannot be (re)assigned.
+update public.subjects set archived_at = now() where id = '37000000-0000-4000-c000-000000000032';
+select tests.login('37000000-0000-4000-a000-000000000001');
+select throws_ok(
+  $$select public.set_section_subjects('37000000-0000-4000-b000-000000000001', '37000000-0000-4000-c000-000000000021', jsonb_build_array(
+      jsonb_build_object('subject_id', '37000000-0000-4000-c000-000000000032', 'teacher_id', null)))$$,
+  '22023', 'SUBJECT_ARCHIVED', 'an archived subject cannot be given to a section');
+select tests.logout();
+update public.subjects set archived_at = null where id = '37000000-0000-4000-c000-000000000032';
+
+-- Teacher A2 becomes class teacher of Class 6 – A and teaches its Maths.
+update public.sections set class_teacher_id = '37000000-0000-4000-d000-000000000005'
+ where id = '37000000-0000-4000-c000-000000000021';
+update public.section_subjects set teacher_id = '37000000-0000-4000-d000-000000000005'
+ where section_id = '37000000-0000-4000-c000-000000000021'
+   and subject_id = '37000000-0000-4000-c000-000000000031';
+
 update public.workspaces set access_mode = 'read_only' where id = '37000000-0000-4000-b000-000000000001';
 select tests.login('37000000-0000-4000-a000-000000000001');
 select throws_ok(
@@ -269,6 +288,22 @@ select tests.logout();
 select is(
   (select count(*)::int from public.section_subjects where section_id = '37000000-0000-4000-c000-000000000021'),
   2, 'the refused save changed nothing');
+
+-- D-300: removing a member always works, even when it releases teaching
+-- assignments in a read-only school (review of PR #73).
+select tests.login('37000000-0000-4000-a000-000000000001');
+select lives_ok(
+  $$update public.workspace_members set status = 'removed'
+     where id = '37000000-0000-4000-d000-000000000005'$$,
+  'a read-only school can still remove a teacher who teaches');
+select tests.logout();
+select is(
+  (select class_teacher_id from public.sections where id = '37000000-0000-4000-c000-000000000021'),
+  null, 'read-only removal: they stop being the class teacher');
+select is(
+  (select count(*)::int from public.section_subjects
+    where teacher_id = '37000000-0000-4000-d000-000000000005'),
+  0, 'read-only removal: they stop teaching their subjects');
 
 select * from finish();
 rollback;

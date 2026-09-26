@@ -183,6 +183,8 @@ function GradeCard({
   const [adding, setAdding] = useState(false)
   const [archiving, setArchiving] = useState<Section | null>(null)
   const [editing, setEditing] = useState<Section | null>(null)
+  // Archived subjects are not offered and not counted.
+  const liveSubjectIds = new Set(subjects.map((s) => s.id))
   const gradeName = locale === "bn" ? grade.nameBn : grade.name
 
   return (
@@ -239,7 +241,13 @@ function GradeCard({
                       .join(" · ")}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {subjectCount(t, section.subjects.length, locale)}
+                    {subjectCount(
+                      t,
+                      section.subjects.filter((s) =>
+                        liveSubjectIds.has(s.subjectId)
+                      ).length,
+                      locale
+                    )}
                   </p>
                 </div>
                 {canWrite ? (
@@ -537,13 +545,28 @@ function SectionSubjectsSheet({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  // subjectId -> teacherId ("" = no teacher); absent = not taken.
-  const [picked, setPicked] = useState<Map<string, string>>(
+  // subjectId -> teacherId ("" = no teacher); absent = not taken. Only
+  // live subjects: an archived one is dropped on the next save.
+  const [initial] = useState(
     () =>
       new Map(
-        (section?.subjects ?? []).map((s) => [s.subjectId, s.teacherId ?? ""])
+        (section?.subjects ?? [])
+          .filter((s) => subjects.some((live) => live.id === s.subjectId))
+          .map((s) => [s.subjectId, s.teacherId ?? ""])
       )
   )
+  const [picked, setPicked] = useState<Map<string, string>>(
+    () => new Map(initial)
+  )
+  // The section's subjects first, sorted once so rows do not jump on tick.
+  const [ordered] = useState(() =>
+    [...subjects].sort(
+      (a, b) => Number(initial.has(b.id)) - Number(initial.has(a.id))
+    )
+  )
+  const isDirty =
+    picked.size !== initial.size ||
+    [...picked].some(([id, teacher]) => initial.get(id) !== teacher)
 
   function setTeacher(subjectId: string, teacherId: string | undefined) {
     setPicked((prev) => {
@@ -582,6 +605,7 @@ function SectionSubjectsSheet({
       }}
       title={t.sectionSubjectsTitle.replace("{section}", label)}
       description={t.sectionSubjectsDescription}
+      isDirty={isDirty && !pending}
       footer={
         <>
           <Button
@@ -608,7 +632,7 @@ function SectionSubjectsSheet({
         <p className="text-muted-foreground text-sm">{t.needSubjectsFirst}</p>
       ) : (
         <ul className="divide-border divide-y">
-          {subjects.map((subject) => {
+          {ordered.map((subject) => {
             const name = subjectName(subject, locale)
             const id = `ss-${subject.id}`
             const teacherId = picked.get(subject.id)

@@ -138,15 +138,22 @@ export type SetSectionSubjectsInput = z.infer<
 /** A section the signed-in member teaches this year (D-107): as its class
  * teacher, as the teacher of one or more of its subjects, or both. Read by
  * the basic-mode home (F-ID-10 Part 2). */
-export type MySection = {
-  sectionId: string
-  sectionName: string
-  gradeLevelId: string
-  gradeName: string
-  gradeNameBn: string
-  levelNumber: number
-  isClassTeacher: boolean
+export const mySectionSchema = z.object({
+  sectionId: uuidSchema,
+  sectionName: z.string(),
+  gradeLevelId: uuidSchema,
+  gradeName: z.string(),
+  gradeNameBn: z.string(),
+  levelNumber: z.number().int(),
+  isClassTeacher: z.boolean(),
   /** The subjects they teach in this section, by name; empty when they are
    * only its class teacher. */
-  subjects: { subjectId: string; name: string; nameBn: string | null }[]
-}
+  subjects: z.array(
+    z.object({
+      subjectId: uuidSchema,
+      name: z.string(),
+      nameBn: z.string().nullable(),
+    })
+  ),
+})
+export type MySection = z.infer<typeof mySectionSchema>

@@ -57,6 +57,7 @@ begin
      and not exists (
        select 1 from public.workspace_members m
         where m.id = new.teacher_id
+          and m.workspace_id = new.workspace_id
           and m.status = 'active'
           and m.role in ('owner', 'admin', 'teacher')) then
     raise exception 'MEMBER_NOT_ELIGIBLE' using errcode = '22023';
@@ -91,6 +92,81 @@ $$;
 create trigger members_release_subject_teacher
   after update of status, role on public.workspace_members
   for each row execute function app.tg_members_release_subject_teacher();
+
+-- D-300 "removing access always works", for teaching assignments too
+-- (review of PR #73): removing a member from a READ-ONLY school runs the
+-- release triggers above and D-102's app.tg_members_release_class_teacher,
+-- whose updates hit this guard (a SECURITY DEFINER trigger does not change
+-- current_setting('role'), so it is not a privileged context) and rolled
+-- the removal back with PLAN_READ_ONLY. The guard now also lets through an
+-- UPDATE that only clears sections.class_teacher_id or
+-- section_subjects.teacher_id (updated_at aside). Clearing a teacher is
+-- itself a removal of access, so a direct one is allowed too. The rest is
+-- 20260925300201's function unchanged.
+create or replace function app.tg_require_writable()
+returns trigger
+language plpgsql
+security definer   -- sees the workspace row even when the caller's RLS cannot
+set search_path = ''
+as $$
+declare
+  v_new    jsonb := case when tg_op = 'DELETE' then null else to_jsonb(new) end;
+  v_old    jsonb := case when tg_op = 'INSERT' then null else to_jsonb(old) end;
+  -- UPDATE/DELETE read OLD's workspace: app.tg_freeze_workspace makes
+  -- workspace_id immutable, so OLD and NEW always agree.
+  v_ws     uuid  := (coalesce(v_old, v_new) ->> coalesce(tg_argv[0], 'workspace_id'))::uuid;
+  v_reason text;
+begin
+  if app.is_privileged_context() or app.is_platform_admin() then
+    return case when tg_op = 'DELETE' then old else new end;
+  end if;
+
+  select w.access_mode_reason into v_reason
+    from public.workspaces w
+   where w.id = v_ws and w.access_mode = 'read_only';
+  if not found then
+    return case when tg_op = 'DELETE' then old else new end;
+  end if;
+
+  -- Removing access is always allowed (D-300, security review).
+  if (tg_table_name = 'workspace_members'
+        and (tg_op = 'DELETE'
+             or (tg_op = 'UPDATE' and v_new ->> 'status' = 'removed'
+                 and v_new - array['status', 'removed_at', 'removed_by', 'updated_at']
+                   = v_old - array['status', 'removed_at', 'removed_by', 'updated_at'])))
+     or (tg_table_name = 'workspace_member_capabilities'
+        and (tg_op = 'DELETE'
+             or (tg_op = 'UPDATE' and v_new ->> 'revoked_at' is not null
+                 and v_new - array['revoked_at', 'revoked_by']
+                   = v_old - array['revoked_at', 'revoked_by'])))
+     or (tg_table_name = 'workspace_invitations'
+        and tg_op = 'UPDATE' and v_new ->> 'status' in ('revoked', 'declined')
+        and v_new - array['status', 'revoked_at', 'revoked_by', 'declined_at', 'updated_at']
+          = v_old - array['status', 'revoked_at', 'revoked_by', 'declined_at', 'updated_at'])
+     -- D-107: releasing a teacher from a section or a section's subject.
+     or (tg_table_name = 'sections'
+        and tg_op = 'UPDATE' and v_new ->> 'class_teacher_id' is null
+        and v_new - array['class_teacher_id', 'updated_at']
+          = v_old - array['class_teacher_id', 'updated_at'])
+     or (tg_table_name = 'section_subjects'
+        and tg_op = 'UPDATE' and v_new ->> 'teacher_id' is null
+        and v_new - array['teacher_id', 'updated_at']
+          = v_old - array['teacher_id', 'updated_at'])
+  then
+    return case when tg_op = 'DELETE' then old else new end;
+  end if;
+
+  -- Only an active member learns the mode; a non-member's write is left to
+  -- RLS, which refuses it the same way whatever the mode (D-301).
+  if app.member_role(v_ws) is not null then
+    raise exception 'PLAN_READ_ONLY'
+      using errcode = '42501',
+            detail  = coalesce(v_reason, 'This workspace is read-only.');
+  end if;
+
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
 
 -- ---------------------------------------------------------------------
 -- Triggers, audit catalogue, RLS (T2), grants
@@ -128,6 +204,11 @@ begin
   end loop;
 end
 $$;
+-- Taking a subject off a section is routine, not a critical event (review
+-- of PR #73). Mirrored in GENERIC_SEVERITY_OVERRIDES
+-- (packages/domain/src/audit/catalog.ts).
+update public.audit_action_catalog set severity = 'notable'
+ where action = 'section_subjects.delete';
 
 alter table public.section_subjects enable row level security;
 
@@ -184,6 +265,14 @@ begin
    where s.id = p_section_id and s.workspace_id = p_workspace_id and s.archived_at is null;
   if v_ws is null then
     raise exception 'SECTION_NOT_FOUND' using errcode = 'P0002';
+  end if;
+
+  if exists (
+    select 1
+      from jsonb_array_elements(p_subjects) e
+      join public.subjects sub on sub.id = (e ->> 'subject_id')::uuid
+     where sub.archived_at is not null) then
+    raise exception 'SUBJECT_ARCHIVED' using errcode = '22023';
   end if;
 
   delete from public.section_subjects ss

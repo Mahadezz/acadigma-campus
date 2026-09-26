@@ -257,6 +257,11 @@ describe("setSectionSubjects (D-107)", () => {
   it.each([
     [{ code: "P0002", message: "SECTION_NOT_FOUND" }, "not_found", undefined],
     [
+      { code: "22023", message: "SUBJECT_ARCHIVED" },
+      "validation_failed",
+      undefined,
+    ],
+    [
       { code: "22023", message: "MEMBER_NOT_ELIGIBLE" },
       "validation_failed",
       "MEMBER_NOT_ELIGIBLE",

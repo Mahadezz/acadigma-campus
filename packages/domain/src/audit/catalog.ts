@@ -690,6 +690,8 @@ const GENERIC_SEVERITY_OVERRIDES: Readonly<
   grade_bands: { update: "info", delete: "info" },
   // A re-save touches the session every morning (20260925300309_attendance.sql).
   attendance_sessions: { update: "info" },
+  // Taking a subject off a section is routine (20260925300320_section_subjects.sql).
+  section_subjects: { delete: "notable" },
 }
 
 const GENERIC_VERBS = {

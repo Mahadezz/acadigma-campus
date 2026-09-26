@@ -328,6 +328,13 @@ export async function setSectionSubjects(
     if (error.message === "SECTION_NOT_FOUND") {
       return err(apiError("not_found", "That section no longer exists."))
     }
+    if (error.message === "SUBJECT_ARCHIVED") {
+      return err(
+        apiError("validation_failed", "One of those subjects is archived.", {
+          fieldErrors: { subjects: ["SUBJECT_ARCHIVED"] },
+        })
+      )
+    }
     if (
       error.message === "MEMBER_NOT_ELIGIBLE" ||
       error.message.includes("section_subjects_teacher_fkey")

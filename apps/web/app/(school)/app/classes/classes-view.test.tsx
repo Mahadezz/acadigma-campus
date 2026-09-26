@@ -41,7 +41,11 @@ const overview = {
           classTeacherName: "Nadia Rahman",
           room: "204",
           capacity: 40,
-          subjects: [{ subjectId: "sub1", teacherId: "m1" }],
+          subjects: [
+            { subjectId: "sub1", teacherId: "m1" },
+            // An archived subject: not in the live list, so not counted.
+            { subjectId: "sub-archived", teacherId: null },
+          ],
         },
       ],
     },
@@ -58,18 +62,18 @@ const overview = {
 
 const SUBJECTS = [
   {
-    id: "sub1",
-    name: "Bangla 1st Paper",
-    nameBn: "বাংলা প্রথম পত্র",
-    code: "BAN1",
-    category: "core" as const,
-    subjectKind: "compulsory" as const,
-  },
-  {
     id: "sub2",
     name: "English 1st Paper",
     nameBn: null,
     code: "ENG1",
+    category: "core" as const,
+    subjectKind: "compulsory" as const,
+  },
+  {
+    id: "sub1",
+    name: "Bangla 1st Paper",
+    nameBn: "বাংলা প্রথম পত্র",
+    code: "BAN1",
     category: "core" as const,
     subjectKind: "compulsory" as const,
   },
@@ -141,6 +145,26 @@ describe("section subjects sheet (D-107)", () => {
         ],
       })
     )
+  })
+
+  it("lists the section's subjects first and asks before discarding changes", () => {
+    const confirm = vi.fn(() => false)
+    vi.stubGlobal("confirm", confirm)
+    renderView(true)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Subjects of Class 6 – A" })
+    )
+    const boxes = screen.getAllByRole("checkbox").map((b) => b.id)
+    expect(boxes).toEqual(["ss-sub1", "ss-sub2"])
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "English 1st Paper" }))
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    })
+    expect(confirm).toHaveBeenCalled()
+    expect(
+      screen.getByRole("checkbox", { name: "English 1st Paper" })
+    ).toBeTruthy()
   })
 
   it("names subjects in Bangla and keeps digits Western", () => {

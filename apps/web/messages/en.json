@@ -1087,7 +1087,8 @@
       "MEMBER_NOT_ELIGIBLE": "Pick an active teacher of this school.",
       "SUBJECT_TAKEN": "The school already has a subject with that name or code.",
       "generic": "Something went wrong. Try again.",
-      "readOnly": "This school is read-only right now, so nothing can be changed."
+      "readOnly": "This school is read-only right now, so nothing can be changed.",
+      "SUBJECT_ARCHIVED": "One of those subjects is archived. Reload and try again."
     },
     "subjectsEmpty": "No subjects yet.",
     "useStarter": "Use the NCTB starter list",
