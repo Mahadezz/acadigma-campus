@@ -193,7 +193,14 @@ describe("getReportCard", () => {
   it("shapes the report card: absent has no mark, ties and class size, attendance by policy", async () => {
     const { client } = fakeClient({
       results: [
-        { data: { frozen_payload: null }, error: null },
+        {
+          data: {
+            published: false,
+            withheld_reason: null,
+            frozen_payload: null,
+          },
+          error: null,
+        },
         { data: card, error: null },
         { data: null, error: null, count: 38 },
         { data: null, error: null, count: 2 },
@@ -247,6 +254,59 @@ describe("getReportCard", () => {
     })
   })
 
+  it("after an unpublish, prints live data, not the kept snapshot", async () => {
+    const { client } = fakeClient({
+      results: [
+        {
+          data: {
+            published: false,
+            withheld_reason: null,
+            frozen_payload: { stale: true },
+          },
+          error: null,
+        },
+        { data: card, error: null },
+        { data: null, error: null, count: 38 },
+        { data: null, error: null, count: 1 },
+      ],
+      attendance_records: [{ data: [], error: null }],
+      school_profiles: [{ data: null, error: null }],
+    })
+    const r = await getReportCard(CTX, client, "id-S2", EXAM)
+    if (!r.ok) throw new Error("expected ok")
+    expect(r.data).toMatchObject({ gpa: 4.67, result: "pass", rank: 2 })
+  })
+
+  it("a published but withheld result prints live, marked withheld, with no GPA, grade or rank", async () => {
+    const { client } = fakeClient({
+      results: [
+        {
+          data: {
+            published: true,
+            withheld_reason: "Fees due",
+            frozen_payload: {},
+          },
+          error: null,
+        },
+        { data: card, error: null },
+        { data: null, error: null, count: 38 },
+        { data: null, error: null, count: 2 },
+      ],
+      attendance_records: [{ data: [], error: null }],
+      school_profiles: [{ data: null, error: null }],
+    })
+    const r = await getReportCard(CTX, client, "id-S2", EXAM)
+    if (!r.ok) throw new Error("expected ok")
+    expect(r.data).toMatchObject({
+      result: "withheld",
+      gpa: null,
+      gpaWithoutOptional: null,
+      overallLetter: null,
+      rank: null,
+      rankTied: false,
+    })
+  })
+
   it("is not_found when RLS shows no result (another class, another school)", async () => {
     const { client } = fakeClient({ results: [{ data: null, error: null }] })
     const r = await getReportCard(CTX, client, "x", EXAM)
@@ -256,7 +316,14 @@ describe("getReportCard", () => {
   it("a student without a roll number or attendance still gets a card", async () => {
     const { client } = fakeClient({
       results: [
-        { data: { frozen_payload: null }, error: null },
+        {
+          data: {
+            published: false,
+            withheld_reason: null,
+            frozen_payload: null,
+          },
+          error: null,
+        },
         { data: { ...card, enrollments: { roll_number: null } }, error: null },
         { data: null, error: null, count: 38 },
         { data: null, error: null, count: 1 },
@@ -319,7 +386,16 @@ const FROZEN = {
 describe("published results (D-306)", () => {
   it("getReportCard prints a published result from its frozen payload, reading nothing else", async () => {
     const { client } = fakeClient({
-      results: [{ data: { frozen_payload: FROZEN }, error: null }],
+      results: [
+        {
+          data: {
+            published: true,
+            withheld_reason: null,
+            frozen_payload: FROZEN,
+          },
+          error: null,
+        },
+      ],
     })
     const r = await getReportCard(CTX, client, "id-S1", EXAM)
     expect(r).toEqual({ ok: true, data: FROZEN })
@@ -327,7 +403,16 @@ describe("published results (D-306)", () => {
 
   it("getReportCard refuses a frozen payload that is not a report card", async () => {
     const { client } = fakeClient({
-      results: [{ data: { frozen_payload: { gpa: 5 } }, error: null }],
+      results: [
+        {
+          data: {
+            published: true,
+            withheld_reason: null,
+            frozen_payload: { gpa: 5 },
+          },
+          error: null,
+        },
+      ],
     })
     const r = await getReportCard(CTX, client, "id-S1", EXAM)
     expect(!r.ok && r.error.code).toBe("dependency_unavailable")
@@ -365,23 +450,43 @@ describe("published results (D-306)", () => {
     }
   })
 
-  it("listFamilyResults returns the frozen cards RLS shows", async () => {
-    const { client } = fakeClient({
-      results: [
-        {
-          data: [
-            {
-              exam_id: EXAM,
-              student_id: "id-S1",
-              published_at: "2026-09-26T04:00:00+00:00",
-              frozen_payload: FROZEN,
-            },
-          ],
-          error: null,
-        },
-      ],
-    })
+  it("listFamilyResults returns own cards and a withheld result without marks", async () => {
+    const withheldCard = {
+      studentNameEn: "Student S2",
+      studentNameBn: "Student S2",
+      className: "Class 6",
+      sectionName: "A",
+      examNameEn: "Half-Yearly",
+      subjects: [],
+      gpa: null,
+    }
+    const { client, rpcCalls } = fakeClient(
+      {},
+      {
+        data: [
+          {
+            exam_id: EXAM,
+            student_id: "id-S1",
+            published_at: "2026-09-26T04:00:00+00:00",
+            withheld: false,
+            card: FROZEN,
+          },
+          {
+            exam_id: EXAM,
+            student_id: "id-S2",
+            published_at: "2026-09-26T04:00:00+00:00",
+            withheld: true,
+            card: withheldCard,
+          },
+        ],
+        error: null,
+      }
+    )
     const r = await listFamilyResults(CTX, client)
+    expect(rpcCalls[0]).toEqual([
+      "family_results",
+      { p_workspace_id: CTX.workspaceId },
+    ])
     expect(r).toEqual({
       ok: true,
       data: [
@@ -389,7 +494,21 @@ describe("published results (D-306)", () => {
           examId: EXAM,
           studentId: "id-S1",
           publishedAt: "2026-09-26T04:00:00+00:00",
+          withheld: false,
           card: FROZEN,
+        },
+        {
+          examId: EXAM,
+          studentId: "id-S2",
+          publishedAt: "2026-09-26T04:00:00+00:00",
+          withheld: true,
+          card: {
+            studentNameEn: "Student S2",
+            studentNameBn: "Student S2",
+            className: "Class 6",
+            sectionName: "A",
+            examNameEn: "Half-Yearly",
+          },
         },
       ],
     })

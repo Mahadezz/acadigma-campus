@@ -1,5 +1,22 @@
 # @acadigma/pdf
 
+## 0.4.0
+
+### Minor Changes
+
+- 5996a98: F-OP-03 Part 5 bulk report cards, demo cut (D-207): owners, admins and teachers render one merged A4 PDF of every student's report card in a section for one exam, ordered by roll or name, with duplex padding so every card starts on an odd page when "print both sides" is on. New `report_card_bulk` report kind on the existing run pipeline (synchronous, D-205's precedent); a per-student failure is recorded as a `report_run_items` row without failing the run. New permission `report.render.report_card_bulk` (owner/admin/teacher, not staff). Security hardening: `report_runs`/`report_run_items` SELECT now restrict staff to `report_card` runs at the RLS layer itself (defence in depth, #63 review).
+
+### Patch Changes
+
+- d4e2480: F-AC-06 Part 5 (D-305): results and section rank computed in SQL. `public.compute_results` (owner/admin, marks locked and complete) replaces an exam's `results` and `result_subject_lines` in one transaction from the exam's grading snapshot — paper percentage to 2 decimals with no rounding before banding, absent fails the paper, exempt is left out, an F zeroes the GPA, `rank()` per section by GPA, total, percentage. "Compute results" on the exam page and a results preview per section (`/app/exams/[id]/results`). `computeResults` in `@acadigma/domain/grading` is the TypeScript reference, held to the same golden fixture as the SQL. F-OP-03's report card (`getReportCardData`) reads real results; its fixture is removed and the button moves to each preview row.
+  A missing roll number or attendance prints "—" on the report card; a student with a paper not yet marked is `incomplete` (no GPA, no rank) instead of blocking the whole exam.
+- Updated dependencies [ab3b1eb]
+- Updated dependencies [d4e2480]
+- Updated dependencies [db0cd58]
+- Updated dependencies [5996a98]
+  - @acadigma/domain@0.7.0
+  - @acadigma/contracts@0.7.0
+
 ## 0.3.0
 
 ### Minor Changes

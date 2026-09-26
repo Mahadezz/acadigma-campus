@@ -224,19 +224,27 @@ export async function getReportCard(
   studentId: string,
   examId: string
 ): Promise<Result<ReportCardDto, ApiError>> {
-  // A published result prints from its frozen payload (§5.14, D-306): what
-  // the family was shown, whatever changed since. A parent can only ever
-  // reach this branch — RLS shows them published results only.
+  // A published, not withheld result prints from its frozen payload (§5.14,
+  // D-306): what the family was shown, whatever changed since. A parent can
+  // only ever reach this branch — RLS shows them published, not withheld
+  // results only. After an unpublish the kept payload is stale, so school
+  // users print live data; a withheld result froze no marks, so the school
+  // prints it live, marked withheld.
   const frozen = await client
     .from("results")
-    .select("frozen_payload")
+    .select("published, withheld_reason, frozen_payload")
     .eq("workspace_id", ctx.workspaceId)
     .eq("exam_id", examId)
     .eq("student_id", studentId)
     .maybeSingle()
   if (frozen.error) return err(UNAVAILABLE)
   if (!frozen.data) return err(NOT_FOUND)
-  if (frozen.data.frozen_payload !== null) {
+  const withheld = frozen.data.published && frozen.data.withheld_reason !== null
+  if (
+    frozen.data.published &&
+    !withheld &&
+    frozen.data.frozen_payload !== null
+  ) {
     const card = reportCardDtoSchema.safeParse(frozen.data.frozen_payload)
     return card.success ? ok(card.data) : err(UNAVAILABLE)
   }
@@ -359,12 +367,12 @@ export async function getReportCard(
     totalObtained: row.totalObtained,
     totalFull: row.totalFull,
     percentage: row.percentage,
-    gpa: row.gpa,
-    gpaWithoutOptional: r.gpa_without_optional,
-    overallLetter: row.letter,
-    result: row.status,
-    rank: row.sectionRank,
-    rankTied: (sameRank?.count ?? 0) > 1,
+    gpa: withheld ? null : row.gpa,
+    gpaWithoutOptional: withheld ? null : r.gpa_without_optional,
+    overallLetter: withheld ? null : row.letter,
+    result: withheld ? "withheld" : row.status,
+    rank: withheld ? null : row.sectionRank,
+    rankTied: !withheld && (sameRank?.count ?? 0) > 1,
     rankOf: ranked.count || null,
     attendance: {
       presentDays,
@@ -492,29 +500,44 @@ export async function listPublishCandidates(
 }
 
 /**
- * F-AC-10 results tab (D-306): the caller's children's published results,
- * newest first, from their frozen payloads. RLS returns a parent only their
- * own linked children's published, non-withheld results.
+ * F-AC-10 results tab (D-306): the caller's linked children's published
+ * results, newest first, from their frozen payloads, through
+ * `public.family_results` — which returns a withheld result too, flagged,
+ * with no marks and no reason (the RLS policy never returns one).
  */
 export async function listFamilyResults(
   ctx: WorkspaceContext,
   client: AcadigmaSupabaseClient
 ): Promise<Result<FamilyResult[], ApiError>> {
-  const { data, error } = await client
-    .from("results")
-    .select("exam_id, student_id, published_at, frozen_payload")
-    .eq("workspace_id", ctx.workspaceId)
-    .eq("published", true)
-    .order("published_at", { ascending: false })
+  const { data, error } = await client.rpc("family_results", {
+    p_workspace_id: ctx.workspaceId,
+  })
   if (error) return err(UNAVAILABLE)
+  const base = {
+    exam_id: z.string(),
+    student_id: z.string(),
+    published_at: z.string(),
+  }
   const rows = z
     .array(
-      z.object({
-        exam_id: z.string(),
-        student_id: z.string(),
-        published_at: z.string(),
-        frozen_payload: reportCardDtoSchema,
-      })
+      z.discriminatedUnion("withheld", [
+        z.object({
+          ...base,
+          withheld: z.literal(false),
+          card: reportCardDtoSchema,
+        }),
+        z.object({
+          ...base,
+          withheld: z.literal(true),
+          card: reportCardDtoSchema.innerType().pick({
+            studentNameEn: true,
+            studentNameBn: true,
+            className: true,
+            sectionName: true,
+            examNameEn: true,
+          }),
+        }),
+      ])
     )
     .safeParse(data ?? [])
   if (!rows.success) return err(UNAVAILABLE)
@@ -523,7 +546,25 @@ export async function listFamilyResults(
       examId: r.exam_id,
       studentId: r.student_id,
       publishedAt: r.published_at,
-      card: r.frozen_payload,
+      ...(r.withheld
+        ? { withheld: true as const, card: r.card }
+        : { withheld: false as const, card: r.card }),
     }))
   )
+}
+
+/** Whether the caller has an active guardian link in this school — the
+ * family screen's "no child linked yet" state (D-306 review). */
+export async function hasGuardianLink(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient
+): Promise<Result<boolean, ApiError>> {
+  const { count, error } = await client
+    .from("guardian_users")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("user_id", ctx.userId)
+    .eq("status", "active")
+  if (error) return err(UNAVAILABLE)
+  return ok((count ?? 0) > 0)
 }

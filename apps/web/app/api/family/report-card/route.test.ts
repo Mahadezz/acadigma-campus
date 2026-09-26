@@ -88,4 +88,15 @@ describe("GET /api/family/report-card", () => {
     ])
     expect(mockRender.mock.calls[0]?.[0]).toMatchObject({ locale: "bn" })
   })
+
+  it("keeps only safe characters of the student code in the filename", async () => {
+    mockGetReportCardData.mockResolvedValueOnce({
+      ok: true,
+      data: { studentCode: 'S-1"; x=y\r\n' },
+    })
+    const response = await call(`examId=${EXAM}&studentId=${STUDENT}`)
+    expect(response.headers.get("content-disposition")).toBe(
+      'attachment; filename="report-card-S-1xy.pdf"'
+    )
+  })
 })

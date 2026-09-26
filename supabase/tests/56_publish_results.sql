@@ -17,7 +17,7 @@
 --      frozen payload; republishing shows it again.
 -- =====================================================================
 begin;
-select plan(44);
+select plan(48);
 
 create schema if not exists tests;
 
@@ -264,9 +264,13 @@ select is((select count(*)::int from public.results where published and publishe
 select is((select withheld_reason from public.results where student_id = tests.id('S2')), 'Fees due',
   'the withheld student keeps the reason');
 select is(tests.card('S2') ->> 'result', 'withheld', 'and is frozen as withheld');
-select ok(tests.card('S2') -> 'gpa' = 'null'::jsonb and tests.card('S2') -> 'rank' = 'null'::jsonb
-          and tests.card('S2') -> 'overallLetter' = 'null'::jsonb,
-  'with no GPA, grade or rank on the card');
+select is(
+  (select jsonb_object_agg(k, tests.card('S2') -> k)
+     from unnest(array['subjects', 'totalObtained', 'totalFull', 'percentage', 'gpa', 'overallLetter',
+                       'rank', 'rankOf', 'attendance']) as k),
+  '{"subjects": [], "totalObtained": null, "totalFull": null, "percentage": null, "gpa": null,
+    "overallLetter": null, "rank": null, "rankOf": null, "attendance": null}'::jsonb,
+  'with no marks at all frozen: no subjects, totals, percentage, GPA, grade, rank or attendance');
 select is(
   jsonb_build_object('name', tests.card('S1') ->> 'studentNameEn', 'result', tests.card('S1') ->> 'result',
     'gpa', (tests.card('S1') ->> 'gpa')::numeric, 'letter', tests.card('S1') ->> 'overallLetter',
@@ -319,8 +323,30 @@ select throws_ok(
   '42501', null, 'a parent cannot create a guardian link');
 select tests.logout();
 
+select tests.login('56000000-0000-4000-a000-000000000004');
+select is((select string_agg(withheld::text || '/' || (card ->> 'studentCode'), ',')
+             from public.family_results('56000000-0000-4000-b000-000000000001')),
+  'false/S1', 'family_results gives a parent their own child''s published card');
+select tests.logout();
 select tests.login('56000000-0000-4000-a000-000000000005');
-select is((select count(*)::int from public.results), 0, 'the parent of a withheld child reads nothing');
+select is((select count(*)::int from public.results) + (select count(*)::int from public.result_subject_lines),
+  0, 'the parent of a withheld child reads no raw result or line');
+select is(
+  (select jsonb_build_object('withheld', f.withheld, 'code', f.card ->> 'studentCode',
+            'subjects', f.card -> 'subjects', 'gpa', f.card -> 'gpa',
+            'reason', to_jsonb(f) ? 'withheld_reason' or f.card ? 'withheld_reason'
+                      or f.card::text like '%Fees due%')
+     from public.family_results('56000000-0000-4000-b000-000000000001') f),
+  '{"withheld": true, "code": "S2", "subjects": [], "gpa": null, "reason": false}'::jsonb,
+  'but sees the withheld result through family_results: no marks and no reason');
+select tests.logout();
+select tests.login('56000000-0000-4000-a000-000000000008');
+select is((select count(*)::int from public.family_results('56000000-0000-4000-b000-000000000001')),
+  0, 'family_results gives another school''s parent nothing');
+select tests.logout();
+select tests.login('56000000-0000-4000-a000-000000000002');
+select is((select count(*)::int from public.family_results('56000000-0000-4000-b000-000000000001')),
+  0, 'nor anyone who is not a parent');
 select tests.logout();
 select tests.login('56000000-0000-4000-a000-000000000006');
 select is((select count(*)::int from public.results), 0, 'a revoked link reads nothing');

@@ -4013,6 +4013,16 @@ export type Database = {
         Returns: Json
       }
       expire_pro_trials: { Args: never; Returns: number }
+      family_results: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          card: Json
+          exam_id: string
+          published_at: string
+          student_id: string
+          withheld: boolean
+        }[]
+      }
       guardian_invitation_preview: { Args: { p_token: string }; Returns: Json }
       import_student_batch: {
         Args: { p_batch_id: string; p_limit?: number; p_workspace_id: string }

@@ -75,7 +75,7 @@ test("owner publishes results withholding one student, then unpublishes", async 
   ).toBeVisible()
 
   await page.getByRole("button", { name: "Publish", exact: true }).click()
-  const sheet = page.getByRole("dialog", { name: "Publish results" })
+  const sheet = page.getByRole("dialog", { name: /^Publish .+ results for / })
   await sheet.getByRole("checkbox").first().check()
   await sheet.getByRole("textbox").first().fill("Fees due")
   await expectNoA11yViolations(page, testInfo)
@@ -84,7 +84,7 @@ test("owner publishes results withholding one student, then unpublishes", async 
     fullPage: true,
   })
   await sheet
-    .getByRole("button", { name: `Publish ${count - 1} · withhold 1` })
+    .getByRole("button", { name: `Publish · parents will see ${count - 1}` })
     .click()
   await expect(
     page.getByText(
