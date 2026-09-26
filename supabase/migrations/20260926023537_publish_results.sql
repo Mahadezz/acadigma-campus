@@ -171,8 +171,10 @@ create index if not exists results_published_by_idx
 
 -- ---------------------------------------------------------------------
 -- The report card's data for one result, frozen at publish. The same
--- values packages/db getReportCard builds live (D-305 item 9); a withheld
--- result has no GPA, letter or rank (ReportCardDto's refine).
+-- values packages/db getReportCard builds live (D-305 item 9). A withheld
+-- result freezes no marks at all (review of #75): the names, class and exam
+-- only, with no subjects, totals, percentage, GPA, grade, rank or
+-- attendance — what its family is shown, via public.family_results.
 -- ---------------------------------------------------------------------
 create or replace function app.result_card_payload(p_result_id uuid)
 returns jsonb
@@ -190,7 +192,7 @@ as $$
     'sectionName', sec.name,
     'examNameEn', ex.name,
     'examNameBn', ex.name,
-    'subjects', (
+    'subjects', case when w.withheld then '[]'::jsonb else (
       select jsonb_agg(jsonb_build_object(
                'subjectNameEn', l.subject_name,
                'subjectNameBn', coalesce(l.subject_name_bn, l.subject_name),
@@ -200,10 +202,10 @@ as $$
                'fullMarks', l.full_marks,
                'letter', l.letter,
                'gradePoint', l.grade_point) order by l.subject_name)
-        from public.result_subject_lines l where l.result_id = r.id),
-    'totalObtained', r.total_obtained,
-    'totalFull', r.total_full,
-    'percentage', r.percentage,
+        from public.result_subject_lines l where l.result_id = r.id) end,
+    'totalObtained', case when w.withheld then null else r.total_obtained end,
+    'totalFull', case when w.withheld then null else r.total_full end,
+    'percentage', case when w.withheld then null else r.percentage end,
     'gpa', case when w.withheld then null else r.gpa end,
     'gpaWithoutOptional', case when w.withheld then null else r.gpa_without_optional end,
     'overallLetter', case when w.withheld then null else r.letter end,
@@ -213,14 +215,14 @@ as $$
       select 1 from public.results o
        where o.exam_id = r.exam_id and o.section_id = r.section_id
          and o.section_rank = r.section_rank and o.id <> r.id),
-    'rankOf', (select nullif(count(*), 0) from public.results o
+    'rankOf', case when w.withheld then null else (select nullif(count(*), 0) from public.results o
                 where o.exam_id = r.exam_id and o.section_id = r.section_id
-                  and o.section_rank is not null),
-    'attendance', jsonb_build_object(
+                  and o.section_rank is not null) end,
+    'attendance', case when w.withheld then null else jsonb_build_object(
       'presentDays', a.present,
       'totalDays', a.total,
       'percent', a.pct,
-      'belowMinimum', coalesce(a.pct * 100 < coalesce((sp.attendance_policy ->> 'min_attendance_bp')::numeric, 7500), false)))
+      'belowMinimum', coalesce(a.pct * 100 < coalesce((sp.attendance_policy ->> 'min_attendance_bp')::numeric, 7500), false)) end)
     from public.results r
     cross join lateral (select r.withheld_reason is not null as withheld) w
     join public.students st on st.id = r.student_id
@@ -388,3 +390,36 @@ create policy results_select_guardian on public.results
          and withheld_reason is null
          and app.has_role(workspace_id, array['parent'])
          and app.is_guardian_of(student_id));
+
+-- ---------------------------------------------------------------------
+-- public.family_results — the parent's results list (F-AC-10, D-306).
+-- The RLS policy above never returns a withheld row, because RLS cannot
+-- hide columns per role (the raw GPA and lines would reach the parent).
+-- This function returns every published result of the caller's linked
+-- children in this school, withheld ones included, as (exam, student,
+-- published_at, withheld, card): the card is the frozen payload, which for
+-- a withheld result carries no marks. The reason is never returned.
+-- ---------------------------------------------------------------------
+create or replace function public.family_results(p_workspace_id uuid)
+returns table (exam_id uuid, student_id uuid, published_at timestamptz, withheld boolean, card jsonb)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select r.exam_id, r.student_id, r.published_at, r.withheld_reason is not null, r.frozen_payload
+    from public.results r
+   where r.workspace_id = p_workspace_id
+     and r.published
+     and app.has_role(p_workspace_id, array['parent'])
+     and app.is_guardian_of(r.student_id)
+   order by r.published_at desc, r.student_id
+$$;
+
+comment on function public.family_results(uuid) is
+  'F-AC-10 results tab (D-306): the caller''s linked children''s published '
+  'results with their frozen cards; withheld ones flagged, with no marks and '
+  'no reason. Empty for anyone who is not an active parent of the school.';
+
+revoke all on function public.family_results(uuid) from public, anon;
+grant execute on function public.family_results(uuid) to authenticated;

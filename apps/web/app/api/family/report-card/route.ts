@@ -81,7 +81,7 @@ export async function GET(request: Request): Promise<Response> {
   return new Response(new Uint8Array(buffer), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `attachment; filename="report-card-${data.data.studentCode}.pdf"`,
+      "content-disposition": `attachment; filename="report-card-${data.data.studentCode.replace(/[^A-Za-z0-9_-]/g, "")}.pdf"`,
       "cache-control": "private, no-store",
     },
   })

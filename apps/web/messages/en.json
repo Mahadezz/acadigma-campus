@@ -341,7 +341,10 @@
         "downloadFor": "Download {name}'s report card for {exam}",
         "publishedOn": "Published {date}",
         "emptyTitle": "No results published yet",
-        "emptyDescription": "When your child's school publishes an exam result, it appears here."
+        "emptyDescription": "When your child's school publishes an exam result, it appears here.",
+        "withheld": "Result withheld: please contact the school.",
+        "notLinkedTitle": "Your account isn't linked to a child yet",
+        "notLinkedDescription": "Your account isn't linked to a child yet. Ask the school office."
       }
     },
     "userMenu": {
@@ -1248,14 +1251,16 @@
       "back": "Back to the exam"
     },
     "publish": {
-      "title": "Publish results",
+      "title": "Publish {exam} results for {class} ({n} students)?",
       "description": "Every result is frozen as it is now and shown to the student's linked parents. A later change to a subject or section name never alters it. Withhold a student to keep their result from their family.",
       "withholdLegend": "Withhold (fees, discipline, …)",
       "withholdStudent": "Withhold {name} · {section} · Roll {roll}",
       "reasonFor": "Reason for withholding {name}",
       "reasonPlaceholder": "For example: fees due",
-      "confirm": "Publish {n} · withhold {withheld}",
-      "done": "Results published: {n} shown to families, {withheld} withheld."
+      "confirm": "Publish · parents will see {n}",
+      "done": "Results published: {n} shown to families, {withheld} withheld.",
+      "computeFirst": "Compute results first.",
+      "incomplete": "{n} results incomplete. Compute results again once every mark is in."
     }
   },
   "students": {

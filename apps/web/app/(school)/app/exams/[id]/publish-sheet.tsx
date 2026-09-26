@@ -23,6 +23,7 @@ export function PublishSheet({
   open,
   onOpenChange,
   candidates,
+  examName,
   pending,
   onConfirm,
 }: {
@@ -30,18 +31,23 @@ export function PublishSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
   candidates: PublishCandidate[]
+  examName: string
   pending: boolean
   onConfirm: (withhold: { studentId: string; reason: string }[]) => void
 }) {
   const [reasons, setReasons] = useState<Record<string, string>>({})
   const withheld = Object.entries(reasons)
   const ready = withheld.every(([, reason]) => reason.trim() !== "")
+  const classes = [...new Set(candidates.map((c) => c.sectionLabel))].join(", ")
 
   return (
     <FormSheet
       open={open}
       onOpenChange={onOpenChange}
-      title={t.publish.title}
+      title={t.publish.title
+        .replace("{exam}", examName)
+        .replace("{class}", classes)
+        .replace("{n}", String(candidates.length))}
       description={t.publish.description}
       footer={
         <>
@@ -66,9 +72,10 @@ export function PublishSheet({
               )
             }
           >
-            {t.publish.confirm
-              .replace("{n}", String(candidates.length - withheld.length))
-              .replace("{withheld}", String(withheld.length))}
+            {t.publish.confirm.replace(
+              "{n}",
+              String(candidates.length - withheld.length)
+            )}
           </Button>
         </>
       }

@@ -141,6 +141,16 @@ export function ExamDetailView({
   }
 
   const sections = [...new Set(exam.papers.map((p) => p.sectionLabel))]
+  // D-306 review: Publish waits for computed, complete results — say which.
+  const incomplete =
+    publishCandidates?.filter((c) => c.status === "incomplete").length ?? 0
+  const publishBlock = !publishCandidates
+    ? null
+    : publishCandidates.length === 0
+      ? t.publish.computeFirst
+      : incomplete > 0
+        ? t.publish.incomplete.replace("{n}", String(incomplete))
+        : null
   const resultsVisible =
     canReadResults &&
     ["marks_locked", "published", "archived"].includes(exam.status)
@@ -197,11 +207,18 @@ export function ExamDetailView({
       ) : null}
 
       {canWrite && (next || back) ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {next ? (
             <Button
               className="h-11"
-              disabled={pending}
+              disabled={
+                pending || (next === "published" && publishBlock !== null)
+              }
+              aria-describedby={
+                next === "published" && publishBlock
+                  ? "publish-block"
+                  : undefined
+              }
               onClick={() =>
                 next === "published" && publishCandidates
                   ? setPublishing(true)
@@ -210,6 +227,11 @@ export function ExamDetailView({
             >
               {t.advance[next as keyof T["advance"]]}
             </Button>
+          ) : null}
+          {next === "published" && publishBlock ? (
+            <p id="publish-block" className="text-muted-foreground text-sm">
+              {publishBlock}
+            </p>
           ) : null}
           {back ? (
             <Button
@@ -230,6 +252,7 @@ export function ExamDetailView({
           open={publishing}
           onOpenChange={setPublishing}
           candidates={publishCandidates}
+          examName={exam.name}
           pending={pending}
           onConfirm={publish}
         />

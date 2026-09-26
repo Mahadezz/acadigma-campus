@@ -1,7 +1,10 @@
 import { HeartHandshakeIcon } from "lucide-react"
 
 import type { FamilyResult } from "@acadigma/contracts"
-import { listFamilyResults } from "@acadigma/db/repositories/results"
+import {
+  hasGuardianLink,
+  listFamilyResults,
+} from "@acadigma/db/repositories/results"
 import { can } from "@acadigma/domain"
 import { Badge } from "@acadigma/ui/components/badge"
 import { Button } from "@acadigma/ui/components/button"
@@ -37,50 +40,87 @@ export default async function FamilyHomePage() {
   const ctx = await requireShell("family")
   const { t, locale } = await getMessages()
 
-  const results = can(ctx.role, "family.results.read")
-    ? await listFamilyResults(ctx, await createClient())
-    : null
+  const tr = t.workspace.family.results
+  const supabase = await createClient()
+  const [linked, results] = can(ctx.role, "family.results.read")
+    ? await Promise.all([
+        hasGuardianLink(ctx, supabase),
+        listFamilyResults(ctx, supabase),
+      ])
+    : [null, null]
 
+  if (linked && !linked.ok) {
+    return <InlineAlert tone="error">{linked.error.message}</InlineAlert>
+  }
   if (results && !results.ok) {
     return <InlineAlert tone="error">{results.error.message}</InlineAlert>
   }
-  if (!results || results.data.length === 0) {
+  if (!linked || !results || results.data.length === 0) {
+    // Three different states: not a parent here (the shell's placeholder),
+    // no child linked yet, or nothing published yet (D-306 review).
+    const title = !linked
+      ? t.workspace.family.emptyTitle
+      : linked.data
+        ? tr.emptyTitle
+        : tr.notLinkedTitle
+    const description = !linked
+      ? t.workspace.family.emptyDescription.replace("{role}", ctx.role)
+      : linked.data
+        ? tr.emptyDescription
+        : tr.notLinkedDescription
     return (
       <>
-        <h2 className="sr-only">{t.workspace.family.emptyTitle}</h2>
+        <h2 className="sr-only">{title}</h2>
         <EmptyState
           icon={<HeartHandshakeIcon />}
-          title={t.workspace.family.emptyTitle}
-          description={
-            results
-              ? t.workspace.family.results.emptyDescription
-              : t.workspace.family.emptyDescription.replace("{role}", ctx.role)
-          }
+          title={title}
+          description={description}
         />
       </>
     )
   }
 
-  const tr = t.workspace.family.results
-  const date = new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Asia/Dhaka",
-  })
+  // Bangla month names with Western digits in Bangla (DESIGN-SYSTEM §1.6).
+  const date = new Intl.DateTimeFormat(
+    locale === "bn" ? "bn-BD-u-nu-latn" : "en-GB",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Dhaka",
+    }
+  )
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <h2 className="text-lg font-semibold tracking-tight">{tr.title}</h2>
       <ul className="space-y-3">
-        {results.data.map((r) => (
-          <ResultCard
-            key={`${r.examId}:${r.studentId}`}
-            tr={tr}
-            result={r}
-            bn={locale === "bn"}
-            publishedOn={date.format(new Date(r.publishedAt))}
-          />
-        ))}
+        {results.data.map((r) =>
+          r.withheld ? (
+            <li
+              key={`${r.examId}:${r.studentId}`}
+              className="bg-card space-y-1 rounded-lg border p-4"
+            >
+              <h3 className="font-medium">
+                {locale === "bn" ? r.card.studentNameBn : r.card.studentNameEn}
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                {tr.exam
+                  .replace("{exam}", r.card.examNameEn)
+                  .replace("{class}", r.card.className)
+                  .replace("{section}", r.card.sectionName)}
+              </p>
+              <p className="text-sm font-medium">{tr.withheld}</p>
+            </li>
+          ) : (
+            <ResultCard
+              key={`${r.examId}:${r.studentId}`}
+              tr={tr}
+              result={r}
+              bn={locale === "bn"}
+              publishedOn={date.format(new Date(r.publishedAt))}
+            />
+          )
+        )}
       </ul>
     </div>
   )
@@ -99,13 +139,14 @@ function ResultCard({
   publishedOn,
 }: {
   tr: T
-  result: FamilyResult
+  result: Extract<FamilyResult, { withheld: false }>
   bn: boolean
   publishedOn: string
 }) {
   const card = result.card
   const name = bn ? card.studentNameBn : card.studentNameEn
-  const exam = bn ? card.examNameBn : card.examNameEn
+  // Exams have one name (examNameBn is the same string, D-305).
+  const exam = card.examNameEn
   const passed = card.result === "pass"
   const query = new URLSearchParams({
     examId: result.examId,
