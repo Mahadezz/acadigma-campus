@@ -21,22 +21,36 @@ export async function GET() {
   const supabase = await createClient()
   const result = await resolveWorkspaceContext(supabase, await headers())
 
+  // Not a verdict: the client keeps its cache and asks again later.
+  const unknown = () =>
+    NextResponse.json(
+      { kind: "unknown" },
+      { status: 503, headers: { "Cache-Control": "no-store" } }
+    )
+
   let body: SessionCheck
   if (result.ok) {
+    // The students this user sees as a guardian here: a revoked link must
+    // wipe the /family pages although membership and role stay (#85 review).
+    const links = await supabase
+      .from("guardian_users")
+      .select("student_id")
+      .eq("workspace_id", result.data.workspaceId)
+      .eq("user_id", result.data.userId)
+      .eq("status", "active")
+    if (links.error) return unknown()
+    const ids = (links.data ?? []).map((l) => l.student_id).sort()
     body = {
       kind: "signed_in",
       userId: result.data.userId,
       workspaceId: result.data.workspaceId,
       role: result.data.role,
+      scope: ids.length > 0 ? ids.join(",") : null,
     }
   } else if (result.error.reason === "unauthenticated") {
     body = { kind: "signed_out" }
   } else if (result.error.reason === "dependency_unavailable") {
-    // Not a verdict: the client keeps its cache and asks again later.
-    return NextResponse.json(
-      { kind: "unknown" },
-      { status: 503, headers: { "Cache-Control": "no-store" } }
-    )
+    return unknown()
   } else {
     // Signed in, but no active membership here (removed, suspended, none).
     const { data } = await supabase.auth.getUser()
@@ -46,6 +60,7 @@ export async function GET() {
           userId: data.user.id,
           workspaceId: null,
           role: null,
+          scope: null,
         }
       : { kind: "signed_out" }
   }

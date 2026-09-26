@@ -38,19 +38,31 @@ function writeSnapshot(next: OfflineSnapshot | null): void {
  * Asks the worker to purge first: it marks every page write in flight as
  * stale before deleting (`purge-guard.ts`), which the page cannot do. Gives up
  * after 2 s (a busy or dying worker); the page's own delete still runs.
+ *
+ * Every worker of the registration gets it — installing, waiting and active,
+ * not only this page's controller: mid-update a new worker may already be
+ * serving fetches, and a first load has no controller at all (#83 re-check).
  */
-function purgeInWorker(): Promise<void> {
-  const worker =
-    typeof navigator === "undefined"
-      ? null
-      : navigator.serviceWorker?.controller
-  if (!worker) return Promise.resolve()
-  return new Promise((resolve) => {
-    const channel = new MessageChannel()
-    channel.port1.onmessage = () => resolve()
-    setTimeout(resolve, 2000)
-    worker.postMessage({ type: PURGE_MESSAGE }, [channel.port2])
-  })
+async function purgeInWorker(): Promise<void> {
+  const sw = typeof navigator === "undefined" ? null : navigator.serviceWorker
+  if (!sw) return
+  const reg = await sw.getRegistration?.().catch(() => undefined)
+  const workers = new Set(
+    [sw.controller, reg?.installing, reg?.waiting, reg?.active].filter(
+      (w): w is ServiceWorker => w != null
+    )
+  )
+  await Promise.all(
+    [...workers].map(
+      (worker) =>
+        new Promise<void>((resolve) => {
+          const channel = new MessageChannel()
+          channel.port1.onmessage = () => resolve()
+          setTimeout(resolve, 2000)
+          worker.postMessage({ type: PURGE_MESSAGE }, [channel.port2])
+        })
+    )
+  )
 }
 
 /** Deletes every `acadigma-data-*` cache, through the worker first. */
@@ -112,9 +124,23 @@ async function fetchSessionCheck(): Promise<SessionCheck> {
  * §4.8: asks the server who is signed in here, in which workspace and with
  * which role, and wipes the page cache if any of that changed since the last
  * check. Returns whether it purged.
+ *
+ * `switchedTo`: the workspace switcher has just wiped every cache itself. If
+ * the check confirms that workspace, the change is the switch, and a second
+ * wipe would only throw away the new workspace's first page (#83 re-check).
  */
-export async function runOfflineCheck(): Promise<boolean> {
-  const decision = decidePurge(readSnapshot(), await fetchSessionCheck())
+export async function runOfflineCheck(
+  opts: { switchedTo?: string } = {}
+): Promise<boolean> {
+  const check = await fetchSessionCheck()
+  const decision = decidePurge(readSnapshot(), check)
+  if (
+    opts.switchedTo &&
+    check.kind === "signed_in" &&
+    check.workspaceId === opts.switchedTo
+  ) {
+    decision.purge = false
+  }
   if (decision.purge) await purgeDataCaches().catch(() => undefined)
   if (decision.next !== undefined) writeSnapshot(decision.next)
   return decision.purge

@@ -16,6 +16,12 @@ export type OfflineSnapshot = {
   /** The active workspace, or `null` when the user has no active membership. */
   workspaceId: string | null
   role: string | null
+  /**
+   * The students this user may see as a guardian in that workspace (sorted
+   * ids, comma-joined), or `null` when none: a revoked link changes neither
+   * the membership nor the role, only this (#85 review).
+   */
+  scope: string | null
 }
 
 /** What `/api/offline/session` answered just now. */
@@ -43,6 +49,7 @@ export function decidePurge(
     userId: check.userId,
     workspaceId: check.workspaceId,
     role: check.role,
+    scope: check.scope,
   }
   // No snapshot means the device cannot tell whose pages it holds (a check
   // that never got through, a session that ended without /login, cleared
@@ -51,7 +58,8 @@ export function decidePurge(
     stored === null ||
     stored.userId !== current.userId ||
     stored.workspaceId !== current.workspaceId ||
-    stored.role !== current.role
+    stored.role !== current.role ||
+    stored.scope !== current.scope
   // No active membership (removed / suspended) never keeps a cache.
   return { purge: changed || current.workspaceId === null, next: current }
 }

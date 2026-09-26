@@ -6,6 +6,7 @@ const TEACHER: OfflineSnapshot = {
   userId: "u1",
   workspaceId: "w1",
   role: "teacher",
+  scope: null,
 }
 
 describe("decidePurge (F-ID-11 §4.8)", () => {
@@ -75,6 +76,17 @@ describe("decidePurge (F-ID-11 §4.8)", () => {
     // …and keeps purging while there is still no active membership.
     expect(decidePurge(removed, { kind: "signed_in", ...removed }).purge).toBe(
       true
+    )
+  })
+  it("purges when the children a guardian may see changed (a revoked link)", () => {
+    // #85 review: a parent (or a staff member who is also a parent) keeps the
+    // same membership and role when one child's link is revoked.
+    const parent = { ...TEACHER, role: "parent", scope: "s1,s2" }
+    expect(
+      decidePurge(parent, { kind: "signed_in", ...parent, scope: "s2" }).purge
+    ).toBe(true)
+    expect(decidePurge(parent, { kind: "signed_in", ...parent }).purge).toBe(
+      false
     )
   })
 })
