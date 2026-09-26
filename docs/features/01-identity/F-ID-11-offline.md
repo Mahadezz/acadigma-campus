@@ -233,7 +233,9 @@ Deviations (D-309):
 
 - Three quick retries follow the `online` event (it fires before the network carries traffic); free when nothing waits.
 - `queued_offline` in the audit row (AC-2) moves to Part 2b with `captured_at`, so `save_attendance` stays unchanged here.
-- A different user's outbox is deleted on the new user's first check, without the §4.6 confirmation (Part 2b).
+- A different user's outbox is **kept** while it holds work; the new user sees only a count. The §4.6 choice is Part 2b and must land before offline is promoted to schools.
+- Merge rule (review, #89): a new save merges only into the newest never-sent waiting item; otherwise it queues behind and is rebased.
+- Not in 2a: the §4.4 "after any successful request" trigger; `UNAUTHENTICATED` pausing the queue (§4.6) and a revoked account's items kept by a signed-out check (§4.8) are 2b; for 2b/Part 3 — a kind → action registry, an `oldVersion` switch in `onupgradeneeded`, `createdAt` → `captured_at`, a marks paper as one item (not per cell), the summary frozen in the queue-time language, no `queued_offline` audit flag yet.
 - The conflict sheet is Part 2b; 2a shows the conflict and offers Delete.
 - `OUTBOX_KINDS` stays in `apps/web/lib/offline/outbox.ts` until a second feature registers; the queue sheet is a dialog on desktop (`FormSheet`).
 - "A failed request counts as offline" (§4.1) covers saves only: a thrown request queues the roll call; the banner still follows `navigator.onLine`.

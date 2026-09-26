@@ -1417,8 +1417,18 @@ Also proven with no fix needed: #76 LOW, a parent gets `{"section": null}` from 
 
 - **Retries after `online`:** the event often fires before the network carries traffic (measured in the journey: the first session check after it fails), so three more tries follow within ~15 s. Each is free when nothing waits (no request at all). The spec's "no backoff timer" otherwise stands.
 - **`queued_offline` in the audit row (AC-2) is deferred to Part 2b**, which changes `save_attendance` for `captured_at` anyway; 2a keeps the function unchanged as required.
-- **Different user on the same phone:** 2a deletes the previous user's outbox on the new user's first check, without the §4.6 confirmation, which Part 2b adds. Safer than keeping another person's unsent work.
+- **Different user on the same phone:** see the review fixes below — the previous user's unsent work is kept (count only) until Part 2b's choice.
 - The attendance conflict sheet (keep theirs / use mine / per student) is Part 2b; 2a shows the conflict and offers Delete.
 - `OUTBOX_KINDS` lives in `apps/web/lib/offline/outbox.ts` (one kind) rather than `packages/domain/offline`; it moves when a second feature registers.
 - The queue sheet is a dialog on desktop (the existing `FormSheet`), not a right-side panel.
 - No migration. The service worker is 49,696 B raw, 14,692 B gzipped (budget 15 KB); the outbox code is in the page bundle, not the worker.
+
+**Review fixes (#89, security + lead):**
+
+- **Merge rule (blocker).** A new save merges only into the **newest** waiting item for that class and day, and only if it was **never sent** (`attempts === 0`); otherwise it queues behind it and is rebased when it lands. Before, after a failed send two waiting items could exist and a later save could merge into the older, already-tried one, so the replay sent the middle save last and overwrote the final one. Proven: three saves with a failed send in the middle end on the last save, in either listing order.
+- **Another user's outbox is kept, not deleted, while it holds work.** Attendance is an official record: B signing in on A's phone sees a plain count ("Another teacher's unsent changes are on this phone"), never the contents; A's outbox is deleted once empty. Items for a workspace the user has left are still deleted; explicit sign-out keeps its confirmation. The full choice is Part 2b and **must land before offline is promoted to schools**.
+- A small registry of outbox users in `localStorage` finds other users' outboxes where `indexedDB.databases()` is missing.
+- A sign-out during a send is not undone: the send's outcome is written back only if the item still exists.
+- The screen and the queue sheet show refusals in the reader's language by their named reason; a phone that cannot keep a save (no IndexedDB) says so and keeps the marks; singular wording for one item; the chip is 44 px; the `online` retries are reset on each event; the UI re-reads after a purge.
+
+**Not in 2a (for 2b / Part 3):** the §4.4 "retry after any successful request" trigger; `UNAUTHENTICATED` pausing the queue (§4.6) — today it waits like a network error; a signed-out check keeping a revoked account's items (§4.8) until that user's next check; a kind → action registry instead of the one `send`; an `oldVersion` switch in `onupgradeneeded` before the schema changes; `createdAt` → `captured_at` for late sync; a marks paper queued as one item, not one per cell (`OUTBOX_LIMIT`); the queued summary text is frozen in the language it was queued in; no `queued_offline` audit flag in 2a.

@@ -99,15 +99,19 @@ async function makeSchool(): Promise<School> {
     if (error || !data) throw error ?? new Error("no row")
     return data
   }
+  // The roster goes in the way the app puts it in, as the owner: the
+  // section through an RLS-checked insert, the students through
+  // `admit_student` (codes, roll numbers, enrolment, audit — all real).
+  const owner = colleague
   const grade = await one(
-    admin
+    owner
       .from("grade_levels")
       .select("id")
       .eq("workspace_id", workspaceId)
       .single()
   )
   const year = await one(
-    admin
+    owner
       .from("academic_years")
       .select("id")
       .eq("workspace_id", workspaceId)
@@ -115,7 +119,7 @@ async function makeSchool(): Promise<School> {
       .single()
   )
   const section = await one(
-    admin
+    owner
       .from("sections")
       .insert({
         workspace_id: workspaceId,
@@ -127,38 +131,29 @@ async function makeSchool(): Promise<School> {
       .select("id")
       .single()
   )
-  const students = await one(
-    admin
-      .from("students")
-      .insert(
-        [1, 2, 3].map((n) => ({
-          workspace_id: workspaceId,
-          student_code: `D309-${n}`,
+  const studentIds: string[] = []
+  for (const n of [1, 2, 3]) {
+    const admitted = await one(
+      owner.rpc("admit_student", {
+        p_workspace_id: workspaceId,
+        p_input: {
+          idempotency_key: randomUUID(),
           first_name: "Student",
           last_name: `No${n}`,
           gender: "female",
-        }))
-      )
-      .select("id, student_code")
-  )
-  const sorted = [...students].sort((a, b) =>
-    a.student_code.localeCompare(b.student_code)
-  )
-  await one(
-    admin
-      .from("enrollments")
-      .insert(
-        sorted.map((s, i) => ({
-          workspace_id: workspaceId,
-          student_id: s.id,
-          academic_year_id: year.id,
+          date_of_birth: "2013-01-15",
           section_id: section.id,
-          roll_number: i + 1,
-          enrolled_on: `${YEAR}-01-01`,
-        }))
-      )
-      .select("id")
-  )
+          roll_number: n,
+          guardian: {
+            relation: "mother",
+            full_name: `Guardian No${n}`,
+            phone: `+8801000009${String(n).padStart(3, "0")}`,
+          },
+        },
+      }) as PromiseLike<{ data: { student_id: string } | null; error: unknown }>
+    )
+    studentIds.push(admitted.student_id)
+  }
   // Straight into the school's shell on sign-in.
   await admin
     .from("profiles")
@@ -173,7 +168,7 @@ async function makeSchool(): Promise<School> {
     password,
     workspaceId,
     sectionId: section.id,
-    studentIds: sorted.map((s) => s.id),
+    studentIds,
     colleague,
     admin,
   }
@@ -342,7 +337,7 @@ test("a colleague's save meanwhile comes back as a conflict, nothing overwritten
   expect(error).toBeNull()
 
   await context.setOffline(false)
-  const needsYou = page.getByRole("button", { name: "1 need you" })
+  const needsYou = page.getByRole("button", { name: "1 needs you" })
   await expect(needsYou).toBeVisible({ timeout: 20_000 })
   await expect(
     page.getByText(/Someone else saved this class meanwhile/)
