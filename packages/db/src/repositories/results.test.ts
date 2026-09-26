@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { computeResults, getReportCard, getSectionResults } from "./results"
+import {
+  computeResults,
+  getReportCard,
+  getSectionResults,
+  listFamilyResults,
+  publishResults,
+} from "./results"
 
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
@@ -187,6 +193,7 @@ describe("getReportCard", () => {
   it("shapes the report card: absent has no mark, ties and class size, attendance by policy", async () => {
     const { client } = fakeClient({
       results: [
+        { data: { frozen_payload: null }, error: null },
         { data: card, error: null },
         { data: null, error: null, count: 38 },
         { data: null, error: null, count: 2 },
@@ -249,6 +256,7 @@ describe("getReportCard", () => {
   it("a student without a roll number or attendance still gets a card", async () => {
     const { client } = fakeClient({
       results: [
+        { data: { frozen_payload: null }, error: null },
         { data: { ...card, enrollments: { roll_number: null } }, error: null },
         { data: null, error: null, count: 38 },
         { data: null, error: null, count: 1 },
@@ -265,6 +273,125 @@ describe("getReportCard", () => {
       totalDays: 0,
       percent: null,
       belowMinimum: false,
+    })
+  })
+})
+
+const FROZEN = {
+  studentNameEn: "Student S1",
+  studentNameBn: "Student S1",
+  studentCode: "S1",
+  rollNumber: 1,
+  className: "Class 6",
+  sectionName: "A",
+  examNameEn: "Half-Yearly",
+  examNameBn: "Half-Yearly",
+  subjects: [
+    {
+      subjectNameEn: "Science",
+      subjectNameBn: "Science",
+      subjectKind: "compulsory",
+      status: "entered",
+      marksObtained: 80,
+      fullMarks: 100,
+      letter: "A+",
+      gradePoint: 5,
+    },
+  ],
+  totalObtained: 80,
+  totalFull: 100,
+  percentage: 80,
+  gpa: 5,
+  gpaWithoutOptional: null,
+  overallLetter: "A+",
+  result: "pass",
+  rank: 1,
+  rankTied: false,
+  rankOf: 3,
+  attendance: {
+    presentDays: 0,
+    totalDays: 0,
+    percent: null,
+    belowMinimum: false,
+  },
+}
+
+describe("published results (D-306)", () => {
+  it("getReportCard prints a published result from its frozen payload, reading nothing else", async () => {
+    const { client } = fakeClient({
+      results: [{ data: { frozen_payload: FROZEN }, error: null }],
+    })
+    const r = await getReportCard(CTX, client, "id-S1", EXAM)
+    expect(r).toEqual({ ok: true, data: FROZEN })
+  })
+
+  it("getReportCard refuses a frozen payload that is not a report card", async () => {
+    const { client } = fakeClient({
+      results: [{ data: { frozen_payload: { gpa: 5 } }, error: null }],
+    })
+    const r = await getReportCard(CTX, client, "id-S1", EXAM)
+    expect(!r.ok && r.error.code).toBe("dependency_unavailable")
+  })
+
+  it("publishResults sends the withheld students and maps named refusals", async () => {
+    const ok = fakeClient(
+      {},
+      { data: { published: 2, withheld: 1 }, error: null }
+    )
+    expect(
+      await publishResults(CTX, ok.client, EXAM, [
+        { studentId: "id-S2", reason: "Fees due" },
+      ])
+    ).toEqual({ ok: true, data: { published: 2, withheld: 1 } })
+    expect(ok.rpcCalls[0]).toEqual([
+      "publish_results",
+      {
+        p_workspace_id: CTX.workspaceId,
+        p_exam_id: EXAM,
+        p_withhold: [{ student_id: "id-S2", reason: "Fees due" }],
+      },
+    ])
+
+    for (const [code, apiCode] of [
+      ["INCOMPLETE_PRESENT", "conflict"],
+      ["NOT_COMPUTED", "conflict"],
+      ["MARKS_INCOMPLETE", "conflict"],
+      ["FORBIDDEN", "forbidden"],
+      ["something else", "dependency_unavailable"],
+    ] as const) {
+      const refused = fakeClient({}, { data: null, error: { message: code } })
+      const r = await publishResults(CTX, refused.client, EXAM, [])
+      expect(!r.ok && r.error.code).toBe(apiCode)
+    }
+  })
+
+  it("listFamilyResults returns the frozen cards RLS shows", async () => {
+    const { client } = fakeClient({
+      results: [
+        {
+          data: [
+            {
+              exam_id: EXAM,
+              student_id: "id-S1",
+              published_at: "2026-09-26T04:00:00+00:00",
+              frozen_payload: FROZEN,
+            },
+          ],
+          error: null,
+        },
+      ],
+    })
+    const r = await listFamilyResults(CTX, client)
+    expect(r).toEqual({
+      ok: true,
+      data: [
+        {
+          examId: EXAM,
+          studentId: "id-S1",
+          publishedAt: "2026-09-26T04:00:00+00:00",
+          card: FROZEN,
+        },
+      ],
     })
   })
 })
