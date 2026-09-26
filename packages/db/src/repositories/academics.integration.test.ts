@@ -39,7 +39,12 @@ import { randomUUID } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { getClassesOverview, listClassTeacherOptions } from "./academics"
+import {
+  getClassesOverview,
+  listClassTeacherOptions,
+  listMySections,
+  setSectionSubjects,
+} from "./academics"
 import { createSchoolWorkspace } from "./school"
 
 import type { AcadigmaSupabaseClient } from "../client"
@@ -59,6 +64,7 @@ describe.skipIf(!RUN)(
     // or tests), and createClient throws synchronously on an undefined key
     // — exactly the case when RUN is false and these are unset.
     let serviceClient: AcadigmaSupabaseClient
+    let userClient: AcadigmaSupabaseClient
     let ctx: WorkspaceContext
     let userId: string
 
@@ -92,7 +98,7 @@ describe.skipIf(!RUN)(
       }
 
       // A real user JWT: `create_school_workspace` reads `auth.uid()`.
-      const userClient = createClient<Database>(URL, anonKey, {
+      userClient = createClient<Database>(URL, anonKey, {
         global: {
           headers: {
             Authorization: `Bearer ${session.session.access_token}`,
@@ -210,6 +216,59 @@ describe.skipIf(!RUN)(
       expect(result.data.map((option) => option.name)).toContain(
         "Regression Owner"
       )
+    })
+
+    // D-107: the section_subjects embeds and the RPC, as the signed-in owner.
+    it("setSectionSubjects + listMySections round-trip through real PostgREST", async () => {
+      const { data: subject, error: subjectError } = await serviceClient
+        .from("subjects")
+        .insert({
+          workspace_id: ctx.workspaceId,
+          name: "Mathematics",
+          name_bn: "গণিত",
+          created_by: userId,
+        })
+        .select("id")
+        .single()
+      if (subjectError || !subject) throw subjectError
+      const { data: member } = await serviceClient
+        .from("workspace_members")
+        .select("id")
+        .eq("workspace_id", ctx.workspaceId)
+        .eq("user_id", userId)
+        .single()
+      const overview = await getClassesOverview(userClient, ctx)
+      const section = overview.ok
+        ? overview.data.grades.flatMap((g) => g.sections)[0]
+        : undefined
+      if (!section || !member) throw new Error("no section")
+
+      const saved = await setSectionSubjects(userClient, ctx, {
+        sectionId: section.id,
+        subjects: [{ subjectId: subject.id, teacherId: member.id }],
+      })
+      expect(saved).toEqual({ ok: true, data: { count: 1 } })
+
+      const after = await getClassesOverview(userClient, ctx)
+      expect(
+        after.ok && after.data.grades.flatMap((g) => g.sections)[0]?.subjects
+      ).toEqual([{ subjectId: subject.id, teacherId: member.id }])
+
+      const mine = await listMySections(userClient, ctx)
+      expect(mine).toEqual({
+        ok: true,
+        data: [
+          expect.objectContaining({
+            sectionId: section.id,
+            sectionName: "A",
+            gradeName: "Class 6",
+            isClassTeacher: true,
+            subjects: [
+              { subjectId: subject.id, name: "Mathematics", nameBn: "গণিত" },
+            ],
+          }),
+        ],
+      })
     })
   }
 )

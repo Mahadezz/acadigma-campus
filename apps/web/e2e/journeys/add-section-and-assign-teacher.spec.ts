@@ -55,3 +55,40 @@ test("owner adds Class 6 – section with a class teacher, then archives it", as
   await expect(page.getByText("Bangla 1st Paper")).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 })
+
+/** F-AC-01 §4.3 (Part 5 demo cut, D-107): subjects and their teachers. */
+test("owner gives a section its subjects, each with a teacher", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/login")
+  await page.getByLabel("Email").fill(process.env.E2E_OWNER_EMAIL ?? "")
+  await page.getByLabel("Password").fill(process.env.E2E_OWNER_PASSWORD ?? "")
+  await page.getByRole("button", { name: "Sign in" }).click()
+
+  await page.goto("/app/classes")
+  await page.getByRole("tab", { name: "Subjects" }).click()
+  await page.getByRole("button", { name: "Use the NCTB starter list" }).click()
+  await expect(page.getByText("Bangla 1st Paper")).toBeVisible()
+  await page.getByRole("tab", { name: "Classes & sections" }).click()
+
+  await page.getByRole("button", { name: "Add a section to Class 6" }).click()
+  const name = `S${Date.now() % 1000}`
+  await page.getByLabel("Section name").fill(name)
+  await page.getByRole("button", { name: "Save" }).click()
+  const label = `Class 6 – ${name}`
+  await expect(page.getByText(label)).toBeVisible()
+
+  await page.getByRole("button", { name: `Subjects of ${label}` }).click()
+  await page.getByRole("checkbox", { name: "Bangla 1st Paper" }).click()
+  await page
+    .getByLabel("Teacher for Bangla 1st Paper")
+    .selectOption({ index: 1 })
+  await page.getByRole("checkbox", { name: "Mathematics" }).click()
+  await expectNoA11yViolations(page, testInfo)
+  await page.getByRole("button", { name: "Save" }).click()
+  await expect(page.getByText(/2 subjects/).first()).toBeVisible()
+
+  await page.getByRole("button", { name: `Archive ${label}?` }).click()
+  await page.getByRole("button", { name: "Archive", exact: true }).click()
+  await expect(page.getByText(label)).toHaveCount(0)
+})
