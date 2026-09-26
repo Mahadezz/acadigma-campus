@@ -13,8 +13,11 @@
 --         (D-302: 79.5 -> A, 32.5 -> F);
 --       - absent = 0 % and a failed paper; exempt is left out of totals,
 --         percentage and GPA;
---       - a paper is passed when obtained >= its pass marks and its band is
---         not a fail band (the pass flag flips exactly at the pass mark);
+--       - a paper is passed when obtained >= its pass marks AND its band is
+--         not a fail band (the pass flag flips exactly at the pass mark, and
+--         a printed F is never a pass);
+--       - a paper with no mark row yet makes the student `incomplete`: no
+--         GPA, no letter, no rank (§5.10);
 --       - GPA = round_half_up(mean grade point of the non-exempt papers, 2),
 --         0.00 when any paper failed and fail_any_subject_zero_gpa is on;
 --       - overall letter = the first band (top down) whose grade point is at
@@ -22,19 +25,19 @@
 --       - section rank = rank() over (partition by section order by gpa
 --         desc, total_obtained desc, percentage desc). student_code is NOT a
 --         rank key — it would break every tie — it only orders the list.
---   * Compute runs only on a marks_locked exam (MARKS_NOT_LOCKED) whose
---     marks are complete (MARKS_INCOMPLETE — the same app.exam_marks_missing
---     count the publish gate uses), so no result is ever computed from
---     partial marks and no `incomplete` result exists yet.
+--   * Compute runs only on a marks_locked exam (MARKS_NOT_LOCKED). One
+--     missing mark does not block the class: that student is `incomplete`.
+--     Publishing still waits for complete marks (D-304's gate), so nothing
+--     incomplete is ever published.
 --   * Re-running replaces the exam's results in one transaction and logs one
---     results.computed event. Going back to marks_entry clears them.
+--     results.computed event. Going back to marks_entry clears them and logs
+--     one results.cleared event.
 --   * RLS: owner/admin/staff and the section's class teacher read; parents
 --     read nothing until Part 7 (publishing).
 -- =====================================================================
 
--- incomplete and withheld are part of the shape the report card reads
--- (F-OP-03, D-206); nothing produces them yet: compute refuses incomplete
--- marks, and withholding arrives with publishing (Part 7).
+-- incomplete: a paper has no mark yet. withheld arrives with publishing
+-- (Part 7); it is part of the shape the report card reads (F-OP-03, D-206).
 do $$ begin
   create type public.result_status as enum ('pass', 'fail', 'incomplete', 'withheld');
 exception when duplicate_object then null; end $$;
@@ -57,7 +60,7 @@ create table if not exists public.results (
   enrollment_id   uuid not null,
   total_obtained  numeric(8,2) not null,
   total_full      numeric(8,2) not null,
-  percentage      numeric(5,2),   -- null only when every paper is exempt
+  percentage      numeric(5,2) check (percentage between 0 and 100),   -- null when no paper counts
   gpa             numeric(4,2) check (gpa between 0 and 5),
   gpa_without_optional numeric(4,2) check (gpa_without_optional between 0 and 5),  -- Part 6
   letter          text,
@@ -107,7 +110,7 @@ create table if not exists public.result_subject_lines (
   subject_name_bn text,
   full_marks      numeric(6,2) not null,
   pass_marks      numeric(6,2) not null,
-  status          public.mark_status not null,
+  status          public.mark_status,   -- null: no mark entered yet (incomplete)
   subject_kind    public.subject_kind not null default 'compulsory',   -- snapshotted (§5.4)
   obtained        numeric(6,2),    -- null when absent or exempt
   percentage      numeric(5,2),    -- 0 when absent, null when exempt
@@ -190,7 +193,6 @@ declare
   v_exam    public.exams;
   v_bands   jsonb;
   v_zero    boolean;
-  v_missing integer;
   v_summary jsonb;
 begin
   -- The exam row lock serialises two admins computing the same exam.
@@ -203,10 +205,9 @@ begin
   if v_exam.status <> 'marks_locked' then
     raise exception 'MARKS_NOT_LOCKED' using errcode = '22023';
   end if;
-  v_missing := app.exam_marks_missing(p_workspace_id, p_exam_id);
-  if v_missing > 0 then
-    raise exception 'MARKS_INCOMPLETE' using errcode = '22023',
-      detail = format('%s marks missing', v_missing);
+  -- The snapshot's rank_by: only GPA, then total, then percentage exists.
+  if coalesce(v_exam.grading_snapshot ->> 'rank_by', 'gpa_then_total') <> 'gpa_then_total' then
+    raise exception 'RANK_BY_UNSUPPORTED' using errcode = '22023';
   end if;
 
   v_bands := v_exam.grading_snapshot -> 'bands';
@@ -219,8 +220,8 @@ begin
   delete from public.results r where r.exam_id = p_exam_id;   -- lines cascade
 
   with lines as (
-    -- Every paper of every student actively enrolled in its section: the
-    -- publish gate's definition, which has just found no missing mark.
+    -- Every paper of every student actively enrolled in its section (the
+    -- publish gate's definition); a paper with no mark row has status null.
     select e.student_id, e.id as enrollment_id, es.section_id, es.id as exam_subject_id,
            es.subject_id, sub.name as subject_name, sub.name_bn as subject_name_bn,
            es.full_marks, es.pass_marks, mk.status, mk.obtained,
@@ -233,12 +234,12 @@ begin
       join public.enrollments e
         on e.section_id = es.section_id and e.workspace_id = es.workspace_id and e.status = 'active'
       join public.students st on st.id = e.student_id and st.status = 'active' and st.deleted_at is null
-      join public.marks mk on mk.exam_subject_id = es.id and mk.student_id = e.student_id
+      left join public.marks mk on mk.exam_subject_id = es.id and mk.student_id = e.student_id
      where es.exam_id = p_exam_id and es.workspace_id = p_workspace_id
   ),
   banded as (
     select l.*, b.letter, b.grade_point,
-           case when l.status = 'exempt' then null
+           case when l.status is null or l.status = 'exempt' then null
                 else l.status = 'entered' and l.obtained >= l.pass_marks and not b.is_fail
            end as passed
       from lines l
@@ -249,7 +250,8 @@ begin
            coalesce(sum(b.obtained) filter (where b.status <> 'exempt'), 0) as total_obtained,
            coalesce(sum(b.full_marks) filter (where b.status <> 'exempt'), 0) as total_full,
            count(*) filter (where b.passed is false) as failed,
-           avg(b.grade_point) filter (where b.status <> 'exempt') as gp_mean
+           avg(b.grade_point) filter (where b.status <> 'exempt') as gp_mean,
+           bool_or(b.status is null) as incomplete
       from banded b
      group by b.student_id, b.enrollment_id, b.section_id
   ),
@@ -257,7 +259,7 @@ begin
     select p.*,
            case when p.total_full > 0
                 then app.round_half_up(100 * p.total_obtained / p.total_full, 2) end as percentage,
-           case when p.gp_mean is null then null
+           case when p.incomplete or p.gp_mean is null then null
                 when v_zero and p.failed > 0 then 0::numeric
                 else app.round_half_up(p.gp_mean, 2) end as gpa
       from per_student p
@@ -269,11 +271,12 @@ begin
     select p_workspace_id, p_exam_id, g.section_id, g.student_id, g.enrollment_id,
            g.total_obtained, g.total_full, g.percentage, g.gpa,
            app.snapshot_gpa_letter(v_bands, g.gpa),
-           case when g.failed > 0 then 'fail' else 'pass' end::public.result_status,
+           case when g.incomplete then 'incomplete' when g.failed > 0 then 'fail'
+                else 'pass' end::public.result_status,
            g.failed,
            case when g.gpa is not null then
-             rank() over (partition by g.section_id, g.gpa is null
-                          order by g.gpa desc, g.total_obtained desc, g.percentage desc)
+             rank() over (partition by g.section_id
+                          order by g.gpa desc nulls last, g.total_obtained desc, g.percentage desc)
            end,
            auth.uid()
       from graded g
@@ -290,7 +293,8 @@ begin
   select jsonb_build_object(
            'computed', count(*),
            'passed', count(*) filter (where r.result_status = 'pass'),
-           'failed', count(*) filter (where r.result_status = 'fail'))
+           'failed', count(*) filter (where r.result_status = 'fail'),
+           'incomplete', count(*) filter (where r.result_status = 'incomplete'))
     into v_summary
     from public.results r where r.exam_id = p_exam_id;
 
@@ -303,8 +307,9 @@ $$;
 comment on function app.compute_results(uuid, uuid) is
   'F-AC-06 §4.4 (Part 5 demo cut, D-305): replaces an exam''s results and '
   'result_subject_lines from its marks and grading_snapshot, with section '
-  'ranks, in one transaction. Raises EXAM_NOT_FOUND, MARKS_NOT_LOCKED, '
-  'MARKS_INCOMPLETE. No role check here: callers check.';
+  'ranks, in one transaction; a student missing a mark is incomplete. Raises '
+  'EXAM_NOT_FOUND, MARKS_NOT_LOCKED, RANK_BY_UNSUPPORTED. No role check here: '
+  'callers check.';
 
 revoke all on function app.compute_results(uuid, uuid) from public, anon, authenticated;
 
@@ -334,7 +339,9 @@ grant execute on function public.compute_results(uuid, uuid) to authenticated;
 insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
 values
   ('results.computed', 'notable', '{actor} computed an exam''s results ({n})',
-    '{actor} একটি পরীক্ষার ফলাফল তৈরি করেছেন ({n})', false)
+    '{actor} একটি পরীক্ষার ফলাফল তৈরি করেছেন ({n})', false),
+  ('results.cleared', 'notable', '{actor} unlocked marks and cleared an exam''s results ({n})',
+    '{actor} নম্বর আনলক করে একটি পরীক্ষার ফলাফল মুছে ফেলেছেন ({n})', false)
 on conflict (action) do update
   set severity    = excluded.severity,
       sentence_en = excluded.sentence_en,
@@ -351,8 +358,18 @@ language plpgsql
 security definer   -- results have no client write grant
 set search_path = ''
 as $$
+declare
+  v_cleared integer;
 begin
   delete from public.results r where r.exam_id = new.id;
+  get diagnostics v_cleared = row_count;
+  if v_cleared > 0 then
+    if app.current_correlation_id() is null then
+      perform set_config('app.correlation_id', gen_random_uuid()::text, true);
+    end if;
+    perform app.log_audit_event('results.cleared', new.workspace_id, 'exams', new.id,
+      null, jsonb_build_object('cleared', v_cleared));
+  end if;
   return null;
 end;
 $$;
@@ -382,6 +399,7 @@ as $$
              join public.workspace_members m on m.id = s.class_teacher_id
             where s.id = p_section_id
               and s.workspace_id = p_workspace_id
+              and s.archived_at is null
               and m.user_id = auth.uid()
               and m.status = 'active'
               and m.role in ('owner', 'admin', 'teacher'))

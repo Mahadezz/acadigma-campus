@@ -1184,8 +1184,7 @@
     "computeResults": "Compute results",
     "computing": "Computing…",
     "viewResults": "View results",
-    "computed": "Results computed: {n} students, {passed} passed, {failed} failed.",
-    "computeBlocked": "Every student in every paper needs a mark, or Absent or Exempt, before results can be computed.",
+    "computed": "Results computed: {n} students, {passed} passed, {failed} failed, {incomplete} incomplete.",
     "results": {
       "title": "Results",
       "section": "Class",
@@ -1193,7 +1192,7 @@
       "emptyTitle": "No results yet",
       "emptyBody": "Lock marks and compute results on the exam page.",
       "computedAt": "Computed {date}",
-      "summary": "{n} students · {passed} passed · {failed} failed",
+      "summary": "{n} students · {passed} passed · {failed} failed · {incomplete} incomplete",
       "rank": "Rank",
       "tied": "tied",
       "gpa": "GPA",
@@ -1210,6 +1209,7 @@
       "points": "GP",
       "absent": "Absent",
       "exempt": "Exempt",
+      "notEntered": "No mark yet",
       "failedPapers": "{n} failed",
       "back": "Back to the exam"
     }

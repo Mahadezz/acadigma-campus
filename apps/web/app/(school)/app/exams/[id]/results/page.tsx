@@ -130,4 +130,5 @@ function summary(t: T, rows: StudentResultRow[]): string {
     .replace("{n}", String(rows.length))
     .replace("{passed}", count("pass"))
     .replace("{failed}", count("fail"))
+    .replace("{incomplete}", count("incomplete"))
 }

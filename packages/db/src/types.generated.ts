@@ -2086,7 +2086,7 @@ export type Database = {
           passed: boolean | null
           percentage: number | null
           result_id: string
-          status: Database["public"]["Enums"]["mark_status"]
+          status: Database["public"]["Enums"]["mark_status"] | null
           subject_id: string
           subject_kind: Database["public"]["Enums"]["subject_kind"]
           subject_name: string
@@ -2104,7 +2104,7 @@ export type Database = {
           passed?: boolean | null
           percentage?: number | null
           result_id: string
-          status: Database["public"]["Enums"]["mark_status"]
+          status?: Database["public"]["Enums"]["mark_status"] | null
           subject_id: string
           subject_kind?: Database["public"]["Enums"]["subject_kind"]
           subject_name: string
@@ -2122,7 +2122,7 @@ export type Database = {
           passed?: boolean | null
           percentage?: number | null
           result_id?: string
-          status?: Database["public"]["Enums"]["mark_status"]
+          status?: Database["public"]["Enums"]["mark_status"] | null
           subject_id?: string
           subject_kind?: Database["public"]["Enums"]["subject_kind"]
           subject_name?: string

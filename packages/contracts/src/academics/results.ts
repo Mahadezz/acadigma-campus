@@ -22,14 +22,18 @@ export type ComputeResultsSummary = {
   computed: number
   passed: number
   failed: number
+  incomplete: number
 }
 
 /** One paper's line on a student's result (the mark-sheet row). */
 export type ResultLine = {
+  /** The paper (exam_subjects.id). */
+  paperId: string
   subjectName: string
   subjectNameBn: string | null
   fullMarks: number
-  status: MarkStatus
+  /** Null: no mark entered yet. */
+  status: MarkStatus | null
   /** Null when absent or exempt. */
   obtained: number | null
   /** 0 when absent, null when exempt. */

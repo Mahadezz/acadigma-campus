@@ -155,6 +155,24 @@ describe("ReportCardDocument — Bengali render (golden)", () => {
     expect(text).toContain("৬৮") // attendance percent
   })
 
+  it("prints a dash for a missing roll number and an attendance with no days", async () => {
+    const text = await textOf(
+      {
+        ...BASE,
+        rollNumber: null,
+        attendance: {
+          presentDays: 0,
+          totalDays: 0,
+          percent: null,
+          belowMinimum: false,
+        },
+      },
+      "en"
+    )
+    expect(text).toMatch(/Roll:\s*—/)
+    expect(text).toMatch(/0 \/ 0 \(—\)/)
+  })
+
   it("titles the card প্রগতিপত্র and marks the 4th subject and a tied rank", async () => {
     const text = await textOf(BASE, "bn")
     expectSameBengaliGlyphs(text, "প্রগতিপত্র")

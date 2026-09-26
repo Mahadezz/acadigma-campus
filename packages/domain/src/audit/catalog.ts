@@ -530,6 +530,14 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn: "{actor} একটি পরীক্ষার ফলাফল তৈরি করেছেন ({n})",
     isGeneric: false,
   },
+  // F-AC-06 Part 5 (D-305) — unlocking marks clears the exam's results.
+  {
+    action: "results.cleared",
+    severity: "notable",
+    sentenceEn: "{actor} unlocked marks and cleared an exam's results ({n})",
+    sentenceBn: "{actor} নম্বর আনলক করে একটি পরীক্ষার ফলাফল মুছে ফেলেছেন ({n})",
+    isGeneric: false,
+  },
 ]
 
 /**

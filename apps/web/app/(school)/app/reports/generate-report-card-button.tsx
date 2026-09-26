@@ -27,11 +27,14 @@ export function GenerateReportCardButton({
   studentId,
   examId,
   locale,
+  studentName,
 }: {
   t: ReportCardCopy
   studentId: string
   examId: string
   locale: "en" | "bn"
+  /** Names the button for screen readers: "Report card — Ayesha Rahman". */
+  studentName: string
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -65,6 +68,7 @@ export function GenerateReportCardButton({
         className="w-full sm:w-auto"
       >
         {pending ? t.generating : t.generateReportCard}
+        <span className="sr-only"> — {studentName}</span>
       </Button>
       {error && (
         <InlineAlert tone="error" className="max-w-md">

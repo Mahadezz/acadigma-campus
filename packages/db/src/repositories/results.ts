@@ -41,11 +41,6 @@ const COMPUTE_ERRORS: Record<string, ApiError> = {
     "Lock marks entry before computing results.",
     { fieldErrors: { _root: ["MARKS_NOT_LOCKED"] } }
   ),
-  MARKS_INCOMPLETE: apiError(
-    "conflict",
-    "Every student in every paper needs a mark, or Absent or Exempt, before results can be computed.",
-    { fieldErrors: { _root: ["MARKS_INCOMPLETE"] } }
-  ),
 }
 
 /** §7 computeResults: replaces the exam's results in one transaction. */
@@ -65,7 +60,12 @@ export async function computeResults(
     return err(known ?? UNAVAILABLE)
   }
   const summary = z
-    .object({ computed: z.number(), passed: z.number(), failed: z.number() })
+    .object({
+      computed: z.number(),
+      passed: z.number(),
+      failed: z.number(),
+      incomplete: z.number(),
+    })
     .safeParse(data)
   return summary.success ? ok(summary.data) : err(UNAVAILABLE)
 }
@@ -74,10 +74,11 @@ const num = z.coerce.number()
 const numOrNull = z.union([z.null(), num])
 
 const lineRow = z.object({
+  exam_subject_id: z.string(),
   subject_name: z.string(),
   subject_name_bn: z.string().nullable(),
   full_marks: num,
-  status: z.enum(["entered", "absent", "exempt"]),
+  status: z.enum(["entered", "absent", "exempt"]).nullable(),
   subject_kind: z.enum(["compulsory", "optional_fourth"]),
   obtained: numOrNull,
   percentage: numOrNull,
@@ -112,7 +113,7 @@ const RESULT_COLUMNS =
   "student_id, section_id, total_obtained, total_full, percentage, gpa, gpa_without_optional, letter, result_status, " +
   "failed_subjects, section_rank, computed_at, enrollments(roll_number), " +
   "students(student_code, full_name, full_name_bn), " +
-  "result_subject_lines(subject_name, subject_name_bn, full_marks, status, subject_kind, obtained, percentage, " +
+  "result_subject_lines(exam_subject_id, subject_name, subject_name_bn, full_marks, status, subject_kind, obtained, percentage, " +
   "letter, grade_point, passed)"
 
 function toRow(r: z.infer<typeof resultRow>): StudentResultRow {
@@ -132,6 +133,7 @@ function toRow(r: z.infer<typeof resultRow>): StudentResultRow {
     sectionRank: r.section_rank,
     lines: r.result_subject_lines
       .map((l) => ({
+        paperId: l.exam_subject_id,
         subjectName: l.subject_name,
         subjectNameBn: l.subject_name_bn,
         fullMarks: l.full_marks,
@@ -246,11 +248,11 @@ export async function getReportCard(
   if (!parsed.success) return err(UNAVAILABLE)
   const r = parsed.data
   const row = toRow(r)
-  if (row.rollNumber === null || row.percentage === null) {
+  if (row.percentage === null) {
     return err(
       apiError(
         "not_found",
-        "This student has no report card to print: no roll number, or every paper exempt."
+        "This student has no report card to print: no paper counts yet."
       )
     )
   }
@@ -308,7 +310,7 @@ export async function getReportCard(
   )
   const percent =
     statuses.length === 0
-      ? 0
+      ? null
       : roundHalfUp((100 * presentDays) / statuses.length, 0)
 
   return ok({
@@ -325,7 +327,8 @@ export async function getReportCard(
         subjectNameEn: l.subject_name,
         subjectNameBn: l.subject_name_bn ?? l.subject_name,
         subjectKind: l.subject_kind,
-        status: l.status,
+        // A paper with no mark yet prints "—" (an `entered` line with no mark).
+        status: l.status ?? "entered",
         marksObtained: l.obtained,
         fullMarks: l.full_marks,
         letter: l.letter,
@@ -346,7 +349,7 @@ export async function getReportCard(
       presentDays,
       totalDays: statuses.length,
       percent,
-      belowMinimum: percent * 100 < rules.min_attendance_bp,
+      belowMinimum: percent !== null && percent * 100 < rules.min_attendance_bp,
     },
   })
 }

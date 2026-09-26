@@ -89,11 +89,7 @@ export function ExamDetailView({
     startTransition(async () => {
       const result = await computeResults({ examId: exam.id })
       if (!result.ok) {
-        setError(
-          result.error.fieldErrors?._root?.[0] === "MARKS_INCOMPLETE"
-            ? t.computeBlocked
-            : result.error.message || t.error
-        )
+        setError(result.error.message || t.error)
         return
       }
       setNotice(
@@ -101,6 +97,7 @@ export function ExamDetailView({
           .replace("{n}", String(result.data.computed))
           .replace("{passed}", String(result.data.passed))
           .replace("{failed}", String(result.data.failed))
+          .replace("{incomplete}", String(result.data.incomplete))
       )
       router.refresh()
     })
@@ -145,11 +142,9 @@ export function ExamDetailView({
       </div>
 
       {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
-      {notice ? (
-        <p className="text-sm" role="status">
-          {notice}
-        </p>
-      ) : null}
+      <p className="text-sm empty:hidden" role="status">
+        {notice}
+      </p>
 
       {resultsVisible ? (
         <div className="flex flex-wrap gap-2">

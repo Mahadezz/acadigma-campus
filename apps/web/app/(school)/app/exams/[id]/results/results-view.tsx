@@ -143,6 +143,7 @@ function ResultList({
             <AccordionTrigger className="min-h-14 items-center px-4 hover:no-underline">
               <span className="grid flex-1 grid-cols-[3rem_1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[4rem_1fr_5rem_4rem_5rem]">
                 <span className="text-base font-semibold tabular-nums">
+                  <span className="sr-only">{t.rank} </span>
                   {row.sectionRank ?? "—"}
                   {tied ? (
                     <span className="text-muted-foreground block text-xs font-normal">
@@ -162,10 +163,9 @@ function ResultList({
                   </span>
                 </span>
                 <span className="text-right tabular-nums sm:text-left">
-                  <span className="text-muted-foreground block text-xs sm:hidden">
+                  <span className="text-muted-foreground block text-xs sm:me-1 sm:inline sm:text-sm">
                     {t.gpa}
                   </span>
-                  <span className="sr-only sm:not-sr-only">{t.gpa} </span>
                   {fixed2(row.gpa)}
                 </span>
                 <span className="col-start-2 sm:col-start-auto">
@@ -208,18 +208,20 @@ function ResultList({
                 </TableHeader>
                 <TableBody>
                   {row.lines.map((line) => (
-                    <TableRow key={line.subjectName}>
+                    <TableRow key={line.paperId}>
                       <TableCell className="whitespace-normal">
                         {locale === "bn" && line.subjectNameBn
                           ? line.subjectNameBn
                           : line.subjectName}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {line.status === "absent"
-                          ? t.absent
-                          : line.status === "exempt"
-                            ? t.exempt
-                            : `${marks(line.obtained)}/${marks(line.fullMarks)}`}
+                        {line.status === null
+                          ? t.notEntered
+                          : line.status === "absent"
+                            ? t.absent
+                            : line.status === "exempt"
+                              ? t.exempt
+                              : `${marks(line.obtained)}/${marks(line.fullMarks)}`}
                       </TableCell>
                       <TableCell className="hidden text-right tabular-nums sm:table-cell">
                         {fixed2(line.percentage)}
@@ -227,7 +229,9 @@ function ResultList({
                       <TableCell>
                         {line.letter ?? "—"}
                         {line.passed === false ? (
-                          <span className="sr-only"> ({t.fail})</span>
+                          <span className="text-danger-ink ms-1 text-xs font-medium">
+                            ({t.fail})
+                          </span>
                         ) : null}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
@@ -244,6 +248,7 @@ function ResultList({
                     studentId={row.studentId}
                     examId={examId}
                     locale={locale}
+                    studentName={name}
                   />
                 </div>
               ) : null}

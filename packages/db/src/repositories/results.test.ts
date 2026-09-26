@@ -70,6 +70,7 @@ function result(code: string, rank: number | null, gpa: string | null) {
     },
     result_subject_lines: [
       {
+        exam_subject_id: "p-science",
         subject_name: "Science",
         subject_name_bn: "বিজ্ঞান",
         full_marks: "100.00",
@@ -82,6 +83,7 @@ function result(code: string, rank: number | null, gpa: string | null) {
         passed: false,
       },
       {
+        exam_subject_id: "p-bangla",
         subject_name: "Bangla",
         subject_name_bn: null,
         full_marks: "100.00",
@@ -101,11 +103,14 @@ describe("computeResults", () => {
   it("calls public.compute_results and returns the summary", async () => {
     const { client, rpcCalls } = fakeClient(
       {},
-      { data: { computed: 12, passed: 9, failed: 3 }, error: null }
+      {
+        data: { computed: 12, passed: 8, failed: 3, incomplete: 1 },
+        error: null,
+      }
     )
     expect(await computeResults(CTX, client, EXAM)).toEqual({
       ok: true,
-      data: { computed: 12, passed: 9, failed: 3 },
+      data: { computed: 12, passed: 8, failed: 3, incomplete: 1 },
     })
     expect(rpcCalls).toEqual([
       ["compute_results", { p_workspace_id: CTX.workspaceId, p_exam_id: EXAM }],
@@ -115,7 +120,6 @@ describe("computeResults", () => {
   it("maps the database's named refusals", async () => {
     for (const [message, code] of [
       ["MARKS_NOT_LOCKED", "conflict"],
-      ["MARKS_INCOMPLETE", "conflict"],
       ["FORBIDDEN", "forbidden"],
       ["something else", "dependency_unavailable"],
     ]) {
@@ -242,13 +246,25 @@ describe("getReportCard", () => {
     expect(!r.ok && r.error.code).toBe("not_found")
   })
 
-  it("has no card for a student without a roll number", async () => {
+  it("a student without a roll number or attendance still gets a card", async () => {
     const { client } = fakeClient({
       results: [
         { data: { ...card, enrollments: { roll_number: null } }, error: null },
+        { data: null, error: null, count: 38 },
+        { data: null, error: null, count: 1 },
       ],
+      attendance_records: [{ data: [], error: null }],
+      school_profiles: [{ data: null, error: null }],
     })
     const r = await getReportCard(CTX, client, "x", EXAM)
-    expect(!r.ok && r.error.code).toBe("not_found")
+    if (!r.ok) throw new Error("expected ok")
+    expect(r.data.rollNumber).toBeNull()
+    expect(r.data.rankTied).toBe(false)
+    expect(r.data.attendance).toEqual({
+      presentDays: 0,
+      totalDays: 0,
+      percent: null,
+      belowMinimum: false,
+    })
   })
 })

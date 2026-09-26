@@ -2,9 +2,11 @@
 -- pgTAP · F-AC-06 Part 5 (demo cut) — results and rank in SQL
 -- (20260925300318_results.sql, D-305)
 --
---   A. Guards: MARKS_NOT_LOCKED, MARKS_INCOMPLETE (the publish gate's
---      count), FORBIDDEN for teachers, staff and another school.
---   B. The golden fixture: 10 students x 6 papers in Class 6 A, every
+--   A. Guards: MARKS_NOT_LOCKED, FORBIDDEN for teachers, staff and another
+--      school.
+--   B. A missing mark does not block the class: that student is
+--      `incomplete` (no GPA, no rank). The golden fixture: 12 students x 6
+--      papers in Class 6 A, every
 --      result asserted row by row against hand-computed values. The rows
 --      between the `-- parity:golden_*` markers are read verbatim by
 --      packages/domain/src/grading/results.test.ts, so SQL and TS are held
@@ -13,10 +15,10 @@
 --   D. RLS: owner/admin/staff and the class teacher read; another class's
 --      teacher, parents and another school read nothing; nobody writes.
 --   E. read_only (PLAN_READ_ONLY); going back to marks_entry clears the
---      results; composite FKs.
+--      results and audits it once; composite FKs.
 -- =====================================================================
 begin;
-select plan(37);
+select plan(40);
 
 create schema if not exists tests;
 
@@ -67,7 +69,7 @@ $fn$;
 
 -- ---------------------------------------------------------------------
 -- The golden fixture. Papers P1-P5 are out of 100, P6 out of 50 (pass
--- marks 33 and 16.50). 'A' = absent, 'E' = exempt.
+-- marks 33 and 16.50). 'A' = absent, 'E' = exempt, 'M' = no mark yet.
 -- ---------------------------------------------------------------------
 create temp table golden_marks (code text, p1 text, p2 text, p3 text, p4 text, p5 text, p6 text);
 insert into golden_marks values
@@ -81,7 +83,9 @@ insert into golden_marks values
   ('S07', '90', '90', 'A', '90', '90', '45'),
   ('S08', '60', '32.5', '60', '60', '60', '30'),
   ('S09', '33', '33', '33', '33', '33', '16.5'),
-  ('S10', '50', '50', '50', '50', '50', '16.49')
+  ('S10', '50', '50', '50', '50', '50', '16.49'),
+  ('S11', '85', 'M', '80', '80', '80', '40'),
+  ('S12', '75', '72', 'E', '65', '55', 'E')
 -- /parity:golden_marks
 ;
 
@@ -97,12 +101,14 @@ insert into golden_expected values
   ('S02', 442.00, 550.00, 80.36, 4.67, 'A', 'pass', 0, 2),
   ('S03', 440.00, 550.00, 80.00, 4.67, 'A', 'pass', 0, 3),
   ('S04', 440.00, 550.00, 80.00, 4.67, 'A', 'pass', 0, 3),
-  ('S05', 349.50, 550.00, 63.55, 3.58, 'A-', 'pass', 0, 5),
-  ('S06', 285.00, 450.00, 63.33, 3.40, 'B', 'pass', 0, 6),
-  ('S07', 405.00, 550.00, 73.64, 0.00, 'F', 'fail', 1, 8),
-  ('S08', 302.50, 550.00, 55.00, 0.00, 'F', 'fail', 1, 9),
-  ('S09', 181.50, 550.00, 33.00, 1.00, 'D', 'pass', 0, 7),
-  ('S10', 266.49, 550.00, 48.45, 0.00, 'F', 'fail', 1, 10)
+  ('S05', 349.50, 550.00, 63.55, 3.58, 'A-', 'pass', 0, 6),
+  ('S06', 285.00, 450.00, 63.33, 3.40, 'B', 'pass', 0, 7),
+  ('S07', 405.00, 550.00, 73.64, 0.00, 'F', 'fail', 1, 9),
+  ('S08', 302.50, 550.00, 55.00, 0.00, 'F', 'fail', 1, 10),
+  ('S09', 181.50, 550.00, 33.00, 1.00, 'D', 'pass', 0, 8),
+  ('S10', 266.49, 550.00, 48.45, 0.00, 'F', 'fail', 1, 11),
+  ('S11', 365.00, 450.00, 81.11, null, null, 'incomplete', 0, null),
+  ('S12', 267.00, 400.00, 66.75, 3.63, 'A-', 'pass', 0, 5)
 -- /parity:golden_expected
 ;
 
@@ -155,7 +161,7 @@ insert into public.subjects (id, workspace_id, name)
 select ('55000000-0000-4000-c000-00000000003' || n)::uuid, '55000000-0000-4000-b000-000000000001', 'Paper ' || n || ' 55'
   from generate_series(1, 6) as n;
 
--- Ten students in 6 A (the golden fixture), two in 6 B.
+-- Twelve students in 6 A (the golden fixture), two in 6 B.
 insert into public.students (workspace_id, student_code, first_name, last_name, gender)
 select '55000000-0000-4000-b000-000000000001'::uuid, g.code, 'Student', g.code, 'female'::public.student_gender from golden_marks g
 union all
@@ -183,7 +189,7 @@ update public.exams set status = 'marks_entry' where id = tests.id('exam');
 select tests.logout();
 
 -- Marks as postgres (save_marks is covered by 54_marks.sql). 6 B: T1 all 60,
--- T2 all 70 % — but T2's P6 (35 of 50) is left missing for the completeness guard.
+-- T2 all 70 % — but T2's P6 (35 of 50) is left missing at first.
 insert into public.marks (workspace_id, exam_subject_id, student_id, enrollment_id, status, obtained)
 select e.workspace_id, es.id, e.student_id, e.id,
        case x.v when 'A' then 'absent' when 'E' then 'exempt' else 'entered' end::public.mark_status,
@@ -198,7 +204,7 @@ select e.workspace_id, es.id, e.student_id, e.id,
   join public.exam_subjects es
     on es.section_id = e.section_id and es.exam_id = tests.id('exam')
    and es.subject_id = ('55000000-0000-4000-c000-00000000003' || x.n)::uuid
- where x.v is not null;
+ where x.v is not null and x.v <> 'M';
 
 -- =====================================================================
 -- A. Guards
@@ -207,19 +213,7 @@ select tests.login('55000000-0000-4000-a000-000000000001');
 select throws_ok('select tests.compute()', '22023', 'MARKS_NOT_LOCKED',
   'results are not computed while marks entry is open');
 update public.exams set status = 'marks_locked' where id = tests.id('exam');
-select throws_ok('select tests.compute()', '22023', 'MARKS_INCOMPLETE',
-  'nor while an enrolled student has no mark on a paper (the publish gate''s count)');
-select is((select count(*)::int from public.results), 0, 'a refused compute writes nothing');
 select tests.logout();
-
-insert into public.marks (workspace_id, exam_subject_id, student_id, enrollment_id, status, obtained)
-select e.workspace_id, es.id, e.student_id, e.id, 'entered', 35
-  from public.students st
-  join public.enrollments e on e.student_id = st.id
-  join public.exam_subjects es
-    on es.section_id = e.section_id and es.exam_id = tests.id('exam')
-   and es.subject_id = '55000000-0000-4000-c000-000000000036'
- where st.student_code = 'T2' and st.workspace_id = '55000000-0000-4000-b000-000000000001';
 
 select tests.login('55000000-0000-4000-a000-000000000002');
 select throws_ok('select tests.compute()', '42501', 'FORBIDDEN', 'the class teacher cannot compute results');
@@ -235,8 +229,29 @@ select tests.logout();
 -- B. The golden fixture
 -- =====================================================================
 select tests.login('55000000-0000-4000-a000-000000000001');
-select is(tests.compute(), '{"computed": 12, "passed": 9, "failed": 3}'::jsonb,
-  'the owner computes: 12 results, 9 pass, 3 fail');
+select is(tests.compute(), '{"computed": 14, "passed": 9, "failed": 3, "incomplete": 2}'::jsonb,
+  'one missing mark does not block the class: 14 results, T2 and S11 incomplete');
+select tests.logout();
+select is(
+  (select string_agg(st.student_code || '=' || r.result_status || '/' || coalesce(r.gpa::text, '-')
+                     || '/' || coalesce(r.section_rank::text, '-'), ',' order by st.student_code)
+     from public.results r join public.students st on st.id = r.student_id
+    where r.section_id = '55000000-0000-4000-c000-000000000022'),
+  'T1=pass/3.50/1,T2=incomplete/-/-',
+  'an incomplete student has no GPA and no rank, and takes no rank from anyone');
+
+-- The missing mark arrives; recompute.
+insert into public.marks (workspace_id, exam_subject_id, student_id, enrollment_id, status, obtained)
+select e.workspace_id, es.id, e.student_id, e.id, 'entered', 35
+  from public.students st
+  join public.enrollments e on e.student_id = st.id
+  join public.exam_subjects es
+    on es.section_id = e.section_id and es.exam_id = tests.id('exam')
+   and es.subject_id = '55000000-0000-4000-c000-000000000036'
+ where st.student_code = 'T2' and st.workspace_id = '55000000-0000-4000-b000-000000000001';
+select tests.login('55000000-0000-4000-a000-000000000001');
+select is(tests.compute(), '{"computed": 14, "passed": 10, "failed": 3, "incomplete": 1}'::jsonb,
+  'recomputed: T2 is complete, S11 is still incomplete');
 select tests.logout();
 
 select results_eq(
@@ -264,7 +279,8 @@ select is(tests.line('S09', 6), 'entered|16.50|33.00|D|1.00|t', '16.50 of 50 is 
 select is(tests.line('S10', 6), 'entered|16.49|32.98|F|0.00|f', '16.49 of 50 is one hundredth short: F, failed');
 select is(tests.line('S07', 3), 'absent|0.00|F|0.00|f', 'absent scores 0 % and fails the paper');
 select is(tests.line('S06', 5), 'exempt', 'exempt has no mark, percentage, grade or pass flag');
-select is((select count(*)::int from public.result_subject_lines), 72, 'one line per student per paper');
+select is(tests.line('S11', 2), '', 'a paper with no mark yet has no status, mark, grade or pass flag');
+select is((select count(*)::int from public.result_subject_lines), 84, 'one line per student per paper');
 select is(
   (select string_agg(st.student_code || '=' || r.section_rank || '/' || r.gpa, ',' order by st.student_code)
      from public.results r join public.students st on st.id = r.student_id
@@ -273,7 +289,7 @@ select is(
 select is(
   (select count(*)::int from public.audit_events
     where action = 'results.computed' and row_id = tests.id('exam')),
-  1, 'one results.computed audit event for the exam');
+  2, 'one results.computed audit event per run');
 
 -- =====================================================================
 -- C. Recompute is idempotent
@@ -283,25 +299,25 @@ select r.student_id, r.total_obtained, r.percentage, r.gpa, r.letter, r.result_s
        r.failed_subjects, r.section_rank from public.results r;
 
 select tests.login('55000000-0000-4000-a000-000000000001');
-select is(tests.compute(), '{"computed": 12, "passed": 9, "failed": 3}'::jsonb, 'computing again returns the same summary');
+select is(tests.compute(), '{"computed": 14, "passed": 10, "failed": 3, "incomplete": 1}'::jsonb, 'computing again returns the same summary');
 select tests.logout();
 select results_eq(
   $$select r.student_id, r.total_obtained, r.percentage, r.gpa, r.letter, r.result_status,
            r.failed_subjects, r.section_rank from public.results r order by r.student_id$$,
   $$select * from before_rerun order by student_id$$,
   'and replaces the rows with identical ones');
-select is((select count(*)::int from public.result_subject_lines), 72, 'with no duplicate lines');
+select is((select count(*)::int from public.result_subject_lines), 84, 'with no duplicate lines');
 select is(
   (select count(*)::int from public.audit_events
     where action = 'results.computed' and row_id = tests.id('exam')),
-  2, 'each run is audited once');
+  3, 'each run is audited once');
 
 -- =====================================================================
 -- D. RLS
 -- =====================================================================
 select tests.login('55000000-0000-4000-a000-000000000002');
-select is((select count(*)::int from public.results), 10, 'the class teacher of 6 A reads 6 A''s results');
-select is((select count(*)::int from public.result_subject_lines), 60, 'and their lines');
+select is((select count(*)::int from public.results), 12, 'the class teacher of 6 A reads 6 A''s results');
+select is((select count(*)::int from public.result_subject_lines), 72, 'and their lines');
 select tests.logout();
 select tests.login('55000000-0000-4000-a000-000000000003');
 select is((select count(*)::int from public.results), 2, 'the class teacher of 6 B reads only 6 B''s');
@@ -310,13 +326,18 @@ select is(
     where st.student_code = 'S01'),
   0, 'so a 6 B teacher cannot read (or print) a 6 A student''s result');
 select tests.logout();
+update public.sections set archived_at = now() where id = '55000000-0000-4000-c000-000000000022';
+select tests.login('55000000-0000-4000-a000-000000000003');
+select is((select count(*)::int from public.results), 0, 'the class teacher of an archived section reads nothing');
+select tests.logout();
+update public.sections set archived_at = null where id = '55000000-0000-4000-c000-000000000022';
 select tests.login('55000000-0000-4000-a000-000000000007');
 select is(
   (select count(*)::int from public.results) + (select count(*)::int from public.result_subject_lines),
   0, 'a teacher of another school reads no results or lines');
 select tests.logout();
 select tests.login('55000000-0000-4000-a000-000000000004');
-select is((select count(*)::int from public.results), 12, 'staff read every result');
+select is((select count(*)::int from public.results), 14, 'staff read every result');
 select tests.logout();
 select tests.login('55000000-0000-4000-a000-000000000005');
 select is((select count(*)::int from public.results), 0, 'a parent reads no results before publishing (Part 7)');
@@ -352,6 +373,10 @@ update public.exams set status = 'marks_entry', status_reason = 'A mark was wron
 select tests.logout();
 select is((select count(*)::int from public.results), 0, 'going back to marks entry clears the stale results');
 select is((select count(*)::int from public.result_subject_lines), 0, 'and their lines');
+select is(
+  (select string_agg(after ->> 'cleared', ',') from public.audit_events
+    where action = 'results.cleared' and row_id = tests.id('exam')),
+  '14', 'clearing is audited once, with the count');
 select throws_ok(
   format($$insert into public.results (workspace_id, exam_id, section_id, student_id, enrollment_id,
       total_obtained, total_full, result_status, failed_subjects)

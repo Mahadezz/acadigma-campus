@@ -6,12 +6,18 @@ import { BD_GRADE_BANDS } from "./scale"
 
 const GOLDEN = "55_results.sql"
 
+/** A parity cell: SQL `null` stays null. */
+const orNull = <T>(cell: string | undefined, as: (c: string) => T) =>
+  cell === "null" || cell === undefined ? null : as(cell)
+
 /** P1-P5 out of 100 (pass 33), P6 out of 50 (pass 16.50) — as in the pgTAP fixture. */
 function mark(cell: string, paper: number): PaperMark {
   const fullMarks = paper === 5 ? 50 : 100
   const passMarks = paper === 5 ? 16.5 : 33
   if (cell === "A")
     return { fullMarks, passMarks, status: "absent", obtained: null }
+  if (cell === "M")
+    return { fullMarks, passMarks, status: null, obtained: null }
   if (cell === "E")
     return { fullMarks, passMarks, status: "exempt", obtained: null }
   return { fullMarks, passMarks, status: "entered", obtained: Number(cell) }
@@ -29,9 +35,9 @@ describe("computeResults — the golden fixture (parity with app.compute_results
     computeResults(BD_GRADE_BANDS, true, students).map((r) => [r.studentId, r])
   )
 
-  it("has ten students and ten expected rows", () => {
-    expect(students).toHaveLength(10)
-    expect(parityRows("golden_expected", GOLDEN)).toHaveLength(10)
+  it("has twelve students and twelve expected rows", () => {
+    expect(students).toHaveLength(12)
+    expect(parityRows("golden_expected", GOLDEN)).toHaveLength(12)
   })
 
   it.each(parityRows("golden_expected", GOLDEN))(
@@ -51,11 +57,11 @@ describe("computeResults — the golden fixture (parity with app.compute_results
         total: Number(total),
         full: Number(full),
         pct: Number(pct),
-        gpa: Number(gpa),
-        letter,
+        gpa: orNull(gpa, Number),
+        letter: orNull(letter, String),
         status,
         failed: Number(failed),
-        rank: Number(rank),
+        rank: orNull(rank, Number),
       })
     }
   )
@@ -132,6 +138,31 @@ describe("computeResults — rules", () => {
       { studentId: "e", sectionId: "t", papers: entered(40, 40) },
     ])
     expect(rs.map((r) => r.sectionRank)).toEqual([1, 2, 2, 4, 1])
+  })
+
+  it("a paper with no mark makes the student incomplete, unranked, outranking nobody", () => {
+    const rs = computeResults(BD_GRADE_BANDS, true, [
+      { studentId: "a", sectionId: "s", papers: [mark("90", 0), mark("M", 0)] },
+      { studentId: "b", sectionId: "s", papers: entered(40, 40) },
+    ])
+    expect(rs[0]).toMatchObject({
+      status: "incomplete",
+      gpa: null,
+      letter: null,
+      sectionRank: null,
+    })
+    expect(rs[1]!.sectionRank).toBe(1)
+  })
+
+  it("GPA rounds half up: grade points 4, 4, 3.5, 3 give 3.63", () => {
+    const [r] = computeResults(BD_GRADE_BANDS, true, [
+      {
+        studentId: "x",
+        sectionId: "s",
+        papers: [...entered(75, 72, 65, 55), mark("E", 0), mark("E", 0)],
+      },
+    ])
+    expect(r!.gpa).toBe(3.63)
   })
 
   it("a student with every paper exempt has no GPA and no rank", () => {

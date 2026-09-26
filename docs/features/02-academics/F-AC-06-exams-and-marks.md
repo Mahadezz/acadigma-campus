@@ -215,15 +215,16 @@ This is the **mark-weighted** overall percentage. The unweighted mean of subject
 **5.6 Pass / fail.**
 
 ```
-subject_pass = subject_pct >= band-derived pass OR obtained >= exam_subjects.pass_marks
-               (pass_marks default = round(full_marks * grade_scales.pass_mark / 100), i.e. 33 %)
+subject_pass = obtained >= exam_subjects.pass_marks AND the paper's band is not a fail band
+               (pass_marks default = full_marks * pass_mark / 100, not rounded — 16.50 of 50, D-302/D-303;
+                AND respects the paper's own pass mark and never passes a printed F — D-305)
 component_pass (only if use_component_pass) = every component >= its pass_marks
 failed_subjects = count(countable lines where NOT subject_pass)
                   // countable excludes the 4th subject entirely (§5.4): a failed 4th
                   // subject is reported on the mark sheet but never fails the student
-result_status   = 'fail'      if failed_subjects > 0
-                = 'incomplete' if any countable line has no mark and none were forced to absent
-                = 'withheld'   if any line is withheld
+result_status   = 'incomplete' if any countable line has no mark yet (§5.10; checked first)
+                = 'fail'       if failed_subjects > 0
+                = 'withheld'   if any line is withheld (Part 7)
                 = 'pass'       otherwise
 ```
 
@@ -250,15 +251,15 @@ obtained_s = round_half_up( pct_s * full_marks_s / 100 , 2 )     // written into
 ```sql
 rank() over (
   partition by section_id
-  order by gpa desc, total_obtained desc, percentage desc, student_code asc
+  order by gpa desc nulls last, total_obtained desc, percentage desc
 )
 ```
 
-`rank()` gives standard competition ranking (1, 2, 2, 4). `section_rank` partitions by section; `grade_rank` partitions by `grade_level_id`. Students with `result_status in ('incomplete','withheld')` get `rank = null` and are listed after the ranked students. Ties are shown as "2 (tied)". The final tiebreaker on `student_code` exists only to make the ordering deterministic for tests; it never changes a rank value because `rank()` assigns equal ranks to equal keys before it.
+`rank()` gives standard competition ranking (1, 2, 2, 4). `section_rank` partitions by section; `grade_rank` partitions by `grade_level_id`. Students with `result_status in ('incomplete','withheld')` have no GPA, get `rank = null`, sort after the ranked students and take no rank from anyone. Ties are shown as "2 (tied)". **`student_code` is not a rank key** (D-305): every code is unique, so putting it in `rank()`'s ORDER BY would break every tie. It only orders the displayed list after the rank.
 
 **5.9 Exam eligibility warning.** On the exam roster and admit card, a student whose term-to-date attendance is below `attendance_policy.min_attendance_pct` (default 75) is flagged — a **warning, never a block** (PRODUCT-DECISIONS 2.2). The flag is informational on the result too.
 
-**5.10 Incomplete handling.** A student missing marks in ≥ 1 countable subject is `incomplete`, excluded from rank, and their GPA is **not** computed (null), rather than being computed from partial data. The compute preview lists them so the office can chase the paper.
+**5.10 Incomplete handling.** A student missing marks in ≥ 1 countable subject is `incomplete`, excluded from rank, and their GPA is **not** computed (null), rather than being computed from partial data. One missing mark never blocks the class's compute (D-305); publishing still waits for complete marks (D-304's gate), so an incomplete result is never published. The compute preview lists them so the office can chase the paper.
 
 **5.11 Entry window.** `exam_subjects.entry_opens_on` defaults to the paper's `exam_date` and `entry_closes_on` to `exam_date + grading.entry_window_days` (default 7). Teachers may write only inside it; admins always, with the row stamped `updated_by` and an audit event.
 
@@ -396,7 +397,7 @@ SQL routines: `app.band_for(grade_scale_id, pct)`, `app.round_half_up(numeric, i
 
 ## 11. Open questions
 
-**Part 5 status (demo cut, D-305):** `results` and `result_subject_lines`, `app.compute_results` behind `public.compute_results` (owner/admin), "Compute results" and "View results" on the exam page, and `/app/exams/[id]/results` — one section in rank order, each row opening to its per-subject grades. Computed from the exam's `grading_snapshot`, never the live scale: paper % to 2 decimals with no rounding before banding (D-302); absent is 0 % and a failed paper; exempt is left out everywhere; a paper passes when `obtained ≥ pass_marks` and its band is not a fail band; an F zeroes the GPA (the snapshotted `fail_any_subject_zero_gpa`); rank is `rank()` per section by GPA, total, percentage. Compute runs only on a `marks_locked` exam whose marks are complete (the publish gate's count), and replaces the exam's results in one transaction with one `results.computed` audit event; unlocking marks clears them. Owner/admin/staff and the class teacher read; parents read nothing until Part 7. The golden fixture (10 students × 6 papers) in `55_results.sql` is asserted against both the SQL and `packages/domain/src/grading/results.ts`. F-OP-03's report-card seam (`getReportCardData`, D-206) now reads these results; its fixture is deleted and each preview row offers "Report card". Deviations: §5.8's `student_code` is not a rank key (it would break every tie; it only orders the list); §5.6's pass rule is "pass marks AND not a fail band" rather than OR; no `incomplete` result (compute refuses missing marks until Part 4's force-absent); `result_status` and `subject_kind` carry all their values but only `pass`/`fail`/`compulsory` are produced; no `grade_rank`, `published`, `frozen_payload`, idempotency key, rate limit, GPA chart or search on the preview. See D-305.
+**Part 5 status (demo cut, D-305):** `results` and `result_subject_lines`, `app.compute_results` behind `public.compute_results` (owner/admin), "Compute results" and "View results" on the exam page, and `/app/exams/[id]/results` — one section in rank order, each row opening to its per-subject grades. Computed from the exam's `grading_snapshot`, never the live scale: paper % to 2 decimals with no rounding before banding (D-302); absent is 0 % and a failed paper; exempt is left out everywhere; a paper passes when `obtained ≥ pass_marks` and its band is not a fail band; an F zeroes the GPA (the snapshotted `fail_any_subject_zero_gpa`); rank is `rank()` per section by GPA, total, percentage. Compute runs on a `marks_locked` exam; a student with a paper not yet marked is `incomplete` (no GPA, no rank), and publishing still waits for complete marks. It replaces the exam's results in one transaction with one `results.computed` audit event; unlocking marks clears them with one `results.cleared` event. Owner/admin/staff and the class teacher read; parents read nothing until Part 7. The golden fixture (12 students × 6 papers) in `55_results.sql` is asserted against both the SQL and `packages/domain/src/grading/results.ts`. F-OP-03's report-card seam (`getReportCardData`, D-206) now reads these results; its fixture is deleted and each preview row offers "Report card". Deviations: §5.8's `student_code` is not a rank key (it would break every tie; it only orders the list); §5.6's pass rule is now "pass marks AND not a fail band" (§5.6 and §5.8 are rewritten above); `withheld` and `optional_fourth` exist but are not produced until Parts 7 and 6; no `grade_rank`, `published`, `frozen_payload`, idempotency key, rate limit, GPA chart or search on the preview. See D-305.
 
 **Part 3 status (demo cut, D-304):** `marks` (`entered` with a number, or `absent`/`exempt`), `exam_subjects.teacher_id` (the paper's teacher, named by an owner/admin on the exam page, standing in for `section_subjects` until F-AC-01 ships it), `public.save_marks`, and `/app/marks/[examSubjectId]` — 72 px rows, a large numeric input, Enter to the next student, Absent/Exempt chips, a sticky "24/40 · Save", per-row inline errors; ↑/↓, Esc, A, E and Ctrl+S on desktop. Who: an owner/admin, the paper's teacher or the class teacher (`app.can_enter_marks`); staff read; another subject's teacher reads nothing (AC14). Entry is open while the exam is in `marks_entry` and the paper is not `locked`. The save is idempotent and checks each row: out of range → `MARK_OUT_OF_RANGE`, changed by someone else since it was loaded → `CONFLICT`; the other rows save (AC12). A changed mark is audited before/after, and each save logs one paper-level `marks.entered` event. **Part 4's completeness gate is in:** Publish is refused (`MARKS_INCOMPLETE`) until every enrolled student in every paper has a mark or is absent/exempt. The owner confirmed on 2026-09-26 that D-302 stands: percentages to 2 decimals, no rounding before banding (79.5 → A, 32.5 → F). Deviations: no entry date window, no autosave draft or offline queue, no components, no paste-a-column or histogram, no `withheld` or remarks, no teacher "my papers" list; the screen uses `ui/input`, not `MarkCell` (which clamps, contrary to AC12) — see D-304.
 

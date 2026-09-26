@@ -12,7 +12,8 @@ export type MarkStatus = "entered" | "absent" | "exempt"
 export type PaperMark = {
   fullMarks: number
   passMarks: number
-  status: MarkStatus
+  /** Null: no mark entered yet — the student is `incomplete` (§5.10). */
+  status: MarkStatus | null
   /** Present exactly when `status` is `entered`. */
   obtained: number | null
 }
@@ -24,11 +25,11 @@ export type StudentMarks = {
 }
 
 export type PaperLine = {
-  /** 0 when absent, null when exempt. */
+  /** 0 when absent, null when exempt or not entered. */
   percentage: number | null
   letter: string | null
   gradePoint: number | null
-  /** Null when exempt. */
+  /** Null when exempt or not entered. */
   passed: boolean | null
 }
 
@@ -37,11 +38,12 @@ export type StudentResult = {
   sectionId: string
   totalObtained: number
   totalFull: number
-  /** Null only when every paper is exempt. */
+  /** Over the papers that count so far; null when none does. */
   percentage: number | null
+  /** Null when incomplete (or every paper exempt). */
   gpa: number | null
   letter: string | null
-  status: "pass" | "fail"
+  status: "pass" | "fail" | "incomplete"
   failedSubjects: number
   sectionRank: number | null
   lines: PaperLine[]
@@ -52,7 +54,7 @@ export function paperLine(
   bands: readonly GradeBand[],
   mark: PaperMark
 ): PaperLine {
-  if (mark.status === "exempt") {
+  if (mark.status === "exempt" || mark.status === null) {
     return { percentage: null, letter: null, gradePoint: null, passed: null }
   }
   const obtained = mark.obtained ?? 0
@@ -99,15 +101,16 @@ export function computeResults(
 ): StudentResult[] {
   const results = students.map((student): StudentResult => {
     const lines = student.papers.map((p) => paperLine(bands, p))
+    const incomplete = student.papers.some((p) => p.status === null)
     const counted = student.papers
       .map((paper, i) => ({ paper, line: lines[i]! }))
-      .filter((x) => x.paper.status !== "exempt")
+      .filter((x) => x.paper.status !== "exempt" && x.paper.status !== null)
     const totalObtained = sum2(counted.map((x) => x.paper.obtained ?? 0))
     const totalFull = sum2(counted.map((x) => x.paper.fullMarks))
     const failedSubjects = counted.filter((x) => x.line.passed === false).length
     const gradePoints = counted.map((x) => x.line.gradePoint ?? 0)
     const gpa =
-      gradePoints.length === 0
+      incomplete || gradePoints.length === 0
         ? null
         : failZeroesGpa && failedSubjects > 0
           ? 0
@@ -123,7 +126,7 @@ export function computeResults(
           : null,
       gpa,
       letter: gpaLetter(bands, gpa),
-      status: failedSubjects > 0 ? "fail" : "pass",
+      status: incomplete ? "incomplete" : failedSubjects > 0 ? "fail" : "pass",
       failedSubjects,
       sectionRank: null,
       lines,
