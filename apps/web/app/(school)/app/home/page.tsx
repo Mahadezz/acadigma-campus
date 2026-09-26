@@ -4,7 +4,6 @@ import { GraduationCapIcon } from "lucide-react"
 
 import { getBasicHome } from "@acadigma/db/repositories/basic-home"
 import { getSchoolProfile } from "@acadigma/db/repositories/settings"
-import { Button } from "@acadigma/ui/components/button"
 import { ClassBlock } from "@acadigma/ui/primitives/class-block"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
@@ -27,6 +26,16 @@ const renderLink: SimpleLinkRenderer = ({ href, className, children }) => (
     {children}
   </Link>
 )
+
+/**
+ * Primary/`lg` `Button` classes, inlined for the same reason
+ * `essentials-row.tsx`'s `OUTLINE_BUTTON_CLASSNAME` is — see that file's
+ * docblock. Only the empty state's Call school office link needs it here;
+ * every other button-shaped element on this page already goes through
+ * `ClassBlock`/`TodayStrip`, which style themselves without `Button`.
+ */
+const PRIMARY_BUTTON_CLASSNAME =
+  "inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-6 text-sm font-medium whitespace-nowrap text-primary-foreground transition-all outline-none hover:bg-primary/90 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 
 /**
  * F-ID-10 §4.4/§6 `/app/home` — the real basic-mode home (Part 2). Today
@@ -95,11 +104,9 @@ export default async function BasicHomePage() {
           description={s.emptyDescription}
           action={
             phone ? (
-              <Button asChild size="lg" className="min-h-14">
-                <a href={`tel:${phone}`}>
-                  {fill(t.basicMode.help.callSchoolOffice, { phone })}
-                </a>
-              </Button>
+              <a href={`tel:${phone}`} className={PRIMARY_BUTTON_CLASSNAME}>
+                {fill(t.basicMode.help.callSchoolOffice, { phone })}
+              </a>
             ) : undefined
           }
         />
