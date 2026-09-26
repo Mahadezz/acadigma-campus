@@ -22,6 +22,20 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = { title: "Reports" }
 
+/**
+ * F-OP-03 Part 5 (D-207) — bulk rendering is still synchronous in-request
+ * (D-205's precedent), but it is no longer a single-page render: 40 students
+ * measured ~3.4 s locally (well under the spec §10 budget of 25 s;
+ * `docs/test-reports/`). `maxDuration` (Vercel Node runtime) is raised so a
+ * larger section does not get cut off mid-render — a Server Action inherits
+ * the page it is invoked from, so this covers `createReportRun` when called
+ * from this page's buttons. A background job with `report_run_items`
+ * progress is the next step if a real section-count distribution ever needs
+ * more than this ceiling (§7's own note: "a hard 120 s cap per chunk" once
+ * Part 5 was built for real).
+ */
+export const maxDuration = 60
+
 const STATUS_TONE: Record<ReportStatus, ToneStatusChipProps["tone"]> = {
   queued: "pending",
   rendering: "info",

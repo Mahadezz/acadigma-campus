@@ -66,18 +66,6 @@ import { ACTION_FOR_KIND } from "./report-kind-action"
 
 const REPORTS_PATH = "/app/reports"
 
-/**
- * F-OP-03 Part 5 (D-207) — bulk rendering is still synchronous in-request
- * (D-205's precedent), but it is no longer a single-page render: 40 students
- * measured ~<value filled in the test report> locally (well under the spec
- * §10 budget of 25 s). `maxDuration` (Vercel Node runtime) is raised so a
- * larger section does not get cut off mid-render; a background job with
- * `report_run_items` progress is the next step if a real section-count
- * distribution ever needs more than this ceiling (§7's own note: "a hard
- * 120 s cap per chunk" once Part 5 was built for real).
- */
-export const maxDuration = 60
-
 /** Branding fields every template takes as plain props (`document-shell.tsx`'s
  * file header: this package never fetches its own data). Shared by every
  * render function below so a branding-read bug is fixed once. */
