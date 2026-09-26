@@ -25,7 +25,10 @@ test.skip(
   "needs a seeded, verified Supabase account with zero school memberships (OQ-27)"
 )
 
-function credentialsFor(projectName: string): { email: string; password: string } {
+function credentialsFor(projectName: string): {
+  email: string
+  password: string
+} {
   const suffix = projectName === "phone" ? "" : "_2"
   return {
     email: process.env[`E2E_TEST_USER_EMAIL${suffix}`] ?? "",
@@ -33,6 +36,9 @@ function credentialsFor(projectName: string): { email: string; password: string 
   }
 }
 
+// Playwright requires the fixtures object-destructuring pattern even when
+// nothing is destructured from it.
+// eslint-disable-next-line no-empty-pattern
 test.beforeEach(({}, testInfo) => {
   const { email, password } = credentialsFor(testInfo.project.name)
   test.skip(
