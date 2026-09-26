@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-06 Part 7 (demo cut) — publishing results, the freeze and
--- the parent read (20260926022352_publish_results.sql, D-306)
+-- the parent read (20260926023537_publish_results.sql, D-306)
 --
 --   A. Guards: FORBIDDEN (teacher, staff, parent, another school),
 --      MARKS_NOT_LOCKED, MARKS_INCOMPLETE, NOT_COMPUTED, INCOMPLETE_PRESENT,

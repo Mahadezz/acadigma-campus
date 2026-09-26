@@ -614,7 +614,7 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "student_import_batches",
   // F-AC-01 Part 5 demo cut (D-107) — 20260926021923_section_subjects.sql.
   "section_subjects",
-  // F-AC-06 Part 7 (D-306) — 20260926022352_publish_results.sql.
+  // F-AC-06 Part 7 (D-306) — 20260926023537_publish_results.sql.
   "guardian_users",
 ]
 
