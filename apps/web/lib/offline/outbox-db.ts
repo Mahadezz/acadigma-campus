@@ -11,6 +11,32 @@ const PREFIX = "acadigma-"
 const USER_DB = /^acadigma-([0-9a-f-]{36})$/
 const STORE = "outbox"
 
+/** Every change to an outbox (queued, sent, purged): the UI re-reads. */
+export const outboxEvents: EventTarget | null =
+  typeof EventTarget === "undefined" ? null : new EventTarget()
+export function notifyOutboxChanged(): void {
+  outboxEvents?.dispatchEvent(new Event("change"))
+}
+
+// The users with an outbox here, for browsers that cannot list databases
+// (`indexedDB.databases`): without it another user's outbox would never be
+// found (review, #89).
+const REGISTRY = "acadigma-outbox-users"
+function registry(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(REGISTRY) ?? "[]") as string[]
+  } catch {
+    return []
+  }
+}
+function setRegistry(ids: string[]): void {
+  try {
+    localStorage.setItem(REGISTRY, JSON.stringify(ids))
+  } catch {
+    // No storage: listing falls back to indexedDB.databases() alone.
+  }
+}
+
 function done<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     req.onsuccess = () => resolve(req.result)
@@ -55,6 +81,8 @@ export function outboxStore(userId: string): OutboxStore {
       run(userId, "readonly", (s) => s.getAll() as IDBRequest<OutboxItem[]>),
     put: async (item) => {
       await run(userId, "readwrite", (s) => s.put(item))
+      const known = registry()
+      if (!known.includes(userId)) setRegistry([...known, userId])
     },
     remove: async (id) => {
       await run(userId, "readwrite", (s) => s.delete(id))
@@ -62,9 +90,11 @@ export function outboxStore(userId: string): OutboxStore {
   }
 }
 
-/** Users with an outbox on this device; `null` where the browser cannot list databases. */
-export async function outboxUserIds(): Promise<string[] | null> {
-  if (typeof indexedDB === "undefined" || !indexedDB.databases) return null
+/** Users with an outbox on this device (the registry where databases cannot be listed). */
+export async function outboxUserIds(): Promise<string[]> {
+  if (typeof indexedDB === "undefined" || !indexedDB.databases) {
+    return registry()
+  }
   const dbs = await indexedDB.databases().catch(() => [])
   return dbs.flatMap((d) => USER_DB.exec(d.name ?? "")?.[1] ?? [])
 }
@@ -72,6 +102,7 @@ export async function outboxUserIds(): Promise<string[] | null> {
 /** Deletes one user's whole outbox database. */
 export function deleteOutbox(userId: string): Promise<void> {
   return new Promise((resolve) => {
+    setRegistry(registry().filter((id) => id !== userId))
     const req = indexedDB.deleteDatabase(PREFIX + userId)
     req.onsuccess = () => resolve()
     req.onerror = () => resolve()

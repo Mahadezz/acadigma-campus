@@ -12,7 +12,13 @@ import {
   type OutboxItem,
   type OutboxStore,
 } from "./outbox"
-import { deleteOutbox, outboxStore, outboxUserIds } from "./outbox-db"
+import {
+  deleteOutbox,
+  notifyOutboxChanged,
+  outboxEvents,
+  outboxStore,
+  outboxUserIds,
+} from "./outbox-db"
 
 /**
  * F-ID-11 Part 2a (D-309): the outbox as the app uses it — queue a save,
@@ -20,8 +26,7 @@ import { deleteOutbox, outboxStore, outboxUserIds } from "./outbox-db"
  * storage in `outbox-db.ts`.
  */
 
-const listeners = new Set<() => void>()
-const changed = () => listeners.forEach((fn) => fn())
+const changed = notifyOutboxChanged
 
 const sentListeners = new Set<(entityKey: string, updatedAt: string) => void>()
 /** A queued save landed: the version it created is the screen's next base. */
@@ -163,7 +168,7 @@ export function deleteItem(userId: string, id: string): Promise<void> {
 /** Every outbox on this device (the last-seen user where it cannot be listed). */
 async function deviceUsers(): Promise<string[]> {
   const listed = await outboxUserIds()
-  if (listed) return listed
+  if (listed.length > 0) return listed
   const last = snapshotUserId()
   return last ? [last] : []
 }
@@ -203,10 +208,10 @@ export function useOutbox(userId: string): OutboxItem[] {
         .catch(() => undefined)
     }
     load()
-    listeners.add(load)
+    outboxEvents?.addEventListener("change", load)
     return () => {
       live = false
-      listeners.delete(load)
+      outboxEvents?.removeEventListener("change", load)
     }
   }, [userId])
   return items

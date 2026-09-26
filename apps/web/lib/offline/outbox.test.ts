@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
+import type { ApiErrorCode } from "@acadigma/contracts"
+
 import {
   classify,
   enqueue,
@@ -50,11 +52,14 @@ const draft = (key: string, over: Partial<OutboxDraft> = {}): OutboxDraft => ({
   detail: "Absent: none",
   ...over,
 })
-const ok = (updatedAt = "v2") => ({ ok: true as const, data: { updatedAt } })
-const fail = (code: string, root?: string) => ({
+const ok = (updatedAt = "v2"): SendReply => ({
+  ok: true as const,
+  data: { updatedAt },
+})
+const fail = (code: string, root?: string): SendReply => ({
   ok: false as const,
   error: {
-    code,
+    code: code as ApiErrorCode,
     message: `${code} ${root ?? ""}`,
     ...(root ? { fieldErrors: { _root: [root] } } : {}),
   },

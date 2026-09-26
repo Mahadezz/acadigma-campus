@@ -1,4 +1,9 @@
-import { deleteOutbox, outboxStore, outboxUserIds } from "./outbox-db"
+import {
+  deleteOutbox,
+  notifyOutboxChanged,
+  outboxStore,
+  outboxUserIds,
+} from "./outbox-db"
 import {
   DATA_CACHE_PREFIX,
   decidePurge,
@@ -143,8 +148,8 @@ export async function runOfflineCheck(
 
 /**
  * §4.8, the outbox half (D-309), kept apart from the page wipe: another
- * user's outbox on this device is deleted (a different user never sends or
- * sees it), and this user's items for a workspace they are no longer an
+ * user's outbox is never sent or shown to this user (it is kept, and only
+ * counted, while it holds work; deleted once empty), and this user's items for a workspace they are no longer an
  * active member of are deleted. A role change keeps them — they replay under
  * the new role, where the server decides. Signed out keeps everything: an
  * expired session resumes for the same user (§4.6).
@@ -154,17 +159,33 @@ async function purgeOutboxes(
 ): Promise<void> {
   if (typeof indexedDB === "undefined") return
   const users = await outboxUserIds()
-  for (const id of users ?? []) {
-    if (id !== check.userId) await deleteOutbox(id)
+  // Another teacher's unsent work is an official record: kept while it
+  // holds anything (only counted, never shown), deleted once empty. The
+  // choice to delete it is Part 2b's (§4.6); review, #89.
+  let waiting = 0
+  for (const id of users) {
+    if (id === check.userId) continue
+    const n = (await outboxStore(id).list()).length
+    if (n > 0) waiting += n
+    else await deleteOutbox(id)
   }
+  others = waiting
   // No outbox of theirs here: nothing to open (opening would create one).
-  if (users && !users.includes(check.userId)) return
-  const store = outboxStore(check.userId)
-  for (const item of await store.list()) {
-    if (!check.activeWorkspaceIds.includes(item.workspaceId)) {
-      await store.remove(item.id)
+  if (users.includes(check.userId)) {
+    const store = outboxStore(check.userId)
+    for (const item of await store.list()) {
+      if (!check.activeWorkspaceIds.includes(item.workspaceId)) {
+        await store.remove(item.id)
+      }
     }
   }
+  notifyOutboxChanged()
+}
+
+let others = 0
+/** How many unsent changes of other users this device holds (last check). */
+export function othersWaiting(): number {
+  return others
 }
 
 /** The check and both purges; what replay needs to know who may send. */

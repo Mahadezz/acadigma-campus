@@ -12,19 +12,27 @@ import type { SessionCheck } from "./purge"
 const deleted: string[] = []
 let items: OutboxItem[] = []
 let users: string[] | null = []
-const openStore = vi.fn(() => ({
-  list: async () => items,
+/** Other users' outboxes: user id → how many items it holds. */
+let others: Record<string, number> = {}
+const openStore = vi.fn((userId: string) => ({
+  list: async () =>
+    userId === "u1"
+      ? items
+      : Array.from({ length: others[userId] ?? 0 }, (_, i) =>
+          item(`${userId}-${i}`, "w1")
+        ),
   remove: async (id: string) => {
     items = items.filter((i) => i.id !== id)
   },
 }))
 vi.mock("./outbox-db", () => ({
-  outboxUserIds: async () => users,
+  outboxUserIds: async () => users ?? [],
+  notifyOutboxChanged: () => undefined,
   deleteOutbox: async (id: string) => void deleted.push(id),
-  outboxStore: () => openStore(),
+  outboxStore: (userId: string) => openStore(userId),
 }))
 
-const { checkSession } = await import("./check")
+const { checkSession, othersWaiting } = await import("./check")
 
 const item = (id: string, workspaceId: string) =>
   ({ id, userId: "u1", workspaceId }) as OutboxItem
@@ -50,6 +58,7 @@ beforeEach(() => {
   vi.stubGlobal("caches", { keys: async () => [], delete: async () => true })
   deleted.length = 0
   users = ["u1", "u2"]
+  others = {}
   items = [item("a", "w1"), item("b", "w2")]
 })
 afterEach(() => {
@@ -58,7 +67,17 @@ afterEach(() => {
 })
 
 describe("outbox purge on the session check", () => {
-  it("deletes another user's outbox and this user's items for a workspace they left", async () => {
+  it("keeps another teacher's outbox while it holds work, and only counts it", async () => {
+    // Review (#89): attendance is an official record — B signing in on A's
+    // phone must not silently delete A's unsent roll calls (2b: the choice).
+    users = ["u1", "u2", "u3"]
+    others = { u2: 2 }
+    await checkSession()
+    expect(deleted).toEqual(["u3"])
+    expect(othersWaiting()).toBe(2)
+  })
+
+  it("deletes another user's empty outbox and this user's items for a workspace they left", async () => {
     await checkSession()
     expect(deleted).toEqual(["u2"])
     expect(items.map((i) => i.id)).toEqual(["a"])
@@ -86,7 +105,7 @@ describe("outbox purge on the session check", () => {
     users = ["u2"]
     openStore.mockClear()
     await checkSession()
-    expect(openStore).not.toHaveBeenCalled()
+    expect(openStore).not.toHaveBeenCalledWith("u1")
     expect(deleted).toEqual(["u2"])
   })
 })
