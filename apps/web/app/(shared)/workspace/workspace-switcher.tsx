@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import {
   CheckIcon,
   ChevronsUpDownIcon,
+  HeartHandshakeIcon,
   HomeIcon,
   Loader2Icon,
   PlusIcon,
@@ -19,6 +20,7 @@ import type { MembershipSummary } from "@acadigma/contracts"
 import { Avatar, AvatarFallback } from "@acadigma/ui/components/avatar"
 import { Badge } from "@acadigma/ui/components/badge"
 import { Button } from "@acadigma/ui/components/button"
+import { Separator } from "@acadigma/ui/components/separator"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -45,6 +47,12 @@ export type WorkspaceSwitcherProps = {
   workspaces: MembershipSummary[]
   currentWorkspaceId: string
   t: Messages["workspace"]["switcher"]
+  /**
+   * D-109: the other shell of the SAME school for a staff member who is also
+   * a parent there — "My children" (/family) from the school app, "School
+   * app" (/app) back from the family shell.
+   */
+  shellLink?: { href: string; label: string }
 }
 
 function initialOf(name: string): string {
@@ -55,6 +63,7 @@ export function WorkspaceSwitcher({
   workspaces,
   currentWorkspaceId,
   t,
+  shellLink,
 }: WorkspaceSwitcherProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -113,7 +122,7 @@ export function WorkspaceSwitcher({
     })
   }
 
-  if (selectable.length <= 1) {
+  if (selectable.length <= 1 && !shellLink) {
     // §6: "Only one workspace → the chip is not tappable and shows no chevron."
     return (
       <div className="flex min-w-0 items-center gap-2 px-1">
@@ -232,6 +241,26 @@ export function WorkspaceSwitcher({
               )
             })}
           </ul>
+
+          {shellLink ? (
+            <div className="flex flex-col gap-2">
+              <Separator />
+              <p className="text-muted-foreground px-1 text-xs font-medium">
+                {t.alsoParent}
+              </p>
+              <Button asChild variant="outline" className="w-full">
+                <Link href={shellLink.href} onClick={() => setOpen(false)}>
+                  {shellLink.href === "/app" ? (
+                    <SchoolIcon aria-hidden="true" />
+                  ) : (
+                    <HeartHandshakeIcon aria-hidden="true" />
+                  )}
+                  {shellLink.label}
+                </Link>
+              </Button>
+              <Separator />
+            </div>
+          ) : null}
 
           <Button asChild variant="outline" className="w-full">
             <Link href="/onboarding" onClick={() => setOpen(false)}>

@@ -40,7 +40,9 @@ export const ACTIONS = [
   // F-AC-02 §2 / §4.7: bulk import from a spreadsheet (D-106).
   "students.import",
   // F-AC-02 §2 / Part 4 (D-108): invite a guardian to the parent app and
-  // revoke a parent's link — owner/admin.
+  // revoke a parent's link — owner/admin, and (D-109, F-ID-04 OQ-6) a teacher
+  // may attempt it: SQL narrows it to the class teacher of the student's
+  // current section.
   "students.guardian.invite",
   "marks.read",
   "marks.write",
@@ -58,7 +60,9 @@ export const ACTIONS = [
   // F-AC-06 §2 / Part 7 (D-306): publish, withhold and unpublish — owner/admin.
   "results.publish",
   // F-AC-10 §2: a parent reads their own children's published results
-  // (RLS: published, not withheld, an active guardian link).
+  // (RLS: published, not withheld, an active guardian link). Since D-109 the
+  // family surface itself (/family, its report card) is gated on an active
+  // guardian link, not on this role grant: staff can be parents too.
   "family.results.read",
   "timetable.read",
   "timetable.manage",
@@ -320,6 +324,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "exams.read",
     "results.read",
     "students.read_sensitive",
+    "students.guardian.invite",
   ],
   // Office staff: sees the school, changes almost nothing.
   staff: [

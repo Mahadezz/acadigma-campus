@@ -32,7 +32,7 @@ const UNAVAILABLE: ApiError = apiError(
 const ERRORS: Record<string, ApiError> = {
   FORBIDDEN: apiError(
     "forbidden",
-    "Only an owner or admin can manage parent access."
+    "Only an owner, an admin or the student's class teacher can manage parent access."
   ),
   GUARDIAN_NOT_FOUND: apiError("not_found", "That guardian was not found."),
   GUARDIAN_ALREADY_LINKED: apiError(
@@ -63,7 +63,7 @@ const ERRORS: Record<string, ApiError> = {
   INVITATION_DECLINED: apiError("conflict", "This invitation was declined."),
   MEMBERSHIP_CONFLICT: apiError(
     "conflict",
-    "Your account already belongs to this school in another role. Please contact the school."
+    "Your account's membership at this school is not active. Please contact the school."
   ),
   PLAN_READ_ONLY: apiError(
     "forbidden",
@@ -108,7 +108,7 @@ export async function revokeGuardianLink(
   return error ? err(mapError(error.message)) : ok(null)
 }
 
-/** The accounts actively linked to a student's guardians (RLS: owner/admin). */
+/** The accounts actively linked to a student's guardians (RLS: owner/admin or the class teacher). */
 export async function listGuardianLinks(
   ctx: WorkspaceContext,
   client: AcadigmaSupabaseClient,
@@ -189,15 +189,29 @@ export async function acceptGuardianInvitation(
     : err(UNAVAILABLE)
 }
 
-/** A parent's linked children (RLS: `students_select_guardian`). */
+/**
+ * The caller's linked children. Filtered by the caller's own active links,
+ * not by RLS alone: a staff member who is also a parent (D-109) reads the
+ * whole roster, and must see only their own children here.
+ */
 export async function listFamilyChildren(
   ctx: WorkspaceContext,
   client: AcadigmaSupabaseClient
 ): Promise<Result<FamilyChild[], ApiError>> {
+  const links = await client
+    .from("guardian_users")
+    .select("student_id")
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("user_id", ctx.userId)
+    .eq("status", "active")
+  if (links.error) return err(UNAVAILABLE)
+  const ids = (links.data ?? []).map((l) => l.student_id)
+  if (ids.length === 0) return ok([])
   const { data, error } = await client
     .from("students")
     .select("id, full_name, full_name_bn, student_code")
     .eq("workspace_id", ctx.workspaceId)
+    .in("id", ids)
     .is("deleted_at", null)
     .order("full_name")
   if (error) return err(UNAVAILABLE)
