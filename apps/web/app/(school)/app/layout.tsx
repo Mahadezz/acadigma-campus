@@ -207,6 +207,7 @@ export default async function SchoolLayout({
               </Button>
               <UserMenu
                 locale={locale}
+                userId={ctx.userId}
                 t={{
                   ...t.workspace.userMenu,
                   ...t.auth.languageToggle,

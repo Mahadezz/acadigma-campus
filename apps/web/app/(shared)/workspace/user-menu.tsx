@@ -27,6 +27,8 @@ import { updateLocale, updateUiPreferences } from "./actions"
 
 export type UserMenuProps = {
   locale: Locale
+  /** The signed-in user (`ctx.userId`): whose outbox a sign-out deletes. */
+  userId: string
   t: {
     ariaLabel: string
     languageLabel: string
@@ -73,7 +75,12 @@ export type UserMenuProps = {
  * `/login`) rather than a new one; this menu is simply the first place it is
  * wired into the UI.
  */
-export function UserMenu({ locale, t, showBasicModeSwitch }: UserMenuProps) {
+export function UserMenu({
+  locale,
+  userId,
+  t,
+  showBasicModeSwitch,
+}: UserMenuProps) {
   const router = useRouter()
   const [, startTransition] = React.useTransition()
 
@@ -91,7 +98,7 @@ export function UserMenu({ locale, t, showBasicModeSwitch }: UserMenuProps) {
 
   // F-ID-11 §4.7 (D-308, D-309): asks first if changes are still on the
   // phone; then the outbox and the cached pages go before the session does.
-  const guardedSignOut = useGuardedSignOut(() => signOut())
+  const guardedSignOut = useGuardedSignOut(() => signOut(), userId)
 
   function handleSwitchToBasicMode() {
     startTransition(async () => {
