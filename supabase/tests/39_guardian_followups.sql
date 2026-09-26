@@ -343,11 +343,12 @@ select tests.login('39000000-0000-4000-a000-000000000002');
 select lives_ok($$select public.revoke_guardian_link('39000000-0000-4000-b000-000000000001', (select s_a1 from lx))$$,
   'the class teacher of A revokes staff S''s link to A1');
 select lives_ok($$update public.workspace_members set status = 'removed'
-                   where user_id = '39000000-0000-4000-a000-000000000005'$$,
+                   where user_id = '39000000-0000-4000-a000-000000000005'
+                     and workspace_id = '39000000-0000-4000-b000-000000000001'$$,
   'a direct update of S''s membership by the class teacher changes nothing (RLS)');
 select tests.logout();
 select is((select role::text || '/' || status::text from public.workspace_members
-            where user_id = '39000000-0000-4000-a000-000000000005'), 'staff/active',
+            where user_id = '39000000-0000-4000-a000-000000000005' and workspace_id = '39000000-0000-4000-b000-000000000001'), 'staff/active',
   'a class teacher cannot remove a staff member: S stays active staff');
 
 select tests.login('39000000-0000-4000-a000-000000000002');
@@ -357,7 +358,7 @@ select throws_ok($$select public.revoke_guardian_link('39000000-0000-4000-b000-0
   '42501', 'FORBIDDEN', 'the class teacher of A cannot revoke Q''s link to B1 (outside their section)');
 select tests.logout();
 select is((select role::text || '/' || status::text from public.workspace_members
-            where user_id = '39000000-0000-4000-a000-000000000007'), 'parent/active',
+            where user_id = '39000000-0000-4000-a000-000000000007' and workspace_id = '39000000-0000-4000-b000-000000000001'), 'parent/active',
   'a parent who still has another link keeps their membership');
 select is((select status::text from public.guardian_users where id = (select q_b1 from lx)), 'active',
   'and their link to B1');
@@ -367,17 +368,19 @@ select is((select status::text from public.guardian_users where id = (select q_b
 update public.guardian_users set status = 'revoked', revoked_at = now() where id = (select q_b1 from lx);
 select tests.login('39000000-0000-4000-a000-000000000007');
 select throws_ok($$update public.workspace_members set status = 'removed'
-                    where user_id = '39000000-0000-4000-a000-000000000007'$$,
+                    where user_id = '39000000-0000-4000-a000-000000000007'
+                     and workspace_id = '39000000-0000-4000-b000-000000000001'$$,
   '42501', 'members cannot change their own role or status',
   'a parent cannot use a same-transaction revoked link to change their own membership');
 select tests.logout();
 select tests.login('39000000-0000-4000-a000-000000000002');
 select lives_ok($$update public.workspace_members set status = 'removed'
-                   where user_id = '39000000-0000-4000-a000-000000000007'$$,
+                   where user_id = '39000000-0000-4000-a000-000000000007'
+                     and workspace_id = '39000000-0000-4000-b000-000000000001'$$,
   'a class teacher''s direct update with the proof in place changes nothing');
 select tests.logout();
 select is((select role::text || '/' || status::text from public.workspace_members
-            where user_id = '39000000-0000-4000-a000-000000000007'), 'parent/active',
+            where user_id = '39000000-0000-4000-a000-000000000007' and workspace_id = '39000000-0000-4000-b000-000000000001'), 'parent/active',
   'the forged proof removed no one: only the SECURITY DEFINER path qualifies');
 
 -- The same 60/h school limit applies to the class teacher.
