@@ -32,9 +32,14 @@ schema_paths = []
 # Without this block `supabase start`/`db reset` silently seeded nothing at all
 # (confirmed on PR #77's own CI run: "WARN: no files matched pattern:
 # supabase/seed.sql"), contradicting seed.sql's own header comment.
+#
+# e2e-fixtures.sql (D-76 / OQ-27) runs after seed.sql on purpose — it reads
+# the owner/teacher ids and workspace seed.sql just created — and sources
+# demo-class-6-ka.sql itself (unmodified) via \ir, so that file stays out of
+# this list.
 [db.seed]
 enabled = true
-sql_paths = ["./seed/seed.sql"]
+sql_paths = ["./seed/seed.sql", "./seed/e2e-fixtures.sql"]
 
 [db.pooler]
 enabled = false
