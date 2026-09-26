@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-OP-03 Part 6 review (D-208 BLOCKER fix) —
--- `public.attendance_register` (20260926065335_report_register_marksheet_kinds.sql).
+-- `public.attendance_register` (20260926072044_report_register_marksheet_kinds.sql).
 --
 -- Proves the two things the review flagged:
 --   1. No PostgREST `max_rows` cap (supabase/config.toml, 1000): a

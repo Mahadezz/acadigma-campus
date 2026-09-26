@@ -1,7 +1,7 @@
 /**
  * F-OP-03 Part 6 (D-208) — the monthly attendance register (spec §4 "Sign and
  * lock" workflow deferred, §5.2/§5.7). One RPC call per (section, month):
- * `public.attendance_register` (20260926065335_report_register_marksheet_kinds.sql,
+ * `public.attendance_register` (20260926072044_report_register_marksheet_kinds.sql,
  * review fix) returns the section, the roster, the calendar days
  * (`app.is_school_day` already computed per day) and every attendance record
  * as ONE jsonb value — PostgREST's `max_rows` (supabase/config.toml) caps the
