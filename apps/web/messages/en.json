@@ -1108,7 +1108,16 @@
       "co_curricular": "Co-curricular"
     },
     "fourthBadge": "4th subject",
-    "readOnlyNote": "You can view classes and subjects. Only an owner or admin can change them."
+    "readOnlyNote": "You can view classes and subjects. Only an owner or admin can change them.",
+    "subjectsButton": "Subjects",
+    "sectionSubjectsTitle": "Subjects of {section}",
+    "sectionSubjectsDescription": "Tick the subjects this section takes and pick who teaches each one.",
+    "subjectTeacher": "Teacher for {subject}",
+    "noTeacher": "No teacher yet",
+    "subjectCountOne": "1 subject",
+    "subjectCountOther": "{count} subjects",
+    "noSectionSubjects": "No subjects yet",
+    "needSubjectsFirst": "Add subjects on the Subjects tab first."
   },
   "exams": {
     "title": "Exams",

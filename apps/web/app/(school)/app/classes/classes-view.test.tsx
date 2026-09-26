@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import bn from "@/messages/bn.json"
@@ -17,9 +17,11 @@ vi.mock("./actions", () => ({
   createSection: vi.fn(),
   createSubject: vi.fn(),
   seedStarterSubjects: vi.fn(),
+  setSectionSubjects: vi.fn(async () => ({ ok: true, data: { count: 2 } })),
 }))
 
 const { ClassesView, errorText } = await import("./classes-view")
+const actions = await import("./actions")
 
 const overview = {
   year: { id: "y", name: "2026" },
@@ -39,6 +41,7 @@ const overview = {
           classTeacherName: "Nadia Rahman",
           room: "204",
           capacity: 40,
+          subjects: [{ subjectId: "sub1", teacherId: "m1" }],
         },
       ],
     },
@@ -53,6 +56,25 @@ const overview = {
   ],
 }
 
+const SUBJECTS = [
+  {
+    id: "sub1",
+    name: "Bangla 1st Paper",
+    nameBn: "বাংলা প্রথম পত্র",
+    code: "BAN1",
+    category: "core" as const,
+    subjectKind: "compulsory" as const,
+  },
+  {
+    id: "sub2",
+    name: "English 1st Paper",
+    nameBn: null,
+    code: "ENG1",
+    category: "core" as const,
+    subjectKind: "compulsory" as const,
+  },
+]
+
 function renderView(canWrite: boolean, locale: "en" | "bn" = "en") {
   const t = (locale === "bn" ? bn : en).classes
   render(
@@ -60,8 +82,8 @@ function renderView(canWrite: boolean, locale: "en" | "bn" = "en") {
       t={t}
       locale={locale}
       overview={overview}
-      subjects={[]}
-      teachers={[]}
+      subjects={SUBJECTS}
+      teachers={[{ memberId: "m1", name: "Nadia Rahman" }]}
       canWriteSections={canWrite}
       canWriteSubjects={canWrite}
     />
@@ -74,7 +96,7 @@ describe("ClassesView", () => {
     renderView(true)
     expect(screen.getByText("Class 6 – A")).toBeTruthy()
     expect(
-      screen.getByText("Class teacher: Nadia Rahman · Room 204")
+      screen.getByText("Class teacher: Nadia Rahman · Room 204 · 1 subject")
     ).toBeTruthy()
     expect(screen.getByText(en.classes.noSections)).toBeTruthy()
   })
@@ -83,12 +105,50 @@ describe("ClassesView", () => {
     renderView(false)
     expect(screen.queryByRole("button", { name: /add a section/i })).toBeNull()
     expect(screen.queryByRole("button", { name: /archive/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /subjects of/i })).toBeNull()
     expect(screen.getByText(en.classes.readOnlyNote)).toBeTruthy()
   })
 
   it("uses Bangla grade names in Bangla", () => {
     renderView(true, "bn")
     expect(screen.getByText("ষষ্ঠ শ্রেণি – A")).toBeTruthy()
+  })
+})
+
+describe("section subjects sheet (D-107)", () => {
+  it("adds a subject with its teacher and saves the whole list", async () => {
+    renderView(true)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Subjects of Class 6 – A" })
+    )
+    const bangla = screen.getByLabelText("Teacher for Bangla 1st Paper")
+    expect((bangla as HTMLSelectElement).value).toBe("m1")
+    expect(screen.queryByLabelText("Teacher for English 1st Paper")).toBeNull()
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "English 1st Paper" }))
+    fireEvent.change(screen.getByLabelText("Teacher for English 1st Paper"), {
+      target: { value: "m1" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: en.classes.save }))
+
+    await waitFor(() =>
+      expect(actions.setSectionSubjects).toHaveBeenCalledWith({
+        sectionId: "s1",
+        subjects: [
+          { subjectId: "sub1", teacherId: "m1" },
+          { subjectId: "sub2", teacherId: "m1" },
+        ],
+      })
+    )
+  })
+
+  it("names subjects in Bangla and keeps digits Western", () => {
+    renderView(true, "bn")
+    expect(screen.getByText(/1টি বিষয়/)).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole("button", { name: "ষষ্ঠ শ্রেণি – A-এর বিষয়" })
+    )
+    expect(screen.getByLabelText("বাংলা প্রথম পত্র-এর শিক্ষক")).toBeTruthy()
   })
 })
 

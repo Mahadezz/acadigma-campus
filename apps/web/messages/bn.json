@@ -1108,7 +1108,16 @@
       "co_curricular": "সহশিক্ষা"
     },
     "fourthBadge": "চতুর্থ বিষয়",
-    "readOnlyNote": "আপনি শ্রেণি ও বিষয় দেখতে পারবেন। শুধু মালিক বা অ্যাডমিন পরিবর্তন করতে পারেন।"
+    "readOnlyNote": "আপনি শ্রেণি ও বিষয় দেখতে পারবেন। শুধু মালিক বা অ্যাডমিন পরিবর্তন করতে পারেন।",
+    "subjectsButton": "বিষয়",
+    "sectionSubjectsTitle": "{section}-এর বিষয়",
+    "sectionSubjectsDescription": "এই শাখা যে বিষয়গুলো পড়ে সেগুলোতে টিক দিন এবং প্রতিটি কে পড়ান তা বেছে নিন।",
+    "subjectTeacher": "{subject}-এর শিক্ষক",
+    "noTeacher": "এখনো শিক্ষক নেই",
+    "subjectCountOne": "1টি বিষয়",
+    "subjectCountOther": "{count}টি বিষয়",
+    "noSectionSubjects": "এখনো কোনো বিষয় নেই",
+    "needSubjectsFirst": "আগে বিষয় ট্যাবে বিষয় যোগ করুন।"
   },
   "exams": {
     "title": "পরীক্ষা",
