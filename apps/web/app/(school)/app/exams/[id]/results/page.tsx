@@ -20,6 +20,16 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = { title: "Results" }
 
+/**
+ * F-OP-03 Part 5 (D-207): "Print all report cards" renders every student in
+ * the section synchronously, in-request (D-205's precedent) — measured
+ * ~3.4 s for 40 students locally (`docs/test-reports/`), well under the
+ * spec §10 budget of 25 s. A Server Action inherits the page it is invoked
+ * from, so this covers `createReportRun` when called from this page's bulk
+ * button.
+ */
+export const maxDuration = 60
+
 type T = Messages["exams"]["results"]
 
 const UUID = /^[0-9a-f-]{36}$/i
@@ -97,11 +107,21 @@ export default async function ExamResultsPage({
         locale={locale}
         sections={sections}
         sectionId={sectionId}
+        examId={id}
         results={results}
         reportCard={
           can(ctx.role, "report.render.report_card")
             ? {
                 generateReportCard: t.reports.generateReportCard,
+                generating: t.reports.generating,
+                error: t.reports.error,
+              }
+            : null
+        }
+        bulkReportCard={
+          can(ctx.role, "report.render.report_card_bulk")
+            ? {
+                generateReportCardBulk: t.reports.generateReportCardBulk,
                 generating: t.reports.generating,
                 error: t.reports.error,
               }

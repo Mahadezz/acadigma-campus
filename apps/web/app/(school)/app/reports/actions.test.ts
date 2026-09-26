@@ -46,8 +46,11 @@ const mockGetReportRun = vi.fn()
 const mockMarkRendering = vi.fn()
 const mockMarkReady = vi.fn()
 const mockMarkFailed = vi.fn()
+const mockCreateReportRunItems = vi.fn()
 vi.mock("@acadigma/db/repositories/reports", () => ({
   createReportRun: (...args: unknown[]) => mockCreateReportRunRepo(...args),
+  createReportRunItems: (...args: unknown[]) =>
+    mockCreateReportRunItems(...args),
   getReportRun: (...args: unknown[]) => mockGetReportRun(...args),
   markReportRunRendering: (...args: unknown[]) => mockMarkRendering(...args),
   markReportRunReady: (...args: unknown[]) => mockMarkReady(...args),
@@ -71,6 +74,12 @@ vi.mock("./report-card-data", () => ({
   getReportCardData: (...args: unknown[]) => mockGetReportCardData(...args),
 }))
 
+const mockRenderReportCardBulkPdf = vi.fn()
+vi.mock("./report-card-bulk", () => ({
+  renderReportCardBulkPdf: (...args: unknown[]) =>
+    mockRenderReportCardBulkPdf(...args),
+}))
+
 const { createReportRun } = await import("./actions")
 
 const CTX = {
@@ -89,6 +98,16 @@ const VALID_REPORT_CARD_INPUT = {
   },
   locale: "bn",
 }
+const VALID_REPORT_CARD_BULK_INPUT = {
+  params: {
+    kind: "report_card_bulk",
+    sectionId: "33333333-3333-3333-3333-333333333333",
+    examId: "22222222-2222-2222-2222-222222222222",
+    order: "roll",
+    duplex: false,
+  },
+  locale: "bn",
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -97,6 +116,7 @@ beforeEach(() => {
   mockResolveEntitledNavModules.mockResolvedValue(["reports"])
   mockRequireWritable.mockResolvedValue({ ok: true, data: undefined })
   mockMarkRendering.mockResolvedValue({ ok: true, data: undefined })
+  mockCreateReportRunItems.mockResolvedValue({ ok: true, data: undefined })
   mockWithServiceRole.mockImplementation(
     async (_reason: string, op: (client: unknown) => unknown) => op({})
   )
@@ -263,5 +283,210 @@ describe("report_card kind (D-206)", () => {
       "no fixture data"
     )
     expect(mockRenderPdfToBuffer).not.toHaveBeenCalled()
+  })
+})
+
+describe("report_card_bulk kind (D-207)", () => {
+  it("checks report.render.report_card_bulk, not report.render.report_card", async () => {
+    mockCreateReportRunRepo.mockResolvedValue({
+      ok: true,
+      data: { id: "run-idempotent-bulk", status: "ready" },
+    })
+    await createReportRun(VALID_REPORT_CARD_BULK_INPUT)
+    expect(mockCan).toHaveBeenCalledWith(
+      "teacher",
+      "report.render.report_card_bulk"
+    )
+  })
+
+  it("denies a role without report.render.report_card_bulk", async () => {
+    mockCan.mockReturnValue(false)
+    const result = await createReportRun(VALID_REPORT_CARD_BULK_INPUT)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("forbidden")
+    expect(mockCreateReportRunRepo).not.toHaveBeenCalled()
+  })
+
+  it("renders through renderReportCardBulkPdf, writes report_run_items and sets item_count", async () => {
+    mockCreateReportRunRepo.mockResolvedValue({
+      ok: true,
+      data: { id: "run-bulk-1", status: "queued" },
+    })
+    mockGetSchoolProfile.mockResolvedValue({
+      ok: true,
+      data: {
+        fields: { legal_name: "Test School" },
+        branding: {
+          header_line_1: null,
+          header_line_2: null,
+          accent: null,
+          report_footer: null,
+        },
+      },
+    })
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: { id: "run-bulk-1", status: "ready", locale: "bn" },
+    })
+    mockRenderReportCardBulkPdf.mockResolvedValue({
+      ok: true,
+      data: {
+        buffer: Buffer.from("%PDF"),
+        pageCount: 2,
+        items: [
+          { studentId: "s1", status: "ready", pageFrom: 1, pageTo: 1 },
+          { studentId: "s2", status: "failed", errorDetail: "no_marks" },
+        ],
+      },
+    })
+    const callerClient = { caller: true }
+    mockCreateClient.mockImplementationOnce(async () => callerClient)
+
+    const result = await createReportRun(VALID_REPORT_CARD_BULK_INPUT)
+    expect(result.ok).toBe(true)
+    // The seam-orchestration function reads through the caller's RLS client.
+    expect(mockRenderReportCardBulkPdf).toHaveBeenCalledWith(
+      callerClient,
+      CTX,
+      VALID_REPORT_CARD_BULK_INPUT.params,
+      "bn",
+      expect.anything(),
+      expect.any(Date)
+    )
+    expect(mockCreateReportRunItems).toHaveBeenCalledWith(
+      expect.anything(),
+      CTX,
+      "run-bulk-1",
+      [
+        { subjectId: "s1", status: "ready", pageFrom: 1, pageTo: 1 },
+        { subjectId: "s2", status: "failed", errorDetail: "no_marks" },
+      ]
+    )
+    expect(mockMarkReady).toHaveBeenCalledWith(
+      expect.anything(),
+      "run-bulk-1",
+      2,
+      expect.any(Number),
+      2
+    )
+    expect(mockMarkFailed).not.toHaveBeenCalled()
+  })
+
+  it("marks the run failed with no_data and writes no items when the roster resolver itself fails (no items were ever attempted)", async () => {
+    mockCreateReportRunRepo.mockResolvedValue({
+      ok: true,
+      data: { id: "run-bulk-2", status: "queued" },
+    })
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: { id: "run-bulk-2", status: "queued", locale: "bn" },
+    })
+    mockRenderReportCardBulkPdf.mockResolvedValue({
+      ok: false,
+      error: {
+        error: { code: "not_found", message: "no student has data" },
+        items: [],
+      },
+    })
+
+    const result = await createReportRun(VALID_REPORT_CARD_BULK_INPUT)
+    expect(result.ok).toBe(true)
+    expect(mockMarkFailed).toHaveBeenCalledWith(
+      expect.anything(),
+      "run-bulk-2",
+      "no_data",
+      "no student has data"
+    )
+    expect(mockCreateReportRunItems).not.toHaveBeenCalled()
+  })
+
+  it("writes every attempted item, then marks the run failed with no_data, when every student in the roster fails (lead review: shows why)", async () => {
+    mockCreateReportRunRepo.mockResolvedValue({
+      ok: true,
+      data: { id: "run-bulk-3", status: "queued" },
+    })
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: { id: "run-bulk-3", status: "queued", locale: "bn" },
+    })
+    mockRenderReportCardBulkPdf.mockResolvedValue({
+      ok: false,
+      error: {
+        error: { code: "not_found", message: "no student has data" },
+        items: [
+          {
+            studentId: "s1",
+            status: "failed",
+            errorDetail: "not the class teacher",
+          },
+        ],
+      },
+    })
+
+    const result = await createReportRun(VALID_REPORT_CARD_BULK_INPUT)
+    expect(result.ok).toBe(true)
+    expect(mockCreateReportRunItems).toHaveBeenCalledWith(
+      expect.anything(),
+      CTX,
+      "run-bulk-3",
+      [
+        {
+          subjectId: "s1",
+          status: "failed",
+          errorDetail: "not the class teacher",
+        },
+      ]
+    )
+    expect(mockMarkFailed).toHaveBeenCalledWith(
+      expect.anything(),
+      "run-bulk-3",
+      "no_data",
+      "no student has data"
+    )
+  })
+
+  it("marks the run failed with items_write_failed when report_run_items fails to write, never marks ready", async () => {
+    mockCreateReportRunRepo.mockResolvedValue({
+      ok: true,
+      data: { id: "run-bulk-4", status: "queued" },
+    })
+    mockGetSchoolProfile.mockResolvedValue({
+      ok: true,
+      data: {
+        fields: { legal_name: "Test School" },
+        branding: {
+          header_line_1: null,
+          header_line_2: null,
+          accent: null,
+          report_footer: null,
+        },
+      },
+    })
+    mockGetReportRun.mockResolvedValue({
+      ok: true,
+      data: { id: "run-bulk-4", status: "ready", locale: "bn" },
+    })
+    mockRenderReportCardBulkPdf.mockResolvedValue({
+      ok: true,
+      data: {
+        buffer: Buffer.from("%PDF"),
+        pageCount: 1,
+        items: [{ studentId: "s1", status: "ready", pageFrom: 1, pageTo: 1 }],
+      },
+    })
+    mockCreateReportRunItems.mockResolvedValue({
+      ok: false,
+      error: { code: "dependency_unavailable", message: "db down" },
+    })
+
+    const result = await createReportRun(VALID_REPORT_CARD_BULK_INPUT)
+    expect(result.ok).toBe(true)
+    expect(mockMarkFailed).toHaveBeenCalledWith(
+      expect.anything(),
+      "run-bulk-4",
+      "items_write_failed",
+      "db down"
+    )
+    expect(mockMarkReady).not.toHaveBeenCalled()
   })
 })

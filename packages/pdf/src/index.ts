@@ -11,6 +11,11 @@ export {
   formatNumber,
   type ReportLocale,
 } from "./format"
+export {
+  mergeReportCardBulkPdf,
+  type ReportCardBulkMergeResult,
+  type ReportCardBulkPageRange,
+} from "./merge"
 export { renderPdfToBuffer } from "./render"
 export {
   ReportCardDocument,

@@ -30,6 +30,8 @@ import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { StatusChip } from "@acadigma/ui/primitives/status-chip"
 
+import { GenerateReportCardBulkButton } from "@/app/(school)/app/reports/generate-report-card-bulk-button"
+import type { ReportCardBulkCopy } from "@/app/(school)/app/reports/generate-report-card-bulk-button"
 import {
   GenerateReportCardButton,
   type ReportCardCopy,
@@ -50,16 +52,22 @@ export function ResultsView({
   locale,
   sections,
   sectionId,
+  examId,
   results,
   reportCard,
+  bulkReportCard,
 }: {
   t: T
   locale: Locale
   sections: [string, string][]
   sectionId: string | undefined
+  examId: string
   results: Result<SectionResults, ApiError> | null
   /** Set when the viewer may render report cards (report.render.report_card). */
   reportCard: ReportCardCopy | null
+  /** Set when the viewer may render bulk report cards
+   * (report.render.report_card_bulk, F-OP-03 Part 5, D-207). */
+  bulkReportCard: ReportCardBulkCopy | null
 }) {
   return (
     <>
@@ -84,6 +92,15 @@ export function ResultsView({
             {r.show}
           </Button>
         </form>
+      ) : null}
+
+      {bulkReportCard && sectionId && results?.ok ? (
+        <GenerateReportCardBulkButton
+          t={bulkReportCard}
+          sectionId={sectionId}
+          examId={examId}
+          locale={locale}
+        />
       ) : null}
 
       {results && !results.ok ? (
