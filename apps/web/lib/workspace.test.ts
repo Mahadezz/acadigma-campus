@@ -39,6 +39,11 @@ vi.mock("@/lib/logger", () => ({
   requestLogger: vi.fn(async () => ({ warn: vi.fn() })),
 }))
 
+const mockHasGuardianLink = vi.fn(async () => ok(false))
+vi.mock("@acadigma/db/repositories/results", () => ({
+  hasGuardianLink: mockHasGuardianLink,
+}))
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({})),
 }))
@@ -93,12 +98,29 @@ describe("requireShell", () => {
     await expect(requireShell("family")).resolves.toEqual(ctx)
   })
 
-  it("redirects a non-parent staff role away from the family shell to /app", async () => {
+  it("redirects an unlinked staff role away from the family shell to /app", async () => {
     mockResolveWorkspaceContext.mockResolvedValue(
       ok(context({ workspaceType: "school", role: "teacher" }))
     )
 
     await expect(requireShell("family")).rejects.toThrow("REDIRECT:/app")
+  })
+
+  it("allows a staff member with an active guardian link into the family shell (D-109)", async () => {
+    const ctx = context({ workspaceType: "school", role: "teacher" })
+    mockResolveWorkspaceContext.mockResolvedValue(ok(ctx))
+    mockHasGuardianLink.mockResolvedValueOnce(ok(true))
+
+    await expect(requireShell("family")).resolves.toEqual(ctx)
+  })
+
+  it("never asks for a guardian link outside the family shell", async () => {
+    mockResolveWorkspaceContext.mockResolvedValue(
+      ok(context({ workspaceType: "school", role: "parent" }))
+    )
+
+    await expect(requireShell("school")).rejects.toThrow("REDIRECT:/family")
+    expect(mockHasGuardianLink).not.toHaveBeenCalled()
   })
 
   it("allows any role into the personal shell when the workspace is personal", async () => {

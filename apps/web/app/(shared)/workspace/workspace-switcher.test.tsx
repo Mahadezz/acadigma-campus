@@ -61,6 +61,8 @@ const T = {
     "Your request to join is waiting for an owner or admin to approve it.",
   createOrJoin: "Create or join a workspace",
   switchError: "Could not switch workspaces. Check your connection.",
+  myChildren: "My children",
+  schoolApp: "School app",
 }
 
 const WORKSPACES: MembershipSummary[] = [
@@ -152,5 +154,38 @@ describe("WorkspaceSwitcher", () => {
     await act(async () => {
       resolveSwitch({ ok: true, data: { landingRoute: "/personal" } })
     })
+  })
+
+  it("offers the other shell of the same school to a staff member who is also a parent (D-109)", async () => {
+    render(
+      <WorkspaceSwitcher
+        workspaces={[WORKSPACES[0]!]}
+        currentWorkspaceId={WORKSPACES[0]!.workspaceId}
+        t={T}
+        shellLink={{ href: "/family", label: T.myChildren }}
+      />
+    )
+
+    // One workspace, but the chip is still tappable because of the link.
+    await act(async () => {
+      screen.getByRole("button", { name: /switch workspace/i }).click()
+    })
+    expect(
+      screen.getByRole("link", { name: "My children" }).getAttribute("href")
+    ).toBe("/family")
+  })
+
+  it("shows no shell link without one", async () => {
+    render(
+      <WorkspaceSwitcher
+        workspaces={WORKSPACES}
+        currentWorkspaceId={WORKSPACES[0]!.workspaceId}
+        t={T}
+      />
+    )
+    await act(async () => {
+      screen.getByRole("button", { name: /switch workspace/i }).click()
+    })
+    expect(screen.queryByRole("link", { name: "My children" })).toBeNull()
   })
 })

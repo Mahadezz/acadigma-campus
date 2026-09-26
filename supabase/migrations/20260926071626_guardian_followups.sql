@@ -11,8 +11,8 @@
 --      role = 'parent'. A pure parent still gets a 'parent' membership.
 --      MEMBERSHIP_CONFLICT is now only for a membership that is not active
 --      (pending, or removed in a staff role): no one is reactivated or
---      re-roled by a link. The members guard is NOT changed (D-108's one
---      returning-parent exception stays the only one).
+--      re-roled by a link. No self-service exception is added to the
+--      members guard (D-108's returning-parent path stays the only one).
 --      Revoking a staff member's link removes nothing else (only a 'parent'
 --      membership goes with its last link, unchanged); removing any
 --      membership still revokes that person's links (the D-108 trigger).
@@ -23,6 +23,10 @@
 --      the link update are audited by the generic table audit with the
 --      teacher as actor. The class teacher also reads that student's links
 --      (guardian_users_select), so the student page can show them.
+--      A pure parent's last link revoked by a class teacher still removes
+--      their parent membership: the members guard accepts that one removal
+--      (not an addition) on a same-transaction proof (a link revoked at
+--      now(), none left), since the teacher is not an owner/admin.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -296,3 +300,124 @@ comment on function public.accept_guardian_invitation(text) is
   'INVITATION_NOT_FOUND, INVITATION_EXPIRED, INVITATION_ACCEPTED, '
   'INVITATION_REVOKED, INVITATION_DECLINED, MEMBERSHIP_CONFLICT (a pending '
   'or removed staff membership), PLAN_READ_ONLY.';
+
+-- ---------------------------------------------------------------------
+-- The members guard: D-108's version plus one removal. A class teacher who
+-- revokes a pure parent's last link (above) is not an owner/admin, so the
+-- parent membership removal in revoke_guardian_link needs a proof here: the
+-- link was revoked in this same transaction and none is left. It never
+-- grants or restores anything. Otherwise identical to 20260926065723.
+-- ---------------------------------------------------------------------
+create or replace function app.tg_workspace_members_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_uid         uuid := auth.uid();
+  v_actor_role  text;
+  v_other_owner int;
+  v_returning   boolean := false;
+  v_unlinked    boolean := false;
+begin
+  if tg_op = 'UPDATE' then
+    if new.workspace_id is distinct from old.workspace_id
+       or new.user_id is distinct from old.user_id then
+      raise exception 'workspace_id and user_id are immutable on a membership'
+        using errcode = '42501';
+    end if;
+
+    -- lifecycle stamps, applied server-side so the client cannot forge them
+    if new.status = 'removed' and old.status is distinct from 'removed' then
+      new.removed_at := now();
+      new.removed_by := v_uid;
+    elsif new.status = 'active' and old.status is distinct from 'active' then
+      new.joined_at  := coalesce(new.joined_at, now());
+      new.removed_at := null;
+      new.removed_by := null;
+    end if;
+
+    v_returning :=
+      new.user_id = v_uid
+      and old.role = 'parent' and new.role = 'parent'
+      and old.status = 'removed' and new.status = 'active'
+      and to_jsonb(new) - array['status', 'joined_at', 'removed_at', 'removed_by',
+                                'invitation_id', 'updated_at']
+        = to_jsonb(old) - array['status', 'joined_at', 'removed_at', 'removed_by',
+                                'invitation_id', 'updated_at']
+      and exists (select 1 from public.workspace_invitations i
+                   where i.id = new.invitation_id
+                     and i.workspace_id = new.workspace_id
+                     and i.guardian_id is not null
+                     and i.status = 'accepted'
+                     and i.accepted_by = v_uid
+                     and i.accepted_at = now());
+
+    -- D-109: a parent whose last link was revoked in this same transaction
+    -- (revoke_guardian_link, which a class teacher may call) leaves the
+    -- school. Only active -> removed, only a parent, nothing else changed,
+    -- no active link left. guardian_users has no client write grant, so a
+    -- link revoked at now() proves a SECURITY DEFINER path ran in this
+    -- transaction; it only ever removes access.
+    v_unlinked :=
+      old.role = 'parent' and new.role = 'parent'
+      and old.status = 'active' and new.status = 'removed'
+      and to_jsonb(new) - array['status', 'removed_at', 'removed_by', 'updated_at']
+        = to_jsonb(old) - array['status', 'removed_at', 'removed_by', 'updated_at']
+      and not exists (select 1 from public.guardian_users gu
+                       where gu.workspace_id = new.workspace_id
+                         and gu.user_id = new.user_id and gu.status = 'active')
+      and exists (select 1 from public.guardian_users gu
+                   where gu.workspace_id = new.workspace_id
+                     and gu.user_id = new.user_id and gu.status = 'revoked'
+                     and gu.revoked_at = now());
+  end if;
+
+  -- ---- authorization: skipped for server-owned paths and platform staff --
+  if not (app.is_privileged_context() or app.is_platform_admin() or v_returning or v_unlinked) then
+
+    v_actor_role := app.member_role(new.workspace_id);
+
+    if tg_op = 'UPDATE' and (new.role is distinct from old.role
+                             or new.status is distinct from old.status) then
+
+      if new.user_id = v_uid then
+        raise exception 'members cannot change their own role or status'
+          using errcode = '42501';
+      end if;
+
+      if v_actor_role is null or v_actor_role not in ('owner', 'admin') then
+        raise exception 'only owners and admins can change a membership role or status'
+          using errcode = '42501';
+      end if;
+
+      if (new.role = 'owner' or old.role = 'owner') and v_actor_role <> 'owner' then
+        raise exception 'only an owner can grant or remove ownership'
+          using errcode = '42501';
+      end if;
+    end if;
+
+    if tg_op = 'INSERT'
+       and new.role = 'owner'
+       and new.user_id is distinct from v_uid
+       and v_actor_role is distinct from 'owner' then
+      raise exception 'only an owner can add another owner' using errcode = '42501';
+    end if;
+  end if;
+
+  -- ---- invariant: enforced for EVERY caller, including the server -------
+  -- A workspace must always have at least one active owner
+  -- (PRODUCT-DECISIONS 1.5: "last owner cannot leave/downgrade").
+  if tg_op = 'UPDATE'
+     and old.role = 'owner' and old.status = 'active'
+     and (new.role <> 'owner' or new.status <> 'active') then
+    v_other_owner := app.count_active_owners(new.workspace_id, old.id);
+    if v_other_owner = 0 then
+      raise exception 'a workspace must always have at least one active owner'
+        using errcode = '23514';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;

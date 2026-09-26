@@ -86,7 +86,7 @@ describe("quickAdmitStudent", () => {
   })
 })
 
-describe("inviteGuardian / revokeGuardianLink (D-108)", () => {
+describe("inviteGuardian / revokeGuardianLink (D-108, D-109)", () => {
   const ID = "6a1d3b2f-9c8e-4d4b-8f70-2b3c4d5e6f7a"
 
   it("invites through the repository for an admin", async () => {
@@ -99,9 +99,16 @@ describe("inviteGuardian / revokeGuardianLink (D-108)", () => {
     expect(mockInvite.mock.calls[0]?.[2]).toBe(ID)
   })
 
-  it("refuses a teacher, bad input and a read-only school", async () => {
-    expect((await inviteGuardian({ guardianId: "nope" })).ok).toBe(false)
+  it("lets a teacher reach the database, which decides class teacher (D-109)", async () => {
     ctx.role = "teacher"
+    mockRevoke.mockResolvedValue({ ok: true, data: null })
+    expect((await revokeGuardianLink({ linkId: ID })).ok).toBe(true)
+    expect(mockRevoke).toHaveBeenCalledTimes(1)
+  })
+
+  it("refuses staff, bad input and a read-only school", async () => {
+    expect((await inviteGuardian({ guardianId: "nope" })).ok).toBe(false)
+    ctx.role = "staff"
     const forbidden = await revokeGuardianLink({ linkId: ID })
     expect(!forbidden.ok && forbidden.error.code).toBe("forbidden")
     ctx.role = "owner"

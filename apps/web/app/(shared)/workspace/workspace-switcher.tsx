@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import {
   CheckIcon,
   ChevronsUpDownIcon,
+  HeartHandshakeIcon,
   HomeIcon,
   Loader2Icon,
   PlusIcon,
@@ -45,6 +46,12 @@ export type WorkspaceSwitcherProps = {
   workspaces: MembershipSummary[]
   currentWorkspaceId: string
   t: Messages["workspace"]["switcher"]
+  /**
+   * D-109: the other shell of the SAME school for a staff member who is also
+   * a parent there — "My children" (/family) from the school app, "School
+   * app" (/app) back from the family shell.
+   */
+  shellLink?: { href: string; label: string }
 }
 
 function initialOf(name: string): string {
@@ -55,6 +62,7 @@ export function WorkspaceSwitcher({
   workspaces,
   currentWorkspaceId,
   t,
+  shellLink,
 }: WorkspaceSwitcherProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -113,7 +121,7 @@ export function WorkspaceSwitcher({
     })
   }
 
-  if (selectable.length <= 1) {
+  if (selectable.length <= 1 && !shellLink) {
     // §6: "Only one workspace → the chip is not tappable and shows no chevron."
     return (
       <div className="flex min-w-0 items-center gap-2 px-1">
@@ -232,6 +240,15 @@ export function WorkspaceSwitcher({
               )
             })}
           </ul>
+
+          {shellLink ? (
+            <Button asChild variant="outline" className="w-full">
+              <Link href={shellLink.href} onClick={() => setOpen(false)}>
+                <HeartHandshakeIcon aria-hidden="true" />
+                {shellLink.label}
+              </Link>
+            </Button>
+          ) : null}
 
           <Button asChild variant="outline" className="w-full">
             <Link href="/onboarding" onClick={() => setOpen(false)}>

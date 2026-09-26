@@ -2,6 +2,7 @@ import { BellIcon } from "lucide-react"
 
 import { planReadOnlyApiError } from "@acadigma/contracts"
 import { requireWritable } from "@acadigma/db"
+import { hasGuardianLink } from "@acadigma/db/repositories/results"
 import { getNavConfig, type NavConfig } from "@acadigma/domain/nav"
 import { Button } from "@acadigma/ui/components/button"
 import { AppShell } from "@acadigma/ui/primitives/app-shell"
@@ -122,9 +123,11 @@ export default async function SchoolLayout({
     )
   }
 
-  const [entitledModules, workspacesResult] = await Promise.all([
+  const [entitledModules, workspacesResult, guardianLink] = await Promise.all([
     resolveEntitledNavModules(ctx, client),
     listMyWorkspaces(),
+    // D-109: staff who are also parents here reach /family from the switcher.
+    hasGuardianLink(ctx, client),
   ])
   // Only links to pages that exist — no prefetch 404s (D-400).
   const config: NavConfig = onlyImplemented(
@@ -156,6 +159,11 @@ export default async function SchoolLayout({
               workspaces={workspacesResult.ok ? workspacesResult.data : []}
               currentWorkspaceId={ctx.workspaceId}
               t={t.workspace.switcher}
+              shellLink={
+                guardianLink.ok && guardianLink.data
+                  ? { href: "/family", label: t.workspace.switcher.myChildren }
+                  : undefined
+              }
             />
           }
           title={

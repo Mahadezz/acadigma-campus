@@ -55,7 +55,7 @@ export async function quickAdmitStudent(
 
 const GUARDIAN_FORBIDDEN = apiError(
   "forbidden",
-  "Only an owner or admin can manage parent access."
+  "Only an owner, an admin or the student's class teacher can manage parent access."
 )
 
 /**

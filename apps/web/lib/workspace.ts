@@ -8,6 +8,7 @@ import {
   resolveWorkspaceContext,
   type WorkspaceContext,
 } from "@acadigma/db"
+import { hasGuardianLink } from "@acadigma/db/repositories/results"
 import { resolveShellGate, type ShellName } from "@acadigma/domain/workspace"
 
 import { requestLogger } from "@/lib/logger"
@@ -65,8 +66,26 @@ export async function requireShell(
     workspaceType: ctx.workspaceType,
     role: ctx.role,
   })
-  if (gate.kind === "redirect") redirect(gate.to)
+  if (gate.kind === "redirect") {
+    // D-109: a staff member who is also a parent at this school opens the
+    // family shell for their own children — an active guardian link here,
+    // not the role, is what lets them in.
+    if (
+      shell === "family" &&
+      ctx.workspaceType === "school" &&
+      (await isGuardianHere(ctx))
+    ) {
+      return ctx
+    }
+    redirect(gate.to)
+  }
   if (gate.kind === "forbidden") forbidden()
 
   return ctx
+}
+
+/** True when the caller has an active guardian link in this school (D-109). */
+export async function isGuardianHere(ctx: WorkspaceContext): Promise<boolean> {
+  const linked = await hasGuardianLink(ctx, await createClient())
+  return linked.ok && linked.data
 }
