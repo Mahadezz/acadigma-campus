@@ -94,7 +94,11 @@ test("turning on basic mode lands on /app/home, and a second browser context for
 
   await page.getByRole("switch", { name: "Basic mode" }).click()
   await expect(page).toHaveURL(/\/app\/home$/)
-  await expect(page.getByRole("heading", { name: "Basic mode" })).toBeVisible()
+  // F-ID-10 Part 2: the real class-by-class home's own <h2> is the
+  // greeting, not a static "Basic mode" placeholder title (Part 1).
+  await expect(
+    page.getByRole("heading", { name: /^Good (morning|afternoon|evening),/ })
+  ).toBeVisible()
   await expectNoHorizontalScroll(page)
   await expectNoA11yViolations(page, testInfo)
 

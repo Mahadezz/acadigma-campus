@@ -35,10 +35,14 @@ export function TodayStrip({
   return (
     <section className={cn("flex flex-col gap-3", className)}>
       <div>
-        <p className="text-lg font-semibold tracking-tight">
+        {/* The basic shell's top bar owns the page's <h1> (a fixed brand
+            wordmark, not a page title, in basic mode); this is the page's
+            own heading, same "shell = h1, page = h2" rule every full-app
+            page follows (e.g. dashboard-view.tsx). */}
+        <h2 className="text-lg font-semibold tracking-tight">
           {greeting}{" "}
           <span className="text-muted-foreground">· {dateLabel}</span>
-        </p>
+        </h2>
         {nextPeriodLabel ? (
           <p className="text-muted-foreground mt-1 text-base">
             {nextPeriodLabel}
