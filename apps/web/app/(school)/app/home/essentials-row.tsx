@@ -5,6 +5,7 @@ import { LogOutIcon, SettingsIcon } from "lucide-react"
 import { buttonVariants } from "@acadigma/ui/components/button-variants"
 
 import { signOut } from "@/app/(auth)/actions"
+import { GuardedSignOutButton } from "@/app/(shared)/offline/sign-out-guard"
 import type { Locale } from "@/lib/locale"
 
 import { LanguageSwitchButton } from "./language-switch-button"
@@ -65,12 +66,14 @@ export function EssentialsRow({
       </Link>
       <LanguageSwitchButton locale={locale} labels={t.languageToggle} />
       <SwitchToFullAppButton label={t.switchToFullApp} />
-      <form action={signOut}>
-        <button type="submit" className={ROW_BUTTON_CLASSNAME}>
-          <LogOutIcon className="size-7" aria-hidden="true" />
-          {t.signOut}
-        </button>
-      </form>
+      {/* F-ID-11 §4.7 (D-309): asks first if changes wait on the phone. */}
+      <GuardedSignOutButton
+        signOutNow={signOut}
+        className={ROW_BUTTON_CLASSNAME}
+      >
+        <LogOutIcon className="size-7" aria-hidden="true" />
+        {t.signOut}
+      </GuardedSignOutButton>
     </div>
   )
 }

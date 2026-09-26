@@ -188,6 +188,10 @@ export async function replay(
       await store.put({ ...sending, status: "pending", lastError })
       return
     }
-    await store.put({ ...sending, status: outcome, lastError })
+    await store.put({
+      ...sending,
+      status: outcome === "conflict" ? "conflict" : "needs_attention",
+      lastError,
+    })
   }
 }

@@ -8,7 +8,7 @@ import {
 } from "./check"
 import { PURGE_MESSAGE } from "./purge-guard"
 
-import type { OfflineSnapshot, SessionCheck } from "./purge"
+import type { OfflineSnapshot } from "./purge"
 
 /**
  * F-ID-11 §4.7 / §4.8 / §5.8 (D-308): the browser half of the purge, against
@@ -26,7 +26,7 @@ const TEACHER: OfflineSnapshot = {
 
 let store: Set<string>
 
-function respond(check: SessionCheck | "network-error") {
+function respond(check: object | "network-error") {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => {

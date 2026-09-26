@@ -8,6 +8,7 @@ import {
   type OutboxDraft,
   type OutboxItem,
   type OutboxStore,
+  type SendReply,
 } from "./outbox"
 
 /**
@@ -123,7 +124,7 @@ describe("classify (§4.4)", () => {
     [fail("payment_required"), "needs_attention"],
     [fail("conflict", "ROSTER_CHANGED"), "needs_attention"],
   ] as const)("%j → %s", (reply, outcome) => {
-    expect(classify(reply)).toBe(outcome)
+    expect(classify(reply as SendReply)).toBe(outcome)
   })
 })
 
@@ -156,7 +157,7 @@ describe("replay", () => {
       draft("theirs", { userId: "u2", entityKey: "b" }),
       draft("other-school", { workspaceId: "w2", entityKey: "c" })
     )
-    const send = vi.fn(async () => ok())
+    const send = vi.fn(async (_item: OutboxItem) => ok())
     await replay(store, { userId: U, workspaceId: W, send })
     expect(send).toHaveBeenCalledTimes(1)
     expect(send.mock.calls[0]![0].payload.idempotencyKey).toBe("mine")
@@ -208,7 +209,7 @@ describe("replay", () => {
     const store = await queued(draft("k1"))
     const [item] = store.items.values()
     await store.put({ ...item!, status: "sending" })
-    const send = vi.fn(async () => ok())
+    const send = vi.fn(async (_item: OutboxItem) => ok())
     await replay(store, { userId: U, workspaceId: W, send })
     expect(send.mock.calls[0]![0].payload.idempotencyKey).toBe("k1")
     expect(store.items.size).toBe(0)

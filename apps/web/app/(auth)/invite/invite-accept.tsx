@@ -7,9 +7,9 @@ import { Button } from "@acadigma/ui/components/button"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import { OnlineOnly } from "@/app/(shared)/offline/online-only"
+import { useGuardedSignOut } from "@/app/(shared)/offline/sign-out-guard"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
-import { purgeOnSignOut } from "@/lib/offline/check"
 
 import { signOut } from "../actions"
 
@@ -83,7 +83,9 @@ export function InviteAccept({
   const [state, setState] = useState<State>({ kind: "loading" })
   const [pending, startTransition] = useTransition()
   const [acceptError, setAcceptError] = useState<ApiError | null>(null)
-  const [signingOut, startSignOut] = useTransition()
+  // F-ID-11 §4.7 (D-308, D-309): this sign-out ends on /register, not
+  // /login, so the guard wipes the outbox and the page cache itself.
+  const guardedSignOut = useGuardedSignOut(() => signOut("/invite"))
 
   function errorView(e: ApiError) {
     const code = errorCode(e, t.errors)
@@ -94,19 +96,13 @@ export function InviteAccept({
           <Button
             variant="outline"
             className="h-11 w-full"
-            disabled={signingOut}
-            onClick={() =>
-              startSignOut(async () => {
-                // F-ID-11 §4.7 (D-308): this sign-out ends on /register,
-                // not /login, so it wipes the offline page cache itself.
-                await purgeOnSignOut()
-                await signOut("/invite")
-              })
-            }
+            disabled={guardedSignOut.pending}
+            onClick={guardedSignOut.request}
           >
             {t.signOut}
           </Button>
         ) : null}
+        {guardedSignOut.dialog}
       </div>
     )
   }

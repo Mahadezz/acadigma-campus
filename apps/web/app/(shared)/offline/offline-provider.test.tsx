@@ -1,6 +1,8 @@
 import { render, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import en from "@/messages/en.json"
+
 let pathname = "/app/classes"
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }))
 
@@ -12,13 +14,7 @@ const { OfflineProvider } = await import("./offline-provider")
  * from outside it (sign-in, invite, new school) re-checks who is here.
  */
 
-const copy = {
-  banner: "offline",
-  lastUpdated: "Last updated {time}",
-  today: "today",
-  needsInternet: "Needs internet",
-  needsInternetHint: "hint",
-}
+const copy = en.offline
 
 let store: Set<string>
 const fetchMock = vi.fn()

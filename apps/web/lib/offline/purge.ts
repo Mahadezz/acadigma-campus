@@ -42,7 +42,11 @@ export type PurgeDecision = {
 
 export function decidePurge(
   stored: OfflineSnapshot | null,
-  check: SessionCheck
+  // Any SessionCheck; the outbox's workspace list plays no part here.
+  check:
+    | { kind: "signed_out" }
+    | { kind: "unknown" }
+    | ({ kind: "signed_in" } & OfflineSnapshot)
 ): PurgeDecision {
   if (check.kind === "unknown") return { purge: false, next: undefined }
   // Signed out or session revoked: nothing cached may outlive the session.

@@ -25,6 +25,11 @@ function readSnapshot(): OfflineSnapshot | null {
   }
 }
 
+/** The user the last successful check saw here, if any. */
+export function snapshotUserId(): string | null {
+  return readSnapshot()?.userId ?? null
+}
+
 function writeSnapshot(next: OfflineSnapshot | null): void {
   try {
     if (next) localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(next))

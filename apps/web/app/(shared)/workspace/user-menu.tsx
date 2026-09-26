@@ -20,7 +20,8 @@ import {
 
 import { signOut } from "@/app/(auth)/actions"
 import { isLocale, setLocaleCookie, type Locale } from "@/lib/locale"
-import { purgeOnSignOut } from "@/lib/offline/check"
+
+import { useGuardedSignOut } from "../offline/sign-out-guard"
 
 import { updateLocale, updateUiPreferences } from "./actions"
 
@@ -88,14 +89,9 @@ export function UserMenu({ locale, t, showBasicModeSwitch }: UserMenuProps) {
     })
   }
 
-  function handleSignOut() {
-    startTransition(async () => {
-      // F-ID-11 §4.7 (D-308): pages cached for offline reading hold student
-      // data; they go before the session does.
-      await purgeOnSignOut()
-      await signOut()
-    })
-  }
+  // F-ID-11 §4.7 (D-308, D-309): asks first if changes are still on the
+  // phone; then the outbox and the cached pages go before the session does.
+  const guardedSignOut = useGuardedSignOut(() => signOut())
 
   function handleSwitchToBasicMode() {
     startTransition(async () => {
@@ -105,33 +101,39 @@ export function UserMenu({ locale, t, showBasicModeSwitch }: UserMenuProps) {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={t.ariaLabel}>
-          <UserRoundIcon aria-hidden="true" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{t.languageLabel}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={locale} onValueChange={handleChange}>
-          <DropdownMenuRadioItem value="bn">{t.bn}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="en">{t.en}</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        {showBasicModeSwitch && t.switchToBasicMode ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={handleSwitchToBasicMode}>
-              <LayoutGridIcon aria-hidden="true" />
-              {t.switchToBasicMode}
-            </DropdownMenuItem>
-          </>
-        ) : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
-          <LogOutIcon aria-hidden="true" />
-          {t.signOut}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      {guardedSignOut.dialog}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label={t.ariaLabel}>
+            <UserRoundIcon aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>{t.languageLabel}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={locale} onValueChange={handleChange}>
+            <DropdownMenuRadioItem value="bn">{t.bn}</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="en">{t.en}</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+          {showBasicModeSwitch && t.switchToBasicMode ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={handleSwitchToBasicMode}>
+                <LayoutGridIcon aria-hidden="true" />
+                {t.switchToBasicMode}
+              </DropdownMenuItem>
+            </>
+          ) : null}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={guardedSignOut.request}
+          >
+            <LogOutIcon aria-hidden="true" />
+            {t.signOut}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   )
 }

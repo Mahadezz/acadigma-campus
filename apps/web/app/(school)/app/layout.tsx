@@ -11,6 +11,10 @@ import { Logo } from "@acadigma/ui/primitives/logo"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
 
 import { LastUpdated } from "@/app/(shared)/offline/last-updated"
+import {
+  OutboxChip,
+  OutboxStaleBanner,
+} from "@/app/(shared)/offline/outbox-chip"
 import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
 import { UserMenu } from "@/app/(shared)/workspace/user-menu"
 import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
@@ -73,6 +77,8 @@ export default async function SchoolLayout({
   // page, so the stamp can tell a cached page from a fresh one.
   // eslint-disable-next-line react-hooks/purity -- the render time is the value
   const lastUpdated = <LastUpdated renderedAt={Date.now()} locale={locale} />
+  // F-ID-11 Part 2a (D-309): changes saved on the phone, waiting to send.
+  const staleOutbox = <OutboxStaleBanner userId={ctx.userId} />
 
   const readOnlyBanner = writable.ok ? null : (
     // F-CM-06 Part 4 (D-62): a Pro trial past trial_ends_at (or any other
@@ -124,6 +130,10 @@ export default async function SchoolLayout({
         addPhoneLabel={s.help.addPhoneLink}
       >
         {lastUpdated}
+        <div className="mb-3 flex justify-end empty:hidden">
+          <OutboxChip userId={ctx.userId} />
+        </div>
+        {staleOutbox}
         {readOnlyBanner}
         {children}
       </BasicShellWrapper>
@@ -187,6 +197,7 @@ export default async function SchoolLayout({
           )}
           actions={
             <>
+              <OutboxChip userId={ctx.userId} />
               <Button
                 variant="ghost"
                 size="icon"
@@ -212,6 +223,7 @@ export default async function SchoolLayout({
       }
     >
       {lastUpdated}
+      {staleOutbox}
       {readOnlyBanner}
       {children}
     </AppShell>
