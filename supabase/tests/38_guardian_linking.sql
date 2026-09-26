@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-AC-02 Part 4 (demo cut) — guardian linking
--- (20260926025038_guardian_linking.sql, D-108)
+-- (20260926035028_guardian_linking.sql, D-108)
 --
 --   A. invite_guardian: owner/admin only, own school's guardian only; the
 --      raw token is never stored; a new link replaces the old one.
