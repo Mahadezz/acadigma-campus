@@ -338,7 +338,10 @@ begin
   end if;
 
   p_withhold := coalesce(p_withhold, '[]'::jsonb);
-  if jsonb_typeof(p_withhold) <> 'array' or exists (
+  if jsonb_typeof(p_withhold) <> 'array' then
+    raise exception 'VALIDATION' using errcode = '22023', detail = 'withhold must be an array';
+  end if;
+  if exists (
        select 1 from jsonb_array_elements(p_withhold) w
         where jsonb_typeof(w) <> 'object'
            or length(btrim(coalesce(w ->> 'reason', ''))) not between 1 and 500

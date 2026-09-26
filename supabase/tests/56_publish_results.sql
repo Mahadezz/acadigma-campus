@@ -17,7 +17,7 @@
 --      frozen payload; republishing shows it again.
 -- =====================================================================
 begin;
-select plan(43);
+select plan(44);
 
 create schema if not exists tests;
 
@@ -233,6 +233,7 @@ select throws_ok($$select tests.publish('[{"student_id": "56000000-0000-4000-a00
 select throws_ok(format($$select tests.publish('[{"student_id": "%s", "reason": " "}]')$$,
     (select id from public.students where student_code = 'S2' and workspace_id = '56000000-0000-4000-b000-000000000001')),
   '22023', 'VALIDATION', 'and a reason');
+select throws_ok($$select tests.publish('{"student_id": "x"}')$$, '22023', 'VALIDATION', 'withhold is a list');
 select tests.logout();
 
 select app.set_access_mode('56000000-0000-4000-b000-000000000001', 'read_only', 'Trial ended.');
