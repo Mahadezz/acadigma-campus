@@ -2765,11 +2765,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "staff_documents_file_id_fkey"
-            columns: ["file_id"]
+            foreignKeyName: "staff_documents_file_fkey"
+            columns: ["file_id", "workspace_id"]
             isOneToOne: false
             referencedRelation: "files"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "workspace_id"]
           },
           {
             foreignKeyName: "staff_documents_staff_record_fk"
