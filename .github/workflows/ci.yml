@@ -63,6 +63,7 @@ jobs:
     outputs:
       db: ${{ steps.diff.outputs.db }}
       app: ${{ steps.diff.outputs.app }}
+      dbIntegration: ${{ steps.diff.outputs.dbIntegration }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -79,6 +80,10 @@ jobs:
       # .github/** — workflows, actions, dependabot, everything — changed) since it is
       # the expensive job and has no correctness cost when skipped for a docs/app-only
       # PR; the append-only and order checks it runs only matter when db=true anyway.
+      # dbIntegration (D-73) is the same narrow shape as db, plus packages/db/** and
+      # packages/contracts/** (the code the real-PostgREST job actually exercises) —
+      # .github/** is included too, so a CI workflow change (like this one) tests
+      # itself instead of skipping the very job it just added.
       - name: Diff against the base
         id: diff
         env:
@@ -88,6 +93,7 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "merge_group" ]; then
             echo "db=true" >> "$GITHUB_OUTPUT"
             echo "app=true" >> "$GITHUB_OUTPUT"
+            echo "dbIntegration=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           files=$(git diff --no-renames --name-only "origin/$BASE_REF...HEAD")
@@ -102,14 +108,42 @@ jobs:
             db=true
           fi
 
+          dbIntegration=false
+          if grep -qE '^(supabase/|packages/db/|packages/contracts/|\.github/)' <<<"$files"; then
+            dbIntegration=true
+          fi
+
           echo "db=$db" >> "$GITHUB_OUTPUT"
           echo "app=$app" >> "$GITHUB_OUTPUT"
+          echo "dbIntegration=$dbIntegration" >> "$GITHUB_OUTPUT"
+
+      # D-73: #57 and #70 both put unformatted .md on main because a docs-only PR
+      # (app=false) skips the whole `lint` job, prettier included. Rather than pay
+      # for a full pnpm install on every PR just to recheck .md files `lint` already
+      # covers, this only runs for the docs-only case `lint` actually skips.
+      - uses: ./.github/actions/setup
+        if: steps.diff.outputs.app == 'false'
+
+      - name: Prettier check on changed markdown (docs-only PRs skip the lint job)
+        if: steps.diff.outputs.app == 'false'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git diff --no-renames --name-only --diff-filter=d "origin/$BASE_REF...HEAD" -- '*.md')
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "### changes — no markdown changed" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          pnpm exec prettier --check --cache "${files[@]}"
+          echo "### changes — prettier --check passed on ${#files[@]} changed markdown file(s)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summary
+        if: always()
         run: |
           docsOnly=false
           [ "${{ steps.diff.outputs.db }}" = "false" ] && [ "${{ steps.diff.outputs.app }}" = "false" ] && docsOnly=true
-          echo "### changes — db=${{ steps.diff.outputs.db }} app=${{ steps.diff.outputs.app }} docs-only=$docsOnly" >> "$GITHUB_STEP_SUMMARY"
+          echo "### changes — db=${{ steps.diff.outputs.db }} app=${{ steps.diff.outputs.app }} dbIntegration=${{ steps.diff.outputs.dbIntegration }} docs-only=$docsOnly" >> "$GITHUB_STEP_SUMMARY"
 
   lint:
     name: lint
@@ -309,6 +343,68 @@ jobs:
           name: pgtap
           path: pgtap.tap
           retention-days: 14
+
+  # D-73: the gap #61 (PGRST201 on /app/classes) fell through. `unit`'s vitest suite
+  # mocks the Supabase client, so it never resolves a real PostgREST relationship;
+  # `db` above runs pgTAP against bare postgres:17 with no PostgREST in front of it
+  # at all; the one e2e journey that opens /app/classes as a real owner is
+  # skip-gated on E2E_LIVE_SUPABASE + OQ-27, which CI never sets. This job starts a
+  # real local Supabase stack (matching db.yml's CLI version) and runs every opt-in
+  # *.integration.test.ts against it — #61's own DB_LOCAL_SUPABASE=1 test
+  # (packages/db/src/repositories/academics.integration.test.ts) is the seed for
+  # this job, now wired to run by default in CI instead of opt-in only.
+  db-integration:
+    name: db-integration
+    needs: changes
+    if: "!cancelled() && needs.changes.outputs.dbIntegration != 'false'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.117.0
+
+      # A GitHub-hosted runner always starts from a fresh Postgres data volume, so
+      # `start` also applies every supabase/migrations/*.sql and supabase/seed/*.sql
+      # before it brings PostgREST/GoTrue up in front of them — the same CLI db.yml's
+      # `push` job uses, pointed at a disposable local stack instead of production.
+      - name: supabase start
+        run: supabase start
+
+      # Not secrets: fixed, well-known local-CLI demo keys for an ephemeral,
+      # network-isolated stack this job tears down with the runner.
+      - name: Export the local anon/service keys
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          {
+            echo "DB_LOCAL_SUPABASE=1"
+            echo "DB_LOCAL_SUPABASE_URL=$API_URL"
+            echo "DB_LOCAL_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "DB_LOCAL_SUPABASE_SERVICE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      # Every *.integration.test.ts in the workspace, wherever a lane adds the next
+      # one — not just packages/db's. Each already carries its own
+      # `describe.skipIf(!RUN)` guard; DB_LOCAL_SUPABASE=1 above turns RUN on, so
+      # nothing here needs to know which suites exist. Passed as explicit file
+      # arguments to the root vitest config (vitest.config.ts's `projects`, not one
+      # config per package) rather than `cd`-ing into each package and running its
+      # `test` script — the latter would still load the root config from cwd and run
+      # every project's whole suite, not just the file that changed.
+      - name: Run every *.integration.test.ts against real PostgREST
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find packages apps -name '*.integration.test.ts' -not -path '*/node_modules/*' | sort)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "### db-integration — no *.integration.test.ts files in the tree" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "### db-integration — ${#files[@]} file(s): ${files[*]}" >> "$GITHUB_STEP_SUMMARY"
+          pnpm exec vitest run "${files[@]}"
 
   unit:
     name: unit
@@ -622,6 +718,7 @@ jobs:
         lint,
         typecheck,
         db,
+        db-integration,
         unit,
         contracts,
         build,
