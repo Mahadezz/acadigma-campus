@@ -234,10 +234,12 @@ function GradeCard({
                       section.room
                         ? t.roomShort.replace("{room}", section.room)
                         : null,
-                      subjectCount(t, section.subjects.length, locale),
                     ]
                       .filter(Boolean)
                       .join(" · ")}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {subjectCount(t, section.subjects.length, locale)}
                   </p>
                 </div>
                 {canWrite ? (

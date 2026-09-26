@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 
 import { expectNoA11yViolations } from "../axe"
 
@@ -17,6 +17,14 @@ test.skip(
   "needs a seeded school owner account (OQ-27)"
 )
 
+/** Axe reads colours mid fade-in otherwise (the overlay blends into the
+ * sheet's text); wait for the open animation to finish. */
+async function settled(page: Page) {
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((a) => a.finished))
+  )
+}
+
 test.beforeEach(() => {
   test.skip(
     !process.env.E2E_OWNER_EMAIL || !process.env.E2E_OWNER_PASSWORD,
@@ -31,6 +39,7 @@ test("owner adds Class 6 – section with a class teacher, then archives it", as
   await page.getByLabel("Email").fill(process.env.E2E_OWNER_EMAIL ?? "")
   await page.getByLabel("Password").fill(process.env.E2E_OWNER_PASSWORD ?? "")
   await page.getByRole("button", { name: "Sign in" }).click()
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"))
 
   await page.goto("/app/classes")
   await expect(page.getByRole("heading", { name: "Classes" })).toBeVisible()
@@ -41,6 +50,7 @@ test("owner adds Class 6 – section with a class teacher, then archives it", as
   await page.getByLabel("Section name").fill(name)
   await page.getByLabel(/Class teacher/).selectOption({ index: 1 })
   await page.getByLabel(/Room/).fill("204")
+  await settled(page)
   await expectNoA11yViolations(page, testInfo)
   await page.getByRole("button", { name: "Save" }).click()
 
@@ -64,6 +74,7 @@ test("owner gives a section its subjects, each with a teacher", async ({
   await page.getByLabel("Email").fill(process.env.E2E_OWNER_EMAIL ?? "")
   await page.getByLabel("Password").fill(process.env.E2E_OWNER_PASSWORD ?? "")
   await page.getByRole("button", { name: "Sign in" }).click()
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"))
 
   await page.goto("/app/classes")
   await page.getByRole("tab", { name: "Subjects" }).click()
@@ -83,7 +94,8 @@ test("owner gives a section its subjects, each with a teacher", async ({
   await page
     .getByLabel("Teacher for Bangla 1st Paper")
     .selectOption({ index: 1 })
-  await page.getByRole("checkbox", { name: "Mathematics" }).click()
+  await page.getByRole("checkbox", { name: "Mathematics", exact: true }).click()
+  await settled(page)
   await expectNoA11yViolations(page, testInfo)
   await page.getByRole("button", { name: "Save" }).click()
   await expect(page.getByText(/2 subjects/).first()).toBeVisible()
