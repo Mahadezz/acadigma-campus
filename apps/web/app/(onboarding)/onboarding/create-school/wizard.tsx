@@ -81,6 +81,7 @@ import {
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { OnboardingShell } from "@acadigma/ui/primitives/onboarding-shell"
 
+import { OnlineOnly } from "@/app/(shared)/offline/online-only"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
@@ -1340,21 +1341,24 @@ function Step4({
           {t.trialLine.replace("{days}", String(trialDays))}
         </p>
 
-        <Button
-          type="button"
-          className="h-12 w-full"
-          disabled={creating}
-          onClick={handleCreate}
-        >
-          {creating ? (
-            <>
-              <Loader2Icon className="animate-spin" aria-hidden="true" />
-              {t.creatingButton}
-            </>
-          ) : (
-            t.createButton
-          )}
-        </Button>
+        {/* F-ID-11 §4.9: creating a school needs the server. */}
+        <OnlineOnly>
+          <Button
+            type="button"
+            className="h-12 w-full"
+            disabled={creating}
+            onClick={handleCreate}
+          >
+            {creating ? (
+              <>
+                <Loader2Icon className="animate-spin" aria-hidden="true" />
+                {t.creatingButton}
+              </>
+            ) : (
+              t.createButton
+            )}
+          </Button>
+        </OnlineOnly>
       </div>
     </OnboardingShell>
   )

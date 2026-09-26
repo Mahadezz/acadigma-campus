@@ -167,6 +167,13 @@ const nextConfig: NextConfig = {
 const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",
   swDest: "public/sw.js",
+  // The page the worker serves for a navigation it has no copy of (F-ID-11
+  // §4.2). App routes are not precached on their own, so without this entry
+  // the fallback had nothing to serve. A new revision per build keeps it
+  // current.
+  additionalPrecacheEntries: [
+    { url: "/~offline", revision: crypto.randomUUID() },
+  ],
   disable: process.env.NODE_ENV === "development",
   // reloadOnOnline is deliberately off: reloading the page the moment connectivity
   // returns would throw away a half-finished attendance register.

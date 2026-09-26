@@ -25,6 +25,7 @@ import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import type { Messages } from "@/lib/i18n"
+import { purgeDataCaches, runOfflineCheck } from "@/lib/offline/check"
 
 import { switchWorkspace } from "./actions"
 
@@ -113,6 +114,12 @@ export function WorkspaceSwitcher({
         // in the product is workspace-prefixed, so the whole cache is stale
         // the instant the tenant changes.
         queryClient.clear()
+        // F-ID-11 §5.8 (D-308): cached pages carry no workspace in their
+        // URL, so they all go before the new workspace opens. The check that
+        // records the new workspace is not awaited: on a bad connection it
+        // would hold the switch, and the wipe above already made it safe.
+        await purgeDataCaches()
+        void runOfflineCheck()
         setOpen(false)
         router.push(result.data.landingRoute)
       } catch {

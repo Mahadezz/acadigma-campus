@@ -7,6 +7,11 @@ import { ThemeProvider } from "next-themes"
 
 import { Toaster } from "@acadigma/ui/components/sonner"
 
+import {
+  OfflineProvider,
+  type OfflineCopy,
+} from "./(shared)/offline/offline-provider"
+
 /**
  * Server state lives in TanStack Query, keyed by workspace (ARCHITECTURE §6).
  * There is no global store: UI state stays local to the component that owns it.
@@ -32,7 +37,13 @@ function makeQueryClient() {
   })
 }
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  offlineCopy,
+}: {
+  children: ReactNode
+  offlineCopy: OfflineCopy
+}) {
   // useState, not a module-level singleton: on the server a shared client would
   // leak one request's cache into the next user's response.
   const [queryClient] = useState(makeQueryClient)
@@ -45,7 +56,7 @@ export function Providers({ children }: { children: ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        {children}
+        <OfflineProvider copy={offlineCopy}>{children}</OfflineProvider>
         {/* aria-live region for toasts, per ARCHITECTURE §6. */}
         <Toaster position="top-center" richColors closeButton />
       </ThemeProvider>
