@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react"
 
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -18,7 +19,6 @@ import { Label } from "@acadigma/ui/components/label"
 import { cn } from "@acadigma/ui/lib/utils"
 import { AttendanceToggle } from "@acadigma/ui/primitives/attendance-toggle"
 import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
-import { ConfirmSheet } from "@acadigma/ui/primitives/confirm-sheet"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -27,6 +27,12 @@ import type { Locale } from "@/lib/locale"
 
 import { saveAttendanceSession } from "../actions"
 import { fill } from "../format"
+
+const ConfirmSheet = dynamic(
+  () =>
+    import("@acadigma/ui/primitives/confirm-sheet").then((m) => m.ConfirmSheet),
+  { ssr: false }
+)
 
 type T = Messages["attendance"]["roll"]
 type Marks = Record<string, AttendanceStatus | null>

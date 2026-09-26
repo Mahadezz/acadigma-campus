@@ -18,7 +18,12 @@ import type {
   SectionPaper,
   SectionPrintExam,
 } from "@acadigma/contracts"
-import { cn } from "@acadigma/ui/lib/utils"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@acadigma/ui/components/tabs"
 import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 
@@ -104,9 +109,6 @@ export function ClassHubView({
 }) {
   const s = t.basicMode.classHub
   const [tab, setTab] = React.useState<ClassHubTabId>("attendance")
-  const tabRefs = React.useRef<
-    Partial<Record<ClassHubTabId, HTMLButtonElement>>
-  >({})
 
   React.useEffect(() => {
     // Reading a value from an external system (localStorage) on mount is one
@@ -140,31 +142,6 @@ export function ClassHubView({
     }
   }
 
-  // WAI-ARIA APG "Tabs" pattern (automatic activation): only the selected
-  // tab is in the Tab order (roving tabindex below); Left/Right move focus
-  // between tabs and activate the newly focused one, Home/End jump to the
-  // first/last tab. This is the same keyboard contract Radix's `Tabs` gives
-  // for free — written by hand here only because Radix itself doesn't fit
-  // the route's bundle budget (see the note on the tablist below).
-  function onTabKeyDown(
-    event: React.KeyboardEvent<HTMLButtonElement>,
-    index: number
-  ) {
-    let nextIndex: number
-    if (event.key === "ArrowRight") nextIndex = (index + 1) % TAB_IDS.length
-    else if (event.key === "ArrowLeft")
-      nextIndex = (index - 1 + TAB_IDS.length) % TAB_IDS.length
-    else if (event.key === "Home") nextIndex = 0
-    else if (event.key === "End") nextIndex = TAB_IDS.length - 1
-    else return
-    event.preventDefault()
-    // `nextIndex` is always within [0, TAB_IDS.length) by construction; the
-    // `?? tab` fallback exists only to satisfy `noUncheckedIndexedAccess`.
-    const nextId = TAB_IDS[nextIndex] ?? tab
-    changeTab(nextId)
-    tabRefs.current[nextId]?.focus()
-  }
-
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
       <header>
@@ -176,61 +153,25 @@ export function ClassHubView({
         </p>
       </header>
 
-      {/*
-       * Hand-rolled instead of `@acadigma/ui/components/tabs` (Radix): a
-       * PR #82 review re-measured this (2026-09-27) after replacing this
-       * block with real shadcn `Tabs` — 251 kB gzipped, 1 kB over the
-       * §5.5/BUILDER-BRIEF 250 kB budget (`check-bundle-budget.mjs`),
-       * against 245 kB for this hand-rolled version. Radix's `Tabs` is not
-       * free here even though `RollCall`'s `Sheet`/`Checkbox` already pull
-       * in `radix-ui` for the eager Attendance tab — see D-406 item 7. The
-       * roving-tabindex/arrow-key handling below reproduces Radix `Tabs`'s
-       * own keyboard contract (WAI-ARIA APG "Tabs", automatic activation)
-       * by hand for the same reason.
-       */}
-      <div
-        role="tablist"
-        className="bg-muted grid grid-cols-4 gap-1 rounded-lg p-1"
-      >
-        {TAB_IDS.map((id, index) => {
-          const Icon = TAB_ICONS[id]
-          const selected = tab === id
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              id={`class-hub-tab-${id}`}
-              ref={(el) => {
-                tabRefs.current[id] = el ?? undefined
-              }}
-              aria-selected={selected}
-              aria-controls={`class-hub-panel-${id}`}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => changeTab(id)}
-              onKeyDown={(event) => onTabKeyDown(event, index)}
-              className={cn(
-                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-md py-2 text-sm font-medium transition-colors",
-                selected
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground"
-              )}
-            >
-              <Icon className="size-7" aria-hidden />
-              {s.tabs[id]}
-            </button>
-          )
-        })}
-      </div>
+      <Tabs value={tab} onValueChange={changeTab}>
+        <TabsList className="bg-muted grid h-auto grid-cols-4 gap-1 rounded-lg p-1">
+          {TAB_IDS.map((id) => {
+            const Icon = TAB_ICONS[id]
+            return (
+              <TabsTrigger
+                key={id}
+                value={id}
+                className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-md py-2 text-sm font-medium"
+              >
+                <Icon className="size-7" aria-hidden />
+                {s.tabs[id]}
+              </TabsTrigger>
+            )
+          })}
+        </TabsList>
 
-      <div
-        role="tabpanel"
-        id={`class-hub-panel-${tab}`}
-        aria-labelledby={`class-hub-tab-${tab}`}
-        className="pt-2"
-      >
-        {tab === "attendance" ? (
-          attendance ? (
+        <TabsContent value="attendance" className="pt-2">
+          {attendance ? (
             <RollCall
               t={t.attendance.roll}
               locale={locale}
@@ -254,12 +195,15 @@ export function ClassHubView({
             />
           ) : (
             <EmptyState title={t.classes.errors.generic} />
-          )
-        ) : tab === "marks" ? (
+          )}
+        </TabsContent>
+        <TabsContent value="marks" className="pt-2">
           <MarksTab t={s} locale={locale} papers={papers} />
-        ) : tab === "students" ? (
+        </TabsContent>
+        <TabsContent value="students" className="pt-2">
           <StudentsTab t={s} locale={locale} students={students} />
-        ) : (
+        </TabsContent>
+        <TabsContent value="print" className="pt-2">
           <PrintTab
             t={t}
             locale={locale}
@@ -267,8 +211,8 @@ export function ClassHubView({
             latestExam={latestExam}
             students={students}
           />
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

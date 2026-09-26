@@ -141,9 +141,11 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
     expect(mockSave).not.toHaveBeenCalled()
     // ConfirmSheet renders the sentence as both its visible title and a
     // sr-only description (same pattern HelpSheet already uses), so two
-    // matches is correct here, not a bug.
+    // matches is correct here, not a bug. It's a `next/dynamic({ ssr: false
+    // })` import (D-406 addendum — off the route's initial JS, same reason
+    // Marks/Students/Print already are), so it mounts one tick after Save.
     expect(
-      screen.getAllByText(
+      await screen.findAllByText(
         "Save attendance for Class 6 – ক? 2 present, 1 absent."
       )
     ).toHaveLength(2)
@@ -151,11 +153,11 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
   })
 
-  it("Go back closes the sheet without saving", () => {
+  it("Go back closes the sheet without saving", async () => {
     render(<RollCall {...BASE} basic basicCopy={basicCopy} />)
     fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
-    fireEvent.click(screen.getByRole("button", { name: "Go back" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Go back" }))
     expect(mockSave).not.toHaveBeenCalled()
   })
 
@@ -165,7 +167,7 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
-    fireEvent.click(screen.getByRole("button", { name: "Yes, save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
     await screen.findByText(basicCopy.undoToast)
     // The Undo button is disabled while a save transition is in flight; wait
@@ -189,7 +191,7 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
     render(<RollCall {...BASE} basic basicCopy={basicCopy} />)
     fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
-    fireEvent.click(screen.getByRole("button", { name: "Yes, save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
     expect(screen.queryByText(basicCopy.undoToast)).toBeNull()
   })
