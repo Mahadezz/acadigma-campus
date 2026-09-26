@@ -1,5 +1,12 @@
 # @acadigma/pdf
 
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [c5091fe]
+  - @acadigma/domain@0.10.0
+
 ## 0.5.0
 
 ### Minor Changes
