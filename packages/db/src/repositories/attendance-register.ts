@@ -106,7 +106,9 @@ export async function getAttendanceRegister(
         .lte("date", monthEnd),
       supabase
         .from("attendance_records")
-        .select("student_id, status, attendance_sessions!inner(date, section_id)")
+        .select(
+          "student_id, status, attendance_sessions!inner(date, section_id)"
+        )
         .eq("workspace_id", ctx.workspaceId)
         .eq("attendance_sessions.section_id", sectionId)
         .gte("attendance_sessions.date", monthStart)
@@ -188,7 +190,10 @@ export async function getAttendanceRegister(
     status: AttendanceStatus
     attendance_sessions: { date: string }
   }[]) {
-    recordMap.set(`${rec.student_id}|${rec.attendance_sessions.date}`, rec.status)
+    recordMap.set(
+      `${rec.student_id}|${rec.attendance_sessions.date}`,
+      rec.status
+    )
   }
 
   const rosterRows = (roster.data ?? []) as unknown as RosterRow[]
@@ -202,9 +207,7 @@ export async function getAttendanceRegister(
       }
       return recordMap.get(`${row.students.id}|${day.date}`) ?? null
     })
-    const recorded = cells.filter(
-      (c): c is AttendanceStatus => c !== null
-    )
+    const recorded = cells.filter((c): c is AttendanceStatus => c !== null)
     const presentEquivalent = recorded.reduce(
       (sum, status) =>
         sum +
@@ -230,7 +233,9 @@ export async function getAttendanceRegister(
     }
   })
   students.sort(
-    (a, b) => (a.rollNumber ?? Number.MAX_SAFE_INTEGER) - (b.rollNumber ?? Number.MAX_SAFE_INTEGER)
+    (a, b) =>
+      (a.rollNumber ?? Number.MAX_SAFE_INTEGER) -
+      (b.rollNumber ?? Number.MAX_SAFE_INTEGER)
   )
 
   const daysWithPresentCount = days.map((day) => ({

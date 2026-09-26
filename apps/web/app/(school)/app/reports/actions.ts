@@ -534,7 +534,12 @@ export async function createReportRun(
         supabase
       )
     } else {
-      await renderMarkSheetRun(created.data.id, ctx, parsed.data.params, supabase)
+      await renderMarkSheetRun(
+        created.data.id,
+        ctx,
+        parsed.data.params,
+        supabase
+      )
     }
     const refreshed = await getReportRun(supabase, ctx, created.data.id)
     revalidatePath(REPORTS_PATH)

@@ -53,8 +53,8 @@ describe("isSchoolDay — precedence: override > weekly pattern > holiday > true
     // An override beats a holiday too.
     const holidays = [{ startsOn: "2026-09-10", endsOn: "2026-09-12" }]
     const forcedOpenInHoliday = new Map([["2026-09-11", true]])
-    expect(isSchoolDay("2026-09-11", SAT_THU, holidays, forcedOpenInHoliday)).toBe(
-      true
-    )
+    expect(
+      isSchoolDay("2026-09-11", SAT_THU, holidays, forcedOpenInHoliday)
+    ).toBe(true)
   })
 })

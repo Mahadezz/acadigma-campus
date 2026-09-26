@@ -33,7 +33,9 @@ export const markSheetSubjectHeaderSchema = z.object({
   subjectNameBn: z.string().min(1),
   fullMarks: z.number().positive(),
 })
-export type MarkSheetSubjectHeader = z.infer<typeof markSheetSubjectHeaderSchema>
+export type MarkSheetSubjectHeader = z.infer<
+  typeof markSheetSubjectHeaderSchema
+>
 
 export const markSheetLineSchema = z.object({
   subjectNameEn: z.string().min(1),

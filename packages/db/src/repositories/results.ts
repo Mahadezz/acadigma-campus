@@ -455,10 +455,7 @@ export async function getMarkSheetData(
     const average =
       marks.length === 0
         ? null
-        : roundHalfUp(
-            marks.reduce((sum, m) => sum + m, 0) / marks.length,
-            2
-          )
+        : roundHalfUp(marks.reduce((sum, m) => sum + m, 0) / marks.length, 2)
     return {
       subjectNameEn: name,
       highest: marks.length === 0 ? null : Math.max(...marks),
@@ -466,7 +463,8 @@ export async function getMarkSheetData(
       average,
       passCount,
       appeared,
-      passRate: appeared === 0 ? null : roundHalfUp((100 * passCount) / appeared, 1),
+      passRate:
+        appeared === 0 ? null : roundHalfUp((100 * passCount) / appeared, 1),
     }
   })
 

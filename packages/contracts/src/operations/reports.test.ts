@@ -12,9 +12,7 @@ describe("report enums — parity with the Postgres enums (report_runs migration
     expect(reportKindSchema.safeParse("sample").success).toBe(true)
     expect(reportKindSchema.safeParse("report_card").success).toBe(true)
     expect(reportKindSchema.safeParse("report_card_bulk").success).toBe(true)
-    expect(reportKindSchema.safeParse("attendance_register").success).toBe(
-      true
-    )
+    expect(reportKindSchema.safeParse("attendance_register").success).toBe(true)
     expect(reportKindSchema.safeParse("mark_sheet").success).toBe(true)
     expect(reportKindSchema.safeParse("id_card").success).toBe(false)
   })

@@ -11,13 +11,23 @@
  * (a deliberate simplification, D-208: several Bengali status words share a
  * first letter — উপস্থিত/অনুপস্থিত both start with a vowel sound close enough
  * to collide at one glyph — so the legend, not the cell, carries the
- * Bengali meaning).
+ * Bengali meaning). Every OTHER piece of text — including every formatted
+ * number, which prints Bengali digits in `bn` locale — goes through
+ * `ScriptText`, never a plain `<Text>` (`document-shell.tsx`'s file header:
+ * Inter has no Bengali glyphs at all and silently produces mojibake).
  */
 import { StyleSheet, Text, View } from "@react-pdf/renderer"
 
-import type { AttendanceRegisterDto, AttendanceStatus } from "@acadigma/contracts"
+import type {
+  AttendanceRegisterDto,
+  AttendanceStatus,
+} from "@acadigma/contracts"
 
-import { ReportShell, ScriptText, type ReportShellProps } from "../document-shell"
+import {
+  ReportShell,
+  ScriptText,
+  type ReportShellProps,
+} from "../document-shell"
 import { formatMonthYear, formatNumber, type ReportLocale } from "../format"
 
 const STATUS_CODE: Record<AttendanceStatus, string> = {
@@ -50,7 +60,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.4,
     borderBottomColor: "#e2e2df",
   },
-  rollCell: { width: 20, fontSize: 6.5, textAlign: "right" as const, paddingRight: 2 },
+  rollCell: {
+    width: 20,
+    fontSize: 6.5,
+    textAlign: "right" as const,
+    paddingRight: 2,
+  },
   nameCell: { width: 92, fontSize: 6.5, paddingRight: 2 },
   dayCell: {
     width: 15,
@@ -58,7 +73,12 @@ const styles = StyleSheet.create({
     textAlign: "center" as const,
   },
   dayCellGrey: { backgroundColor: "#efefec", color: "#9a9a96" },
-  totalCell: { width: 28, fontSize: 6.5, textAlign: "right" as const, paddingLeft: 2 },
+  totalCell: {
+    width: 28,
+    fontSize: 6.5,
+    textAlign: "right" as const,
+    paddingLeft: 2,
+  },
   headerCellText: { fontSize: 6, fontWeight: 600, color: "#4a4a48" },
   legend: { marginTop: 8, fontSize: 7.5, color: "#4a4a48" },
   incompleteBanner: { marginTop: 4, fontSize: 8, color: "#8a1a12" },
@@ -85,7 +105,6 @@ export function AttendanceRegisterDocument(
     roll: bn ? "রোল" : "Roll",
     name: bn ? "নাম" : "Name",
     total: bn ? "মোট" : "Total",
-    percent: bn ? "%" : "%",
     present: bn ? "উপস্থিত সংখ্যা" : "Present count",
     legendTitle: bn ? "সংকেত" : "Legend",
     codes: bn
@@ -127,39 +146,42 @@ export function AttendanceRegisterDocument(
 
         <View style={styles.table}>
           <View style={styles.headerRow}>
-            <Text style={[styles.rollCell, styles.headerCellText]}>
-              {labels.roll}
-            </Text>
-            <Text style={[styles.nameCell, styles.headerCellText]}>
-              {labels.name}
-            </Text>
+            <ScriptText
+              style={[styles.rollCell, styles.headerCellText]}
+              text={labels.roll}
+            />
+            <ScriptText
+              style={[styles.nameCell, styles.headerCellText]}
+              text={labels.name}
+            />
             {days.map((day) => (
-              <Text
+              <ScriptText
                 key={day.date}
                 style={[
                   styles.dayCell,
                   styles.headerCellText,
                   !day.isSchoolDay ? styles.dayCellGrey : {},
                 ]}
-              >
-                {formatNumber(day.dayOfMonth, locale)}
-              </Text>
+                text={formatNumber(day.dayOfMonth, locale)}
+              />
             ))}
-            <Text style={[styles.totalCell, styles.headerCellText]}>
-              {labels.total}
-            </Text>
-            <Text style={[styles.totalCell, styles.headerCellText]}>
-              {labels.percent}
-            </Text>
+            <ScriptText
+              style={[styles.totalCell, styles.headerCellText]}
+              text={labels.total}
+            />
+            <Text style={[styles.totalCell, styles.headerCellText]}>%</Text>
           </View>
 
           {students.map((student) => (
             <View key={student.studentId} style={styles.studentRow}>
-              <Text style={styles.rollCell}>
-                {student.rollNumber === null
-                  ? "—"
-                  : formatNumber(student.rollNumber, locale)}
-              </Text>
+              <ScriptText
+                style={styles.rollCell}
+                text={
+                  student.rollNumber === null
+                    ? "—"
+                    : formatNumber(student.rollNumber, locale)
+                }
+              />
               <ScriptText
                 style={styles.nameCell}
                 text={bn ? student.studentNameBn : student.studentNameEn}
@@ -175,40 +197,49 @@ export function AttendanceRegisterDocument(
                   {cell === null ? "-" : STATUS_CODE[cell]}
                 </Text>
               ))}
-              <Text style={styles.totalCell}>
-                {formatNumber(student.recordedDays, locale)}
-              </Text>
-              <Text style={styles.totalCell}>
-                {student.percent === null
-                  ? "—"
-                  : formatNumber(student.percent, locale)}
-              </Text>
+              <ScriptText
+                style={styles.totalCell}
+                text={formatNumber(student.recordedDays, locale)}
+              />
+              <ScriptText
+                style={styles.totalCell}
+                text={
+                  student.percent === null
+                    ? "—"
+                    : formatNumber(student.percent, locale)
+                }
+              />
             </View>
           ))}
 
           <View style={styles.footerRow}>
             <Text style={[styles.rollCell, styles.headerCellText]} />
-            <Text style={[styles.nameCell, styles.headerCellText]}>
-              {labels.present}
-            </Text>
+            <ScriptText
+              style={[styles.nameCell, styles.headerCellText]}
+              text={labels.present}
+            />
             {days.map((day) => (
-              <Text
+              <ScriptText
                 key={day.date}
                 style={[
                   styles.dayCell,
                   styles.headerCellText,
                   !day.isSchoolDay ? styles.dayCellGrey : {},
                 ]}
-              >
-                {day.sessionTaken ? formatNumber(day.presentCount, locale) : ""}
-              </Text>
+                text={
+                  day.sessionTaken ? formatNumber(day.presentCount, locale) : ""
+                }
+              />
             ))}
             <Text style={styles.totalCell} />
             <Text style={styles.totalCell} />
           </View>
         </View>
 
-        <ScriptText style={styles.legend} text={`${labels.legendTitle}: ${labels.codes}`} />
+        <ScriptText
+          style={styles.legend}
+          text={`${labels.legendTitle}: ${labels.codes}`}
+        />
         <ScriptText
           style={styles.legend}
           text={`${labels.latePolicy} ${props.policy.lateCountsPresent ? labels.policyYes : labels.policyNo}  ·  ${labels.halfDayPolicy} ${props.policy.halfDayCountsPresent ? labels.policyYes : labels.policyNo}`}
