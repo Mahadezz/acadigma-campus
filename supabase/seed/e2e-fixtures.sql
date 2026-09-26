@@ -26,20 +26,22 @@ end
 $$;
 
 -- ---------------------------------------------------------------------
--- 0. Three more accounts seed.sql has no reason to own (E2E-only, not
+-- 0. Four more accounts seed.sql has no reason to own (E2E-only, not
 --    part of the general dev-seed narrative): membership-less accounts
---    for create-school-wizard.spec.ts (E2E_TEST_USER_*), the onboarding
---    chooser (E2E_ONBOARDING_TEST_*, its own account -- create-school-
---    wizard.spec.ts creates a real school with E2E_TEST_USER_*, which
---    would otherwise race this journey's "membership-less"/"tutoring
---    exit visible" assertions) and guardian-invite.spec.ts's parent
---    (E2E_PARENT_*) -- the existing seeded `parent@acadigma.test` is
---    already an active member of the Model School (seed.sql §5), which
---    is exactly what guardian-invite.spec.ts's own comment says its
---    account must NOT be ("a second verified account that is not a
---    member of the school"). Same pattern as seed.sql §1: insert into
---    auth.users directly (fires app.handle_new_user()), bcrypt-hashed
---    here, no hash literal in the repo.
+--    for create-school-wizard.spec.ts (E2E_TEST_USER_*, one per
+--    viewport project -- that journey really does create a real school
+--    and complete onboarding for good, so the SAME account cannot also
+--    still be membership-less for its own desktop-project run, the
+--    exact bug this run found: sign-in no longer lands on /onboarding
+--    once a school membership and last_active_workspace_id exist), the
+--    onboarding chooser (E2E_ONBOARDING_TEST_*, its own account for the
+--    same reason) and guardian-invite.spec.ts's parent (E2E_PARENT_*) --
+--    the existing seeded `parent@acadigma.test` is already an active
+--    member of the Model School (seed.sql §5), which is exactly what
+--    guardian-invite.spec.ts's own comment says its account must NOT be
+--    ("a second verified account that is not a member of the school").
+--    Same pattern as seed.sql §1: insert into auth.users directly (fires
+--    app.handle_new_user()), bcrypt-hashed here, no hash literal in the repo.
 -- ---------------------------------------------------------------------
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -64,20 +66,29 @@ values
    'authenticated', 'authenticated', 'e2e-onboarding-user@acadigma.test',
    extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"full_name":"E2E Onboarding User"}'::jsonb, now(), now())
+   '{"full_name":"E2E Onboarding User"}'::jsonb, now(), now()),
+
+  ('00000000-0000-0000-0000-000000000000',
+   '5eed0000-0000-4000-a000-000000000008',
+   'authenticated', 'authenticated', 'e2e-test-user-2@acadigma.test',
+   extensions.crypt('password123', extensions.gen_salt('bf')),
+   now(), '{"provider":"email","providers":["email"]}'::jsonb,
+   '{"full_name":"E2E Test User 2"}'::jsonb, now(), now())
 on conflict (id) do nothing;
 
 update public.profiles
    set phone = case id
                  when '5eed0000-0000-4000-a000-000000000005'::uuid then '+8801711000005'
                  when '5eed0000-0000-4000-a000-000000000006'::uuid then '+8801711000006'
-                 else '+8801711000007'
+                 when '5eed0000-0000-4000-a000-000000000007'::uuid then '+8801711000007'
+                 else '+8801711000008'
                end,
        onboarding_completed_at = null,
        locale = 'en'
  where id in ('5eed0000-0000-4000-a000-000000000005',
               '5eed0000-0000-4000-a000-000000000006',
-              '5eed0000-0000-4000-a000-000000000007');
+              '5eed0000-0000-4000-a000-000000000007',
+              '5eed0000-0000-4000-a000-000000000008');
 
 -- ---------------------------------------------------------------------
 -- 1. The current academic year + Class 6 grade level. create_school_
