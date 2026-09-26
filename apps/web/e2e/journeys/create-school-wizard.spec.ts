@@ -12,29 +12,48 @@ import { expectNoA11yViolations } from "../axe"
  *
  * Needs a seeded, verified account with zero school memberships (OQ-27), so
  * it carries the same skip guard as the other live journeys. It creates a
- * real school, so each run needs a fresh account: the database allows three
- * schools per user per day (AC16) and this spec runs once per viewport.
+ * real school and completes onboarding for good, so each run needs its own
+ * still-membership-less account: the database allows three schools per user
+ * per day (AC16), but this spec runs once per viewport project against the
+ * SAME env var pair, and reusing one account for both fails the second
+ * project's sign-in assertion outright (D-76, found by this lane's first
+ * full run) — E2E_TEST_USER_EMAIL/PASSWORD for phone,
+ * E2E_TEST_USER_EMAIL_2/PASSWORD_2 for desktop.
  */
 test.skip(
   !process.env.E2E_LIVE_SUPABASE,
   "needs a seeded, verified Supabase account with zero school memberships (OQ-27)"
 )
 
-test.beforeEach(() => {
+function credentialsFor(projectName: string): {
+  email: string
+  password: string
+} {
+  const suffix = projectName === "phone" ? "" : "_2"
+  return {
+    email: process.env[`E2E_TEST_USER_EMAIL${suffix}`] ?? "",
+    password: process.env[`E2E_TEST_USER_PASSWORD${suffix}`] ?? "",
+  }
+}
+
+// Playwright requires the fixtures object-destructuring pattern even when
+// nothing is destructured from it.
+// eslint-disable-next-line no-empty-pattern
+test.beforeEach(({}, testInfo) => {
+  const { email, password } = credentialsFor(testInfo.project.name)
   test.skip(
-    !process.env.E2E_TEST_USER_EMAIL || !process.env.E2E_TEST_USER_PASSWORD,
-    "E2E_TEST_USER_EMAIL / E2E_TEST_USER_PASSWORD are not set"
+    !email || !password,
+    "E2E_TEST_USER_EMAIL(_2) / E2E_TEST_USER_PASSWORD(_2) are not set"
   )
 })
 
 test("create-school wizard: identity → where and when → classes → review → /app", async ({
   page,
 }, testInfo) => {
+  const { email, password } = credentialsFor(testInfo.project.name)
   await page.goto("/login")
-  await page.getByLabel("Email").fill(process.env.E2E_TEST_USER_EMAIL ?? "")
-  await page
-    .getByLabel("Password")
-    .fill(process.env.E2E_TEST_USER_PASSWORD ?? "")
+  await page.getByLabel("Email").fill(email)
+  await page.getByLabel("Password").fill(password)
   await page.getByRole("button", { name: "Sign in" }).click()
   await expect(page).toHaveURL(/\/onboarding$/)
 

@@ -32,12 +32,23 @@ test.describe("onboarding chooser — /onboarding", () => {
       !process.env.E2E_LIVE_SUPABASE,
       "needs a seeded, verified Supabase account with zero school memberships (OQ-27)"
     )
+    // The tutoring exit below completes onboarding for good (sets
+    // onboarding_completed_at and switches the active workspace to
+    // personal) -- a second sign-in on the same fixture account then
+    // resolves straight to /personal, never reaching /onboarding
+    // (resolveLandingRoute). Same "mutates a shared seeded row" guard
+    // offline-read-cache.spec.ts already uses for exactly this reason.
+    test.skip(testInfo.project.name !== "phone", "mutates a shared seeded row")
 
-    const email = process.env.E2E_TEST_USER_EMAIL
-    const password = process.env.E2E_TEST_USER_PASSWORD
+    // A dedicated account, not E2E_TEST_USER_EMAIL: create-school-wizard.spec.ts
+    // uses that one to create real schools (twice, once per viewport), which
+    // would leave this test's "membership-less" and "tutoring exit visible"
+    // assertions racing that journey's writes.
+    const email = process.env.E2E_ONBOARDING_TEST_EMAIL
+    const password = process.env.E2E_ONBOARDING_TEST_PASSWORD
     test.skip(
       !email || !password,
-      "E2E_TEST_USER_EMAIL / E2E_TEST_USER_PASSWORD are not set"
+      "E2E_ONBOARDING_TEST_EMAIL / E2E_ONBOARDING_TEST_PASSWORD are not set"
     )
 
     await page.goto("/login")

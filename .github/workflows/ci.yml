@@ -406,6 +406,113 @@ jobs:
           echo "### db-integration — ${#files[@]} file(s): ${files[*]}" >> "$GITHUB_STEP_SUMMARY"
           pnpm exec vitest run "${files[@]}"
 
+  # D-76 (OQ-27): closes the gap D-73 item 5 left open. The `e2e` job below
+  # builds against the production NEXT_PUBLIC_SUPABASE_* values (this
+  # workflow's top-level env) and every seeded-account journey skips itself
+  # (`E2E_LIVE_SUPABASE` unset) — 106 of ~126 Playwright tests never actually
+  # run in CI. This job starts the same local Supabase stack db-integration
+  # uses, builds a SECOND, separate `next build` pointed at that stack's own
+  # URL/keys (Next.js inlines NEXT_PUBLIC_* at build time — the artifact the
+  # `build` job already produced cannot be reused here), seeds the accounts
+  # every journey's own comments say they need, and runs the full suite,
+  # every viewport, un-skipped.
+  e2e-live:
+    name: e2e-live
+    needs: changes
+    # Same rules as e2e/lighthouse (see e2e's comment): not on push to main
+    # (already covered by the PR that merged), draft PRs skip it, only when
+    # app or db code changed.
+    if: |
+      !cancelled() &&
+      github.event_name != 'push' &&
+      (github.event_name != 'pull_request' || !github.event.pull_request.draft) &&
+      (needs.changes.outputs.app != 'false' || needs.changes.outputs.db != 'false')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: production
+      PLAYWRIGHT_PORT: "3110"
+      APP_URL: http://127.0.0.1:3110
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.117.0
+
+      # Same CLI version and pattern as db-integration: a GitHub-hosted
+      # runner always starts from a fresh Postgres data volume, so `start`
+      # applies every supabase/migrations/*.sql and BOTH supabase/seed/*.sql
+      # files (config.toml [db.seed] sql_paths: seed.sql then
+      # e2e-fixtures.sql) before PostgREST/GoTrue come up in front of them.
+      - name: supabase start
+        run: supabase start
+
+      # Not secrets: fixed, well-known local-CLI demo keys for an ephemeral,
+      # network-isolated stack this job tears down with the runner (same
+      # note as db-integration's equivalent step). Overrides this workflow's
+      # top-level NEXT_PUBLIC_SUPABASE_* (the production project) for every
+      # later step in this job only — the whole reason this is a separate
+      # job from `build`/`e2e`, which must keep shipping the real values.
+      - name: Export the local stack's URL/keys and the seeded E2E accounts
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "E2E_MAILPIT_URL=$MAILPIT_URL"
+            echo "E2E_LIVE_SUPABASE=1"
+            # supabase/seed/seed.sql — the Model School's owner/teacher.
+            echo "E2E_OWNER_EMAIL=owner@acadigma.test"
+            echo "E2E_OWNER_PASSWORD=password123"
+            echo "E2E_TEACHER_EMAIL=teacher@acadigma.test"
+            echo "E2E_TEACHER_PASSWORD=password123"
+            # supabase/seed/e2e-fixtures.sql — membership-less accounts and
+            # a parent not already a member of the school (D-76).
+            echo "E2E_TEST_USER_EMAIL=e2e-test-user@acadigma.test"
+            echo "E2E_TEST_USER_PASSWORD=password123"
+            echo "E2E_TEST_USER_EMAIL_2=e2e-test-user-2@acadigma.test"
+            echo "E2E_TEST_USER_PASSWORD_2=password123"
+            echo "E2E_ONBOARDING_TEST_EMAIL=e2e-onboarding-user@acadigma.test"
+            echo "E2E_ONBOARDING_TEST_PASSWORD=password123"
+            echo "E2E_PARENT_EMAIL=e2e-parent@acadigma.test"
+            echo "E2E_PARENT_PASSWORD=password123"
+          } >> "$GITHUB_ENV"
+
+      # A second, separate build from the `build` job's artifact (see the
+      # job comment above) — Next.js inlines NEXT_PUBLIC_* at build time.
+      - name: Build against the local stack
+        run: pnpm --filter @acadigma/web build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Chromium
+        run: pnpm --filter @acadigma/web exec playwright install --with-deps chromium
+
+      # playwright.config.ts starts `next start --port 3110` (PLAYWRIGHT_PORT
+      # above) and waits for it; both the phone and desktop projects run,
+      # every journey un-skipped by the env this job just set.
+      - name: Playwright (live Supabase, every journey)
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: playwright-report-live
+          path: apps/web/playwright-report/
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: node scripts/e2e-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
   unit:
     name: unit
     needs: changes
@@ -724,6 +831,7 @@ jobs:
         build,
         security,
         e2e,
+        e2e-live,
         lighthouse,
         changeset,
         docs-sync,
