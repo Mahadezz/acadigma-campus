@@ -581,22 +581,25 @@ export async function listPublishCandidates(
   examId: string
 ): Promise<Result<PublishCandidate[], ApiError>> {
   // A whole-school exam can pass PostgREST's max_rows (1,000), which
-  // truncates silently: page until a short page (D-75).
+  // truncates silently: keyset pages on id until a short page (D-75).
+  // PAGE must equal the hosted max_rows, or a capped page looks short.
   const PAGE = 1000
   const data: unknown[] = []
-  for (let from = 0; ; from += PAGE) {
-    const page = await client
+  let lastId: string | null = null
+  for (;;) {
+    let query = client
       .from("results")
       .select(
-        "student_id, result_status, enrollments(roll_number), students(full_name), sections(name, grade_levels(name))"
+        "id, student_id, result_status, enrollments(roll_number), students(full_name), sections(name, grade_levels(name))"
       )
       .eq("workspace_id", ctx.workspaceId)
       .eq("exam_id", examId)
-      .order("id")
-      .range(from, from + PAGE - 1)
+    if (lastId) query = query.gt("id", lastId)
+    const page = await query.order("id").limit(PAGE)
     if (page.error) return err(UNAVAILABLE)
     data.push(...page.data)
     if (page.data.length < PAGE) break
+    lastId = page.data[page.data.length - 1]!.id
   }
   const rows = z
     .array(

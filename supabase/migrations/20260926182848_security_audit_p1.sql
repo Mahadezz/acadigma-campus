@@ -1,5 +1,5 @@
 -- =====================================================================
--- Security audit Part 1 (D-75): three fixes found auditing main.
+-- Security audit Part 1 (D-75): four fixes found auditing main.
 -- Tests: supabase/tests/23_security_audit_identity.sql.
 -- =====================================================================
 
@@ -101,3 +101,34 @@ create policy workspace_invitations_update on public.workspace_invitations
     app.has_role(workspace_id, array['owner', 'admin'])
     and (role <> 'owner' or app.has_role(workspace_id, array['owner']))
   );
+
+-- Any owner invitation already written by a non-owner is revoked: the
+-- policy above only stops new ones. Set-based; audited by tg_audit. A
+-- function (granted to nobody) so pgTAP runs the same statement.
+create or replace function app.revoke_non_owner_owner_invitations()
+returns integer
+language sql
+set search_path = ''
+as $$
+  with revoked as (
+    update public.workspace_invitations i
+       set status = 'revoked', revoked_at = now()
+     where i.status = 'pending'
+       and i.role = 'owner'
+       and not exists (select 1 from public.workspace_members m
+                        where m.workspace_id = i.workspace_id
+                          and m.user_id = i.invited_by
+                          and m.role = 'owner'
+                          and m.status = 'active')
+    returning 1)
+  select count(*)::integer from revoked
+$$;
+revoke all on function app.revoke_non_owner_owner_invitations() from public, anon, authenticated;
+select app.revoke_non_owner_owner_invitations();
+
+-- ---------------------------------------------------------------------
+-- 4. listPublishCandidates keyset-pages an exam's results on id (D-75):
+--    (workspace_id, exam_id, id) serves each page as one index range.
+-- ---------------------------------------------------------------------
+create index if not exists results_workspace_exam_id_idx
+  on public.results (workspace_id, exam_id, id);

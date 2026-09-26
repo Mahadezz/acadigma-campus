@@ -19,9 +19,12 @@
 --      'owner' (app.create_invitation refuses that; a direct PostgREST
 --      write skipped it), and app.accept_invitation then makes the invitee
 --      an owner. Only an owner may create or set an owner invitation.
+--   D. app.revoke_non_owner_owner_invitations (run once by the migration)
+--      revokes pending owner invitations whose inviter is not an active
+--      owner, and leaves an owner's own owner invitation alone.
 -- =====================================================================
 begin;
-select plan(15);
+select plan(18);
 
 create schema if not exists tests;
 
@@ -200,6 +203,24 @@ select lives_ok(
             app.hash_token('sa23-owner'), 'sa23-own', auth.uid(), now() + interval '7 days')$$,
   'an owner still can');
 select tests.logout();
+
+-- =====================================================================
+-- D. the one-off sweep of owner invitations written by a non-owner
+-- =====================================================================
+-- As postgres: an admin-written owner invitation from before the fix.
+insert into public.workspace_invitations
+  (workspace_id, channel, email, role, token_hash, token_prefix, invited_by, expires_at)
+values ('23000000-0000-4000-b000-000000000001', 'email', 't2@sa23.local', 'owner',
+        app.hash_token('sa23-admin-owner'), 'sa23-adm', '23000000-0000-4000-a000-000000000006',
+        now() + interval '7 days');
+select is(app.revoke_non_owner_owner_invitations(), 1,
+  'the sweep revokes exactly the admin-written owner invitation');
+select is((select status::text from public.workspace_invitations
+            where token_hash = app.hash_token('sa23-admin-owner')), 'revoked',
+  'it is now revoked');
+select is((select status::text from public.workspace_invitations
+            where token_hash = app.hash_token('sa23-owner')), 'pending',
+  'the owner''s own owner invitation stays pending');
 
 select * from finish();
 rollback;
