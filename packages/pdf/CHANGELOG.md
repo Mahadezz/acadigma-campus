@@ -1,5 +1,13 @@
 # @acadigma/pdf
 
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies [889257b]
+  - @acadigma/contracts@0.10.0
+  - @acadigma/domain@0.10.1
+
 ## 0.5.1
 
 ### Patch Changes
