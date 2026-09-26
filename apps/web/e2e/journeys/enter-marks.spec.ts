@@ -83,6 +83,10 @@ test("owner enters a whole class's marks in one pass and saves once", async ({
   await page.getByRole("link", { name: "Back to the exam" }).click()
   await page.getByRole("button", { name: "Lock marks" }).click()
   await page.getByRole("button", { name: "Publish" }).click()
+  await page
+    .getByRole("dialog", { name: "Publish results" })
+    .getByRole("button", { name: /^Publish \d+ · withhold \d+$/ })
+    .click()
   // The second subject's paper has no marks: Publish is refused.
   await expect(
     page.getByText(/Every student in every paper needs a mark/)
