@@ -1,3 +1,4 @@
+import { othersExpired } from "./outbox"
 import {
   deleteOutbox,
   notifyOutboxChanged,
@@ -10,7 +11,6 @@ import {
   type OfflineSnapshot,
   type SessionCheck,
 } from "./purge"
-import { othersExpired } from "./outbox"
 import { PURGE_MESSAGE } from "./purge-guard"
 
 /**

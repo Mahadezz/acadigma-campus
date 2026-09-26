@@ -21,9 +21,11 @@ import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { ConflictSheet } from "@/app/(shared)/offline/conflict-sheet"
 import { useOfflineCopy } from "@/app/(shared)/offline/offline-provider"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
+import { serverClockOffset } from "@/lib/offline/check"
 import {
   onOutboxSent,
   queuedItem,
@@ -90,6 +92,7 @@ export function RollCall({
   const [key, setKey] = useState(() => crypto.randomUUID())
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
+  const [choosing, setChoosing] = useState(false)
   const getOfflineCopy = useOfflineCopy()
   const entityKey = `attendance:${sectionId}:${date}`
   // F-ID-11 Part 2a (D-309): this class's saves still on the phone, live —
@@ -238,8 +241,13 @@ export function RollCall({
       }
       // Offline, or an earlier save of this class still waiting: queue it —
       // sent now, ahead of the waiting one, it would conflict with her own.
+      // It carries when the roll was taken, on the server's clock (§5.3,
+      // D-310): fixed now, so every replay of the item is the same payload.
       if (!navigator.onLine || (await queuedItem(userId, entityKey))) {
-        await queue(input)
+        await queue({
+          ...input,
+          capturedAt: new Date(Date.now() + serverClockOffset()).toISOString(),
+        })
         return
       }
       let result
@@ -381,17 +389,42 @@ export function RollCall({
             ) : null}
             {refused && !waiting ? (
               <InlineAlert tone="error">
-                {refused.status === "conflict"
-                  ? getOfflineCopy().conflictReason
-                  : saveErrorText(t, {
-                      code: (refused.lastError?.code ??
-                        "internal") as ApiError["code"],
-                      message: refused.lastError?.message ?? "",
-                      ...(refused.lastError?.root
-                        ? { fieldErrors: { _root: [refused.lastError.root] } }
-                        : {}),
-                    })}
+                {refused.status === "conflict" ? (
+                  <>
+                    <span className="block">
+                      {getOfflineCopy().conflictReason}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-2 h-11"
+                      onClick={() => setChoosing(true)}
+                    >
+                      {getOfflineCopy().compareAndChoose}
+                    </Button>
+                  </>
+                ) : (
+                  saveErrorText(t, {
+                    code: (refused.lastError?.code ??
+                      "internal") as ApiError["code"],
+                    message: refused.lastError?.message ?? "",
+                    ...(refused.lastError?.root
+                      ? { fieldErrors: { _root: [refused.lastError.root] } }
+                      : {}),
+                  })
+                )}
               </InlineAlert>
+            ) : null}
+            {refused?.status === "conflict" && choosing ? (
+              // F-ID-11 §4.5 (D-310): theirs / mine, she chooses.
+              <ConflictSheet
+                item={refused}
+                userId={userId}
+                copy={getOfflineCopy()}
+                locale={locale}
+                open
+                onOpenChange={setChoosing}
+              />
             ) : null}
             <div className="flex items-center gap-3">
               <p

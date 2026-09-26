@@ -18,6 +18,7 @@ import {
   notifyOutboxChanged,
   outboxEvents,
   outboxStore,
+  outboxUserIds,
 } from "./outbox-db"
 
 /**
@@ -150,7 +151,10 @@ export function watchSuccessfulRequests(
       if (r.initiatorType !== "fetch" && r.initiatorType !== "xmlhttprequest") {
         return false
       }
-      return r.responseStatus === undefined || (r.responseStatus >= 200 && r.responseStatus < 400)
+      return (
+        r.responseStatus === undefined ||
+        (r.responseStatus >= 200 && r.responseStatus < 400)
+      )
     })
     if (!ok || now() - last < windowMs) return
     last = now()
@@ -249,6 +253,18 @@ export function deleteItem(userId: string, id: string): Promise<void> {
 export async function countQueued(userId: string | null): Promise<number> {
   if (!userId) return 0
   return (await outboxStore(userId).list()).length
+}
+
+/**
+ * The sign-in screen (§4.6, D-310): how many changes wait on this phone, from
+ * any account — a count only, so the right person signs in to send them.
+ */
+export async function countOnDevice(): Promise<number> {
+  let n = 0
+  for (const id of await outboxUserIds()) {
+    n += (await outboxStore(id).list()).length
+  }
+  return n
 }
 
 /** Sign-out (§4.7): the signed-in user's outbox goes with their session. */
