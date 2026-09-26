@@ -15,9 +15,12 @@ import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
 import { getMessages } from "@/lib/i18n"
 import { onlyImplemented } from "@/lib/implemented-routes"
 import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
+import { getCachedSchoolProfile } from "@/lib/school-profile"
 import { createClient } from "@/lib/supabase/server"
+import { getUiPreferences } from "@/lib/ui-preferences"
 import { requireShell } from "@/lib/workspace"
 
+import { BasicShellWrapper } from "./basic-shell-wrapper"
 import { SchoolBottomNav, SchoolSidebar } from "./nav"
 
 /**
@@ -49,10 +52,78 @@ export default async function SchoolLayout({
   const { t, locale } = await getMessages()
 
   const client = await createClient()
-
-  const [entitledModules, writable, workspacesResult] = await Promise.all([
-    resolveEntitledNavModules(ctx, client),
+  // Review fix (SHOULD): `getSchoolProfile` used to run only after this
+  // `Promise.all` resolved, and only in the basic-mode branch below — a
+  // second, sequential round trip on top of it (a request waterfall). It
+  // depends on neither `writable` nor `ui`, only `ctx`/`client`, both
+  // already resolved above, so it starts alongside them instead. Full mode
+  // never reads `profile`, but the query is cheap (single indexed row) and
+  // `getCachedSchoolProfile` (keyed on `ctx.workspaceId`) means a page that
+  // also needs it in this request — `home/page.tsx`'s empty state — reuses
+  // this result rather than paying for it twice.
+  const [writable, ui, profileResult] = await Promise.all([
     requireWritable(ctx, client),
+    getUiPreferences(),
+    getCachedSchoolProfile(ctx.workspaceId),
+  ])
+
+  const readOnlyBanner = writable.ok ? null : (
+    // F-CM-06 Part 4 (D-62): a Pro trial past trial_ends_at (or any other
+    // access_mode=read_only cause) shows here, on every screen. D-300: every
+    // write is refused (server action and database); reads, exports, billing,
+    // sign-out and removing access still work.
+    <InlineAlert
+      tone="error"
+      title={t.workspace.readOnly.title}
+      className="mb-4"
+    >
+      {planReadOnlyApiError(writable.error).message}
+    </InlineAlert>
+  )
+
+  // F-ID-10 §4.10 (D-403/D-405): basic mode replaces the ENTIRE shell below
+  // (no sidebar, no bottom nav — "the home is the nav") for every page under
+  // `/app`, not only `/app/home` — see `basic-shell-wrapper.tsx`'s docblock
+  // for why that is deliberate rather than a narrower "only /app/home" check.
+  // §2 note 4: hidden for `staff`, who have no classes.
+  if (ui.uiMode === "basic" && ctx.role !== "staff") {
+    const phone = profileResult.ok
+      ? profileResult.data.fields.contact_phone
+      : null
+    const s = t.basicMode
+    return (
+      <BasicShellWrapper
+        homeHref="/app/home"
+        homeLabel={s.home.homeLabel}
+        brand={
+          <Logo
+            product="campus"
+            className="[&>span]:sr-only sm:[&>span]:not-sr-only"
+          />
+        }
+        helpLabel={s.home.helpLabel}
+        helpTitle={s.help.title}
+        homeLines={s.help.routes.home}
+        defaultLines={s.help.routes.default}
+        phone={phone}
+        callLabel={s.help.callSchoolOffice.replace("{phone}", phone ?? "")}
+        noPhoneLine={s.help.noPhoneYet}
+        goBackLabel={s.help.goBack}
+        addPhoneHref={
+          ctx.role === "owner" || ctx.role === "admin"
+            ? "/app/settings/school"
+            : undefined
+        }
+        addPhoneLabel={s.help.addPhoneLink}
+      >
+        {readOnlyBanner}
+        {children}
+      </BasicShellWrapper>
+    )
+  }
+
+  const [entitledModules, workspacesResult] = await Promise.all([
+    resolveEntitledNavModules(ctx, client),
     listMyWorkspaces(),
   ])
   // Only links to pages that exist — no prefetch 404s (D-400).
@@ -125,19 +196,7 @@ export default async function SchoolLayout({
         />
       }
     >
-      {writable.ok ? null : (
-        // F-CM-06 Part 4 (D-62): a Pro trial past trial_ends_at (or any other
-        // access_mode=read_only cause) shows here, on every screen. D-300: every
-        // write is refused (server action and database); reads, exports, billing,
-        // sign-out and removing access still work.
-        <InlineAlert
-          tone="error"
-          title={t.workspace.readOnly.title}
-          className="mb-4"
-        >
-          {planReadOnlyApiError(writable.error).message}
-        </InlineAlert>
-      )}
+      {readOnlyBanner}
       {children}
     </AppShell>
   )

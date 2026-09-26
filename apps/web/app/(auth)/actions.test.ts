@@ -379,6 +379,32 @@ describe("signInWithPassword (F-ID-03 review: stale workspace cookie on a shared
 
     expect(mockCookieSet).not.toHaveBeenCalled()
   })
+
+  it("deletes both display-preference cookies (not just skips setting them) when the preferences row cannot be read (F-ID-10 Part 2 follow-up)", async () => {
+    mockFetchUiPreferences.mockImplementation(async () => {
+      mockCallOrder.push("fetchUiPreferences")
+      return {
+        ok: false,
+        error: { code: "dependency_unavailable", message: "down" },
+      }
+    })
+
+    await expect(
+      signInWithPassword({
+        email: "person@test.local",
+        password: "whatever-they-typed",
+        remember: true,
+      })
+    ).rejects.toThrow("NEXT_REDIRECT")
+
+    // A read failure is not distinguishable from "no row yet"; either way a
+    // stale cookie left by a previous person on a shared device must not
+    // survive into this session, so both cookies are deleted rather than
+    // left untouched.
+    expect(mockCookieSet).not.toHaveBeenCalled()
+    expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_ui_mode")
+    expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_text_size")
+  })
 })
 
 describe("signOut (review fix: shared-device display-preference leak)", () => {

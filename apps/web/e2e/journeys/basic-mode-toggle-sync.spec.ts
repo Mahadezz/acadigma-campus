@@ -49,6 +49,17 @@ test.afterEach(async ({ page }) => {
     await bnMenuButton.click()
     await page.getByRole("menuitemradio", { name: "English" }).click()
     await expect(page.locator("html")).toHaveAttribute("lang", "en")
+  } else {
+    // Review fix (PR #72): the third test below turns on basic mode before
+    // switching to বাংলা, so the account menu above never renders — basic
+    // mode has no `UserMenu` at all (D-405 item 5). Its essentials row has
+    // its own language switch instead, labelled with the language it would
+    // switch TO — "English" while the current locale is bn.
+    const bnRowButton = page.getByRole("button", { name: "English" })
+    if (await bnRowButton.isVisible().catch(() => false)) {
+      await bnRowButton.click()
+      await expect(page.locator("html")).toHaveAttribute("lang", "en")
+    }
   }
 
   await page.goto("/app/settings/display")
@@ -94,7 +105,11 @@ test("turning on basic mode lands on /app/home, and a second browser context for
 
   await page.getByRole("switch", { name: "Basic mode" }).click()
   await expect(page).toHaveURL(/\/app\/home$/)
-  await expect(page.getByRole("heading", { name: "Basic mode" })).toBeVisible()
+  // F-ID-10 Part 2: the real class-by-class home's own <h2> is the
+  // greeting, not a static "Basic mode" placeholder title (Part 1).
+  await expect(
+    page.getByRole("heading", { name: /^Good (morning|afternoon|evening),/ })
+  ).toBeVisible()
   await expectNoHorizontalScroll(page)
   await expectNoA11yViolations(page, testInfo)
 
@@ -136,8 +151,10 @@ test("বাংলা with Extra large text size overflows neither the dashboard
   await page.getByRole("switch", { name: "Basic mode" }).click()
   await expect(page).toHaveURL(/\/app\/home$/)
 
-  await page.getByRole("button", { name: "Account menu" }).click()
-  await page.getByRole("menuitemradio", { name: "বাংলা" }).click()
+  // Review fix (PR #72): basic mode has no `UserMenu`/Account menu — the
+  // essentials row's own language switch button (labelled with the
+  // language it switches TO) replaces it here.
+  await page.getByRole("button", { name: "বাংলা" }).click()
   await expect(page.locator("html")).toHaveAttribute("lang", "bn")
   await expect(page.locator("html")).toHaveAttribute("data-text-size", "xlarge")
   await expectNoHorizontalScroll(page)
