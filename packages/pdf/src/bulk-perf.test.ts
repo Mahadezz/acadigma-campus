@@ -1,11 +1,11 @@
 /**
  * F-OP-03 Part 5 (D-207) — the spec §10 performance budget ("bulk 40
  * students ≤ 25 s") for the actual render+merge path, measured here with 40
- * directly-constructed `ReportCardDto`s rather than
- * `apps/web/.../report-card-fixture.ts` — that fixture belongs to the app's
- * seam and is deleted once F-AC-06 Part 5 (#68, D-305) replaces it with a
- * real query; this test must keep proving the render/merge budget after
- * that swap, so it never imports it.
+ * directly-constructed `ReportCardDto`s rather than a seeded database or the
+ * now-deleted `apps/web/.../report-card-fixture.ts` (F-AC-06 Part 5, #68,
+ * D-305, replaced the fixture seam with a real query) — this test proves
+ * the render/merge budget on its own, independent of where the data comes
+ * from, in `packages/pdf` alone.
  *
  * Set `OPS_BULK_OUTPUT_DIR` to also write the merged PDFs to disk for a
  * manual pymupdf check (opt-in — CI does not have an `F:\` drive).

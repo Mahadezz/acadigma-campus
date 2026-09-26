@@ -13,7 +13,7 @@
 -- holding), for both report_runs and report_run_items.
 -- =====================================================================
 begin;
-select plan(8);
+select plan(10);
 
 create schema if not exists tests;
 
@@ -171,6 +171,32 @@ select is(
    where report_run_id = 'b0000003-0000-0000-0000-000000000003'),
   1,
   'the owner sees the simulated run''s report_run_items row'
+);
+
+select tests.logout();
+
+-- =====================================================================
+-- 6. positive regression (lead review, 2026-09-26): the tightened SELECT
+--    policy's new `kind = 'report_card' OR has_role(...,{owner,admin,
+--    teacher})` clause must not also take away staff's existing D-206
+--    grant to request and read their OWN report_card run — the clause
+--    only needs to narrow report_card_bulk visibility, not report_card.
+-- =====================================================================
+select tests.login('eeeeeeee-0000-0000-0000-000000000003');
+
+select lives_ok(
+  $$insert into public.report_runs
+      (id, workspace_id, kind, params, locale, requested_by, idempotency_key)
+    values ('b0000006-0000-0000-0000-000000000006', '55555555-5555-5555-5555-555555555555',
+            'report_card', '{"kind":"report_card"}'::jsonb, 'bn',
+            'eeeeeeee-0000-0000-0000-000000000003', 'key-report-card-staff-e')$$,
+  'staff can still request their own report_card run (D-206, unaffected by the D-207 tightening)'
+);
+
+select results_eq(
+  $$select id from public.report_runs where kind = 'report_card' order by id$$,
+  $$values ('b0000006-0000-0000-0000-000000000006'::uuid)$$,
+  'staff still sees their own report_card run under the tightened SELECT policy'
 );
 
 select tests.logout();

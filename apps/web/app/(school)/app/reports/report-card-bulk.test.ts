@@ -3,17 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 /**
  * F-OP-03 Part 5 (D-207) — `renderReportCardBulkPdf`'s own contract test,
- * independent of the fixture: mocks the roster resolver, the seam
- * (`getReportCardData`) and the render/merge calls so this test still holds
- * once F-AC-06 Part 5 (#68, D-305) replaces both fixture functions with real
- * queries — the seam's signature and this function's failure-isolation
- * contract do not change.
+ * against the real seam signature (`getReportCardData`/
+ * `getReportCardBulkStudentIds`, both real since F-AC-06 Part 5, #68,
+ * D-305): mocks them and the render/merge calls, so this test proves the
+ * failure-isolation and ordering contract independent of where the data
+ * comes from.
  *
- * The "no roll number" case matters specifically: D-305's real
- * `getReportCard` refuses to print a student with no roll number. This test
- * proves that refusal reaches this function as a per-student `failed` item
- * (never a silent drop, never a thrown exception) — the lead's own
- * requirement for the real seam.
+ * D-305 item 9: a student with no roll number still gets a card (the roll
+ * prints "—") — `rollNumber` on `ReportCardDto` is nullable. The seam only
+ * refuses a student with no paper counted at all. This test covers both: a
+ * genuine seam refusal still isolates to one `failed` item (never a silent
+ * drop, never a thrown exception), and a roll-less-but-successful card
+ * sorts correctly rather than corrupting the comparator.
  */
 
 const mockGetReportCardBulkStudentIds = vi.fn()
@@ -57,11 +58,11 @@ const BRANDING = {
   footerNote: null,
 }
 
-function dto(rollNumber: number, nameEn: string) {
+function dto(rollNumber: number | null, nameEn: string) {
   return {
     studentNameEn: nameEn,
     studentNameBn: nameEn,
-    studentCode: `STU-${rollNumber}`,
+    studentCode: `STU-${rollNumber ?? "none"}`,
     rollNumber,
     className: "Class 6",
     sectionName: "ক",
@@ -126,11 +127,14 @@ describe("renderReportCardBulkPdf", () => {
       new Date()
     )
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error.message).toBe("no section")
+    if (!result.ok) {
+      expect(result.error.error.message).toBe("no section")
+      expect(result.error.items).toEqual([])
+    }
     expect(mockGetReportCardData).not.toHaveBeenCalled()
   })
 
-  it("records a student with no roll number (D-305) as a failed item, never dropped, and still renders the rest", async () => {
+  it("records a student the seam refuses (no paper counted at all, D-305) as a failed item, never dropped, and still renders the rest", async () => {
     mockGetReportCardBulkStudentIds.mockResolvedValue({
       ok: true,
       data: ["s1", "s2"],
@@ -142,8 +146,7 @@ describe("renderReportCardBulkPdf", () => {
             ok: false,
             error: {
               code: "not_found",
-              message:
-                "This student has no report card to print: no roll number, or every paper exempt.",
+              message: "No result for this student and exam.",
             },
           }
     )
@@ -162,7 +165,7 @@ describe("renderReportCardBulkPdf", () => {
     const failedItem = result.data.items.find((i) => i.studentId === "s2")
     expect(failedItem).toMatchObject({
       status: "failed",
-      errorDetail: expect.stringContaining("no roll number"),
+      errorDetail: "No result for this student and exam.",
     })
     const readyItem = result.data.items.find((i) => i.studentId === "s1")
     expect(readyItem).toMatchObject({ status: "ready" })
@@ -202,10 +205,10 @@ describe("renderReportCardBulkPdf", () => {
     expect(failedItem).toMatchObject({ status: "failed", errorDetail: "boom" })
   })
 
-  it("returns not_found when every student in the roster fails, never calls merge", async () => {
+  it("returns not_found with every attempted item when the whole roster fails, never calls merge (lead review: a teacher who cannot read the section still gets items explaining why)", async () => {
     mockGetReportCardBulkStudentIds.mockResolvedValue({
       ok: true,
-      data: ["s1"],
+      data: ["s1", "s2"],
     })
     mockGetReportCardData.mockResolvedValue({
       ok: false,
@@ -220,7 +223,55 @@ describe("renderReportCardBulkPdf", () => {
       new Date()
     )
     expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.error.code).toBe("not_found")
+      expect(result.error.items).toEqual([
+        { studentId: "s1", status: "failed", errorDetail: "no data" },
+        { studentId: "s2", status: "failed", errorDetail: "no data" },
+      ])
+    }
     expect(mockMergeReportCardBulkPdf).not.toHaveBeenCalled()
+  })
+
+  it("sorts a roll-less student (D-305: a card with no roll number) after every rolled student, tie-broken by name", async () => {
+    mockGetReportCardBulkStudentIds.mockResolvedValue({
+      ok: true,
+      data: ["s-none", "s-2", "s-1"],
+    })
+    mockGetReportCardData.mockImplementation(async (_c, _ctx, studentId) => {
+      if (studentId === "s-none")
+        return { ok: true, data: dto(null, "No Roll") }
+      const roll = studentId === "s-2" ? 2 : 1
+      return { ok: true, data: dto(roll, `Roll ${roll}`) }
+    })
+    mockRenderPdfToBuffer.mockImplementation(async (props: unknown) =>
+      Buffer.from(
+        `%PDF-${(props as { rollNumber: number | null }).rollNumber ?? "none"}`
+      )
+    )
+    mockMergeReportCardBulkPdf.mockResolvedValue({
+      buffer: Buffer.from("%PDF-merged"),
+      pageCount: 3,
+      pageRanges: [
+        { from: 1, to: 1 },
+        { from: 2, to: 2 },
+        { from: 3, to: 3 },
+      ],
+    })
+
+    await renderReportCardBulkPdf(
+      CLIENT,
+      CTX,
+      PARAMS,
+      "bn",
+      BRANDING,
+      new Date()
+    )
+
+    expect(mockMergeReportCardBulkPdf).toHaveBeenCalledWith(
+      [Buffer.from("%PDF-1"), Buffer.from("%PDF-2"), Buffer.from("%PDF-none")],
+      false
+    )
   })
 
   it("sorts by roll number ascending before merging", async () => {

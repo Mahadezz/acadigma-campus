@@ -28,7 +28,7 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
-import { setExamStatus, updateExamSubject } from "../actions"
+import { computeResults, setExamStatus, updateExamSubject } from "../actions"
 import { dateRange, examDateFormatter } from "../format"
 
 type T = Messages["exams"]
@@ -42,18 +42,25 @@ export function ExamDetailView({
   locale,
   exam,
   canWrite,
+  canCompute,
+  canReadResults,
   teachers,
 }: {
   t: T
   locale: Locale
   exam: ExamDetail
   canWrite: boolean
+  /** results.compute (owner/admin). */
+  canCompute: boolean
+  /** results.read; RLS narrows a teacher to their own class. */
+  canReadResults: boolean
   teachers: TeacherOption[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [reversing, setReversing] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const next = nextExamStatus(exam.status)
   const back = reversalFrom(exam.status)
   const fmt = examDateFormatter(locale)
@@ -76,7 +83,30 @@ export function ExamDetailView({
     })
   }
 
+  function compute() {
+    setError(null)
+    setNotice(null)
+    startTransition(async () => {
+      const result = await computeResults({ examId: exam.id })
+      if (!result.ok) {
+        setError(result.error.message || t.error)
+        return
+      }
+      setNotice(
+        t.computed
+          .replace("{n}", String(result.data.computed))
+          .replace("{passed}", String(result.data.passed))
+          .replace("{failed}", String(result.data.failed))
+          .replace("{incomplete}", String(result.data.incomplete))
+      )
+      router.refresh()
+    })
+  }
+
   const sections = [...new Set(exam.papers.map((p) => p.sectionLabel))]
+  const resultsVisible =
+    canReadResults &&
+    ["marks_locked", "published", "archived"].includes(exam.status)
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -112,6 +142,22 @@ export function ExamDetailView({
       </div>
 
       {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+      <p className="text-sm empty:hidden" role="status">
+        {notice}
+      </p>
+
+      {resultsVisible ? (
+        <div className="flex flex-wrap gap-2">
+          {canCompute && exam.status === "marks_locked" ? (
+            <Button className="h-11" disabled={pending} onClick={compute}>
+              {pending ? t.computing : t.computeResults}
+            </Button>
+          ) : null}
+          <Button asChild variant="outline" className="h-11">
+            <Link href={`/app/exams/${exam.id}/results`}>{t.viewResults}</Link>
+          </Button>
+        </div>
+      ) : null}
 
       {canWrite && (next || back) ? (
         <div className="flex flex-wrap gap-2">

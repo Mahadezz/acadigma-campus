@@ -48,6 +48,8 @@ export default async function ExamPage({
       locale={locale}
       exam={exam.data}
       canWrite={canWrite}
+      canCompute={can(ctx.role, "results.compute")}
+      canReadResults={can(ctx.role, "results.read")}
       teachers={teachers?.ok ? teachers.data : []}
     />
   )

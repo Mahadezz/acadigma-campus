@@ -328,7 +328,10 @@ describe("report_card_bulk kind (D-207)", () => {
     })
     mockRenderReportCardBulkPdf.mockResolvedValue({
       ok: false,
-      error: { code: "not_found", message: "no student has data" },
+      error: {
+        error: { code: "not_found", message: "no student has data" },
+        items: [],
+      },
     })
     const response = await callWith(RUN_ID)
     expect(response.status).toBe(404)

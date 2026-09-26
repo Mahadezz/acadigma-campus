@@ -34,6 +34,19 @@ export type ReportCardBulkRenderResult = {
   items: readonly ReportCardBulkItemResult[]
 }
 
+/**
+ * The failure shape for the whole run (e.g. the roster resolver itself
+ * refused, or every student in it failed). `items` still carries every
+ * per-student outcome attempted so far, so the caller can write
+ * `report_run_items` even when the run as a whole is `failed` — a teacher
+ * who cannot read the section at all still gets a run that says why,
+ * student by student, not just a bare `no_data` (lead review, 2026-09-26).
+ */
+export type ReportCardBulkFailure = {
+  error: ApiError
+  items: readonly ReportCardBulkItemResult[]
+}
+
 type Branding = Pick<
   ReportCardDocumentProps,
   "schoolName" | "headerLines" | "accentColor" | "footerNote" | "logoImage"
@@ -47,9 +60,9 @@ type Branding = Pick<
  * once per student, exactly as the single-card path (D-206) already does —
  * renders each to its own single-document PDF, sorts by the requested
  * order, and merges with duplex padding (`mergeReportCardBulkPdf`,
- * `packages/pdf`). A student whose seam call fails for ANY reason (missing
- * data today; once F-AC-06 Part 5 lands, also a real result with no roll
- * number — `getReportCard` itself refuses to print one, D-305) is recorded
+ * `packages/pdf`). A student whose seam call fails for ANY reason (a result
+ * with no papers counted at all — `getReportCard` refuses to print one,
+ * D-305 item 9; a missing roll number alone still gets a card) is recorded
  * as a `failed` item carrying the seam's own message, and excluded from the
  * merge; the run still succeeds for every other student (§4 W2 "a failed
  * student fails only their item"). This function never pre-filters the
@@ -69,14 +82,14 @@ export async function renderReportCardBulkPdf(
   locale: ReportLocale,
   branding: Branding,
   generatedAt: Date
-): Promise<Result<ReportCardBulkRenderResult, ApiError>> {
+): Promise<Result<ReportCardBulkRenderResult, ReportCardBulkFailure>> {
   const roster = await getReportCardBulkStudentIds(
     supabase,
     ctx,
     params.sectionId,
     params.examId
   )
-  if (!roster.ok) return roster
+  if (!roster.ok) return err({ error: roster.error, items: [] })
 
   const rendered: { studentId: string; buffer: Buffer; dto: ReportCardDto }[] =
     []
@@ -120,21 +133,25 @@ export async function renderReportCardBulkPdf(
   }
 
   if (rendered.length === 0) {
-    return err(
-      apiError(
+    return err({
+      error: apiError(
         "not_found",
         "No student in this section has report card data yet."
-      )
-    )
+      ),
+      items: failed,
+    })
   }
 
   const sorted = [...rendered].sort((a, b) => {
-    if (params.order === "name") {
-      const nameA = locale === "bn" ? a.dto.studentNameBn : a.dto.studentNameEn
-      const nameB = locale === "bn" ? b.dto.studentNameBn : b.dto.studentNameEn
-      return nameA.localeCompare(nameB)
-    }
-    return a.dto.rollNumber - b.dto.rollNumber
+    const nameA = locale === "bn" ? a.dto.studentNameBn : a.dto.studentNameEn
+    const nameB = locale === "bn" ? b.dto.studentNameBn : b.dto.studentNameEn
+    if (params.order === "name") return nameA.localeCompare(nameB, locale)
+    // rollNumber is nullable (D-305 item 9: a student can have a card with
+    // no roll number) — sort them after every rolled student rather than
+    // corrupting the comparator with NaN, tie-broken by name.
+    const rollA = a.dto.rollNumber ?? Number.MAX_SAFE_INTEGER
+    const rollB = b.dto.rollNumber ?? Number.MAX_SAFE_INTEGER
+    return rollA - rollB || nameA.localeCompare(nameB, locale)
   })
 
   const merged = await mergeReportCardBulkPdf(

@@ -14,27 +14,11 @@ import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
-import { GenerateReportCardBulkButton } from "./generate-report-card-bulk-button"
-import { GenerateReportCardButton } from "./generate-report-card-button"
 import { GenerateSampleButton } from "./generate-sample-button"
 
 import type { Metadata } from "next"
 
 export const metadata: Metadata = { title: "Reports" }
-
-/**
- * F-OP-03 Part 5 (D-207) — bulk rendering is still synchronous in-request
- * (D-205's precedent), but it is no longer a single-page render: 40 students
- * measured ~3.4 s locally (well under the spec §10 budget of 25 s;
- * `docs/test-reports/`). `maxDuration` (Vercel Node runtime) is raised so a
- * larger section does not get cut off mid-render — a Server Action inherits
- * the page it is invoked from, so this covers `createReportRun` when called
- * from this page's buttons. A background job with `report_run_items`
- * progress is the next step if a real section-count distribution ever needs
- * more than this ceiling (§7's own note: "a hard 120 s cap per chunk" once
- * Part 5 was built for real).
- */
-export const maxDuration = 60
 
 const STATUS_TONE: Record<ReportStatus, ToneStatusChipProps["tone"]> = {
   queued: "pending",
@@ -48,7 +32,9 @@ const STATUS_TONE: Record<ReportStatus, ToneStatusChipProps["tone"]> = {
  * F-OP-03 Parts 1-2 — `/app/reports` (spec §6 "Report gallery", trimmed to
  * this Part's scope: no 7-card type gallery yet, only the one report kind
  * this PR's pipeline can render — `'sample'`, the letterhead proof — plus
- * the recent-runs list §8 Part 2 asks for).
+ * the recent-runs list §8 Part 2 asks for). The report-card buttons (single,
+ * D-206; bulk, D-207) live on the exam results preview
+ * (`/app/exams/[id]/results`), next to the real students they render for.
  */
 export default async function ReportsPage() {
   const ctx = await requireShell("school")
@@ -70,32 +56,6 @@ export default async function ReportsPage() {
       <GenerateSampleButton
         t={{ generate: r.generate, generating: r.generating, error: r.error }}
       />
-
-      {/* D-206: the only report card data is a fixture student, who must never
-          appear under a real school — no button in production until the
-          seam (`report-card-data.ts`) reads real results. */}
-      {process.env.NODE_ENV !== "production" &&
-        can(ctx.role, "report.render.report_card") && (
-          <GenerateReportCardButton
-            t={{
-              generateReportCard: r.generateReportCard,
-              generating: r.generating,
-              error: r.error,
-            }}
-          />
-        )}
-
-      {/* D-207: same fixture-only rule as report_card, for the whole section. */}
-      {process.env.NODE_ENV !== "production" &&
-        can(ctx.role, "report.render.report_card_bulk") && (
-          <GenerateReportCardBulkButton
-            t={{
-              generateReportCardBulk: r.generateReportCardBulk,
-              generating: r.generating,
-              error: r.error,
-            }}
-          />
-        )}
 
       <div>
         <h3 className="mb-2 text-sm font-semibold">{r.recent}</h3>

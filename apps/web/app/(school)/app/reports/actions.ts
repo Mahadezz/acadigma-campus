@@ -60,9 +60,31 @@ import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
 
-import { renderReportCardBulkPdf } from "./report-card-bulk"
+import {
+  renderReportCardBulkPdf,
+  type ReportCardBulkItemResult,
+} from "./report-card-bulk"
 import { getReportCardData } from "./report-card-data"
 import { ACTION_FOR_KIND } from "./report-kind-action"
+
+/** `ReportCardBulkItemResult` -> the repository's insert shape, shared by
+ * both the success and the all-failed paths below. */
+function toReportRunItemInputs(items: readonly ReportCardBulkItemResult[]) {
+  return items.map((item) =>
+    item.status === "ready"
+      ? {
+          subjectId: item.studentId,
+          status: "ready" as const,
+          pageFrom: item.pageFrom,
+          pageTo: item.pageTo,
+        }
+      : {
+          subjectId: item.studentId,
+          status: "failed" as const,
+          errorDetail: item.errorDetail,
+        }
+  )
+}
 
 const REPORTS_PATH = "/app/reports"
 
@@ -258,34 +280,46 @@ async function renderReportCardBulkRun(
         new Date()
       )
       if (!result.ok) {
+        // Write whatever per-student outcomes were attempted before the
+        // whole run failed (e.g. a teacher who cannot read this section at
+        // all still gets items explaining why), then fail the run itself.
+        // Best-effort: the run's own failure reason is more informative
+        // than an items-write error at this point, so its result is not
+        // separately checked here.
+        if (result.error.items.length > 0) {
+          await createReportRunItems(
+            service,
+            ctx,
+            runId,
+            toReportRunItemInputs(result.error.items)
+          )
+        }
         await markReportRunFailed(
           service,
           runId,
           "no_data",
-          result.error.message
+          result.error.error.message
         )
         return
       }
 
-      await createReportRunItems(
+      const itemsWrite = await createReportRunItems(
         service,
         ctx,
         runId,
-        result.data.items.map((item) =>
-          item.status === "ready"
-            ? {
-                subjectId: item.studentId,
-                status: "ready" as const,
-                pageFrom: item.pageFrom,
-                pageTo: item.pageTo,
-              }
-            : {
-                subjectId: item.studentId,
-                status: "failed" as const,
-                errorDetail: item.errorDetail,
-              }
-        )
+        toReportRunItemInputs(result.data.items)
       )
+      if (!itemsWrite.ok) {
+        // The merged PDF rendered, but its own bookkeeping did not persist —
+        // never claim 'ready' when report_run_items does not reflect it.
+        await markReportRunFailed(
+          service,
+          runId,
+          "items_write_failed",
+          itemsWrite.error.message
+        )
+        return
+      }
 
       await markReportRunReady(
         service,

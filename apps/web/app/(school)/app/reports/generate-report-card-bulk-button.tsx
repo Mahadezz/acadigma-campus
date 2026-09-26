@@ -10,13 +10,13 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { createReportRun } from "./actions"
 
 /**
- * F-OP-03 Part 5 (D-207) demo action: renders the whole Class 6-ক fixture
- * (40 students) as one merged, duplex-padded PDF. Same local-constant
- * pattern as `generate-report-card-button.tsx` — the fixture section id is
- * a fixed uuid, not an import of `report-card-fixture.ts`.
+ * F-OP-03 Part 5 (D-207): renders one merged, duplex-padded PDF of every
+ * student's report card in a section for one exam, ordered by roll number.
+ * Shown on the results preview (`/app/exams/[id]/results`), next to the
+ * per-student `GenerateReportCardButton` — same real `sectionId`/`examId`
+ * the page already resolved, same seam underneath (`getReportCardData`,
+ * called once per student by `renderReportCardBulkPdf`).
  */
-const DEMO_SECTION_ID = "00000000-6000-4000-7000-000000000000"
-const DEMO_EXAM_ID = "00000000-6000-4000-9000-000000000000"
 
 export type ReportCardBulkCopy = {
   generateReportCardBulk: string
@@ -24,7 +24,17 @@ export type ReportCardBulkCopy = {
   error: string
 }
 
-export function GenerateReportCardBulkButton({ t }: { t: ReportCardBulkCopy }) {
+export function GenerateReportCardBulkButton({
+  t,
+  sectionId,
+  examId,
+  locale,
+}: {
+  t: ReportCardBulkCopy
+  sectionId: string
+  examId: string
+  locale: "en" | "bn"
+}) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -35,12 +45,12 @@ export function GenerateReportCardBulkButton({ t }: { t: ReportCardBulkCopy }) {
       const result = await createReportRun({
         params: {
           kind: "report_card_bulk",
-          sectionId: DEMO_SECTION_ID,
-          examId: DEMO_EXAM_ID,
+          sectionId,
+          examId,
           order: "roll",
           duplex: true,
         },
-        locale: "bn",
+        locale,
       })
       if (!result.ok) {
         setError(result.error.message)

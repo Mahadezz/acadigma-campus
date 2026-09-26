@@ -44,7 +44,10 @@ export const dynamic = "force-dynamic"
 // F-OP-03 Part 5 (D-207): a report_card_bulk download re-renders and
 // re-merges every student in the section (no stored PDF yet — item 11 of
 // the Parts 1-2 addendum), the same cost `createReportRun` paid once
-// already. Same ceiling as `actions.ts`'s `maxDuration`.
+// already. Same ceiling as the results preview's `maxDuration`
+// (`apps/web/.../exams/[id]/results/page.tsx` — a Server Action's own
+// `maxDuration` cannot live in a "use server" file, so `actions.ts` has none
+// of its own; a route handler like this one sets its own directly).
 export const maxDuration = 60
 
 export async function GET(
@@ -167,8 +170,8 @@ export async function GET(
     )
     if (!merged.ok) {
       return NextResponse.json(
-        { error: merged.error },
-        { status: httpStatusForError(merged.error.code) }
+        { error: merged.error.error },
+        { status: httpStatusForError(merged.error.error.code) }
       )
     }
     buffer = merged.data.buffer
