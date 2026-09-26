@@ -364,6 +364,8 @@ select tests.logout();
 
 select tests.login('54000000-0000-4000-a000-000000000001');
 update public.exams set status = 'marks_locked' where id = tests.id('exam');
+-- Publishing also needs computed results (D-306, 56_publish_results.sql).
+select public.compute_results('54000000-0000-4000-b000-000000000001', tests.id('exam'));
 select lives_ok(
   format($$update public.exams set status = 'published' where id = %L$$, tests.id('exam')),
   'with every student marked, absent or exempt, the exam publishes');

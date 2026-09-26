@@ -4,10 +4,14 @@ import {
   apiError,
   err,
   ok,
+  reportCardDtoSchema,
   type ApiError,
   type ComputeResultsSummary,
   type AttendanceStatus,
+  type FamilyResult,
   type MarkSheetDto,
+  type PublishCandidate,
+  type PublishResultsSummary,
   type ReportCardDto,
   type Result,
   type SectionResults,
@@ -221,6 +225,31 @@ export async function getReportCard(
   studentId: string,
   examId: string
 ): Promise<Result<ReportCardDto, ApiError>> {
+  // A published, not withheld result prints from its frozen payload (§5.14,
+  // D-306): what the family was shown, whatever changed since. A parent can
+  // only ever reach this branch — RLS shows them published, not withheld
+  // results only. After an unpublish the kept payload is stale, so school
+  // users print live data; a withheld result froze no marks, so the school
+  // prints it live, marked withheld.
+  const frozen = await client
+    .from("results")
+    .select("published, withheld_reason, frozen_payload")
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("exam_id", examId)
+    .eq("student_id", studentId)
+    .maybeSingle()
+  if (frozen.error) return err(UNAVAILABLE)
+  if (!frozen.data) return err(NOT_FOUND)
+  const withheld = frozen.data.published && frozen.data.withheld_reason !== null
+  if (
+    frozen.data.published &&
+    !withheld &&
+    frozen.data.frozen_payload !== null
+  ) {
+    const card = reportCardDtoSchema.safeParse(frozen.data.frozen_payload)
+    return card.success ? ok(card.data) : err(UNAVAILABLE)
+  }
+
   const { data, error } = await client
     .from("results")
     .select(
@@ -339,12 +368,12 @@ export async function getReportCard(
     totalObtained: row.totalObtained,
     totalFull: row.totalFull,
     percentage: row.percentage,
-    gpa: row.gpa,
-    gpaWithoutOptional: r.gpa_without_optional,
-    overallLetter: row.letter,
-    result: row.status,
-    rank: row.sectionRank,
-    rankTied: (sameRank?.count ?? 0) > 1,
+    gpa: withheld ? null : row.gpa,
+    gpaWithoutOptional: withheld ? null : r.gpa_without_optional,
+    overallLetter: withheld ? null : row.letter,
+    result: withheld ? "withheld" : row.status,
+    rank: withheld ? null : row.sectionRank,
+    rankTied: !withheld && (sameRank?.count ?? 0) > 1,
     rankOf: ranked.count || null,
     attendance: {
       presentDays,
@@ -476,4 +505,190 @@ export async function getMarkSheetData(
     students,
     columnStats,
   })
+}
+
+const PUBLISH_ERRORS: Record<string, ApiError> = {
+  FORBIDDEN: apiError(
+    "forbidden",
+    "Only an owner or admin can publish results."
+  ),
+  EXAM_NOT_FOUND: apiError("not_found", "That exam does not exist."),
+  MARKS_NOT_LOCKED: apiError(
+    "conflict",
+    "Results can be published only from Marks locked.",
+    { fieldErrors: { _root: ["MARKS_NOT_LOCKED"] } }
+  ),
+  MARKS_INCOMPLETE: apiError(
+    "conflict",
+    "Every student in every paper needs a mark, or Absent or Exempt, before results can be published.",
+    { fieldErrors: { _root: ["MARKS_INCOMPLETE"] } }
+  ),
+  NOT_COMPUTED: apiError(
+    "conflict",
+    "Compute results before publishing them.",
+    { fieldErrors: { _root: ["NOT_COMPUTED"] } }
+  ),
+  INCOMPLETE_PRESENT: apiError(
+    "conflict",
+    "Some results are incomplete. Compute results again, then publish.",
+    { fieldErrors: { _root: ["INCOMPLETE_PRESENT"] } }
+  ),
+  VALIDATION: apiError(
+    "validation_failed",
+    "Each withheld student needs a reason.",
+    { fieldErrors: { withhold: ["VALIDATION"] } }
+  ),
+  PLAN_READ_ONLY: apiError(
+    "forbidden",
+    "This school is read-only. Upgrade to publish results."
+  ),
+}
+
+/**
+ * §7 publishResults (D-306): freezes every result of the exam and publishes
+ * it; the withheld students' results stay hidden from their families.
+ */
+export async function publishResults(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  examId: string,
+  withhold: { studentId: string; reason: string }[]
+): Promise<Result<PublishResultsSummary, ApiError>> {
+  const { data, error } = await client.rpc("publish_results", {
+    p_workspace_id: ctx.workspaceId,
+    p_exam_id: examId,
+    p_withhold: withhold.map((w) => ({
+      student_id: w.studentId,
+      reason: w.reason,
+    })),
+  })
+  if (error) {
+    const known = Object.hasOwn(PUBLISH_ERRORS, error.message)
+      ? PUBLISH_ERRORS[error.message]
+      : undefined
+    return err(known ?? UNAVAILABLE)
+  }
+  const summary = z
+    .object({ published: z.number(), withheld: z.number() })
+    .safeParse(data)
+  return summary.success ? ok(summary.data) : err(UNAVAILABLE)
+}
+
+/** The publish sheet's list: every student with a result in the exam. */
+export async function listPublishCandidates(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  examId: string
+): Promise<Result<PublishCandidate[], ApiError>> {
+  const { data, error } = await client
+    .from("results")
+    .select(
+      "student_id, result_status, enrollments(roll_number), students(full_name), sections(name, grade_levels(name))"
+    )
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("exam_id", examId)
+  if (error) return err(UNAVAILABLE)
+  const rows = z
+    .array(
+      z.object({
+        student_id: z.string(),
+        result_status: resultRow.shape.result_status,
+        enrollments: z.object({ roll_number: z.number().nullable() }),
+        students: z.object({ full_name: z.string() }),
+        sections: z.object({
+          name: z.string(),
+          grade_levels: z.object({ name: z.string() }),
+        }),
+      })
+    )
+    .safeParse(data ?? [])
+  if (!rows.success) return err(UNAVAILABLE)
+  return ok(
+    rows.data
+      .map((r) => ({
+        studentId: r.student_id,
+        fullName: r.students.full_name,
+        sectionLabel: sectionDisplayName(
+          r.sections.grade_levels.name,
+          r.sections.name
+        ),
+        rollNumber: r.enrollments.roll_number,
+        status: r.result_status,
+      }))
+      .sort(
+        (a, b) =>
+          a.sectionLabel.localeCompare(b.sectionLabel) ||
+          (a.rollNumber ?? Infinity) - (b.rollNumber ?? Infinity)
+      )
+  )
+}
+
+/**
+ * F-AC-10 results tab (D-306): the caller's linked children's published
+ * results, newest first, from their frozen payloads, through
+ * `public.family_results` — which returns a withheld result too, flagged,
+ * with no marks and no reason (the RLS policy never returns one).
+ */
+export async function listFamilyResults(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient
+): Promise<Result<FamilyResult[], ApiError>> {
+  const { data, error } = await client.rpc("family_results", {
+    p_workspace_id: ctx.workspaceId,
+  })
+  if (error) return err(UNAVAILABLE)
+  const base = {
+    exam_id: z.string(),
+    student_id: z.string(),
+    published_at: z.string(),
+  }
+  const rows = z
+    .array(
+      z.discriminatedUnion("withheld", [
+        z.object({
+          ...base,
+          withheld: z.literal(false),
+          card: reportCardDtoSchema,
+        }),
+        z.object({
+          ...base,
+          withheld: z.literal(true),
+          card: reportCardDtoSchema.innerType().pick({
+            studentNameEn: true,
+            studentNameBn: true,
+            className: true,
+            sectionName: true,
+            examNameEn: true,
+          }),
+        }),
+      ])
+    )
+    .safeParse(data ?? [])
+  if (!rows.success) return err(UNAVAILABLE)
+  return ok(
+    rows.data.map((r) => ({
+      examId: r.exam_id,
+      studentId: r.student_id,
+      publishedAt: r.published_at,
+      ...(r.withheld
+        ? { withheld: true as const, card: r.card }
+        : { withheld: false as const, card: r.card }),
+    }))
+  )
+}
+
+/** Whether the caller has an active guardian link in this school — the
+ * family screen's "no child linked yet" state (D-306 review). */
+export async function hasGuardianLink(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient
+): Promise<Result<boolean, ApiError>> {
+  const { count, error } = await client
+    .from("guardian_users")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("user_id", ctx.userId)
+    .eq("status", "active")
+  if (error) return err(UNAVAILABLE)
+  return ok((count ?? 0) > 0)
 }

@@ -50,6 +50,11 @@ export const ACTIONS = [
   // compute owner/admin.
   "results.read",
   "results.compute",
+  // F-AC-06 §2 / Part 7 (D-306): publish, withhold and unpublish — owner/admin.
+  "results.publish",
+  // F-AC-10 §2: a parent reads their own children's published results
+  // (RLS: published, not withheld, an active guardian link).
+  "family.results.read",
   "timetable.read",
   "timetable.manage",
   // Workspace administration
@@ -174,6 +179,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "exams.write",
     "results.read",
     "results.compute",
+    "results.publish",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -232,6 +238,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "exams.write",
     "results.read",
     "results.compute",
+    "results.publish",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -341,6 +348,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "members.leave",
     // Audit (F-ID-09 §2)
     "audit.read.self",
+    "family.results.read",
   ],
   // Acadigma staff. Moderation and payouts only — never a tenant's academic data.
   platform: [

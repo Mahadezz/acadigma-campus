@@ -26,12 +26,19 @@ vi.mock("@acadigma/db/repositories/exams", () => ({
 }))
 
 const mockCompute = vi.fn()
+const mockPublish = vi.fn()
 vi.mock("@acadigma/db/repositories/results", () => ({
   computeResults: mockCompute,
+  publishResults: mockPublish,
 }))
 
-const { computeResults, createExam, setExamStatus, updateExamSubject } =
-  await import("./actions")
+const {
+  computeResults,
+  createExam,
+  publishResults,
+  setExamStatus,
+  updateExamSubject,
+} = await import("./actions")
 
 const CTX = {
   workspaceId: "3f1a2e5c-9b7d-4c2e-8f1a-2b3c4d5e6f70",
@@ -142,5 +149,53 @@ describe("exam actions", () => {
 
     const bad = await computeResults({ examId: "nope" })
     expect(!bad.ok && bad.error.code).toBe("validation_failed")
+  })
+
+  it("publishResults: owner publishes with a withheld student; teacher forbidden; read-only refused", async () => {
+    mockPublish.mockResolvedValue({
+      ok: true,
+      data: { published: 39, withheld: 1 },
+    })
+    const withhold = [{ studentId: ID, reason: "  Fees due " }]
+    expect(await publishResults({ examId: ID, withhold })).toEqual({
+      ok: true,
+      data: { published: 39, withheld: 1 },
+    })
+    expect(mockPublish.mock.calls[0]?.slice(2)).toEqual([
+      ID,
+      [{ studentId: ID, reason: "Fees due" }],
+    ])
+    expect(await publishResults({ examId: ID })).toMatchObject({ ok: true })
+    expect(mockPublish.mock.calls[1]?.[3]).toEqual([])
+
+    mockRequireWorkspace.mockResolvedValueOnce({ ...CTX, role: "teacher" })
+    const forbidden = await publishResults({ examId: ID })
+    expect(!forbidden.ok && forbidden.error.code).toBe("forbidden")
+
+    mockRequireWritable.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "PLAN_READ_ONLY", reason: "Your Pro trial has ended." },
+    })
+    const readOnly = await publishResults({ examId: ID })
+    expect(!readOnly.ok && readOnly.error.code).toBe("payment_required")
+    expect(mockPublish).toHaveBeenCalledTimes(2)
+  })
+
+  it("publishResults: a withheld student needs a reason, once", async () => {
+    const blank = await publishResults({
+      examId: ID,
+      withhold: [{ studentId: ID, reason: "  " }],
+    })
+    expect(!blank.ok && blank.error.code).toBe("validation_failed")
+    const twice = await publishResults({
+      examId: ID,
+      withhold: [
+        { studentId: ID, reason: "Fees" },
+        { studentId: ID, reason: "Fees" },
+      ],
+    })
+    expect(!twice.ok && twice.error.code).toBe("validation_failed")
+    expect(mockPublish).not.toHaveBeenCalled()
+    expect(mockRequireWorkspace).not.toHaveBeenCalled()
   })
 })

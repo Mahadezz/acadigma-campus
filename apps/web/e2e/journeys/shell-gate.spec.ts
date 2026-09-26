@@ -44,7 +44,10 @@ test("a parent member never reaches /app — the gate sends them to /family inst
   // family shell renders, not /app.
   await expect(page).toHaveURL("/family")
   await expect(
-    page.getByRole("heading", { name: "Your child's school, from here" })
+    // The seeded parent has no child linked yet (D-306: F-AC-02 Part 4 links).
+    page.getByRole("heading", {
+      name: "Your account isn't linked to a child yet",
+    })
   ).toBeVisible()
 
   // Direct navigation is gated the same way as the redirect after switching —
