@@ -57,7 +57,11 @@ export function useGuardedSignOut(signOutNow: () => Promise<void>): {
         onOpenChange={(open) => {
           if (!open) setWaiting(0)
         }}
-        title={getCopy().signOutTitle.replace("{count}", String(waiting))}
+        title={
+          waiting === 1
+            ? getCopy().signOutTitleOne
+            : getCopy().signOutTitle.replace("{count}", String(waiting))
+        }
         footer={
           <>
             <Button className="h-11" onClick={stay}>

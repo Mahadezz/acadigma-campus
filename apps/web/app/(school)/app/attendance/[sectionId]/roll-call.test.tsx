@@ -253,4 +253,30 @@ describe("RollCall offline (F-ID-11 Part 2a)", () => {
     await screen.findByText(en.offline.savedOnPhone)
     expect(screen.getByText("P 0 · A 3 · L 0")).toBeTruthy()
   })
+  it("if the phone cannot keep it (no IndexedDB), says so and keeps the marks", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    mockQueueSave.mockRejectedValue(new Error("QuotaExceededError"))
+    render(<RollCall {...BASE} />)
+    markAndSave()
+    await screen.findByText(en.offline.saveOnPhoneFailed)
+    expect(screen.getByText("P 3 · A 0 · L 0")).toBeTruthy()
+  })
+
+  it("a refused queued roll shows the reason in the reader's language", () => {
+    mockOutbox.mockReturnValue([
+      {
+        entityKey: ENTITY,
+        status: "needs_attention",
+        lastError: {
+          code: "forbidden",
+          message: "This day is past the correction window. Ask an admin.",
+          root: "OUTSIDE_EDIT_WINDOW",
+        },
+      },
+    ])
+    render(<RollCall {...BASE} t={bn.attendance.roll} locale="bn" />)
+    expect(
+      screen.getByText(bn.attendance.roll.errors.OUTSIDE_EDIT_WINDOW)
+    ).toBeTruthy()
+  })
 })

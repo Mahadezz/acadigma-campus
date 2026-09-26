@@ -4,10 +4,15 @@ import * as React from "react"
 
 import { CloudUploadIcon, TriangleAlertIcon } from "lucide-react"
 
+import type { ApiError } from "@acadigma/contracts"
 import { Button } from "@acadigma/ui/components/button"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+
+import { saveErrorText } from "@/app/(school)/app/attendance/[sectionId]/roll-call"
+import type { Messages } from "@/lib/i18n"
+import { othersWaiting } from "@/lib/offline/check"
 import type { OutboxItem } from "@/lib/offline/outbox"
 import {
   deleteItem,
@@ -15,12 +20,28 @@ import {
   sendQueued,
   useOutbox,
 } from "@/lib/offline/outbox-client"
+import { outboxEvents } from "@/lib/offline/outbox-db"
 import { useOnline } from "@/lib/offline/use-online"
 
 import { useOfflineCopy, type OfflineCopy } from "./offline-provider"
 
 const WEEK_MS = 7 * 24 * 60 * 60_000
-const count = (s: string, n: number) => s.replace("{count}", String(n))
+/** "{count} …", or the singular sentence for one (Bangla has the same). */
+const count = (s: string, n: number, one?: string) =>
+  n === 1 && one ? one : s.replace("{count}", String(n))
+
+type RollCopy = Messages["attendance"]["roll"]
+
+/** The refusal in the reader's language, by its named reason (not the server's English). */
+function refusalText(t: RollCopy, item: OutboxItem): string {
+  const e = item.lastError
+  if (!e) return t.errors.generic
+  return saveErrorText(t, {
+    code: e.code as ApiError["code"],
+    message: e.message,
+    ...(e.root ? { fieldErrors: { _root: [e.root] } } : {}),
+  })
+}
 
 /**
  * F-ID-11 Part 2a (§4.4, §4.10, D-309): the pending chip in the top bar and
@@ -28,7 +49,14 @@ const count = (s: string, n: number) => s.replace("{count}", String(n))
  * on open, on the `online` event and when the app comes back to the
  * foreground (iOS has no Background Sync, so one path everywhere).
  */
-export function OutboxChip({ userId }: { userId: string }) {
+export function OutboxChip({
+  userId,
+  rollCopy,
+}: {
+  userId: string
+  /** For the refusal reasons of queued roll calls. */
+  rollCopy: RollCopy
+}) {
   const items = useOutbox(userId)
   const getCopy = useOfflineCopy()
   const [open, setOpen] = React.useState(false)
@@ -43,6 +71,8 @@ export function OutboxChip({ userId }: { userId: string }) {
     // three more follow within ~15 s. Each is free when nothing waits.
     const timers: number[] = []
     const online = () => {
+      timers.forEach(clearTimeout)
+      timers.length = 0
       send()
       for (const ms of [2_000, 5_000, 15_000]) {
         timers.push(window.setTimeout(send, ms))
@@ -70,7 +100,7 @@ export function OutboxChip({ userId }: { userId: string }) {
         variant="outline"
         size="sm"
         className={
-          needsYou > 0 ? "border-destructive text-destructive h-9" : "h-9"
+          needsYou > 0 ? "border-destructive text-destructive h-11" : "h-11"
         }
         onClick={() => setOpen(true)}
       >
@@ -80,7 +110,7 @@ export function OutboxChip({ userId }: { userId: string }) {
           <CloudUploadIcon aria-hidden="true" />
         )}
         {needsYou > 0
-          ? count(copy.chipNeedsYou, needsYou)
+          ? count(copy.chipNeedsYou, needsYou, copy.chipNeedsYouOne)
           : count(copy.chipWaiting, items.length)}
       </Button>
       <QueueSheet
@@ -89,24 +119,45 @@ export function OutboxChip({ userId }: { userId: string }) {
         items={items}
         userId={userId}
         copy={copy}
+        rollCopy={rollCopy}
       />
     </>
   )
 }
 
-/** §4.10: a banner that stays while anything has waited a week or more. */
+const subscribe = (fn: () => void) => {
+  outboxEvents?.addEventListener("change", fn)
+  return () => outboxEvents?.removeEventListener("change", fn)
+}
+
+/**
+ * §4.10: a banner that stays while anything has waited a week or more; and,
+ * until Part 2b's choice, a plain count of another teacher's unsent changes
+ * kept on this phone (never their contents).
+ */
 export function OutboxStaleBanner({ userId }: { userId: string }) {
   const items = useOutbox(userId)
   const getCopy = useOfflineCopy()
+  const others = React.useSyncExternalStore(subscribe, othersWaiting, () => 0)
   // Read once per render from the device clock: a week is not precise work.
   // eslint-disable-next-line react-hooks/purity -- the current time is the value
   const now = Date.now()
   const stale = items.filter((i) => now - i.createdAt >= WEEK_MS).length
-  if (stale === 0) return null
+  if (stale === 0 && others === 0) return null
+  const copy = getCopy()
   return (
-    <InlineAlert tone="offline" className="mb-3">
-      {count(getCopy().staleBanner, stale)}
-    </InlineAlert>
+    <>
+      {stale > 0 ? (
+        <InlineAlert tone="offline" className="mb-3">
+          {count(copy.staleBanner, stale, copy.staleBannerOne)}
+        </InlineAlert>
+      ) : null}
+      {others > 0 ? (
+        <InlineAlert tone="info" className="mb-3">
+          {count(copy.othersWaiting, others, copy.othersWaitingOne)}
+        </InlineAlert>
+      ) : null}
+    </>
   )
 }
 
@@ -116,12 +167,14 @@ function QueueSheet({
   items,
   userId,
   copy,
+  rollCopy,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   items: OutboxItem[]
   userId: string
   copy: OfflineCopy
+  rollCopy: RollCopy
 }) {
   const online = useOnline()
   const [sending, startSending] = React.useTransition()
@@ -175,6 +228,7 @@ function QueueSheet({
                     item={item}
                     userId={userId}
                     copy={copy}
+                    rollCopy={rollCopy}
                     online={online}
                   />
                 ))}
@@ -191,11 +245,13 @@ function QueueRow({
   item,
   userId,
   copy,
+  rollCopy,
   online,
 }: {
   item: OutboxItem
   userId: string
   copy: OfflineCopy
+  rollCopy: RollCopy
   online: boolean
 }) {
   const [shown, setShown] = React.useState(false)
@@ -218,7 +274,9 @@ function QueueRow({
       {item.status === "conflict" ? (
         <p className="text-muted-foreground text-sm">{copy.conflictReason}</p>
       ) : item.status === "needs_attention" && item.lastError ? (
-        <p className="text-destructive text-sm">{item.lastError.message}</p>
+        <p className="text-destructive text-sm">
+          {refusalText(rollCopy, item)}
+        </p>
       ) : null}
       {/* Always in the DOM so the toggle's aria-controls resolves. */}
       <p id={detailId} hidden={!shown} className="bg-muted rounded p-2 text-sm">

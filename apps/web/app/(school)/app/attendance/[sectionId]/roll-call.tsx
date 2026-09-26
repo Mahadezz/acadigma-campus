@@ -114,6 +114,8 @@ export function RollCall({
           item.payload.records.map((r) => [r.studentId, r.status])
         ),
       }))
+      setBulkMarked(item.payload.bulkMarked)
+      setAnyway(item.payload.allowNonSchoolDay)
     })
     // When it lands, the version it created is the next save's base.
     const off = onOutboxSent((key, updatedAt) => {
@@ -189,17 +191,25 @@ export function RollCall({
   // the next save takes a new key.
   async function queue(input: SaveAttendanceInput) {
     const c = getOfflineCopy()
-    const result = await queueSave({
-      userId,
-      workspaceId,
-      kind: "attendance.save",
-      entityKey,
-      payload: input,
-      summary: c.attendanceSummary
-        .replace("{section}", title)
-        .replace("{date}", dateLabel),
-      detail: detail(),
-    })
+    let result
+    try {
+      result = await queueSave({
+        userId,
+        workspaceId,
+        kind: "attendance.save",
+        entityKey,
+        payload: input,
+        summary: c.attendanceSummary
+          .replace("{section}", title)
+          .replace("{date}", dateLabel),
+        detail: detail(),
+      })
+    } catch {
+      // IndexedDB unavailable (private mode, full disk): say so plainly and
+      // keep her marks on screen to save again online.
+      setError(c.saveOnPhoneFailed)
+      return
+    }
     if (result === "full") {
       setError(c.queueFull)
       return
@@ -373,7 +383,14 @@ export function RollCall({
               <InlineAlert tone="error">
                 {refused.status === "conflict"
                   ? getOfflineCopy().conflictReason
-                  : refused.lastError?.message}
+                  : saveErrorText(t, {
+                      code: (refused.lastError?.code ??
+                        "internal") as ApiError["code"],
+                      message: refused.lastError?.message ?? "",
+                      ...(refused.lastError?.root
+                        ? { fieldErrors: { _root: [refused.lastError.root] } }
+                        : {}),
+                    })}
               </InlineAlert>
             ) : null}
             <div className="flex items-center gap-3">

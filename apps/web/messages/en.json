@@ -1665,6 +1665,12 @@
     "attendanceSummary": "Attendance · {section} · {date}",
     "detailAllPresent": "Everyone present",
     "detailAbsent": "Absent: {names}",
-    "detailLate": "Late: {names}"
+    "detailLate": "Late: {names}",
+    "chipNeedsYouOne": "1 needs you",
+    "signOutTitleOne": "1 change has not been sent yet",
+    "staleBannerOne": "1 change from last week has not been sent. Connect to the internet to send it.",
+    "othersWaiting": "Another teacher's {count} unsent changes are on this phone. They stay until that teacher signs in and sends them.",
+    "othersWaitingOne": "Another teacher's unsent change is on this phone. It stays until that teacher signs in and sends it.",
+    "saveOnPhoneFailed": "Could not keep this on the phone. Your marks are still here — connect to the internet and save again."
   }
 }
