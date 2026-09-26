@@ -2,9 +2,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 /**
- * F-AC-10 results tab (D-306): a parent downloads only what the seam returns
- * through their own RLS client; a bad link, a non-parent and an id RLS hides
- * each stop before a byte of PDF is rendered.
+ * F-AC-10 results tab (D-306, D-109): the card comes only from the family
+ * path (`family_results`: the caller's actively linked children, published,
+ * not withheld), whatever the caller's role; a bad link, a result not on
+ * that list and a withheld one each stop before a byte of PDF is rendered.
  */
 
 const mockRequireWorkspace = vi.fn()
@@ -25,9 +26,9 @@ vi.mock("@acadigma/pdf", () => ({
   ReportCardDocument: (props: unknown) => props,
 }))
 
-const mockGetReportCardData = vi.fn()
-vi.mock("@/app/(school)/app/reports/report-card-data", () => ({
-  getReportCardData: (...args: unknown[]) => mockGetReportCardData(...args),
+const mockListFamilyResults = vi.fn()
+vi.mock("@acadigma/db/repositories/results", () => ({
+  listFamilyResults: (...args: unknown[]) => mockListFamilyResults(...args),
 }))
 
 const { GET } = await import("./route")
@@ -35,6 +36,10 @@ const { GET } = await import("./route")
 const EXAM = "11111111-1111-4111-8111-111111111111"
 const STUDENT = "22222222-2222-4222-8222-222222222222"
 const CTX = { workspaceId: "ws-1", userId: "u-1", role: "parent" }
+
+function familyRow(card: object, withheld = false) {
+  return { examId: EXAM, studentId: STUDENT, withheld, card }
+}
 
 function call(query: string) {
   return GET(new Request(`https://campus.test/api/family/report-card?${query}`))
@@ -45,9 +50,9 @@ beforeEach(() => {
   mockRequireWorkspace.mockResolvedValue(CTX)
   mockGetSchoolProfile.mockResolvedValue({ ok: false, error: {} })
   mockRender.mockResolvedValue(Buffer.from("%PDF-fake"))
-  mockGetReportCardData.mockResolvedValue({
+  mockListFamilyResults.mockResolvedValue({
     ok: true,
-    data: { studentCode: "STU-2026-0001" },
+    data: [familyRow({ studentCode: "STU-2026-0001" })],
   })
 })
 
@@ -58,21 +63,28 @@ describe("GET /api/family/report-card", () => {
     expect(mockRequireWorkspace).not.toHaveBeenCalled()
   })
 
-  it("403s anyone but a parent", async () => {
-    mockRequireWorkspace.mockResolvedValueOnce({ ...CTX, role: "teacher" })
+  it("404s a result that is not on the caller's family list", async () => {
+    mockListFamilyResults.mockResolvedValueOnce({ ok: true, data: [] })
     const response = await call(`examId=${EXAM}&studentId=${STUDENT}`)
-    expect(response.status).toBe(403)
-    expect(mockGetReportCardData).not.toHaveBeenCalled()
+    expect(response.status).toBe(404)
+    expect(mockRender).not.toHaveBeenCalled()
   })
 
-  it("404s a result RLS does not show this parent", async () => {
-    mockGetReportCardData.mockResolvedValueOnce({
-      ok: false,
-      error: { code: "not_found", message: "No result." },
+  it("404s a withheld result", async () => {
+    mockListFamilyResults.mockResolvedValueOnce({
+      ok: true,
+      data: [familyRow({ studentCode: "S" }, true)],
     })
     const response = await call(`examId=${EXAM}&studentId=${STUDENT}`)
     expect(response.status).toBe(404)
     expect(mockRender).not.toHaveBeenCalled()
+  })
+
+  it("serves a staff member who is also a parent from the family path", async () => {
+    mockRequireWorkspace.mockResolvedValueOnce({ ...CTX, role: "teacher" })
+    const response = await call(`examId=${EXAM}&studentId=${STUDENT}`)
+    expect(response.status).toBe(200)
+    expect(mockListFamilyResults).toHaveBeenCalledTimes(1)
   })
 
   it("renders the parent's own child's card in their language", async () => {
@@ -81,18 +93,14 @@ describe("GET /api/family/report-card", () => {
     expect(response.headers.get("content-disposition")).toContain(
       "report-card-STU-2026-0001.pdf"
     )
-    expect(mockGetReportCardData.mock.calls[0]?.slice(1)).toEqual([
-      CTX,
-      STUDENT,
-      EXAM,
-    ])
+    expect(mockListFamilyResults.mock.calls[0]?.[0]).toEqual(CTX)
     expect(mockRender.mock.calls[0]?.[0]).toMatchObject({ locale: "bn" })
   })
 
   it("keeps only safe characters of the student code in the filename", async () => {
-    mockGetReportCardData.mockResolvedValueOnce({
+    mockListFamilyResults.mockResolvedValueOnce({
       ok: true,
-      data: { studentCode: 'S-1"; x=y\r\n' },
+      data: [familyRow({ studentCode: 'S-1"; x=y\r\n' })],
     })
     const response = await call(`examId=${EXAM}&studentId=${STUDENT}`)
     expect(response.headers.get("content-disposition")).toBe(

@@ -220,3 +220,8 @@ _Failures:_ zero linked children (the invitation was revoked, or the student wit
 4. **Read receipts.** Aggregate-only by design. Confirm with the owner that "28 of 38 families opened the result" is acceptable and that per-family "last seen" must stay out of the school UI.
 5. **A guardian with children in two schools** must switch workspace first. Assumed acceptable; a cross-workspace "all my children" view is possible but breaks the one-context-per-request model in ARCHITECTURE §3 and is deliberately deferred.
 6. **Student accounts.** When the Acadigma Students app arrives (PRODUCT-DECISIONS 1.22), it reads these same views with a student-scoped predicate instead of a guardian-scoped one — which is why the scoping lives in one helper rather than in thirteen queries.
+
+### Status / deviations recorded 2026-09-26 (guardian follow-ups, D-109)
+
+- **Built:** the family surface is gated on an active guardian link, not on `role = 'parent'`: a staff member who is also a parent at their school opens `/family` (switcher: "My children"; back with "School app") and sees only their own linked children's published results; `GET /api/family/report-card` serves only rows from `public.family_results`. The RLS reads (`students_select_guardian`, `results_select_guardian`) and `family_results` require an active membership of any role plus `app.is_guardian_of`.
+- **Deviation:** `family.results.read` stays a parent grant in the domain but no longer gates the family pages; the link does.
