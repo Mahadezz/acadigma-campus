@@ -16,13 +16,15 @@
 --   F. Revoke: owner/admin only; a revoked link hides the child and the
 --      published result at once; the last one removes the membership (no
 --      school, file or student reads), and only a new link brings it back.
---      Parents never read workspace files or usage counters. The member
+--      Parents never read workspace files or usage counters. Removing a
+--      membership by any path revokes the person's links; a removed parent
+--      can never PATCH their own membership back. The member
 --      invitation functions ignore guardian invitations.
 --   G. Rate limit (60 guardian invitations an hour per school) and a
 --      read-only school.
 -- =====================================================================
 begin;
-select plan(59);
+select plan(66);
 
 create schema if not exists tests;
 
@@ -435,6 +437,37 @@ select tests.logout();
 select is((select count(*)::int from public.guardian_users gu
             where gu.user_id = '38000000-0000-4000-a000-000000000004'), 0,
   'the stranger holds no link');
+
+-- The school removes P from the members screen (here in a read-only school:
+-- removing access always works). Every link of P's is revoked with it.
+select tests.login('38000000-0000-4000-a000-000000000001');
+select lives_ok($$update public.workspace_members set status = 'removed'
+                   where user_id = '38000000-0000-4000-a000-000000000003'
+                     and workspace_id = '38000000-0000-4000-b000-000000000001'$$,
+  'the owner removes P from the school, even read-only');
+select tests.logout();
+select is((select count(*)::int from public.guardian_users gu
+            where gu.user_id = '38000000-0000-4000-a000-000000000003' and gu.status = 'active'),
+  0, 'removing the membership revoked every link of P''s');
+select tests.login('38000000-0000-4000-a000-000000000003');
+select is((select count(*)::int from public.students), 0, 'P reads no student');
+select is((select count(*)::int from public.results), 0, 'and no result');
+select throws_ok($$update public.workspace_members set status = 'active'
+                    where user_id = '38000000-0000-4000-a000-000000000003'
+                      and workspace_id = '38000000-0000-4000-b000-000000000001'$$,
+  '42501', null, 'a removed parent cannot PATCH their own membership back to active');
+select throws_ok($$update public.workspace_members
+                      set status = 'active',
+                          invitation_id = (select id from public.workspace_invitations
+                                            where token_hash = app.hash_token(tests.tok('p3-again')))
+                    where user_id = '38000000-0000-4000-a000-000000000003'
+                      and workspace_id = '38000000-0000-4000-b000-000000000001'$$,
+  '42501', null, 'not even naming the guardian invitation they accepted earlier');
+select tests.logout();
+select is((select status::text from public.workspace_members
+            where user_id = '38000000-0000-4000-a000-000000000003'
+              and workspace_id = '38000000-0000-4000-b000-000000000001'), 'removed',
+  'P stays removed');
 
 select * from finish();
 rollback;

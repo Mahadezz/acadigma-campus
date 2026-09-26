@@ -373,6 +373,11 @@ select tests.logout();
 update public.workspace_members set status = 'active'
  where user_id = '56000000-0000-4000-a000-000000000004'
    and workspace_id = '56000000-0000-4000-b000-000000000001';
+-- Removing the membership revoked the parent's link too (D-108); the
+-- fixture restores both.
+update public.guardian_users set status = 'active', revoked_at = null
+ where user_id = '56000000-0000-4000-a000-000000000004'
+   and workspace_id = '56000000-0000-4000-b000-000000000001';
 
 -- =====================================================================
 -- E. Unpublish and republish

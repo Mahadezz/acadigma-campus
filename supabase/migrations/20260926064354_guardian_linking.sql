@@ -19,9 +19,11 @@
 --     the active guardian_users link for the invitation's own student only.
 --   * public.revoke_guardian_link(ws, link) — owner/admin: status 'revoked';
 --     app.is_guardian_of reads status = 'active', so access ends at once.
---   * The last revoked link also removes the parent's membership; the
---     members guard lets that parent reactivate it only by accepting a new
---     link. Parents no longer read workspace-visibility files or usage
+--   * The last revoked link also removes the parent's membership, and any
+--     removal of a membership revokes that person's guardian links. The
+--     members guard lets a removed parent reactivate their own membership
+--     only inside accept_guardian_invitation (a guardian invitation they
+--     accepted in the same transaction), changing nothing else. Parents no longer read workspace-visibility files or usage
 --     counters. app.accept_invitation / decline_invitation ignore guardian
 --     invitations (PR #78 review).
 --   * students gains a parent SELECT policy: a parent reads the rows of
@@ -233,8 +235,7 @@ begin
   end if;
 
   -- One membership per person per school: a parent of a second child keeps
-  -- theirs, and a parent removed when their last link was revoked comes
-  -- back. Anyone in the school in another role is refused rather than
+  -- theirs, and a removed parent comes back (below, after the link). Anyone in the school in another role is refused rather than
   -- silently turned into a parent.
   select m.* into v_member from public.workspace_members m
    where m.workspace_id = v_inv.workspace_id and m.user_id = v_uid;
@@ -258,16 +259,17 @@ begin
     set status = 'active', accepted_at = now(), revoked_at = null,
         invitation_id = excluded.invitation_id;
 
-  -- The link exists now, which is what lets the members guard accept this
-  -- person reactivating their own removed parent membership.
-  if found and v_member.status = 'removed' then
-    update public.workspace_members set status = 'active', invitation_id = v_inv.id
-     where id = v_member.id;
-  end if;
-
   update public.workspace_invitations
      set status = 'accepted', accepted_by = v_uid, accepted_at = now()
    where id = v_inv.id;
+
+  -- A returning parent: app.tg_workspace_members_guard accepts this one
+  -- self-reactivation because the guardian invitation named here was
+  -- accepted by them in this same transaction (accepted_at = now()).
+  if v_member.id is not null and v_member.status = 'removed' then
+    update public.workspace_members set status = 'active', invitation_id = v_inv.id
+     where id = v_member.id;
+  end if;
 
   return jsonb_build_object('workspace_id', v_inv.workspace_id, 'student_id', v_inv.student_id);
 end;
@@ -322,8 +324,8 @@ $$;
 
 comment on function public.revoke_guardian_link(uuid, uuid) is
   'F-AC-02 Part 4 (D-108): owner/admin. Revokes a parent''s link to a child '
-  'and, with their last link, their parent membership; idempotent. Raises FORBIDDEN, LINK_NOT_FOUND; PLAN_READ_ONLY from the '
-  'table guard.';
+  'and, with their last link, their parent membership; idempotent, and allowed '
+  'in a read-only school (removing access). Raises FORBIDDEN, LINK_NOT_FOUND.';
 
 revoke all on function public.revoke_guardian_link(uuid, uuid) from public, anon;
 grant execute on function public.revoke_guardian_link(uuid, uuid) to authenticated;
@@ -337,99 +339,6 @@ create policy students_select_guardian on public.students
   using (deleted_at is null
          and app.has_role(workspace_id, array['parent'])
          and app.is_guardian_of(id));
-
--- ---------------------------------------------------------------------
--- The members guard: a parent may reactivate their own removed parent
--- membership only while they hold an active guardian link in that school,
--- which only accept_guardian_invitation writes (no client grant). Otherwise
--- identical to 20260917010100_identity.sql.
--- ---------------------------------------------------------------------
-create or replace function app.tg_workspace_members_guard()
-returns trigger
-language plpgsql
-set search_path = ''
-as $$
-declare
-  v_uid         uuid := auth.uid();
-  v_actor_role  text;
-  v_other_owner int;
-begin
-  if tg_op = 'UPDATE' then
-    if new.workspace_id is distinct from old.workspace_id
-       or new.user_id is distinct from old.user_id then
-      raise exception 'workspace_id and user_id are immutable on a membership'
-        using errcode = '42501';
-    end if;
-
-    -- lifecycle stamps, applied server-side so the client cannot forge them
-    if new.status = 'removed' and old.status is distinct from 'removed' then
-      new.removed_at := now();
-      new.removed_by := v_uid;
-    elsif new.status = 'active' and old.status is distinct from 'active' then
-      new.joined_at  := coalesce(new.joined_at, now());
-      new.removed_at := null;
-      new.removed_by := null;
-    end if;
-
-    -- D-108: a returning parent (see the comment above).
-    if new.user_id = v_uid
-       and old.role = 'parent' and new.role = 'parent'
-       and old.status = 'removed' and new.status = 'active'
-       and exists (select 1 from public.guardian_users gu
-                    where gu.workspace_id = new.workspace_id and gu.user_id = new.user_id
-                      and gu.status = 'active') then
-      return new;
-    end if;
-  end if;
-
-  -- ---- authorization: skipped for server-owned paths and platform staff --
-  if not (app.is_privileged_context() or app.is_platform_admin()) then
-
-    v_actor_role := app.member_role(new.workspace_id);
-
-    if tg_op = 'UPDATE' and (new.role is distinct from old.role
-                             or new.status is distinct from old.status) then
-
-      if new.user_id = v_uid then
-        raise exception 'members cannot change their own role or status'
-          using errcode = '42501';
-      end if;
-
-      if v_actor_role is null or v_actor_role not in ('owner', 'admin') then
-        raise exception 'only owners and admins can change a membership role or status'
-          using errcode = '42501';
-      end if;
-
-      if (new.role = 'owner' or old.role = 'owner') and v_actor_role <> 'owner' then
-        raise exception 'only an owner can grant or remove ownership'
-          using errcode = '42501';
-      end if;
-    end if;
-
-    if tg_op = 'INSERT'
-       and new.role = 'owner'
-       and new.user_id is distinct from v_uid
-       and v_actor_role is distinct from 'owner' then
-      raise exception 'only an owner can add another owner' using errcode = '42501';
-    end if;
-  end if;
-
-  -- ---- invariant: enforced for EVERY caller, including the server -------
-  -- A workspace must always have at least one active owner
-  -- (PRODUCT-DECISIONS 1.5: "last owner cannot leave/downgrade").
-  if tg_op = 'UPDATE'
-     and old.role = 'owner' and old.status = 'active'
-     and (new.role <> 'owner' or new.status <> 'active') then
-    v_other_owner := app.count_active_owners(new.workspace_id, old.id);
-    if v_other_owner = 0 then
-      raise exception 'a workspace must always have at least one active owner'
-        using errcode = '23514';
-    end if;
-  end if;
-
-  return new;
-end;
-$$;
 
 -- ---------------------------------------------------------------------
 -- Parents never see the school's internal files or its plan usage (lead
@@ -563,5 +472,218 @@ begin
   update public.workspace_invitations
      set status = 'declined', declined_at = now()
    where id = v_inv.id;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- The members guard (PR #78 security re-check). A member may never change
+-- their own role or status, with one exception: a removed parent returning
+-- through accept_guardian_invitation. The exception needs a guardian
+-- invitation naming this membership (invitation_id) that this person
+-- accepted in this same transaction (accepted_at = now(), the transaction's
+-- start), and allows no other column to change. Invitations are written
+-- only by SECURITY DEFINER functions, and a PostgREST PATCH is its own
+-- transaction, so a direct self-update can never satisfy it.
+-- (app.is_privileged_context() reads the `role` setting, which a SECURITY
+-- DEFINER function does not change, so it does not cover this path.)
+-- Otherwise identical to 20260917010100_identity.sql.
+-- ---------------------------------------------------------------------
+create or replace function app.tg_workspace_members_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_uid         uuid := auth.uid();
+  v_actor_role  text;
+  v_other_owner int;
+  v_returning   boolean := false;
+begin
+  if tg_op = 'UPDATE' then
+    if new.workspace_id is distinct from old.workspace_id
+       or new.user_id is distinct from old.user_id then
+      raise exception 'workspace_id and user_id are immutable on a membership'
+        using errcode = '42501';
+    end if;
+
+    -- lifecycle stamps, applied server-side so the client cannot forge them
+    if new.status = 'removed' and old.status is distinct from 'removed' then
+      new.removed_at := now();
+      new.removed_by := v_uid;
+    elsif new.status = 'active' and old.status is distinct from 'active' then
+      new.joined_at  := coalesce(new.joined_at, now());
+      new.removed_at := null;
+      new.removed_by := null;
+    end if;
+
+    v_returning :=
+      new.user_id = v_uid
+      and old.role = 'parent' and new.role = 'parent'
+      and old.status = 'removed' and new.status = 'active'
+      and to_jsonb(new) - array['status', 'joined_at', 'removed_at', 'removed_by',
+                                'invitation_id', 'updated_at']
+        = to_jsonb(old) - array['status', 'joined_at', 'removed_at', 'removed_by',
+                                'invitation_id', 'updated_at']
+      and exists (select 1 from public.workspace_invitations i
+                   where i.id = new.invitation_id
+                     and i.workspace_id = new.workspace_id
+                     and i.guardian_id is not null
+                     and i.status = 'accepted'
+                     and i.accepted_by = v_uid
+                     and i.accepted_at = now());
+  end if;
+
+  -- ---- authorization: skipped for server-owned paths and platform staff --
+  if not (app.is_privileged_context() or app.is_platform_admin() or v_returning) then
+
+    v_actor_role := app.member_role(new.workspace_id);
+
+    if tg_op = 'UPDATE' and (new.role is distinct from old.role
+                             or new.status is distinct from old.status) then
+
+      if new.user_id = v_uid then
+        raise exception 'members cannot change their own role or status'
+          using errcode = '42501';
+      end if;
+
+      if v_actor_role is null or v_actor_role not in ('owner', 'admin') then
+        raise exception 'only owners and admins can change a membership role or status'
+          using errcode = '42501';
+      end if;
+
+      if (new.role = 'owner' or old.role = 'owner') and v_actor_role <> 'owner' then
+        raise exception 'only an owner can grant or remove ownership'
+          using errcode = '42501';
+      end if;
+    end if;
+
+    if tg_op = 'INSERT'
+       and new.role = 'owner'
+       and new.user_id is distinct from v_uid
+       and v_actor_role is distinct from 'owner' then
+      raise exception 'only an owner can add another owner' using errcode = '42501';
+    end if;
+  end if;
+
+  -- ---- invariant: enforced for EVERY caller, including the server -------
+  -- A workspace must always have at least one active owner
+  -- (PRODUCT-DECISIONS 1.5: "last owner cannot leave/downgrade").
+  if tg_op = 'UPDATE'
+     and old.role = 'owner' and old.status = 'active'
+     and (new.role <> 'owner' or new.status <> 'active') then
+    v_other_owner := app.count_active_owners(new.workspace_id, old.id);
+    if v_other_owner = 0 then
+      raise exception 'a workspace must always have at least one active owner'
+        using errcode = '23514';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- Removing a membership, by any path (the members screen, leaving,
+-- revoke_guardian_link), revokes that person's guardian links in the
+-- school, so a removed parent keeps no path to a child's results.
+-- ---------------------------------------------------------------------
+create or replace function app.tg_members_revoke_guardian_links()
+returns trigger
+language plpgsql
+security definer   -- guardian_users has no client write grant
+set search_path = ''
+as $$
+begin
+  update public.guardian_users gu
+     set status = 'revoked', revoked_at = now()
+   where gu.workspace_id = new.workspace_id
+     and gu.user_id = new.user_id
+     and gu.status = 'active';
+  return null;
+end;
+$$;
+
+revoke all on function app.tg_members_revoke_guardian_links() from public, anon, authenticated;
+
+drop trigger if exists workspace_members_revoke_guardian_links on public.workspace_members;
+create trigger workspace_members_revoke_guardian_links
+  after update of status on public.workspace_members
+  for each row
+  when (new.status = 'removed' and old.status is distinct from 'removed')
+  execute function app.tg_members_revoke_guardian_links();
+
+-- ---------------------------------------------------------------------
+-- app.tg_require_writable: revoking a guardian link is removing access, so
+-- it is allowed in a read-only school like a member removal (D-300); the
+-- trigger above depends on it. Otherwise identical to
+-- 20260926021923_section_subjects.sql.
+-- ---------------------------------------------------------------------
+create or replace function app.tg_require_writable()
+returns trigger
+language plpgsql
+security definer   -- sees the workspace row even when the caller's RLS cannot
+set search_path = ''
+as $$
+declare
+  v_new    jsonb := case when tg_op = 'DELETE' then null else to_jsonb(new) end;
+  v_old    jsonb := case when tg_op = 'INSERT' then null else to_jsonb(old) end;
+  -- UPDATE/DELETE read OLD's workspace: app.tg_freeze_workspace makes
+  -- workspace_id immutable, so OLD and NEW always agree.
+  v_ws     uuid  := (coalesce(v_old, v_new) ->> coalesce(tg_argv[0], 'workspace_id'))::uuid;
+  v_reason text;
+begin
+  if app.is_privileged_context() or app.is_platform_admin() then
+    return case when tg_op = 'DELETE' then old else new end;
+  end if;
+
+  select w.access_mode_reason into v_reason
+    from public.workspaces w
+   where w.id = v_ws and w.access_mode = 'read_only';
+  if not found then
+    return case when tg_op = 'DELETE' then old else new end;
+  end if;
+
+  -- Removing access is always allowed (D-300, security review).
+  if (tg_table_name = 'workspace_members'
+        and (tg_op = 'DELETE'
+             or (tg_op = 'UPDATE' and v_new ->> 'status' = 'removed'
+                 and v_new - array['status', 'removed_at', 'removed_by', 'updated_at']
+                   = v_old - array['status', 'removed_at', 'removed_by', 'updated_at'])))
+     or (tg_table_name = 'workspace_member_capabilities'
+        and (tg_op = 'DELETE'
+             or (tg_op = 'UPDATE' and v_new ->> 'revoked_at' is not null
+                 and v_new - array['revoked_at', 'revoked_by']
+                   = v_old - array['revoked_at', 'revoked_by'])))
+     or (tg_table_name = 'workspace_invitations'
+        and tg_op = 'UPDATE' and v_new ->> 'status' in ('revoked', 'declined')
+        and v_new - array['status', 'revoked_at', 'revoked_by', 'declined_at', 'updated_at']
+          = v_old - array['status', 'revoked_at', 'revoked_by', 'declined_at', 'updated_at'])
+     -- D-107: releasing a teacher from a section or a section's subject.
+     or (tg_table_name = 'sections'
+        and tg_op = 'UPDATE' and v_new ->> 'class_teacher_id' is null
+        and v_new - array['class_teacher_id', 'updated_at']
+          = v_old - array['class_teacher_id', 'updated_at'])
+     or (tg_table_name = 'section_subjects'
+        and tg_op = 'UPDATE' and v_new ->> 'teacher_id' is null
+        and v_new - array['teacher_id', 'updated_at']
+          = v_old - array['teacher_id', 'updated_at'])
+     -- D-108: revoking a parent's link to a child.
+     or (tg_table_name = 'guardian_users'
+        and tg_op = 'UPDATE' and v_new ->> 'status' = 'revoked'
+        and v_new - array['status', 'revoked_at', 'updated_at']
+          = v_old - array['status', 'revoked_at', 'updated_at'])
+  then
+    return case when tg_op = 'DELETE' then old else new end;
+  end if;
+
+  -- Only an active member learns the mode; a non-member's write is left to
+  -- RLS, which refuses it the same way whatever the mode (D-301).
+  if app.member_role(v_ws) is not null then
+    raise exception 'PLAN_READ_ONLY'
+      using errcode = '42501',
+            detail  = coalesce(v_reason, 'This workspace is read-only.');
+  end if;
+
+  return case when tg_op = 'DELETE' then old else new end;
 end;
 $$;
