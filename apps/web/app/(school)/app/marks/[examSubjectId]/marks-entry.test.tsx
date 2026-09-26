@@ -4,9 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import bn from "@/messages/bn.json"
 import en from "@/messages/en.json"
 
+// FormSheet picks Sheet vs Dialog with matchMedia; jsdom has none.
+vi.stubGlobal("matchMedia", () => ({
+  matches: false,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+}))
+
 const mockSave = vi.fn()
+const mockSubmit = vi.fn()
 vi.mock("../actions", () => ({
   saveMarks: (...a: unknown[]) => mockSave(...a),
+  submitExamSubject: (...a: unknown[]) => mockSubmit(...a),
 }))
 
 const { MarksEntry } = await import("./marks-entry")
@@ -24,6 +33,8 @@ const SHEET = {
   subjectNameBn: "গণিত",
   fullMarks: 50,
   passMarks: 16.5,
+  entryOpensOn: null,
+  entryClosesOn: null,
   rows: [
     {
       studentId: id(1),
@@ -57,6 +68,7 @@ const input = (name: RegExp) => screen.getByRole("textbox", { name })
 
 beforeEach(() => {
   mockSave.mockReset()
+  mockSubmit.mockReset()
 })
 
 describe("MarksEntry", () => {
@@ -281,5 +293,87 @@ describe("MarksEntry", () => {
     expect(screen.getByText("পূর্ণ নম্বর 50 · পাস 16.5")).toBeTruthy()
     expect(screen.getByRole("textbox", { name: /আয়ান/ })).toBeTruthy()
     expect(screen.getByText("1/4")).toBeTruthy()
+  })
+
+  it("shows the entry window and asks an admin outside it for a reason (D-307)", async () => {
+    mockSave.mockResolvedValue({
+      ok: true,
+      data: { saved: 1, entered: 2, enrolled: 4, rejected: [], marks: [] },
+    })
+    render(
+      <MarksEntry
+        {...BASE}
+        sheet={{
+          ...SHEET,
+          entryOpensOn: "2026-06-01",
+          entryClosesOn: "2026-06-08",
+        }}
+        lateReasonRequired
+      />
+    )
+    expect(
+      screen.getByText("Marks entry: 1 Jun 2026 to 8 Jun 2026")
+    ).toBeTruthy()
+    fireEvent.change(input(/Student 2/), { target: { value: "30" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await screen.findByText(en.marks.errors.REASON_REQUIRED)
+    expect(mockSave).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText(en.marks.lateReason), {
+      target: { value: " Script found late " },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalled())
+    expect(mockSave.mock.calls[0]?.[0].lateReason).toBe("Script found late")
+  })
+
+  it("submit warns with the missing students, then submits anyway (D-307)", async () => {
+    mockSubmit
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          submitted: false,
+          missing: [
+            {
+              studentId: id(2),
+              fullName: "Student 2",
+              fullNameBn: null,
+              rollNumber: 2,
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { submitted: true, missing: [] },
+      })
+    render(<MarksEntry {...BASE} canSubmit />)
+    fireEvent.click(screen.getByRole("button", { name: "Submit marks" }))
+    await screen.findByText("1 students have no mark yet")
+    expect(mockSubmit.mock.calls[0]?.[0]).toEqual({
+      examSubjectId: SHEET.paperId,
+      confirmIncomplete: false,
+    })
+    const anyway = screen.getByRole("button", { name: "Submit anyway" })
+    await vi.waitFor(() =>
+      expect((anyway as HTMLButtonElement).disabled).toBe(false)
+    )
+    fireEvent.click(anyway)
+    await screen.findByText(en.marks.submittedNotice)
+    expect(mockSubmit.mock.calls[1]?.[0].confirmIncomplete).toBe(true)
+    expect(screen.queryByRole("button", { name: "Submit marks" })).toBeNull()
+  })
+
+  it("asks to save first before submitting", () => {
+    render(<MarksEntry {...BASE} canSubmit />)
+    fireEvent.change(input(/Student 2/), { target: { value: "30" } })
+    expect(screen.getByText(en.marks.submitSaveFirst)).toBeTruthy()
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Submit marks",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true)
   })
 })

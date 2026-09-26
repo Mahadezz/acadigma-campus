@@ -21,3 +21,14 @@ export function dateRange(
   if (startsOn && endsOn) return `${fmt(startsOn)} – ${fmt(endsOn)}`
   return startsOn ? fmt(startsOn) : endsOn ? fmt(endsOn) : ""
 }
+
+/**
+ * Today's calendar date (ISO) in Asia/Dhaka, the default school timezone.
+ * ponytail: the database decides by the school's own zone (app.school_today);
+ * this only picks what the screen shows.
+ */
+export function schoolToday(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(
+    new Date()
+  )
+}

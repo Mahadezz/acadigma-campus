@@ -805,6 +805,8 @@ export type Database = {
         Row: {
           created_at: string
           duration_minutes: number | null
+          entry_closes_on: string | null
+          entry_opens_on: string | null
           exam_date: string | null
           exam_id: string
           full_marks: number
@@ -813,6 +815,7 @@ export type Database = {
           section_id: string
           starts_at: string | null
           status: Database["public"]["Enums"]["exam_subject_status"]
+          status_reason: string | null
           subject_id: string
           teacher_id: string | null
           updated_at: string
@@ -821,6 +824,8 @@ export type Database = {
         Insert: {
           created_at?: string
           duration_minutes?: number | null
+          entry_closes_on?: string | null
+          entry_opens_on?: string | null
           exam_date?: string | null
           exam_id: string
           full_marks: number
@@ -829,6 +834,7 @@ export type Database = {
           section_id: string
           starts_at?: string | null
           status?: Database["public"]["Enums"]["exam_subject_status"]
+          status_reason?: string | null
           subject_id: string
           teacher_id?: string | null
           updated_at?: string
@@ -837,6 +843,8 @@ export type Database = {
         Update: {
           created_at?: string
           duration_minutes?: number | null
+          entry_closes_on?: string | null
+          entry_opens_on?: string | null
           exam_date?: string | null
           exam_id?: string
           full_marks?: number
@@ -845,6 +853,7 @@ export type Database = {
           section_id?: string
           starts_at?: string | null
           status?: Database["public"]["Enums"]["exam_subject_status"]
+          status_reason?: string | null
           subject_id?: string
           teacher_id?: string | null
           updated_at?: string
@@ -1506,6 +1515,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          edited_after_window: boolean
           enrollment_id: string
           entered_by: string | null
           exam_subject_id: string
@@ -1519,6 +1529,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          edited_after_window?: boolean
           enrollment_id: string
           entered_by?: string | null
           exam_subject_id: string
@@ -1532,6 +1543,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          edited_after_window?: boolean
           enrollment_id?: string
           entered_by?: string | null
           exam_subject_id?: string
@@ -4043,6 +4055,10 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      lock_exam_subject: {
+        Args: { p_exam_subject_id: string; p_workspace_id: string }
+        Returns: undefined
+      }
       log_auth_event: {
         Args: { p_action: string; p_after?: Json }
         Returns: number
@@ -4096,6 +4112,14 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: Json
       }
+      submit_exam_subject: {
+        Args: {
+          p_confirm_incomplete?: boolean
+          p_exam_subject_id: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
       switch_workspace: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -4118,6 +4142,14 @@ export type Database = {
           blocked: boolean
           retry_after_seconds: number
         }[]
+      }
+      unlock_exam_subject: {
+        Args: {
+          p_exam_subject_id: string
+          p_reason: string
+          p_workspace_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

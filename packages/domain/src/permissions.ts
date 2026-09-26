@@ -44,6 +44,8 @@ export const ACTIONS = [
   "students.guardian.invite",
   "marks.read",
   "marks.write",
+  // F-AC-06 §2 / Part 4 (D-307): lock and unlock a paper — owner/admin.
+  "marks.lock",
   // F-AC-06 §2: grade scales, pass mark, GPA rules — owner/admin.
   "settings.grade_scale.write",
   // F-AC-06 §2: the exam schedule and papers.
@@ -172,6 +174,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "results.compute",
     "results.publish",
     "students.guardian.invite",
+    "marks.lock",
     "reports.read",
     "messages.send",
     "ai.use",
@@ -230,6 +233,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "results.compute",
     "results.publish",
     "students.guardian.invite",
+    "marks.lock",
     "reports.read",
     "messages.send",
     "ai.use",

@@ -3,11 +3,14 @@ import { forbidden, notFound } from "next/navigation"
 import { uuidSchema } from "@acadigma/contracts"
 import { getMarkSheet } from "@acadigma/db/repositories/marks"
 import { can } from "@acadigma/domain"
+import { outsideEntryWindow } from "@acadigma/domain/academic"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
+
+import { schoolToday } from "../../exams/format"
 
 import { MarksEntry, type ReadOnlyReason } from "./marks-entry"
 
@@ -38,6 +41,12 @@ export default async function MarksEntryPage({
     return <InlineAlert tone="error">{t.marks.errors.generic}</InlineAlert>
   }
   const s = sheet.data
+  const isAdmin = ctx.role === "owner" || ctx.role === "admin"
+  const today = schoolToday()
+  const outside = outsideEntryWindow(
+    { opensOn: s.entryOpensOn, closesOn: s.entryClosesOn },
+    today
+  )
 
   const readOnlyReason: ReadOnlyReason | null = !s.canEnter
     ? ctx.role === "teacher"
@@ -47,7 +56,9 @@ export default async function MarksEntryPage({
       ? "closed"
       : s.paperStatus === "locked"
         ? "locked"
-        : null
+        : outside && !isAdmin
+          ? "window"
+          : null
 
   return (
     <MarksEntry
@@ -55,6 +66,12 @@ export default async function MarksEntryPage({
       locale={locale}
       sheet={readOnlyReason === "notAssigned" ? { ...s, rows: [] } : { ...s }}
       readOnlyReason={readOnlyReason}
+      lateReasonRequired={readOnlyReason === null && outside}
+      canSubmit={
+        s.canSubmit &&
+        s.examStatus === "marks_entry" &&
+        s.paperStatus !== "locked"
+      }
     />
   )
 }

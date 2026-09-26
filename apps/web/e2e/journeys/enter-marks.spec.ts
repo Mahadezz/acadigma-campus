@@ -9,7 +9,8 @@ import { expectNoA11yViolations } from "../axe"
  * student with Enter moving to the next one (the keypad never closes),
  * marks one student Absent, saves once, and sees the progress complete.
  * The exam has two subjects and only one paper is filled, so Publish is
- * always refused (Part 4's completeness gate, MARKS_INCOMPLETE).
+ * always refused (Part 4's completeness gate, MARKS_INCOMPLETE). Part 4
+ * (D-307): the filled paper is submitted, locked and unlocked with a reason.
  *
  * Needs a seeded, verified owner of a school with a grade scale, at least
  * two subjects and an enrolled section (e.g. Class 6 – ক from
@@ -80,7 +81,28 @@ test("owner enters a whole class's marks in one pass and saves once", async ({
   expect(Date.now() - started).toBeLessThan(120_000)
   await expectNoA11yViolations(page, testInfo)
 
+  // D-307: the paper's marks are complete, so Submit needs no confirmation;
+  // then the owner locks the paper and unlocks it again with a reason.
+  await page.getByRole("button", { name: "Submit marks" }).click()
+  await expect(page.getByText("Marks submitted.")).toBeVisible()
   await page.getByRole("link", { name: "Back to the exam" }).click()
+  await expect(
+    page.getByRole("heading", { name: "Marks progress" })
+  ).toBeVisible()
+  await page
+    .getByRole("button", { name: /^Lock — / })
+    .first()
+    .click()
+  await expect(page.getByText("Locked.")).toBeVisible()
+  await expectNoA11yViolations(page, testInfo)
+  await page
+    .getByRole("button", { name: /^Unlock — / })
+    .first()
+    .click()
+  await page.getByLabel("Reason").fill("Checking the unlock journey")
+  await page.getByRole("button", { name: "Confirm" }).click()
+  await expect(page.getByText("Unlocked.")).toBeVisible()
+
   await page.getByRole("button", { name: "Lock marks" }).click()
   // No results computed yet (the second paper has no marks): Publish waits,
   // and says why (D-306 review; the server refuses MARKS_INCOMPLETE too).
