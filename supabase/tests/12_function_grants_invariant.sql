@@ -134,7 +134,9 @@ with allowed as (
     ('public.invite_guardian(uuid, uuid)'),  -- F-AC-02 Part 4 demo cut, D-108
     ('public.guardian_invitation_preview(text)'),  -- F-AC-02 Part 4 demo cut, D-108
     ('public.accept_guardian_invitation(text)'),  -- F-AC-02 Part 4 demo cut, D-108
-    ('public.revoke_guardian_link(uuid, uuid)')  -- F-AC-02 Part 4 demo cut, D-108
+    ('public.revoke_guardian_link(uuid, uuid)'),  -- F-AC-02 Part 4 demo cut, D-108
+    ('public.attendance_register(uuid, uuid, date)'),  -- F-OP-03 Part 6 review, D-208
+    ('public.can_read_results(uuid, uuid)')  -- F-OP-03 Part 6 review, D-208
   ) as a(sig)
   union all
   select p.oid

@@ -4013,6 +4013,14 @@ export type Database = {
         Args: { p_date?: string; p_workspace_id: string }
         Returns: Json
       }
+      attendance_register: {
+        Args: { p_month: string; p_section_id: string; p_workspace_id: string }
+        Returns: Json
+      }
+      can_read_results: {
+        Args: { p_section_id: string; p_workspace_id: string }
+        Returns: boolean
+      }
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       compute_results: {
         Args: { p_exam_id: string; p_workspace_id: string }
@@ -4226,7 +4234,12 @@ export type Database = {
       member_role: "owner" | "admin" | "teacher" | "staff" | "parent"
       member_status: "pending" | "active" | "removed"
       onboarding_path: "undecided" | "create_school" | "join_school"
-      report_kind: "sample" | "report_card" | "report_card_bulk"
+      report_kind:
+        | "sample"
+        | "report_card"
+        | "report_card_bulk"
+        | "attendance_register"
+        | "mark_sheet"
       report_locale: "bn" | "en"
       report_status: "queued" | "rendering" | "ready" | "failed" | "expired"
       result_status: "pass" | "fail" | "incomplete" | "withheld"
@@ -4474,7 +4487,13 @@ export const Constants = {
       member_role: ["owner", "admin", "teacher", "staff", "parent"],
       member_status: ["pending", "active", "removed"],
       onboarding_path: ["undecided", "create_school", "join_school"],
-      report_kind: ["sample", "report_card", "report_card_bulk"],
+      report_kind: [
+        "sample",
+        "report_card",
+        "report_card_bulk",
+        "attendance_register",
+        "mark_sheet",
+      ],
       report_locale: ["bn", "en"],
       report_status: ["queued", "rendering", "ready", "failed", "expired"],
       result_status: ["pass", "fail", "incomplete", "withheld"],

@@ -30,6 +30,8 @@ import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { StatusChip } from "@acadigma/ui/primitives/status-chip"
 
+import { GenerateMarkSheetButton } from "@/app/(school)/app/reports/generate-mark-sheet-button"
+import type { MarkSheetCopy } from "@/app/(school)/app/reports/generate-mark-sheet-button"
 import { GenerateReportCardBulkButton } from "@/app/(school)/app/reports/generate-report-card-bulk-button"
 import type { ReportCardBulkCopy } from "@/app/(school)/app/reports/generate-report-card-bulk-button"
 import {
@@ -56,6 +58,7 @@ export function ResultsView({
   results,
   reportCard,
   bulkReportCard,
+  markSheet,
 }: {
   t: T
   locale: Locale
@@ -68,6 +71,9 @@ export function ResultsView({
   /** Set when the viewer may render bulk report cards
    * (report.render.report_card_bulk, F-OP-03 Part 5, D-207). */
   bulkReportCard: ReportCardBulkCopy | null
+  /** Set when the viewer may render the mark sheet
+   * (report.render.mark_sheet, F-OP-03 Part 6, D-208). */
+  markSheet: MarkSheetCopy | null
 }) {
   return (
     <>
@@ -97,6 +103,15 @@ export function ResultsView({
       {bulkReportCard && sectionId && results?.ok ? (
         <GenerateReportCardBulkButton
           t={bulkReportCard}
+          sectionId={sectionId}
+          examId={examId}
+          locale={locale}
+        />
+      ) : null}
+
+      {markSheet && sectionId && results?.ok ? (
+        <GenerateMarkSheetButton
+          t={markSheet}
           sectionId={sectionId}
           examId={examId}
           locale={locale}
