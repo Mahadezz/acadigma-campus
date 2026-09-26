@@ -34,7 +34,7 @@ export type OutboxItem = {
   createdAt: number
   attempts: number
   status: OutboxStatus
-  lastError: { code: string; message: string } | null
+  lastError: { code: string; message: string; root?: string | null } | null
 }
 
 export type OutboxDraft = Pick<
@@ -55,10 +55,12 @@ export type OutboxStore = {
 }
 
 /**
- * §4.3 / §5.2: queue a save. A pending item for the same thing takes the new
- * payload and key but keeps its base version — her own unsent save is not a
- * version the server has seen. An item already sending is left alone; the new
- * one queues behind it and is rebased when that one lands (`replay`).
+ * §4.3 / §5.2: queue a save. The NEWEST item for the same thing takes the
+ * new payload and key, keeping its base version — but only while it is
+ * waiting and has never been sent (`attempts === 0`): her own unsent save is
+ * not a version the server has seen. Otherwise (sending, or tried and back to
+ * waiting) the new save queues behind it and is rebased when it lands
+ * (`replay`), so the last save is always the last one sent (review, #89).
  */
 export async function enqueue(
   store: OutboxStore,
@@ -66,13 +68,17 @@ export async function enqueue(
   now = Date.now()
 ): Promise<"queued" | "replaced" | "full"> {
   const items = await store.list()
-  const pending = items.find(
-    (i) =>
-      i.status === "pending" &&
-      i.entityKey === draft.entityKey &&
-      i.userId === draft.userId &&
-      i.workspaceId === draft.workspaceId
-  )
+  const newest = items
+    .filter(
+      (i) =>
+        i.entityKey === draft.entityKey &&
+        i.userId === draft.userId &&
+        i.workspaceId === draft.workspaceId &&
+        (i.status === "pending" || i.status === "sending")
+    )
+    .sort((a, b) => b.createdAt - a.createdAt)[0]
+  const pending =
+    newest?.status === "pending" && newest.attempts === 0 ? newest : undefined
   if (pending) {
     await store.put({
       ...pending,
@@ -146,6 +152,14 @@ export async function replay(
 ): Promise<void> {
   const lock = opts.lock ?? ((fn) => fn())
   const tried = new Set<string>()
+  // After the send, write back only if the item is still there: a sign-out
+  // may have deleted the outbox meanwhile (review, #89).
+  const writeBack = (item: OutboxItem) =>
+    lock(async () => {
+      if ((await store.list()).some((i) => i.id === item.id)) {
+        await store.put(item)
+      }
+    })
 
   for (;;) {
     // The oldest waiting item not yet tried in this run, marked as sending.
@@ -176,7 +190,7 @@ export async function replay(
     try {
       reply = await opts.send(sending)
     } catch {
-      await lock(() => store.put({ ...sending, status: "pending" }))
+      await writeBack({ ...sending, status: "pending" })
       return
     }
     const outcome = classify(reply)
@@ -205,19 +219,23 @@ export async function replay(
       continue
     }
 
-    const lastError = { code: reply.error.code, message: reply.error.message }
-    await lock(() =>
-      store.put({
-        ...sending,
-        status:
-          outcome === "retry"
-            ? "pending"
-            : outcome === "conflict"
-              ? "conflict"
-              : "needs_attention",
-        lastError,
-      })
-    )
+    const lastError = {
+      code: reply.error.code,
+      message: reply.error.message,
+      // The named reason (e.g. SECTION_ARCHIVED): the UI shows its own
+      // translated text for it, not the server's English message.
+      root: reply.error.fieldErrors?._root?.[0] ?? null,
+    }
+    await writeBack({
+      ...sending,
+      status:
+        outcome === "retry"
+          ? "pending"
+          : outcome === "conflict"
+            ? "conflict"
+            : "needs_attention",
+      lastError,
+    })
     if (outcome === "retry") return
   }
 }

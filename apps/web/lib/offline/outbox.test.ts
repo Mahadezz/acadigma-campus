@@ -275,4 +275,63 @@ describe("replay", () => {
       ["pending", "k2", "v1"],
     ])
   })
+  it.each([
+    ["oldest first", false],
+    ["newest first", true],
+  ])(
+    "three saves with a failed send in the middle: the server ends on v3 (%s)",
+    async (_, newestFirst) => {
+      // Review blocker (#89): IndexedDB returns items in random-UUID order.
+      // Listed oldest first, the old rule merged v3 into the OLDER, already
+      // tried item; replay then sent v3 and finally v2 over it.
+      const store = memoryStore()
+      const list = store.list
+      store.list = async () => (newestFirst ? (await list()).reverse() : list())
+      const server = { version: "v0" as string | null, marks: "", n: 0 }
+      const save = (key: string, marks: string, t: number) => {
+        const d = draft(key, { payload: payload(key, "v0") })
+        d.detail = marks
+        return enqueue(store, d, t)
+      }
+      const send = vi.fn(async (item: OutboxItem) => {
+        if (item.payload.expectedUpdatedAt !== server.version) {
+          return fail("conflict", "CONFLICT")
+        }
+        server.version = `s${++server.n}`
+        server.marks = item.detail
+        return ok(server.version)
+      })
+
+      await save("k1", "v1", 1)
+      // The first send fails; v2 is saved while it is on the wire.
+      await replay(store, {
+        userId: U,
+        workspaceId: W,
+        send: async () => {
+          await save("k2", "v2", 2)
+          throw new TypeError("Failed to fetch")
+        },
+      })
+      await save("k3", "v3", 3)
+      await replay(store, { userId: U, workspaceId: W, send })
+
+      expect(server.marks).toBe("v3")
+      expect(store.items.size).toBe(0)
+      expect(send.mock.results.every((r) => r.type === "return")).toBe(true)
+    }
+  )
+  it("a sign-out during a send (outbox deleted) is not undone by the send's outcome", async () => {
+    for (const outcome of ["throw", "retry", "refused"] as const) {
+      const store = await queued(draft("k1"))
+      const send = vi.fn(async () => {
+        store.items.clear() // sign-out deleted the database meanwhile
+        if (outcome === "throw") throw new TypeError("Failed to fetch")
+        return outcome === "retry"
+          ? fail("dependency_unavailable")
+          : fail("validation_failed", "SECTION_ARCHIVED")
+      })
+      await replay(store, { userId: U, workspaceId: W, send })
+      expect(store.items.size).toBe(0)
+    }
+  })
 })
