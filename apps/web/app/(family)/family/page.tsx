@@ -6,7 +6,6 @@ import {
   hasGuardianLink,
   listFamilyResults,
 } from "@acadigma/db/repositories/results"
-import { can } from "@acadigma/domain"
 import { Badge } from "@acadigma/ui/components/badge"
 import { Button } from "@acadigma/ui/components/button"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
@@ -43,42 +42,36 @@ export default async function FamilyHomePage() {
 
   const tr = t.workspace.family.results
   const supabase = await createClient()
-  const [linked, results, children] = can(ctx.role, "family.results.read")
-    ? await Promise.all([
-        hasGuardianLink(ctx, supabase),
-        listFamilyResults(ctx, supabase),
-        listFamilyChildren(ctx, supabase),
-      ])
-    : [null, null, null]
+  // D-109: whatever the role — a parent, or staff who are also parents here
+  // (requireShell let them in on an active link) — this page shows only the
+  // caller's own linked children.
+  const [linked, results, children] = await Promise.all([
+    hasGuardianLink(ctx, supabase),
+    listFamilyResults(ctx, supabase),
+    listFamilyChildren(ctx, supabase),
+  ])
 
-  if (linked && !linked.ok) {
+  if (!linked.ok) {
     return <InlineAlert tone="error">{linked.error.message}</InlineAlert>
   }
-  if (results && !results.ok) {
+  if (!results.ok) {
     return <InlineAlert tone="error">{results.error.message}</InlineAlert>
   }
   // F-AC-02 Part 4 (D-108): the children this account is linked to.
   const childList =
-    children?.ok && children.data.length > 0 ? (
+    children.ok && children.data.length > 0 ? (
       <Children
         t={t.workspace.family.children}
         kids={children.data}
         bn={locale === "bn"}
       />
     ) : null
-  if (!linked || !results || results.data.length === 0) {
-    // Three different states: not a parent here (the shell's placeholder),
-    // no child linked yet, or nothing published yet (D-306 review).
-    const title = !linked
-      ? t.workspace.family.emptyTitle
-      : linked.data
-        ? tr.emptyTitle
-        : tr.notLinkedTitle
-    const description = !linked
-      ? t.workspace.family.emptyDescription.replace("{role}", ctx.role)
-      : linked.data
-        ? tr.emptyDescription
-        : tr.notLinkedDescription
+  if (results.data.length === 0) {
+    // No child linked yet, or nothing published yet (D-306 review).
+    const title = linked.data ? tr.emptyTitle : tr.notLinkedTitle
+    const description = linked.data
+      ? tr.emptyDescription
+      : tr.notLinkedDescription
     return (
       <>
         {childList}

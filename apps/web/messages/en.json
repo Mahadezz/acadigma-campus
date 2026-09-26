@@ -310,7 +310,10 @@
       "pendingApproval": "Pending approval",
       "pendingDescription": "Your request to join is waiting for an owner or admin to approve it.",
       "createOrJoin": "Create or join a workspace",
-      "switchError": "Could not switch workspaces. Check your connection."
+      "switchError": "Could not switch workspaces. Check your connection.",
+      "myChildren": "My children",
+      "schoolApp": "School app",
+      "alsoParent": "You are also a parent here"
     },
     "personal": {
       "shellTitle": "Personal workspace",
@@ -319,8 +322,6 @@
     },
     "family": {
       "shellTitle": "Family",
-      "emptyTitle": "Your child's school, from here",
-      "emptyDescription": "Signed in as {role}. Attendance, results, messages and fees land here in a later part (F-AC-10).",
       "results": {
         "title": "Results",
         "exam": "{exam} · {class} {section}",
@@ -1619,14 +1620,14 @@
       "expired": "This invitation has expired. Ask the school for a new link.",
       "declined": "This invitation was declined."
     },
-    "signOut": "Sign out and create a parent account",
+    "signOut": "Sign out and use another account",
     "errors": {
       "INVITATION_NOT_FOUND": "This invitation link is not valid. Open the full link the school sent you.",
       "INVITATION_EXPIRED": "This invitation has expired. Ask the school for a new link.",
       "INVITATION_ACCEPTED": "This invitation has already been used.",
       "INVITATION_REVOKED": "This link was replaced. Ask the school for the latest one.",
       "INVITATION_DECLINED": "This invitation was declined.",
-      "MEMBERSHIP_CONFLICT": "This account is a staff account at this school. Create a new account with another email for the parent app.",
+      "MEMBERSHIP_CONFLICT": "Your account's membership at this school is not active, so this link can't be added to it. Ask the school office to restore it, or sign out and use another account.",
       "PLAN_READ_ONLY": "This school is read-only right now. Please contact the school.",
       "generic": "Something went wrong. Please try again."
     }

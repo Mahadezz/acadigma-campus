@@ -44,6 +44,12 @@ export async function GatedShell({
               workspaces={workspacesResult.ok ? workspacesResult.data : []}
               currentWorkspaceId={ctx.workspaceId}
               t={t.workspace.switcher}
+              shellLink={
+                // D-109: a staff member here as a parent goes back to /app.
+                shell === "family" && ctx.role !== "parent"
+                  ? { href: "/app", label: t.workspace.switcher.schoolApp }
+                  : undefined
+              }
             />
           }
           title={title}

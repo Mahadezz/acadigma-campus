@@ -133,6 +133,8 @@ describe("guardian links (D-108)", () => {
       {
         data: [
           {
+            // One reply for both reads: the link row, then the student.
+            student_id: "s",
             id: "s",
             full_name: "Rahim",
             full_name_bn: null,
@@ -149,6 +151,19 @@ describe("guardian links (D-108)", () => {
       data: [
         { id: "s", fullName: "Rahim", fullNameBn: null, studentCode: "STU-1" },
       ],
+    })
+  })
+
+  it("lists no children without an active link of the caller's (D-109)", async () => {
+    // A teacher-parent reads the whole roster; with no link of their own
+    // the family list is empty, whatever the students query would return.
+    const { client } = fakeClient(
+      { data: null, error: null },
+      { data: [], error: null }
+    )
+    expect(await listFamilyChildren(CTX, client)).toEqual({
+      ok: true,
+      data: [],
     })
   })
 })

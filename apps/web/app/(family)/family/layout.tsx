@@ -14,6 +14,8 @@ import { getMessages } from "@/lib/i18n"
  * deliberately, so nothing here links to a route that doesn't exist.
  *
  * `GatedShell` (shared with `(personal)`) owns the gate and the top bar.
+ * Since D-109 a staff member with an active guardian link in this school is
+ * let in too (`requireShell`), to see only their own children.
  */
 export default async function FamilyLayout({
   children,

@@ -2,23 +2,22 @@
  * F-AC-10 results tab (D-306) — `GET /api/family/report-card?examId&studentId`:
  * a parent downloads their own child's published report card.
  *
- * Shape: parse -> context -> policy (`family.results.read`, parents only) ->
- * the report-card seam (`getReportCardData`) through the parent's own RLS
- * client, which only ever returns a published, non-withheld result of a
- * child they are actively linked to — so it renders the frozen payload, and
- * any other id is `not_found`, the same as one that does not exist. Nothing
- * is written: no report_runs row, so a read-only school's parents can still
- * download.
+ * Shape: parse -> context -> the family path (`public.family_results`, D-109):
+ * only a published, non-withheld result of a child the caller has an active
+ * guardian link to, whatever their role — a staff member who is also a parent
+ * gets their own child's card here and nothing their staff access would
+ * otherwise show. It renders the frozen payload; any other id is `not_found`,
+ * the same as one that does not exist. Nothing is written: no report_runs
+ * row, so a read-only school's parents can still download.
  */
 import { NextResponse } from "next/server"
 
 import { apiError, httpStatusForError, uuidSchema } from "@acadigma/contracts"
+import { listFamilyResults } from "@acadigma/db/repositories/results"
 import { getSchoolProfile } from "@acadigma/db/repositories/settings"
-import { can } from "@acadigma/domain"
 import { renderHeaderLine } from "@acadigma/domain/settings"
 import { renderPdfToBuffer, ReportCardDocument } from "@acadigma/pdf"
 
-import { getReportCardData } from "@/app/(school)/app/reports/report-card-data"
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
@@ -44,18 +43,15 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const ctx = await requireWorkspace()
-  if (!can(ctx.role, "family.results.read")) {
-    return fail(apiError("forbidden", "Only a parent can download this here."))
-  }
-
   const supabase = await createClient()
-  const data = await getReportCardData(
-    supabase,
-    ctx,
-    studentId.data,
-    examId.data
+  const results = await listFamilyResults(ctx, supabase)
+  if (!results.ok) return fail(results.error)
+  const row = results.data.find(
+    (r) => r.examId === examId.data && r.studentId === studentId.data
   )
-  if (!data.ok) return fail(data.error)
+  if (!row || row.withheld) {
+    return fail(apiError("not_found", "That report card was not found."))
+  }
 
   const { locale } = await getMessages()
   const profile = await getSchoolProfile(supabase, ctx)
@@ -73,7 +69,7 @@ export async function GET(request: Request): Promise<Response> {
         : [],
       accentColor: profile.ok ? profile.data.branding.accent : null,
       footerNote: profile.ok ? profile.data.branding.report_footer : null,
-      ...data.data,
+      ...row.card,
       generatedAt: new Date(),
     })
   )
@@ -81,7 +77,7 @@ export async function GET(request: Request): Promise<Response> {
   return new Response(new Uint8Array(buffer), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `attachment; filename="report-card-${data.data.studentCode.replace(/[^A-Za-z0-9_-]/g, "")}.pdf"`,
+      "content-disposition": `attachment; filename="report-card-${row.card.studentCode.replace(/[^A-Za-z0-9_-]/g, "")}.pdf"`,
       "cache-control": "private, no-store",
     },
   })
