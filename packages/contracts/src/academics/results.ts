@@ -70,3 +70,40 @@ export type SectionResults = {
   computedAt: string | null
   rows: StudentResultRow[]
 }
+
+/**
+ * F-AC-06 Part 7 (demo cut, D-306) — §7 `publishResults`. Each withheld
+ * student needs a reason (fees, discipline, …), kept on the result.
+ */
+export const publishResultsInputSchema = z
+  .object({
+    examId: uuidSchema,
+    withhold: z
+      .array(
+        z
+          .object({
+            studentId: uuidSchema,
+            reason: z.string().trim().min(1).max(500),
+          })
+          .strict()
+      )
+      .max(2000)
+      .refine(
+        (rows) => new Set(rows.map((r) => r.studentId)).size === rows.length,
+        { message: "Each student can be withheld once." }
+      )
+      .default([]),
+  })
+  .strict()
+export type PublishResultsInput = z.input<typeof publishResultsInputSchema>
+
+export type PublishResultsSummary = { published: number; withheld: number }
+
+/** A student on the publish sheet: whose result can be withheld. */
+export type PublishCandidate = {
+  studentId: string
+  fullName: string
+  sectionLabel: string
+  rollNumber: number | null
+  status: ResultStatus
+}

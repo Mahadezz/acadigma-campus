@@ -123,6 +123,8 @@ with allowed as (
     ('public.save_marks(uuid, jsonb)'),  -- F-AC-06 Part 3, D-304
     ('public.exam_marks_progress(uuid, uuid)'),  -- F-AC-06 Part 3, D-304
     ('public.compute_results(uuid, uuid)'),  -- F-AC-06 Part 5, D-305
+    ('public.publish_results(uuid, uuid, jsonb)'),  -- F-AC-06 Part 7, D-306
+    ('public.family_results(uuid)'),  -- F-AC-10 results tab, D-306
     ('public.import_student_batch(uuid, uuid, integer)'),  -- F-AC-02 §4.7, D-106
     ('public.student_import_existing(uuid)'),  -- F-AC-02 §4.7, D-106
     ('public.set_section_subjects(uuid, uuid, jsonb)')  -- F-AC-01 Part 5 demo cut, D-107

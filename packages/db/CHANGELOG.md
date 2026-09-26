@@ -1,5 +1,24 @@
 # @acadigma/db
 
+## 0.7.0
+
+### Minor Changes
+
+- ab3b1eb: F-AC-06 Part 7 (D-306): publishing results. "Publish" on a marks-locked exam opens a sheet to withhold students (each with a reason); `publishResults` refuses until marks are complete and every result is computed and complete, then freezes each student's report card in the database so a later rename can never change what a family was shown. Unpublishing (with a reason) hides results again and is audited. Parents see their own linked children's published, non-withheld results on `/family`, with "Download report card". Adds `guardian_users` (parent ↔ child links; the invite flow that creates them comes with F-AC-02 Part 4) and the `results.publish` and `family.results.read` permissions.
+- d4e2480: F-AC-06 Part 5 (D-305): results and section rank computed in SQL. `public.compute_results` (owner/admin, marks locked and complete) replaces an exam's `results` and `result_subject_lines` in one transaction from the exam's grading snapshot — paper percentage to 2 decimals with no rounding before banding, absent fails the paper, exempt is left out, an F zeroes the GPA, `rank()` per section by GPA, total, percentage. "Compute results" on the exam page and a results preview per section (`/app/exams/[id]/results`). `computeResults` in `@acadigma/domain/grading` is the TypeScript reference, held to the same golden fixture as the SQL. F-OP-03's report card (`getReportCardData`) reads real results; its fixture is removed and the button moves to each preview row.
+  A missing roll number or attendance prints "—" on the report card; a student with a paper not yet marked is `incomplete` (no GPA, no rank) instead of blocking the whole exam.
+- db0cd58: F-AC-01 section subjects, demo cut (D-107): owners and admins pick each section's subjects and who teaches each one from a Subjects sheet on the Classes page (English and Bangla). New `listMySections` returns the sections a member teaches, as class teacher or subject teacher, for the basic-mode home. New exams give each paper the section's subject teacher. A member who leaves stops teaching their subjects, even in a read-only school. A form sheet's Save button stays visible on a phone.
+- 5996a98: F-OP-03 Part 5 bulk report cards, demo cut (D-207): owners, admins and teachers render one merged A4 PDF of every student's report card in a section for one exam, ordered by roll or name, with duplex padding so every card starts on an odd page when "print both sides" is on. New `report_card_bulk` report kind on the existing run pipeline (synchronous, D-205's precedent); a per-student failure is recorded as a `report_run_items` row without failing the run. New permission `report.render.report_card_bulk` (owner/admin/teacher, not staff). Security hardening: `report_runs`/`report_run_items` SELECT now restrict staff to `report_card` runs at the RLS layer itself (defence in depth, #63 review).
+
+### Patch Changes
+
+- Updated dependencies [ab3b1eb]
+- Updated dependencies [d4e2480]
+- Updated dependencies [db0cd58]
+- Updated dependencies [5996a98]
+  - @acadigma/domain@0.7.0
+  - @acadigma/contracts@0.7.0
+
 ## 0.6.0
 
 ### Minor Changes
