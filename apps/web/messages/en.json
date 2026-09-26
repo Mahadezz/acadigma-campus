@@ -1474,16 +1474,59 @@
       "sampleText": "Sample text at this size",
       "basicModeLabel": "Basic mode",
       "basicModeDescription": "Bigger buttons, one screen per class. You can switch back any time.",
-      "basicModeComingSoon": "This turns basic mode on for your account. The class-by-class home screen is coming in a later update.",
+      "basicModeComingSoon": "Tapping a class opens today's roll call for now — the full class hub is coming in a later update.",
       "switchOn": "Turn on",
       "switchOff": "Turn off",
       "saved": "Saved",
       "saveError": "Could not save. Please try again."
     },
     "home": {
-      "title": "Basic mode",
-      "message": "Basic mode is on. Your class-by-class home screen is coming in a later update.",
-      "switchToFullApp": "Switch to full app"
+      "metaTitle": "Basic mode",
+      "greetingMorning": "Good morning, {name}",
+      "greetingAfternoon": "Good afternoon, {name}",
+      "greetingEvening": "Good evening, {name}",
+      "todoRollCallsOne": "{count} roll call not taken",
+      "todoRollCallsOther": "{count} roll calls not taken",
+      "allDone": "Nothing waiting. Well done.",
+      "classTeacher": "Class teacher",
+      "studentCountOne": "{count} student",
+      "studentCountOther": "{count} students",
+      "attendanceTaken": "Taken {taken}/{expected}",
+      "attendanceNotTaken": "Not taken",
+      "attendanceNotSchoolDay": "Not a school day",
+      "emptyTitle": "You have no classes yet.",
+      "emptyDescription": "Ask your school office to add you as a class teacher.",
+      "allClasses": "All classes",
+      "allClassesDescription": "Every class at your school",
+      "switchToFullApp": "Switch to full app",
+      "settingsLabel": "Settings",
+      "helpLabel": "Help",
+      "homeLabel": "Home"
+    },
+    "help": {
+      "title": "Help",
+      "callSchoolOffice": "Call school office ({phone})",
+      "noPhoneYet": "Your school office has not added a phone number yet.",
+      "addPhoneLink": "Add school phone number",
+      "goBack": "ফিরে যান / Go back",
+      "routes": {
+        "home": [
+          "This is your basic-mode home. Each block below is one of your classes.",
+          "Tap a class to take today's roll call.",
+          "Use Switch to full app any time to see everything else.",
+          "To enter marks: Switch to full app → Exams."
+        ],
+        "default": [
+          "You're in basic mode. Tap Home any time to get back to your classes."
+        ]
+      }
+    },
+    "allClasses": {
+      "title": "All classes",
+      "searchLabel": "Search classes",
+      "searchPlaceholder": "Class or section name",
+      "searchEmpty": "No classes match your search.",
+      "back": "Home"
     },
     "userMenu": {
       "switchToBasicMode": "Switch to basic mode"
