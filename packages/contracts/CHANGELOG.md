@@ -1,5 +1,46 @@
 # @acadigma/contracts
 
+## 0.9.0
+
+### Minor Changes
+
+- 2885f6a: F-OP-03 Part 6, demo cut (D-208): two new report kinds on the existing PDF engine and run pipeline. The **monthly attendance register** (`attendance_register`) prints one section's whole month landscape, every calendar day as a column, non-school days greyed, per-student P/A/L/E/H codes with totals and percentages, per-day present counts, the school's own late/half-day policy in the legend, and an "n days not yet taken" banner. The **exam mark sheet** (`mark_sheet`) prints one section x exam landscape, students x papers, with totals/GPA/grade/rank from F-AC-06's already-computed results — a student without a computed result still gets a row and prints "Incomplete"/"অসম্পূর্ণ"; an exam with no computed results at all fails the run with a clear "compute results first" message. New permissions `report.render.attendance_register` and `report.render.mark_sheet` (owner/admin/teacher, not staff). `attendance_register_signoffs` (sign/countersign/lock) is explicitly deferred, not tiny — see D-208.
+
+## 0.8.0
+
+### Minor Changes
+
+- a900e6f: F-AC-02 Part 4 (D-108): guardian linking. On a student's profile an owner or admin can invite a guardian to the parent app: a single-use link for that child (30 days) to copy or send on WhatsApp. The guardian signs in or registers, sees the school and child, and accepts; they become a parent of the school linked to that child only, and `/family` lists the child and their published results. Owners and admins can remove a parent's access, which ends at once. Adds the `students.guardian.invite` permission.
+- 8d87ebf: F-AC-06 Part 4 (D-307): submitting, locking and the marks entry window. A paper's teacher (or an owner/admin) presses "Submit marks"; if students are still missing, a sheet lists them and "Submit anyway" submits regardless. Owners and admins see "Marks progress" on the exam page — each paper's teacher, marked count and status — and lock a submitted paper or unlock it with a reason (audited; unlocking a marks-locked exam sends it back to marks entry and clears its results). Each paper has entry dates (default: the exam date to 7 days after); outside them teachers cannot change marks, and an owner/admin can only with a reason, which is recorded and marks the change as late. Adds the `marks.lock` permission.
+- a900e6f: F-AC-06 Part 7 (D-306): publishing results. "Publish" on a marks-locked exam opens a sheet to withhold students (each with a reason); `publishResults` refuses until marks are complete and every result is computed and complete, then freezes each student's report card in the database so a later rename can never change what a family was shown. Unpublishing (with a reason) hides results again and is audited. Parents see their own linked children's published, non-withheld results on `/family`, with "Download report card". Adds `guardian_users` (parent ↔ child links; the invite flow that creates them comes with F-AC-02 Part 4) and the `results.publish` and `family.results.read` permissions.
+- 9c49976: F-ID-10 Part 2 (D-405): the real basic-mode home. `/app/home` replaces Part
+  1's placeholder with a today strip (greeting, "N roll calls not taken"), one
+  `ClassBlock` per class the teacher is assigned to (F-AC-01 Part 5's
+  `listMySections` — class teacher, subject teacher, or both), an "All
+  classes" block for owner/admin, and an essentials row. `BasicShell`
+  (no sidebar/bottom nav, Home + brand + Help) now applies to the whole `/app`
+  shell whenever `ui_mode=basic`, not only `/app/home` — a deep link into a
+  full-app page still opens inside it. Tapping a class opens the existing roll
+  call; the class hub is Part 3. New primitives: `BasicShell`, `ClassBlock`,
+  `TodayStrip`, `HelpSheet` (`packages/ui`, catalogued in DESIGN-SYSTEM §4.13).
+  New `/app/classes/all`, a searchable list of every live section for
+  owner/admin.
+
+  Also: `signInWithPassword` now deletes both display-preference cookies
+  (instead of leaving a stale one) when the signing-in user's preferences row
+  cannot be read — closing the other half of #64's shared-device fix.
+
+  **Review batch (D-405 addendum):** the essentials row gains Sign out and a
+  language switch (basic mode has no `UserMenu`, which was the only other
+  place either lived) and drops Profile (no dedicated screen exists to link
+  to); `HelpSheet`'s close control is now a full-width "ফিরে যান / Go back"
+  button, not a 16px English-only "✕"; `packages/ui`'s `buttonVariants` moves
+  to a radix-free `components/button-variants.ts` so server files compute
+  real button classes instead of a drifted literal-string copy; the basic-mode
+  layout's `getSchoolProfile` request waterfall is fixed with a
+  `React.cache()`-wrapped loader; the home error state is localised with a
+  Retry link; the Help catalogue gets a marks-entry line.
+
 ## 0.7.0
 
 ### Minor Changes

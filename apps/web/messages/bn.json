@@ -1056,6 +1056,8 @@
     "error": "এই রিপোর্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।",
     "generateReportCard": "প্রগতিপত্র",
     "generateReportCardBulk": "সব প্রগতিপত্র প্রিন্ট করুন",
+    "generateAttendanceRegister": "এই মাসের রেজিস্টার প্রিন্ট করুন",
+    "generateMarkSheet": "নম্বরপত্র প্রিন্ট করুন",
     "empty": "এখনো কোনো রিপোর্ট তৈরি হয়নি।",
     "recent": "সাম্প্রতিক রান",
     "status": {
