@@ -44,13 +44,17 @@ export function decidePurge(
     workspaceId: check.workspaceId,
     role: check.role,
   }
-  const same =
+  const changed =
     stored !== null &&
-    stored.userId === current.userId &&
-    stored.workspaceId === current.workspaceId &&
-    stored.role === current.role
-  // No active membership (removed / suspended) never keeps a cache, and an
-  // unknown past (`stored === null`: first check after a sign-in) is treated
-  // as a different user — the phone may be shared (§5.7).
-  return { purge: !same || current.workspaceId === null, next: current }
+    (stored.userId !== current.userId ||
+      stored.workspaceId !== current.workspaceId ||
+      stored.role !== current.role)
+  // No active membership (removed / suspended) never keeps a cache.
+  //
+  // `stored === null` (first check after a sign-in) does not purge: every way
+  // to a new session passes /login, whose check (signed out) already wiped the
+  // cache and cleared the snapshot — so whatever is cached now was cached by
+  // this user, after signing in. A different user who took over a live
+  // session (no sign-out, §5.7) meets a stored snapshot and purges.
+  return { purge: changed || current.workspaceId === null, next: current }
 }

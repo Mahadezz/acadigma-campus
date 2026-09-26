@@ -3,7 +3,7 @@
 |                  |                                                                                                                                               |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Area             | platform                                                                                                                                      |
-| Status           | planned — owner decision 2026-09-26, D-71                                                                                                     |
+| Status           | Part 1 built (D-308, PR #83); Parts 2a–5 planned — D-71                                                                                       |
 | Owner branch     | `feat/platform-offline`                                                                                                                       |
 | Depends on       | F-ID-01 (sessions, sign-out), F-ID-03 (membership status, `WorkspaceContext`), F-AC-03 (attendance save, D-104), F-AC-06 Part 3 (marks entry) |
 | Offline          | this spec defines the rule every other spec declares against (§5.1)                                                                           |
@@ -210,3 +210,15 @@ Client module (`apps/web/lib/offline/`): `enqueue(kind, payload, opts)`, `replay
 - **OQ-3 — RSC page caching.** Part 1 caches rendered pages and RSC payloads through serwist. If Next's App Router payloads prove unreliable to serve from cache (deploy-version mismatches), the fallback is a JSON read cache per screen in IndexedDB; Part 1 decides with the offline Playwright test and records it.
 - **OQ-4 — Parents offline.** The family shell (F-AC-10) is read-only offline by default. Confirm there is no parent write that needs queuing.
 - **Size, stated honestly:** six Parts (Part 2 is split in two) of about two days each, and it touches every `full`-level feature's action contract (keys, versions, named errors). Parts 1–2b are the bulk of the risk; Part 4 waits for features that do not exist yet. This is a track of its own, not a side task of basic mode.
+
+### Status — Part 1 (D-308, PR #83)
+
+Built: the service worker caches full page loads of the signed-in shells (`/app`, `/family`, `/personal`) network-first in `acadigma-data-pages` (60 entries, 30 days); a page reached by an in-app navigation is fetched once in the background so it is cached too; `/api/*`, RSC payloads, auth pages, `/account` and `/platform` are never cached; the caches the old `defaultCache` worker filled (`pages`, `pages-rsc`, `apis`, `others`, …) are deleted when the new worker activates. "Last updated 09:12 today" on a page served from the cache (the shell's render time travels with the cached copy). The offline banner (offline state). "This needs internet the first time" with Retry for a page never opened. `OnlineOnly` shows "Needs internet / ইন্টারনেট দরকার" on the report-card, bulk report-card and sample PDF buttons, the PDF download link, Publish, the student import and Create school. The purge: `GET /api/offline/session` + `decidePurge` (unit-tested) on every app open, every return online, on arriving at `/login`, and after a workspace switch; sign-out wipes before the session ends.
+
+Deviations (D-308):
+
+- **OQ-3 decided:** RSC payloads are not cached. An RSC fetch that fails offline makes Next fall back to a full navigation, which the page cache answers. Cost: one background page fetch per in-app navigation (at most once per URL per 10 minutes).
+- **The snapshot** (user, workspace, role) lives in `localStorage` (non-secret ids), not IndexedDB `meta` — Part 2a moves it with the outbox.
+- **The first check after a sign-in does not purge:** every way to a new session passes `/login`, whose check already wiped the cache.
+- **Byte cap:** an entry count (60) stands in for the 50 MB cap until Part 5's quota work.
+- **Not built in Part 1:** the warm-up of the teacher's class pages (§4.2 — the navigation copy covers "pages I opened"), `storage.persist()` and the quota banner (Part 5), failed-request offline detection (Part 2a, with the outbox), invitations/SMS/AI buttons (those screens do not exist yet; they use `OnlineOnly` when they ship), the membership-removed and role-changed e2e cases (the rule is unit-tested; the journey covers sign-out).

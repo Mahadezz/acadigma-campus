@@ -31,9 +31,10 @@ describe("decidePurge (F-ID-11 §4.8)", () => {
     expect(decidePurge(null, { kind: "signed_out" }).purge).toBe(true)
   })
 
-  it("purges on the first check after a sign-in (unknown previous user)", () => {
+  it("remembers the user on the first check after a sign-in, without wiping what they just opened", () => {
+    // /login's own check (signed out) already wiped the cache and the snapshot.
     expect(decidePurge(null, { kind: "signed_in", ...TEACHER })).toEqual({
-      purge: true,
+      purge: false,
       next: TEACHER,
     })
   })

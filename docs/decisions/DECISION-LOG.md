@@ -1276,6 +1276,18 @@ The exact ranges, queue order and merge rules are recorded once, in `docs/plan/L
 
 **Consequences:** no preview URLs for PRs, which we already didn't use (CI runs Playwright against its own build, D-70). The Vercel check on PRs disappears; it was never required. Pro stays optional: revisit only if `main` alone ever exceeds the daily limit.
 
-## D-308 — Offline Part 1: read cache of the signed-in shells, purged on sign-out, sign-in, workspace switch, revocation and role change · PROPOSED · 2026-09-26
+## D-308 — Offline Part 1: the signed-in shells' pages are cached network-first as full HTML only, and wiped whenever the user, workspace or role changes · ACCEPTED · 2026-09-26
 
-**Context:** F-ID-11 Part 1 (D-71). Work in progress; the full entry lands before the PR is marked ready.
+**Context:** F-ID-11 Part 1 (D-71, as amended by the #59 review: the purge ships with the cache). The existing worker used serwist's `defaultCache`, which in production already cached signed-in pages, RSC payloads and every `GET /api/*` (signed file URLs, PDFs) under generic names, with no purge at all.
+
+**Decision:**
+
+1. **What is cached.** Only full page loads of `/app`, `/family` and `/personal`, network-first, in `acadigma-data-pages` (60 entries, 30 days, only a plain 200 — never a redirect). RSC payloads, `/api/*`, auth pages, `/account`, `/platform` and cross-origin requests are network-only. Build output and static images keep their own caches (no user data). The old worker's caches are deleted on activate.
+2. **OQ-3: no RSC caching.** An RSC payload depends on the router state it was fetched from, so a cached one can be the wrong tree. When an RSC fetch fails offline, Next falls back to a full navigation, which the page cache answers. A page reached by an in-app navigation is fetched once in the background (header `x-acadigma-cache-page`, stored by the worker under the same rules) — at most once per URL per 10 minutes.
+3. **The purge rule** (`decidePurge`, `apps/web/lib/offline/purge.ts`): the device keeps the last seen `{userId, workspaceId, role}`; `GET /api/offline/session` (re-validates the JWT and the active membership) answers now. Signed out or session revoked → wipe and forget; a different user, workspace or role → wipe; no active membership (removed, suspended) → wipe; network error or 503 → change nothing. Runs on every app open, every return online, on arriving at `/login` (where every sign-out and expired session ends), and after a workspace switch; the user menu's sign-out wipes before the session ends. The first check after a sign-in does not wipe (the `/login` check already did), so the first pages a user opens are kept.
+4. **"Last updated"** is the shell's server render time, which travels with a cached copy: shown on the document the shell was loaded with when it is offline or was more than 2 minutes old at load.
+5. **"Needs internet / ইন্টারনেট দরকার"** (`OnlineOnly`): report card, bulk report cards, sample PDF, PDF download, Publish, student import, Create school. A disabled button with a one-line reason; nothing queues.
+
+**Why:** the cache holds children's names and marks, so it may only exist while the same person, in the same school, with the same role, is looking — and the cheapest cache that is always right is whole pages, network-first.
+
+**Consequences:** no migration. The snapshot lives in `localStorage` (non-secret ids) until Part 2a brings IndexedDB `meta`. The service worker is 48.5 KB raw, 14.4 KB gzipped with its precache manifest (budget 15 KB). Deferred: warm-up of the teacher's class pages (§4.2), `storage.persist()` and the quota banner (Part 5), byte-accurate eviction, "a failed request means offline" (Part 2a).
