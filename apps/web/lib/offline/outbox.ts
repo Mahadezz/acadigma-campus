@@ -107,19 +107,25 @@ export type SendReply =
   | { ok: true; data: { updatedAt: string } }
   | { ok: false; error: Pick<ApiError, "code" | "message" | "fieldErrors"> }
 
-export type Outcome = "sent" | "retry" | "conflict" | "needs_attention"
+export type Outcome =
+  | "sent"
+  | "retry"
+  | "paused"
+  | "conflict"
+  | "needs_attention"
 
 /** Replies that say "not now", not "no": the item waits for the next trigger. */
 const RETRY_CODES = new Set([
   "dependency_unavailable",
   "internal",
   "rate_limited",
-  "unauthenticated",
 ])
 
 /** §4.4, by the server's named error. */
 export function classify(reply: SendReply): Outcome {
   if (reply.ok) return "sent"
+  // §4.6: the session expired. The queue pauses until she signs in again.
+  if (reply.error.code === "unauthenticated") return "paused"
   const root = reply.error.fieldErrors?._root?.[0]
   // Sent while another account or school is active: it waits for its own.
   if (RETRY_CODES.has(reply.error.code) || root === "WRONG_ACCOUNT") {
@@ -149,7 +155,7 @@ export async function replay(
     onSent?: (item: OutboxItem, updatedAt: string) => void
     lock?: <T>(fn: () => Promise<T>) => Promise<T>
   }
-): Promise<void> {
+): Promise<"done" | "retry" | "paused"> {
   const lock = opts.lock ?? ((fn) => fn())
   const tried = new Set<string>()
   // After the send, write back only if the item is still there: a sign-out
@@ -183,7 +189,7 @@ export async function replay(
       await store.put(marked)
       return marked
     })
-    if (!sending) return
+    if (!sending) return "done"
     tried.add(sending.id)
 
     let reply: SendReply
@@ -191,7 +197,7 @@ export async function replay(
       reply = await opts.send(sending)
     } catch {
       await writeBack({ ...sending, status: "pending" })
-      return
+      return "retry"
     }
     const outcome = classify(reply)
 
@@ -229,13 +235,58 @@ export async function replay(
     await writeBack({
       ...sending,
       status:
-        outcome === "retry"
+        outcome === "retry" || outcome === "paused"
           ? "pending"
           : outcome === "conflict"
             ? "conflict"
             : "needs_attention",
       lastError,
     })
-    if (outcome === "retry") return
+    if (outcome === "retry" || outcome === "paused") return outcome
   }
+}
+
+/**
+ * §4.10 conflict sheet (D-310): the teacher's choice goes out as a new save —
+ * the records she picked, on the colleague's version, under a new key (the
+ * old key belongs to the refused payload). Waiting again; "Keep theirs" is a
+ * plain delete.
+ */
+export async function resolveConflict(
+  store: OutboxStore,
+  id: string,
+  records: OutboxItem["payload"]["records"],
+  theirVersion: string,
+  newKey: string
+): Promise<void> {
+  const item = (await store.list()).find((i) => i.id === id)
+  if (!item || item.status !== "conflict") return
+  await store.put({
+    ...item,
+    payload: {
+      ...item.payload,
+      idempotencyKey: newKey,
+      expectedUpdatedAt: theirVersion,
+      records,
+    },
+    status: "pending",
+    attempts: 0,
+    lastError: null,
+  })
+}
+
+/**
+ * §4.6 / §5.7 (D-310): another teacher's unsent work on a shared phone is
+ * kept for them — never sent, shown or deleted by whoever is signed in —
+ * until they sign in, or until everything in it is this old. Two weeks: the
+ * maximum offline age (§5.9), and twice the late-sync limit (§5.3), after
+ * which the server would refuse it anyway.
+ */
+export const OTHERS_KEPT_MS = 14 * 24 * 60 * 60_000
+
+export function othersExpired(
+  items: Pick<OutboxItem, "createdAt">[],
+  now = Date.now()
+): boolean {
+  return items.every((i) => now - i.createdAt >= OTHERS_KEPT_MS)
 }

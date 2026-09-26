@@ -48,6 +48,16 @@ export async function GET() {
       scope: ids.length > 0 ? ids.join(",") : null,
     }
   } else if (result.error.reason === "unauthenticated") {
+    // D-310, §4.8: a deleted or banned account (Auth says so about this
+    // device's token) can never send its queue — unlike an expired session,
+    // whose queue waits for the same user (§4.6). The id is the cookie's own
+    // (unverified) user: it only names which queue on THIS device to delete.
+    const { error } = await supabase.auth.getUser()
+    if (error?.code === "user_not_found" || error?.code === "user_banned") {
+      const { data } = await supabase.auth.getSession()
+      const userId = data.session?.user.id
+      if (userId) return reply({ kind: "revoked", userId })
+    }
     return reply({ kind: "signed_out" })
   } else if (result.error.reason === "dependency_unavailable") {
     return unknown()

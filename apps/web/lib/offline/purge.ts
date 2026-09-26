@@ -27,6 +27,11 @@ export type OfflineSnapshot = {
 /** What `/api/offline/session` answered just now. */
 export type SessionCheck =
   | { kind: "signed_out" }
+  /**
+   * The account behind this device's session was deleted or banned (D-310):
+   * unlike an expired session, nobody will sign in to send its queue (§4.8).
+   */
+  | { kind: "revoked"; userId: string }
   /** Network error, timeout or 5xx: nothing is known, nothing changes. */
   | { kind: "unknown" }
   | ({ kind: "signed_in" } & OfflineSnapshot & {
@@ -45,12 +50,15 @@ export function decidePurge(
   // Any SessionCheck; the outbox's workspace list plays no part here.
   check:
     | { kind: "signed_out" }
+    | { kind: "revoked" }
     | { kind: "unknown" }
     | ({ kind: "signed_in" } & OfflineSnapshot)
 ): PurgeDecision {
   if (check.kind === "unknown") return { purge: false, next: undefined }
   // Signed out or session revoked: nothing cached may outlive the session.
-  if (check.kind === "signed_out") return { purge: true, next: null }
+  if (check.kind === "signed_out" || check.kind === "revoked") {
+    return { purge: true, next: null }
+  }
 
   const current: OfflineSnapshot = {
     userId: check.userId,
