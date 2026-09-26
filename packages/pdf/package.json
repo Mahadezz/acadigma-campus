@@ -1,6 +1,6 @@
 {
   "name": "@acadigma/pdf",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "F-OP-03 Parts 1-2 — the print/PDF rendering engine: document shell (header/footer/watermark/signature block), Bengali + Latin font embedding, locale-aware number/date formatting. No I/O — callers pass in already-resolved branding and data.",
