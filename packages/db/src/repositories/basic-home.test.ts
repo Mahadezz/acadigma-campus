@@ -1,9 +1,16 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
-import { getBasicHome } from "./basic-home"
+import type { MySection } from "@acadigma/contracts"
 
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
+
+const mockListMySections = vi.fn()
+vi.mock("./academics", () => ({
+  listMySections: mockListMySections,
+}))
+
+const { getBasicHome } = await import("./basic-home")
 
 const CTX: WorkspaceContext = {
   workspaceId: "11111111-1111-1111-1111-111111111111",
@@ -12,8 +19,6 @@ const CTX: WorkspaceContext = {
   workspaceType: "school",
   plan: "pro",
 }
-
-const MEMBER_ID = "33333333-3333-3333-3333-333333333333"
 
 type DayJsonSection = {
   section_id: string
@@ -38,21 +43,16 @@ type DayJsonSection = {
   } | null
 }
 
-/** Narrowest stand-in covering every call `getBasicHome` (and the
- * `getAttendanceDay`/`resolveMyAssignments` it composes) makes. */
+/** Narrowest stand-in covering the two calls `getBasicHome` itself makes
+ * (`attendance_day` RPC, the caller's `profiles` row) — `listMySections` is
+ * mocked above, not re-tested here (it has its own suite in
+ * `academics.test.ts`). */
 function fakeClient(options: {
   isSchoolDay?: boolean
   sections?: DayJsonSection[]
   rpcError?: boolean
   profileFullName?: string | null
   profileError?: boolean
-  memberId?: string | null
-  memberError?: boolean
-  examSubjects?: {
-    section_id: string
-    subjects: { name: string; name_bn: string | null } | null
-  }[]
-  examSubjectsError?: boolean
 }): AcadigmaSupabaseClient {
   const {
     isSchoolDay = true,
@@ -60,10 +60,6 @@ function fakeClient(options: {
     rpcError = false,
     profileFullName = "Rahima Khatun",
     profileError = false,
-    memberId = MEMBER_ID,
-    memberError = false,
-    examSubjects = [],
-    examSubjectsError = false,
   } = options
 
   return {
@@ -94,34 +90,6 @@ function fakeClient(options: {
           }),
         }
       }
-      if (table === "workspace_members") {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({
-                    data: memberError || !memberId ? null : { id: memberId },
-                    error: memberError ? { message: "down" } : null,
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }
-      }
-      if (table === "exam_subjects") {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: async () => ({
-                data: examSubjectsError ? null : examSubjects,
-                error: examSubjectsError ? { message: "down" } : null,
-              }),
-            }),
-          }),
-        }
-      }
       throw new Error(`fake supabase client: unexpected table "${table}"`)
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -143,21 +111,42 @@ function section(
   }
 }
 
+function mySection(
+  overrides: Partial<MySection> & { sectionId: string }
+): MySection {
+  return {
+    sectionName: "ক",
+    gradeLevelId: "grade-1",
+    gradeName: "Class 6",
+    gradeNameBn: "ষষ্ঠ শ্রেণি",
+    levelNumber: 6,
+    isClassTeacher: false,
+    subjects: [],
+    ...overrides,
+  }
+}
+
 describe("getBasicHome", () => {
-  it("combines a class-teacher section with a subject-teacher section from exam_subjects", async () => {
+  it("combines listMySections with attendance_day's per-section enrolled count and session", async () => {
+    mockListMySections.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        mySection({ sectionId: "s1", isClassTeacher: true }),
+        mySection({
+          sectionId: "s2",
+          sectionName: "খ",
+          gradeName: "Class 7",
+          subjects: [{ subjectId: "sub1", name: "Bangla", nameBn: "বাংলা" }],
+        }),
+      ],
+    })
     const s1 = section({ section_id: "s1", is_mine: true })
     const s2 = section({
       section_id: "s2",
       section_name: "খ",
       grade_name: "Class 7",
-      is_mine: false,
     })
-    const client = fakeClient({
-      sections: [s1, s2],
-      examSubjects: [
-        { section_id: "s2", subjects: { name: "Bangla", name_bn: "বাংলা" } },
-      ],
-    })
+    const client = fakeClient({ sections: [s1, s2] })
 
     const result = await getBasicHome(client, CTX)
     expect(result.ok).toBe(true)
@@ -165,18 +154,22 @@ describe("getBasicHome", () => {
     expect(result.data.classes).toHaveLength(2)
     expect(result.data.classes[0]).toMatchObject({
       sectionId: "s1",
-      subject: null,
+      isClassTeacher: true,
       attendanceToday: "not_taken",
     })
     expect(result.data.classes[1]).toMatchObject({
       sectionId: "s2",
-      subject: "Bangla",
+      subjects: [{ subjectId: "sub1", name: "Bangla", nameBn: "বাংলা" }],
     })
     expect(result.data.fullName).toBe("Rahima Khatun")
     expect(result.data.todayIso).toBe("2026-09-27")
   })
 
   it("counts a roll-call to-do only for the caller's own not-yet-taken section", async () => {
+    mockListMySections.mockResolvedValueOnce({
+      ok: true,
+      data: [mySection({ sectionId: "s1", isClassTeacher: true })],
+    })
     const mine = section({ section_id: "s1", is_mine: true })
     const notMine = section({ section_id: "s2", is_mine: false })
     const client = fakeClient({ sections: [mine, notMine] })
@@ -188,6 +181,10 @@ describe("getBasicHome", () => {
   })
 
   it("shows no to-dos on a non-school day", async () => {
+    mockListMySections.mockResolvedValueOnce({
+      ok: true,
+      data: [mySection({ sectionId: "s1", isClassTeacher: true })],
+    })
     const mine = section({ section_id: "s1", is_mine: true })
     const client = fakeClient({ sections: [mine], isSchoolDay: false })
 
@@ -196,6 +193,7 @@ describe("getBasicHome", () => {
   })
 
   it("sets showAllClasses for owner/admin but not teacher/staff", async () => {
+    mockListMySections.mockResolvedValue({ ok: true, data: [] })
     const client = fakeClient({ sections: [] })
     const teacher = await getBasicHome(client, CTX)
     expect(teacher.ok && teacher.data.showAllClasses).toBe(false)
@@ -207,28 +205,26 @@ describe("getBasicHome", () => {
     expect(owner.ok && owner.data.showAllClasses).toBe(true)
   })
 
-  it("still returns the caller's class-teacher sections when the membership lookup finds no active row", async () => {
-    const mine = section({ section_id: "s1", is_mine: true })
-    const client = fakeClient({ sections: [mine], memberId: null })
-
+  it("propagates dependency_unavailable from listMySections", async () => {
+    mockListMySections.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "dependency_unavailable", message: "down" },
+    })
+    const client = fakeClient({ sections: [] })
     const result = await getBasicHome(client, CTX)
-    expect(result.ok && result.data.classes).toHaveLength(1)
+    expect(!result.ok && result.error.code).toBe("dependency_unavailable")
   })
 
   it("propagates dependency_unavailable from the attendance_day RPC", async () => {
+    mockListMySections.mockResolvedValueOnce({ ok: true, data: [] })
     const client = fakeClient({ rpcError: true })
     const result = await getBasicHome(client, CTX)
     expect(!result.ok && result.error.code).toBe("dependency_unavailable")
   })
 
   it("propagates dependency_unavailable when the caller's profile cannot be read", async () => {
+    mockListMySections.mockResolvedValueOnce({ ok: true, data: [] })
     const client = fakeClient({ profileError: true })
-    const result = await getBasicHome(client, CTX)
-    expect(!result.ok && result.error.code).toBe("dependency_unavailable")
-  })
-
-  it("propagates dependency_unavailable when the exam_subjects query fails", async () => {
-    const client = fakeClient({ examSubjectsError: true })
     const result = await getBasicHome(client, CTX)
     expect(!result.ok && result.error.code).toBe("dependency_unavailable")
   })

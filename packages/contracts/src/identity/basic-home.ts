@@ -1,3 +1,5 @@
+import type { MySection } from "../academics/structure"
+
 /**
  * F-ID-10 Part 2 (§4.4, §7 `getBasicHome`) — the basic-mode home screen.
  *
@@ -23,21 +25,22 @@ export type BasicHomeTodo = {
 
 export type BasicHomeAttendanceStatus = "taken" | "not_taken" | "not_school_day"
 
-/** One class block (§4.4.2). `subject` is absent for a class-teacher
- * assignment with no subject of its own ("Class 6 – ক · Class teacher");
- * present for a subject-teacher assignment ("Class 6 – ক · Bangla"). A
- * teacher who is both class teacher AND a subject teacher of the same
- * section gets one block of each kind (F-ID-10 §2 footnote ²: "sections
- * where they are the active class_teacher_id, PLUS every (section, subject)
- * they teach" — two distinct assignments, two blocks), not one block that
- * merges the two. */
+/**
+ * One class block (§4.4.2) — one per `MySection` (F-AC-01 Part 5's
+ * `listMySections`, D-107), which already groups "I am the class teacher"
+ * and "every subject I teach here" into a single entry per section, so a
+ * teacher who is both gets one block, not two. The caller (`apps/web`)
+ * builds the "Class 6 – ক · Bangla" / "Class 6 – ক · Class teacher" /
+ * "Class 6 – ক · Class teacher, Bangla" title from `isClassTeacher` and
+ * `subjects`.
+ */
 export type BasicHomeClass = {
   sectionId: string
   gradeName: string
-  gradeNameBn: string | null
+  gradeNameBn: string
   sectionName: string
-  subject: string | null
-  subjectBn: string | null
+  isClassTeacher: boolean
+  subjects: MySection["subjects"]
   studentCount: number
   attendanceToday: BasicHomeAttendanceStatus
   /** Present only when `attendanceToday === "taken"`. `taken` is how many

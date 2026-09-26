@@ -1,10 +1,9 @@
 /**
  * F-ID-10 Part 2 (§4.4) — the pure parts of the basic-mode home: which
  * greeting period a clock time falls in, which sections still owe today's
- * roll call, and turning the two assignment sources (class teacher, subject
- * teacher — F-ID-10 §2 footnote ²) into one ordered list of class blocks.
- * Every input is a real value the repository already read; nothing here
- * queries anything.
+ * roll call, and turning F-AC-01's `listMySections` (D-107) into one
+ * ordered list of class blocks with today's attendance mark. Every input is
+ * a real value the repository already read; nothing here queries anything.
  */
 
 import type {
@@ -13,6 +12,7 @@ import type {
   BasicHomeClass,
   BasicHomeTodo,
   GreetingPeriod,
+  MySection,
 } from "@acadigma/contracts"
 
 /** Bangladeshi school day boundaries: before 12:00 is morning, before 17:00
@@ -44,61 +44,48 @@ export function buildTodos(
 
 function attendanceStatus(
   isSchoolDay: boolean,
-  section: AttendanceDaySection
+  section: AttendanceDaySection | undefined
 ): BasicHomeAttendanceStatus {
   if (!isSchoolDay) return "not_school_day"
-  return section.session ? "taken" : "not_taken"
+  return section?.session ? "taken" : "not_taken"
 }
 
-/** One teaching assignment: either "I am the class teacher" (no subject) or
- * "I teach this subject in this section" (§2 footnote ²). */
-export type Assignment =
-  | { sectionId: string; subject: null; subjectBn: null }
-  | { sectionId: string; subject: string; subjectBn: string | null }
-
 /**
- * §4.4.2: one block per assignment, in the section's existing grade/name
- * order (`public.attendance_day` already sorts `sections` by
- * `grade_levels.level_number, sections.name` — preserved here, not
- * re-derived, because this Part has no `level_number` to sort by on its
- * own). A section the caller is not actually assigned to (a stale id) is
- * silently dropped rather than thrown — the repository is the source of
- * truth for who is assigned, not this function.
+ * §4.4.2: one `ClassBlock` per `MySection` (D-107's `listMySections` already
+ * groups "class teacher" and "every subject taught there" into one entry
+ * per section, in grade/name order — preserved here, not re-derived).
+ * `attendance_day`'s per-section enrolled count and session are merged in
+ * by `sectionId`; a section `listMySections` returned that `attendance_day`
+ * does not know about (should not happen — both read the current year's
+ * live sections) falls back to a zero student count and `not_taken` rather
+ * than throwing.
  */
 export function buildClassBlocks(
   isSchoolDay: boolean,
-  assignments: readonly Assignment[],
-  orderedSections: readonly AttendanceDaySection[]
+  mySections: readonly MySection[],
+  attendanceSections: readonly AttendanceDaySection[]
 ): BasicHomeClass[] {
-  const bySection = new Map<string, Assignment[]>()
-  for (const a of assignments) {
-    const list = bySection.get(a.sectionId) ?? []
-    list.push(a)
-    bySection.set(a.sectionId, list)
-  }
+  const attendanceBySection = new Map(
+    attendanceSections.map((s) => [s.sectionId, s])
+  )
 
-  const blocks: BasicHomeClass[] = []
-  for (const section of orderedSections) {
-    const mine = bySection.get(section.sectionId)
-    if (!mine) continue
-    const status = attendanceStatus(isSchoolDay, section)
-    for (const a of mine) {
-      blocks.push({
-        sectionId: section.sectionId,
-        gradeName: section.gradeName,
-        gradeNameBn: section.gradeNameBn,
-        sectionName: section.sectionName,
-        subject: a.subject,
-        subjectBn: a.subjectBn,
-        studentCount: section.enrolled,
-        attendanceToday: status,
-        ...(status === "taken" && section.session
-          ? { taken: section.session.expected, expected: section.enrolled }
-          : {}),
-      })
+  return mySections.map((mine) => {
+    const attendance = attendanceBySection.get(mine.sectionId)
+    const status = attendanceStatus(isSchoolDay, attendance)
+    return {
+      sectionId: mine.sectionId,
+      gradeName: mine.gradeName,
+      gradeNameBn: mine.gradeNameBn,
+      sectionName: mine.sectionName,
+      isClassTeacher: mine.isClassTeacher,
+      subjects: mine.subjects,
+      studentCount: attendance?.enrolled ?? 0,
+      attendanceToday: status,
+      ...(status === "taken" && attendance?.session
+        ? { taken: attendance.session.expected, expected: attendance.enrolled }
+        : {}),
     }
-  }
-  return blocks
+  })
 }
 
 export type { AttendanceDaySection }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import type { AttendanceDaySection } from "@acadigma/contracts"
+import type { AttendanceDaySection, MySection } from "@acadigma/contracts"
 
 import { buildClassBlocks, buildTodos, greetingPeriod } from "./index"
 
@@ -19,6 +19,35 @@ function section(
   }
 }
 
+function mySection(
+  overrides: Partial<MySection> & { sectionId: string }
+): MySection {
+  return {
+    sectionName: "ক",
+    gradeLevelId: "grade-1",
+    gradeName: "Class 6",
+    gradeNameBn: "ষষ্ঠ শ্রেণি",
+    levelNumber: 6,
+    isClassTeacher: false,
+    subjects: [],
+    ...overrides,
+  }
+}
+
+const SESSION = {
+  id: "sess1",
+  updatedAt: "",
+  takenAt: "",
+  takenByName: null,
+  bulkMarked: false,
+  expected: 38,
+  present: 36,
+  absent: 2,
+  late: 0,
+  excused: 0,
+  halfDay: 0,
+}
+
 describe("greetingPeriod", () => {
   it("is morning before noon", () => {
     expect(greetingPeriod(0)).toBe("morning")
@@ -35,22 +64,7 @@ describe("greetingPeriod", () => {
 })
 
 describe("buildTodos", () => {
-  const taken = section({
-    sectionId: "s1",
-    session: {
-      id: "sess1",
-      updatedAt: "",
-      takenAt: "",
-      takenByName: null,
-      bulkMarked: false,
-      expected: 38,
-      present: 36,
-      absent: 2,
-      late: 0,
-      excused: 0,
-      halfDay: 0,
-    },
-  })
+  const taken = section({ sectionId: "s1", session: SESSION })
   const notTaken = section({ sectionId: "s2" })
 
   it("is empty on a non-school day, even with unmarked sections", () => {
@@ -73,128 +87,72 @@ describe("buildTodos", () => {
       )
     ).toEqual([{ kind: "roll_calls_not_taken", count: 1 }])
   })
-
-  it("does not double count a section id repeated in the assignment list", () => {
-    expect(buildTodos(true, ["s2", "s2"], new Map([["s2", notTaken]]))).toEqual(
-      [{ kind: "roll_calls_not_taken", count: 1 }]
-    )
-  })
 })
 
 describe("buildClassBlocks", () => {
-  it("labels a class-teacher assignment with no subject", () => {
+  it("carries isClassTeacher/subjects straight through for the caller to label", () => {
     const s = section({ sectionId: "s1" })
-    const blocks = buildClassBlocks(
-      true,
-      [{ sectionId: "s1", subject: null, subjectBn: null }],
-      [s]
-    )
-    expect(blocks).toEqual([
-      {
-        sectionId: "s1",
-        gradeName: "Class 6",
-        gradeNameBn: "ষষ্ঠ শ্রেণি",
-        sectionName: "ক",
-        subject: null,
-        subjectBn: null,
-        studentCount: 40,
-        attendanceToday: "not_taken",
-      },
+    const my = mySection({ sectionId: "s1", isClassTeacher: true })
+    const [block] = buildClassBlocks(true, [my], [s])
+    expect(block).toEqual({
+      sectionId: "s1",
+      gradeName: "Class 6",
+      gradeNameBn: "ষষ্ঠ শ্রেণি",
+      sectionName: "ক",
+      isClassTeacher: true,
+      subjects: [],
+      studentCount: 40,
+      attendanceToday: "not_taken",
+    })
+  })
+
+  it("produces one block for a section where the caller is both class teacher and a subject teacher", () => {
+    const s = section({ sectionId: "s1" })
+    const my = mySection({
+      sectionId: "s1",
+      isClassTeacher: true,
+      subjects: [{ subjectId: "sub1", name: "Bangla", nameBn: "বাংলা" }],
+    })
+    const blocks = buildClassBlocks(true, [my], [s])
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0]?.subjects).toEqual([
+      { subjectId: "sub1", name: "Bangla", nameBn: "বাংলা" },
     ])
   })
 
-  it("gives a class teacher who also teaches a subject there two blocks", () => {
-    const s = section({ sectionId: "s1" })
-    const blocks = buildClassBlocks(
-      true,
-      [
-        { sectionId: "s1", subject: null, subjectBn: null },
-        { sectionId: "s1", subject: "Bangla", subjectBn: "বাংলা" },
-      ],
-      [s]
-    )
-    expect(blocks).toHaveLength(2)
-    expect(blocks[1]?.subject).toBe("Bangla")
-  })
-
   it("reports taken/expected from the saved session, not the live enrolled count", () => {
-    const s = section({
-      sectionId: "s1",
-      enrolled: 40,
-      session: {
-        id: "sess1",
-        updatedAt: "",
-        takenAt: "",
-        takenByName: null,
-        bulkMarked: false,
-        expected: 38,
-        present: 36,
-        absent: 2,
-        late: 0,
-        excused: 0,
-        halfDay: 0,
-      },
-    })
-    const [block] = buildClassBlocks(
-      true,
-      [{ sectionId: "s1", subject: null, subjectBn: null }],
-      [s]
-    )
+    const s = section({ sectionId: "s1", enrolled: 40, session: SESSION })
+    const my = mySection({ sectionId: "s1", isClassTeacher: true })
+    const [block] = buildClassBlocks(true, [my], [s])
     expect(block?.attendanceToday).toBe("taken")
     expect(block?.taken).toBe(38)
     expect(block?.expected).toBe(40)
   })
 
-  it("marks every block not_school_day on a non-school day even with a session", () => {
-    const s = section({
-      sectionId: "s1",
-      session: {
-        id: "sess1",
-        updatedAt: "",
-        takenAt: "",
-        takenByName: null,
-        bulkMarked: false,
-        expected: 38,
-        present: 36,
-        absent: 2,
-        late: 0,
-        excused: 0,
-        halfDay: 0,
-      },
-    })
-    const [block] = buildClassBlocks(
-      false,
-      [{ sectionId: "s1", subject: null, subjectBn: null }],
-      [s]
-    )
+  it("marks a block not_school_day on a non-school day even with a session", () => {
+    const s = section({ sectionId: "s1", session: SESSION })
+    const my = mySection({ sectionId: "s1", isClassTeacher: true })
+    const [block] = buildClassBlocks(false, [my], [s])
     expect(block?.attendanceToday).toBe("not_school_day")
     expect(block?.taken).toBeUndefined()
   })
 
-  it("drops an assignment for a section id the caller did not pass in orderedSections", () => {
-    const blocks = buildClassBlocks(
-      true,
-      [{ sectionId: "ghost", subject: null, subjectBn: null }],
-      []
-    )
-    expect(blocks).toEqual([])
+  it("falls back to zero students / not_taken when attendance_day has no matching section", () => {
+    const my = mySection({ sectionId: "ghost", isClassTeacher: true })
+    const [block] = buildClassBlocks(true, [my], [])
+    expect(block?.studentCount).toBe(0)
+    expect(block?.attendanceToday).toBe("not_taken")
   })
 
-  it("preserves the grade/section order of orderedSections", () => {
-    const a = section({ sectionId: "s1", sectionName: "ক" })
-    const b = section({
+  it("preserves listMySections' own order", () => {
+    const a = mySection({ sectionId: "s1", isClassTeacher: true })
+    const b = mySection({
       sectionId: "s2",
       sectionName: "খ",
       gradeName: "Class 7",
+      isClassTeacher: true,
     })
-    const blocks = buildClassBlocks(
-      true,
-      [
-        { sectionId: "s2", subject: null, subjectBn: null },
-        { sectionId: "s1", subject: null, subjectBn: null },
-      ],
-      [a, b]
-    )
-    expect(blocks.map((c) => c.sectionId)).toEqual(["s1", "s2"])
+    const blocks = buildClassBlocks(true, [b, a], [])
+    expect(blocks.map((c) => c.sectionId)).toEqual(["s2", "s1"])
   })
 })

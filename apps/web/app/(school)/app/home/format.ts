@@ -15,22 +15,30 @@ export function fill(
   )
 }
 
-/** "Class 6 – ক · Bangla" / "Class 6 – ক · Class teacher" (§4.4.2). */
+/**
+ * "Class 6 – ক · Bangla" / "Class 6 – ক · Class teacher" / "Class 6 – ক ·
+ * Class teacher, Bangla, English" (§4.4.2) — `listMySections` (D-107)
+ * already groups "class teacher" and "every subject taught here" into one
+ * `BasicHomeClass`, so this only joins the labels, it does not decide which
+ * ones apply.
+ */
 export function classBlockTitle(
   locale: Locale,
   cls: Pick<
     BasicHomeClass,
-    "gradeName" | "gradeNameBn" | "sectionName" | "subject" | "subjectBn"
+    "gradeName" | "gradeNameBn" | "sectionName" | "isClassTeacher" | "subjects"
   >,
   classTeacherLabel: string
 ): string {
-  const grade =
-    locale === "bn" ? (cls.gradeNameBn ?? cls.gradeName) : cls.gradeName
+  const grade = locale === "bn" ? cls.gradeNameBn : cls.gradeName
   const section = sectionDisplayName(grade, cls.sectionName)
-  const subject =
-    (locale === "bn" ? (cls.subjectBn ?? cls.subject) : cls.subject) ??
-    classTeacherLabel
-  return `${section} · ${subject}`
+  const subjectNames = cls.subjects.map((s) =>
+    locale === "bn" ? (s.nameBn ?? s.name) : s.name
+  )
+  const labels = cls.isClassTeacher
+    ? [classTeacherLabel, ...subjectNames]
+    : subjectNames
+  return `${section} · ${labels.join(", ")}`
 }
 
 /** English "1 student" / "40 students"; Bangla has one form for any count

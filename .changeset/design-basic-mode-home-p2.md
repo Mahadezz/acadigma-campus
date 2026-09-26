@@ -8,9 +8,9 @@
 
 F-ID-10 Part 2 (D-405): the real basic-mode home. `/app/home` replaces Part
 1's placeholder with a today strip (greeting, "N roll calls not taken"), one
-`ClassBlock` per class-teacher/subject-teacher assignment (an interim
-`exam_subjects.teacher_id` source until F-AC-01's `section_subjects` ships),
-an "All classes" block for owner/admin, and an essentials row. `BasicShell`
+`ClassBlock` per class the teacher is assigned to (F-AC-01 Part 5's
+`listMySections` — class teacher, subject teacher, or both), an "All
+classes" block for owner/admin, and an essentials row. `BasicShell`
 (no sidebar/bottom nav, Home + brand + Help) now applies to the whole `/app`
 shell whenever `ui_mode=basic`, not only `/app/home` — a deep link into a
 full-app page still opens inside it. Tapping a class opens the existing roll

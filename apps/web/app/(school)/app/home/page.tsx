@@ -39,7 +39,7 @@ const PRIMARY_BUTTON_CLASSNAME =
 
 /**
  * F-ID-10 §4.4/§6 `/app/home` — the real basic-mode home (Part 2). Today
- * strip (greeting + to-dos), one `ClassBlock` per assignment from
+ * strip (greeting + to-dos), one `ClassBlock` per class from
  * `getBasicHome`, an "All classes" block for owner/admin (§4.4 footnote ¹,
  * AC16), then the essentials row. Every read goes through `getBasicHome`
  * (itself built only from already-shipped repositories/RLS, D-405) — this
@@ -112,12 +112,9 @@ export default async function BasicHomePage() {
         />
       ) : (
         <div className="flex flex-col gap-3">
-          {data.classes.map((cls, i) => (
+          {data.classes.map((cls) => (
             <ClassBlock
-              // A section can appear more than once (class teacher AND a
-              // subject there, §2 footnote ²) — sectionId alone is not a
-              // unique key.
-              key={`${cls.sectionId}-${cls.subject ?? "class-teacher"}-${i}`}
+              key={cls.sectionId}
               href={`/app/attendance/${cls.sectionId}`}
               title={classBlockTitle(locale, cls, s.classTeacher)}
               studentCountLabel={pluralize(
