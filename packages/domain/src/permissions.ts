@@ -122,6 +122,12 @@ export const ACTIONS = [
   "report.view",
   "report.render.sample",
   "report.render.report_card",
+  // F-OP-03 Part 5 (D-207): bulk report cards for a whole section. Spec §2
+  // grants this to owner/admin and "class teacher of that section" only
+  // (narrower than the single card's staff grant) — the class-teacher limit
+  // is the same interim as report.render.report_card (D-206): not enforced
+  // yet while the render source is a fixture, so a plain teacher grant.
+  "report.render.report_card_bulk",
   // Academic structure (F-AC-01 §2, D-102): owner/admin/teacher/staff read,
   // owner/admin write. Parents see structure only through their portal.
   "academics.structure.read",
@@ -191,6 +197,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "report.view",
     "report.render.sample",
     "report.render.report_card",
+    "report.render.report_card_bulk",
     "academics.structure.read",
     "academics.section.write",
     "academics.subject.write",
@@ -248,6 +255,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "report.view",
     "report.render.sample",
     "report.render.report_card",
+    "report.render.report_card_bulk",
     "academics.structure.read",
     "academics.section.write",
     "academics.subject.write",
@@ -280,6 +288,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "report.view",
     "report.render.sample",
     "report.render.report_card",
+    "report.render.report_card_bulk",
     "academics.structure.read",
     "exams.read",
     "results.read",

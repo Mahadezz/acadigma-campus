@@ -8,7 +8,10 @@ import {
   type ReportCardDto,
 } from "@acadigma/contracts"
 import type { AcadigmaSupabaseClient, WorkspaceContext } from "@acadigma/db"
-import { getReportCard } from "@acadigma/db/repositories/results"
+import {
+  getReportCard,
+  getSectionResults,
+} from "@acadigma/db/repositories/results"
 
 /**
  * F-OP-03 Part 3 (D-206) — THE SEAM, now real (F-AC-06 Part 5, D-305).
@@ -37,4 +40,33 @@ export async function getReportCardData(
     )
   }
   return ok(dto.data)
+}
+
+/**
+ * F-OP-03 Part 5 (D-207) — resolves a section's student roster for bulk
+ * rendering, real since F-AC-06 Part 5 (D-305, #68) landed. NOT the seam
+ * above: it never returns a `ReportCardDto` itself — the bulk render step
+ * still calls `getReportCardData` once per id this returns, the same seam
+ * every other caller uses.
+ *
+ * Reads `getSectionResults(ctx, client, examId, sectionId)`
+ * (`@acadigma/db/repositories/results`), through the CALLER's own RLS
+ * client — the same tenancy/class-teacher scoping `getReportCard` already
+ * enforces. `getSectionResults` does NOT filter out a student with no roll
+ * number — it is `getReportCardData`/`getReportCard` that refuses to print
+ * one (D-305: "a student without a roll number ... has no card to print").
+ * This function keeps returning every roster id unfiltered so that refusal
+ * reaches `renderReportCardBulkPdf` as a per-student `failed` item (with the
+ * seam's own message) rather than the student being silently missing from
+ * the run.
+ */
+export async function getReportCardBulkStudentIds(
+  supabase: AcadigmaSupabaseClient,
+  ctx: WorkspaceContext,
+  sectionId: string,
+  examId: string
+): Promise<Result<readonly string[], ApiError>> {
+  const results = await getSectionResults(ctx, supabase, examId, sectionId)
+  if (!results.ok) return results
+  return ok(results.data.rows.map((row) => row.studentId))
 }

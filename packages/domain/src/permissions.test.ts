@@ -252,6 +252,9 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     "report.render.report_card": [
       ...rolesWithAction("report.render.report_card"),
     ],
+    "report.render.report_card_bulk": [
+      ...rolesWithAction("report.render.report_card_bulk"),
+    ],
     // F-AC-01 §2 (D-102): asserted for real, not against the matrix itself.
     "academics.structure.read": ["owner", "admin", "teacher", "staff"],
     "academics.section.write": ["owner", "admin"],
@@ -339,6 +342,24 @@ describe("F-OP-03 §2 reports and PDF — Parts 1-3 keys", () => {
       expect(can(role, "report.view")).toBe(false)
       expect(can(role, "report.render.sample")).toBe(false)
       expect(can(role, "report.render.report_card")).toBe(false)
+    }
+  })
+})
+
+describe("F-OP-03 §2 reports and PDF — Part 5 bulk key (D-207)", () => {
+  it("grants report.render.report_card_bulk to owner, admin and teacher", () => {
+    for (const role of ["owner", "admin", "teacher"] as const) {
+      expect(can(role, "report.render.report_card_bulk")).toBe(true)
+    }
+  })
+
+  it("denies report.render.report_card_bulk to staff (spec §2: office prints single cards, not bulk)", () => {
+    expect(can("staff", "report.render.report_card_bulk")).toBe(false)
+  })
+
+  it("denies report.render.report_card_bulk to parent and platform", () => {
+    for (const role of ["parent", "platform"] as const) {
+      expect(can(role, "report.render.report_card_bulk")).toBe(false)
     }
   })
 })

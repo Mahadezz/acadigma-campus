@@ -1047,6 +1047,7 @@
     "generated": "Generated. Ready to download below.",
     "error": "Could not generate this report. Try again.",
     "generateReportCard": "Report card",
+    "generateReportCardBulk": "Print all report cards",
     "empty": "No reports generated yet.",
     "recent": "Recent runs",
     "status": {

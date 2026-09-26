@@ -11,6 +11,7 @@ describe("report enums — parity with the Postgres enums (report_runs migration
   it("reportKindSchema accepts exactly the report_kind labels shipped so far", () => {
     expect(reportKindSchema.safeParse("sample").success).toBe(true)
     expect(reportKindSchema.safeParse("report_card").success).toBe(true)
+    expect(reportKindSchema.safeParse("report_card_bulk").success).toBe(true)
     expect(reportKindSchema.safeParse("mark_sheet").success).toBe(false)
   })
 
@@ -47,6 +48,22 @@ describe("reportRunInputSchema", () => {
       locale: "en",
     })
     expect(parsed.success).toBe(true)
+  })
+
+  it("accepts a report_card_bulk request, defaulting order and duplex", () => {
+    const parsed = reportRunInputSchema.safeParse({
+      params: {
+        kind: "report_card_bulk",
+        sectionId: "11111111-1111-1111-1111-111111111111",
+        examId: "22222222-2222-2222-2222-222222222222",
+      },
+      locale: "bn",
+    })
+    expect(parsed.success).toBe(true)
+    if (parsed.success && parsed.data.params.kind === "report_card_bulk") {
+      expect(parsed.data.params.order).toBe("roll")
+      expect(parsed.data.params.duplex).toBe(false)
+    }
   })
 
   it("rejects an unknown report kind", () => {

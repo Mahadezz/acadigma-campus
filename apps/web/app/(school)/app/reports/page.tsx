@@ -32,7 +32,9 @@ const STATUS_TONE: Record<ReportStatus, ToneStatusChipProps["tone"]> = {
  * F-OP-03 Parts 1-2 — `/app/reports` (spec §6 "Report gallery", trimmed to
  * this Part's scope: no 7-card type gallery yet, only the one report kind
  * this PR's pipeline can render — `'sample'`, the letterhead proof — plus
- * the recent-runs list §8 Part 2 asks for).
+ * the recent-runs list §8 Part 2 asks for). The report-card buttons (single,
+ * D-206; bulk, D-207) live on the exam results preview
+ * (`/app/exams/[id]/results`), next to the real students they render for.
  */
 export default async function ReportsPage() {
   const ctx = await requireShell("school")

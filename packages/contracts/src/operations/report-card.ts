@@ -121,6 +121,25 @@ export const reportCardParamsSchema = z.object({
 })
 export type ReportCardParams = z.infer<typeof reportCardParamsSchema>
 
+// ---------------------------------------------------------------------------
+// createReportRun params for kind: 'report_card_bulk' (F-OP-03 Part 5, D-207)
+// ---------------------------------------------------------------------------
+
+/** Print order within the merged PDF (spec §4 W2). */
+export const reportCardBulkOrderSchema = z.enum(["roll", "name"])
+export type ReportCardBulkOrder = z.infer<typeof reportCardBulkOrderSchema>
+
+export const reportCardBulkParamsSchema = z.object({
+  kind: z.literal("report_card_bulk"),
+  sectionId: uuidSchema,
+  examId: uuidSchema,
+  order: reportCardBulkOrderSchema.default("roll"),
+  /** "Print both sides" (§4 W2 `duplex_friendly`): pads with a blank page so
+   * every student's card starts on an odd page. */
+  duplex: z.boolean().default(false),
+})
+export type ReportCardBulkParams = z.infer<typeof reportCardBulkParamsSchema>
+
 /** F-AC-10 results tab (D-306): one published result of a parent's child,
  * read from `results.frozen_payload` — never recomputed. */
 export type FamilyResult = {
