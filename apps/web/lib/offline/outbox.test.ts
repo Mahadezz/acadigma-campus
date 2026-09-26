@@ -235,4 +235,44 @@ describe("replay", () => {
       "after-k2"
     )
   })
+  it("a save made while another is on the wire is never lost: it queues behind and goes next", async () => {
+    // The lock is not held during the send: queueing stays instant, and the
+    // correction lands as its own item, rebased once the first one succeeds.
+    const store = await queued(draft("k1"))
+    const sent: [string, string | null][] = []
+    const send = vi.fn(async (item: OutboxItem) => {
+      sent.push([item.payload.idempotencyKey, item.payload.expectedUpdatedAt])
+      if (item.payload.idempotencyKey === "k1") {
+        expect(await enqueue(store, draft("k2"), 50)).toBe("queued")
+      }
+      return ok(`after-${item.payload.idempotencyKey}`)
+    })
+    await replay(store, { userId: U, workspaceId: W, send })
+    expect(sent).toEqual([
+      ["k1", "v1"],
+      ["k2", "after-k1"],
+    ])
+    expect(store.items.size).toBe(0)
+  })
+
+  it("a correction made while the send fails replaces the waiting item, keeping the base", async () => {
+    const store = await queued(draft("k1"))
+    const send = vi.fn(async (item: OutboxItem) => {
+      if (item.payload.idempotencyKey === "k1") {
+        await enqueue(store, draft("k2"), 50)
+      }
+      throw new TypeError("Failed to fetch")
+    })
+    await replay(store, { userId: U, workspaceId: W, send })
+    const keys = [...store.items.values()].map((i) => [
+      i.status,
+      i.payload.idempotencyKey,
+      i.payload.expectedUpdatedAt,
+    ])
+    // k1 back to waiting; k2 behind it with the same base. Nothing dropped.
+    expect(keys).toEqual([
+      ["pending", "k1", "v1"],
+      ["pending", "k2", "v1"],
+    ])
+  })
 })

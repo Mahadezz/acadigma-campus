@@ -38,12 +38,23 @@ export function OutboxChip({ userId }: { userId: string }) {
     const visible = () => {
       if (document.visibilityState === "visible") send()
     }
+    // The `online` event often fires before the network carries traffic
+    // (Wi-Fi still joining, mobile data waking up): the first try fails, so
+    // three more follow within ~15 s. Each is free when nothing waits.
+    const timers: number[] = []
+    const online = () => {
+      send()
+      for (const ms of [2_000, 5_000, 15_000]) {
+        timers.push(window.setTimeout(send, ms))
+      }
+    }
     send()
-    window.addEventListener("online", send)
+    window.addEventListener("online", online)
     document.addEventListener("visibilitychange", visible)
     return () => {
-      window.removeEventListener("online", send)
+      window.removeEventListener("online", online)
       document.removeEventListener("visibilitychange", visible)
+      timers.forEach(clearTimeout)
     }
   }, [userId])
 

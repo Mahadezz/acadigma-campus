@@ -32,17 +32,23 @@ export function onOutboxSent(
   return () => void sentListeners.delete(fn)
 }
 
-// Queueing and sending take turns, across tabs too (Web Locks): a save that
-// replaces a pending item must never race the replay sending it.
-let tail: Promise<unknown> = Promise.resolve()
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
+// Web Locks, across tabs too: "store" for each short read-and-write (a save
+// replacing a waiting item never races the replay marking it), "replay" for a
+// whole run (one tab sends at a time). The store lock is never held while a
+// request is on the wire, so an offline save never waits on the network.
+const tails = new Map<string, Promise<unknown>>()
+function withLock<T>(name: string, fn: () => Promise<T>): Promise<T> {
   if (typeof navigator !== "undefined" && navigator.locks) {
-    return navigator.locks.request("acadigma-outbox", fn) as Promise<T>
+    return navigator.locks.request(`acadigma-outbox-${name}`, fn) as Promise<T>
   }
-  const run = tail.then(fn, fn)
-  tail = run.catch(() => undefined)
+  const run = (tails.get(name) ?? Promise.resolve()).then(fn, fn)
+  tails.set(
+    name,
+    run.catch(() => undefined)
+  )
   return run
 }
+const storeLock = <T>(fn: () => Promise<T>) => withLock("store", fn)
 
 function liveStore(userId: string): OutboxStore {
   const store = outboxStore(userId)
@@ -63,7 +69,7 @@ function liveStore(userId: string): OutboxStore {
 export function queueSave(
   draft: OutboxDraft
 ): Promise<"queued" | "replaced" | "full"> {
-  return withLock(() => enqueue(liveStore(draft.userId), draft))
+  return storeLock(() => enqueue(liveStore(draft.userId), draft))
 }
 
 async function send(item: OutboxItem) {
@@ -74,28 +80,49 @@ async function send(item: OutboxItem) {
   })
 }
 
+async function runOnce(userId: string): Promise<void> {
+  if (!navigator.onLine) return
+  // Nothing waiting: no request at all (triggers are frequent and cheap).
+  const items = await outboxStore(userId)
+    .list()
+    .catch(() => [])
+  if (!items.some((i) => i.status === "pending" || i.status === "sending")) {
+    return
+  }
+  const { check } = await checkSession()
+  if (check.kind !== "signed_in" || check.userId !== userId) return
+  const workspaceId = check.workspaceId
+  if (!workspaceId) return
+  await withLock("replay", () =>
+    replay(liveStore(userId), {
+      userId,
+      workspaceId,
+      send,
+      lock: storeLock,
+      onSent: (item, updatedAt) =>
+        sentListeners.forEach((fn) => fn(item.entityKey, updatedAt)),
+    })
+  )
+}
+
 let running: Promise<void> | null = null
+let again = false
 /**
  * §4.4: send this user's waiting items for the workspace the server says is
  * active now — after the session check (and its purges) confirmed who is
- * here. One run at a time; a trigger during a run joins it.
+ * here. One run at a time; a trigger that arrives during a run (the `online`
+ * event while a request is still failing) gets one more run after it.
  */
 export function sendQueued(userId: string): Promise<void> {
-  running ??= (async () => {
-    if (!navigator.onLine) return
-    const { check } = await checkSession()
-    if (check.kind !== "signed_in" || check.userId !== userId) return
-    const workspaceId = check.workspaceId
-    if (!workspaceId) return
-    await withLock(() =>
-      replay(liveStore(userId), {
-        userId,
-        workspaceId,
-        send,
-        onSent: (item, updatedAt) =>
-          sentListeners.forEach((fn) => fn(item.entityKey, updatedAt)),
-      })
-    )
+  if (running) {
+    again = true
+    return running
+  }
+  running = (async () => {
+    do {
+      again = false
+      await runOnce(userId)
+    } while (again)
   })().finally(() => {
     running = null
   })
@@ -120,7 +147,7 @@ export async function queuedItem(
 
 /** Try again (§4.10): back to waiting, then send. */
 export async function retryItem(userId: string, id: string): Promise<void> {
-  await withLock(async () => {
+  await storeLock(async () => {
     const store = liveStore(userId)
     const item = (await store.list()).find((i) => i.id === id)
     if (item) await store.put({ ...item, status: "pending", lastError: null })
@@ -130,7 +157,7 @@ export async function retryItem(userId: string, id: string): Promise<void> {
 
 /** Delete (§4.10): only ever the user's own choice. */
 export function deleteItem(userId: string, id: string): Promise<void> {
-  return withLock(() => liveStore(userId).remove(id))
+  return storeLock(() => liveStore(userId).remove(id))
 }
 
 /** Every outbox on this device (the last-seen user where it cannot be listed). */
@@ -161,11 +188,17 @@ export function useOutbox(userId: string): OutboxItem[] {
   const [items, setItems] = useState<OutboxItem[]>([])
   useEffect(() => {
     let live = true
+    // Reads finish out of order; only the latest may set the state, or an
+    // older read ("sending") could overwrite a newer one (sent, gone).
+    let latest = 0
     const load = () => {
+      const n = ++latest
       outboxStore(userId)
         .list()
         .then((next) => {
-          if (live) setItems(next.sort((a, b) => a.createdAt - b.createdAt))
+          if (live && n === latest) {
+            setItems(next.sort((a, b) => a.createdAt - b.createdAt))
+          }
         })
         .catch(() => undefined)
     }

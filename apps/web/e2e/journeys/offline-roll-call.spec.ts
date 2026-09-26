@@ -181,6 +181,8 @@ async function makeSchool(): Promise<School> {
 
 let school: School
 test.beforeEach(async () => {
+  // Setup makes a user, a school and a class through the API: give it room.
+  test.setTimeout(90_000)
   school = await makeSchool()
 })
 test.afterEach(async () => {
@@ -194,6 +196,30 @@ const cachedPaths = (page: Page) =>
     if (!(await caches.has("acadigma-data-pages"))) return []
     const cache = await caches.open("acadigma-data-pages")
     return (await cache.keys()).map((r) => new URL(r.url).pathname)
+  })
+
+/** The statuses each waiting item holds, read straight from IndexedDB. */
+const queuedMarks = (page: Page) =>
+  page.evaluate(async () => {
+    const out: string[] = []
+    for (const d of await indexedDB.databases()) {
+      if (!d.name?.startsWith("acadigma-")) continue
+      const db = await new Promise<IDBDatabase>((resolve) => {
+        const req = indexedDB.open(d.name!)
+        req.onsuccess = () => resolve(req.result)
+      })
+      const items = await new Promise<
+        { payload: { records: { status: string }[] } }[]
+      >((resolve) => {
+        const req = db.transaction("outbox").objectStore("outbox").getAll()
+        req.onsuccess = () => resolve(req.result)
+      })
+      db.close()
+      for (const i of items) {
+        out.push(i.payload.records.map((r) => r.status[0]).join(""))
+      }
+    }
+    return out
   })
 
 const statusOf = (page: Page, row: number, status: "Absent" | "Present") =>
@@ -253,9 +279,11 @@ test("roll call taken offline sends once when the signal returns", async ({
   await expect(chip).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 
-  // She corrects one student and saves again: still one item.
+  // She corrects one student and saves again: still one item, now holding
+  // the correction (the phone kept it, not a second item).
   await mark(page, 1, "Absent")
   await page.getByRole("button", { name: "Save" }).click()
+  await expect.poll(() => queuedMarks(page)).toEqual(["aap"])
   await expect(chip).toBeVisible()
 
   // Reopened offline, the class shows what she saved, not the old page.

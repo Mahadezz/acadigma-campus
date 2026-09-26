@@ -128,6 +128,11 @@ export function classify(reply: SendReply): Outcome {
  * a time. A network error or a "not now" reply stops the run (the next
  * trigger retries); a conflict or a refusal is kept with its reason and the
  * run carries on. Nothing is dropped without a success.
+ *
+ * `lock` guards each read-and-write of the store, never the send: a save made
+ * while an item is on the wire is queued at once (behind it, §5.2) instead of
+ * waiting on the network — and is sent later in the same run, because every
+ * turn re-reads the store. The caller runs one replay at a time.
  */
 export async function replay(
   store: OutboxStore,
@@ -136,62 +141,83 @@ export async function replay(
     workspaceId: string
     send: (item: OutboxItem) => Promise<SendReply>
     onSent?: (item: OutboxItem, updatedAt: string) => void
+    lock?: <T>(fn: () => Promise<T>) => Promise<T>
   }
 ): Promise<void> {
-  const queue = (await store.list())
-    .filter(
-      (i) =>
-        i.userId === opts.userId &&
-        i.workspaceId === opts.workspaceId &&
-        // "sending" here was left by a closed tab (replay runs under a lock):
-        // resent with the same key, the server returns the stored result.
-        (i.status === "pending" || i.status === "sending")
-    )
-    .sort((a, b) => a.createdAt - b.createdAt)
+  const lock = opts.lock ?? ((fn) => fn())
+  const tried = new Set<string>()
 
-  for (const [n, item] of queue.entries()) {
-    const sending = {
-      ...item,
-      status: "sending" as const,
-      attempts: item.attempts + 1,
-    }
-    await store.put(sending)
+  for (;;) {
+    // The oldest waiting item not yet tried in this run, marked as sending.
+    // ("sending" left by a closed tab is resent: same key, stored result.)
+    const sending = await lock(async () => {
+      const next = (await store.list())
+        .filter(
+          (i) =>
+            i.userId === opts.userId &&
+            i.workspaceId === opts.workspaceId &&
+            (i.status === "pending" || i.status === "sending") &&
+            !tried.has(i.id)
+        )
+        .sort((a, b) => a.createdAt - b.createdAt)[0]
+      if (!next) return null
+      const marked = {
+        ...next,
+        status: "sending" as const,
+        attempts: next.attempts + 1,
+      }
+      await store.put(marked)
+      return marked
+    })
+    if (!sending) return
+    tried.add(sending.id)
+
     let reply: SendReply
     try {
       reply = await opts.send(sending)
     } catch {
-      await store.put({ ...sending, status: "pending" })
+      await lock(() => store.put({ ...sending, status: "pending" }))
       return
     }
     const outcome = classify(reply)
+
     if (reply.ok) {
-      await store.remove(item.id)
-      // A later save of the same thing made while this one was sending
-      // carries the same base; move it onto the version this one created.
-      for (const later of queue.slice(n + 1)) {
-        if (
-          later.entityKey === item.entityKey &&
-          later.payload.expectedUpdatedAt === item.payload.expectedUpdatedAt
-        ) {
-          later.payload = {
-            ...later.payload,
-            expectedUpdatedAt: reply.data.updatedAt,
+      const updatedAt = reply.data.updatedAt
+      await lock(async () => {
+        await store.remove(sending.id)
+        // A later save of the same thing made while this one was sending
+        // carries the same base; move it onto the version this one created.
+        for (const later of await store.list()) {
+          if (
+            later.status === "pending" &&
+            later.entityKey === sending.entityKey &&
+            later.payload.expectedUpdatedAt ===
+              sending.payload.expectedUpdatedAt
+          ) {
+            await store.put({
+              ...later,
+              payload: { ...later.payload, expectedUpdatedAt: updatedAt },
+            })
           }
-          await store.put(later)
         }
-      }
-      opts.onSent?.(item, reply.data.updatedAt)
+      })
+      opts.onSent?.(sending, updatedAt)
       continue
     }
+
     const lastError = { code: reply.error.code, message: reply.error.message }
-    if (outcome === "retry") {
-      await store.put({ ...sending, status: "pending", lastError })
-      return
-    }
-    await store.put({
-      ...sending,
-      status: outcome === "conflict" ? "conflict" : "needs_attention",
-      lastError,
-    })
+    await lock(() =>
+      store.put({
+        ...sending,
+        status:
+          outcome === "retry"
+            ? "pending"
+            : outcome === "conflict"
+              ? "conflict"
+              : "needs_attention",
+        lastError,
+      })
+    )
+    if (outcome === "retry") return
   }
 }
