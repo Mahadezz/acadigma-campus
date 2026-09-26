@@ -33,11 +33,18 @@ import type { Locale } from "@/lib/locale"
 import { saveAttendanceSession } from "../actions"
 import { fill } from "../format"
 
+// `next/dynamic`'s `loading` callback runs at module scope, before any
+// locale-aware `t` prop exists, so it cannot read the reader's own
+// language the way every other string on this screen does. English only,
+// for a state that is normally on screen for well under a second (the
+// chunk starts fetching the moment this tab mounts, per the comment
+// below) — ponytail: add a `useSyncExternalStore`-backed locale reader if
+// this component ever needs more than one sr-only word.
+const LOADING_LABEL = "Loading…"
+
 const ConfirmSheet = dynamic(
   () =>
-    import("@acadigma/ui/primitives/confirm-sheet").then(
-      (m) => m.ConfirmSheet
-    ),
+    import("@acadigma/ui/primitives/confirm-sheet").then((m) => m.ConfirmSheet),
   {
     ssr: false,
     // Review fix (react): a teacher on a slow or offline connection taps
@@ -52,6 +59,8 @@ const ConfirmSheet = dynamic(
         className="min-h-14 w-full sm:w-auto"
       >
         <Loader2Icon className="animate-spin" aria-hidden="true" />
+        {/* Review fix (BLOCKER, axe): icon-only was not an accessible name. */}
+        <span className="sr-only">{LOADING_LABEL}</span>
       </Button>
     ),
   }

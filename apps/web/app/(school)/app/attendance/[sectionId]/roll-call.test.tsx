@@ -139,16 +139,17 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
     fireEvent.click(absent)
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
     expect(mockSave).not.toHaveBeenCalled()
-    // ConfirmSheet renders the sentence as both its visible title and a
-    // sr-only description (same pattern HelpSheet already uses), so two
-    // matches is correct here, not a bug. It's a `next/dynamic({ ssr: false
-    // })` import (D-406 addendum — off the route's initial JS, same reason
-    // Marks/Students/Print already are), so it mounts one tick after Save.
+    // ConfirmSheet's sr-only description names the two buttons (review fix:
+    // it used to repeat this same sentence, so a screen reader said it
+    // twice), so exactly one visible match is expected here, not a bug.
+    // It's a `next/dynamic({ ssr: false })` import (D-406 addendum — off
+    // the route's initial JS, same reason Marks/Students/Print already
+    // are), so it mounts one tick after Save.
     expect(
       await screen.findAllByText(
         "Save attendance for Class 6 – ক? 2 present, 1 absent."
       )
-    ).toHaveLength(2)
+    ).toHaveLength(1)
     fireEvent.click(screen.getByRole("button", { name: "Yes, save" }))
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
   })

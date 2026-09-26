@@ -222,7 +222,12 @@ export async function getLatestSectionExam(
     exams: { starts_on: string | null } | null
   })[]
 
-  type Candidate = { examId: string; name: string; status: string; startsOn: string | null }
+  type Candidate = {
+    examId: string
+    name: string
+    status: string
+    startsOn: string | null
+  }
   // Multiple rows can share one exam_id (one exam_subjects row per subject);
   // reducing straight over `rows` needs no separate dedupe step, since a row
   // sharing the current best's exam_id has identical status/startsOn (both

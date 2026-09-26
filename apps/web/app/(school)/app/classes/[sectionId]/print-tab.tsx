@@ -34,7 +34,10 @@ export function PrintTab({
   latestExam,
   students,
 }: {
-  t: { classHub: Messages["basicMode"]["classHub"]; reports: Messages["reports"] }
+  t: {
+    classHub: Messages["basicMode"]["classHub"]
+    reports: Messages["reports"]
+  }
   locale: Locale
   sectionId: string
   /** `YYYY-MM`, this month — `null` when today's date could not be read. */
