@@ -612,7 +612,7 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "marks",
   // F-AC-02 §4.7 (D-106) — 20260925300316_student_import_batches.sql.
   "student_import_batches",
-  // F-AC-06 Part 7 (D-306) — 20260925300321_publish_results.sql.
+  // F-AC-06 Part 7 (D-306) — 20260926022352_publish_results.sql.
   "guardian_users",
 ]
 
