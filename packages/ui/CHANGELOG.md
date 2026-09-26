@@ -1,5 +1,12 @@
 # @acadigma/ui
 
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [2885f6a]
+  - @acadigma/domain@0.9.0
+
 ## 0.5.0
 
 ### Minor Changes

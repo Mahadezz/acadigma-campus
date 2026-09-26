@@ -60,3 +60,45 @@ export function formatDateTime(
   const out = `${formatDate(d, "en")}, ${hh}:${min}`
   return locale === "bn" ? toBengaliDigits(out) : out
 }
+
+const MONTH_NAMES_EN = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const
+
+const MONTH_NAMES_BN = [
+  "জানুয়ারি",
+  "ফেব্রুয়ারি",
+  "মার্চ",
+  "এপ্রিল",
+  "মে",
+  "জুন",
+  "জুলাই",
+  "আগস্ট",
+  "সেপ্টেম্বর",
+  "অক্টোবর",
+  "নভেম্বর",
+  "ডিসেম্বর",
+] as const
+
+/** F-OP-03 Part 6 — "{Month name} {year}" for the attendance register's
+ * scope line, e.g. "September 2026" / "সেপ্টেম্বর ২০২৬". `month` is 1-12. */
+export function formatMonthYear(
+  year: number,
+  month: number,
+  locale: ReportLocale
+): string {
+  const names = locale === "bn" ? MONTH_NAMES_BN : MONTH_NAMES_EN
+  const name = names[month - 1] ?? "—"
+  return `${name} ${formatNumber(year, locale)}`
+}

@@ -2,6 +2,8 @@ import { z } from "zod"
 
 import { isoDateTimeSchema, uuidSchema, workspaceIdSchema } from "../common"
 
+import { attendanceRegisterParamsSchema } from "./attendance-register"
+import { markSheetParamsSchema } from "./mark-sheet"
 import {
   reportCardBulkParamsSchema,
   reportCardParamsSchema,
@@ -27,6 +29,8 @@ export const reportKindSchema = z.enum([
   "sample",
   "report_card",
   "report_card_bulk",
+  "attendance_register",
+  "mark_sheet",
 ])
 export type ReportKind = z.infer<typeof reportKindSchema>
 
@@ -52,6 +56,8 @@ export const reportRunParamsSchema = z.discriminatedUnion("kind", [
   sampleReportParamsSchema,
   reportCardParamsSchema,
   reportCardBulkParamsSchema,
+  attendanceRegisterParamsSchema,
+  markSheetParamsSchema,
 ])
 export type ReportRunParams = z.infer<typeof reportRunParamsSchema>
 

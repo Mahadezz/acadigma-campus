@@ -1,6 +1,7 @@
 /**
- * F-OP-03 §7 `GET /api/pdf/[runId]` — Parts 1-5: `'sample'`, `'report_card'`
- * (D-206) and `'report_card_bulk'` (D-207).
+ * F-OP-03 §7 `GET /api/pdf/[runId]` — Parts 1-6: `'sample'`, `'report_card'`
+ * (D-206), `'report_card_bulk'` (D-207), `'attendance_register'` and
+ * `'mark_sheet'` (D-208).
  *
  * Shape: parse -> resolve context -> policy (`can`) -> fetch the run through
  * the CALLER's own RLS-scoped client (so a cross-tenant `runId` is simply
@@ -18,16 +19,22 @@ import { NextResponse } from "next/server"
 
 import {
   apiError,
+  attendanceRegisterParamsSchema,
   httpStatusForError,
+  markSheetParamsSchema,
   reportCardBulkParamsSchema,
   reportCardParamsSchema,
   uuidSchema,
 } from "@acadigma/contracts"
+import { getAttendanceRegister } from "@acadigma/db/repositories/attendance-register"
 import { getReportRun } from "@acadigma/db/repositories/reports"
+import { getMarkSheetData } from "@acadigma/db/repositories/results"
 import { getSchoolProfile } from "@acadigma/db/repositories/settings"
 import { can } from "@acadigma/domain"
 import { renderHeaderLine } from "@acadigma/domain/settings"
 import {
+  AttendanceRegisterDocument,
+  MarkSheetDocument,
   renderPdfToBuffer,
   ReportCardDocument,
   SampleDocument,
@@ -175,6 +182,66 @@ export async function GET(
       )
     }
     buffer = merged.data.buffer
+  } else if (run.data.kind === "attendance_register") {
+    const parsedParams = attendanceRegisterParamsSchema.safeParse(
+      run.data.params
+    )
+    if (!parsedParams.success) {
+      const error = apiError("internal", "This report's params are invalid.")
+      return NextResponse.json(
+        { error },
+        { status: httpStatusForError(error.code) }
+      )
+    }
+    const data = await getAttendanceRegister(
+      supabase,
+      ctx,
+      parsedParams.data.sectionId,
+      parsedParams.data.month
+    )
+    if (!data.ok) {
+      return NextResponse.json(
+        { error: data.error },
+        { status: httpStatusForError(data.error.code) }
+      )
+    }
+    buffer = await renderPdfToBuffer(
+      AttendanceRegisterDocument({
+        locale: run.data.locale,
+        ...branding,
+        ...data.data,
+        generatedAt,
+      })
+    )
+  } else if (run.data.kind === "mark_sheet") {
+    const parsedParams = markSheetParamsSchema.safeParse(run.data.params)
+    if (!parsedParams.success) {
+      const error = apiError("internal", "This report's params are invalid.")
+      return NextResponse.json(
+        { error },
+        { status: httpStatusForError(error.code) }
+      )
+    }
+    const data = await getMarkSheetData(
+      ctx,
+      supabase,
+      parsedParams.data.examId,
+      parsedParams.data.sectionId
+    )
+    if (!data.ok) {
+      return NextResponse.json(
+        { error: data.error },
+        { status: httpStatusForError(data.error.code) }
+      )
+    }
+    buffer = await renderPdfToBuffer(
+      MarkSheetDocument({
+        locale: run.data.locale,
+        ...branding,
+        ...data.data,
+        generatedAt,
+      })
+    )
   } else {
     buffer = await renderPdfToBuffer(
       SampleDocument({ locale: run.data.locale, ...branding, generatedAt })

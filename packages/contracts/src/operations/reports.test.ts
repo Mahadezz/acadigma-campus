@@ -12,7 +12,9 @@ describe("report enums — parity with the Postgres enums (report_runs migration
     expect(reportKindSchema.safeParse("sample").success).toBe(true)
     expect(reportKindSchema.safeParse("report_card").success).toBe(true)
     expect(reportKindSchema.safeParse("report_card_bulk").success).toBe(true)
-    expect(reportKindSchema.safeParse("mark_sheet").success).toBe(false)
+    expect(reportKindSchema.safeParse("attendance_register").success).toBe(true)
+    expect(reportKindSchema.safeParse("mark_sheet").success).toBe(true)
+    expect(reportKindSchema.safeParse("id_card").success).toBe(false)
   })
 
   it("reportStatusSchema accepts exactly the five report_status labels", () => {
@@ -66,9 +68,45 @@ describe("reportRunInputSchema", () => {
     }
   })
 
+  it("accepts an attendance_register request with its own params", () => {
+    const parsed = reportRunInputSchema.safeParse({
+      params: {
+        kind: "attendance_register",
+        sectionId: "11111111-1111-1111-1111-111111111111",
+        month: "2026-09",
+      },
+      locale: "bn",
+    })
+    expect(parsed.success).toBe(true)
+  })
+
+  it("rejects an attendance_register request with a malformed month", () => {
+    const parsed = reportRunInputSchema.safeParse({
+      params: {
+        kind: "attendance_register",
+        sectionId: "11111111-1111-1111-1111-111111111111",
+        month: "2026-13",
+      },
+      locale: "bn",
+    })
+    expect(parsed.success).toBe(false)
+  })
+
+  it("accepts a mark_sheet request with its own params", () => {
+    const parsed = reportRunInputSchema.safeParse({
+      params: {
+        kind: "mark_sheet",
+        sectionId: "11111111-1111-1111-1111-111111111111",
+        examId: "22222222-2222-2222-2222-222222222222",
+      },
+      locale: "en",
+    })
+    expect(parsed.success).toBe(true)
+  })
+
   it("rejects an unknown report kind", () => {
     const parsed = reportRunInputSchema.safeParse({
-      params: { kind: "mark_sheet" },
+      params: { kind: "id_card" },
       locale: "en",
     })
     expect(parsed.success).toBe(false)

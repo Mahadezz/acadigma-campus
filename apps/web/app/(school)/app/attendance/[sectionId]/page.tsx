@@ -6,6 +6,7 @@ import { can, formatIsoDate } from "@acadigma/domain"
 import { editWindowOpen } from "@acadigma/domain/attendance"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { GenerateAttendanceRegisterButton } from "@/app/(school)/app/reports/generate-attendance-register-button"
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
@@ -77,20 +78,36 @@ export default async function RollCallPage({
       editWindowOpen(day.data.date, day.data.today, day.data.editWindowDays))
 
   return (
-    <RollCall
-      t={t.attendance.roll}
-      locale={locale}
-      sectionId={sectionId}
-      title={sectionLabel(locale, section)}
-      date={day.data.date}
-      dateLabel={formatIsoDate(
-        day.data.date,
-        locale === "bn" ? "bn-BD-u-nu-latn" : "en-GB"
-      )}
-      isSchoolDay={day.data.isSchoolDay}
-      students={students.data}
-      sessionUpdatedAt={section.session?.updatedAt ?? null}
-      readOnlyReason={!mayMark ? "cannotMark" : !inWindow ? "window" : null}
-    />
+    <>
+      <RollCall
+        t={t.attendance.roll}
+        locale={locale}
+        sectionId={sectionId}
+        title={sectionLabel(locale, section)}
+        date={day.data.date}
+        dateLabel={formatIsoDate(
+          day.data.date,
+          locale === "bn" ? "bn-BD-u-nu-latn" : "en-GB"
+        )}
+        isSchoolDay={day.data.isSchoolDay}
+        students={students.data}
+        sessionUpdatedAt={section.session?.updatedAt ?? null}
+        readOnlyReason={!mayMark ? "cannotMark" : !inWindow ? "window" : null}
+      />
+      {can(ctx.role, "report.render.attendance_register") ? (
+        <div className="mx-auto mt-4 max-w-xl">
+          <GenerateAttendanceRegisterButton
+            t={{
+              generate: t.reports.generateAttendanceRegister,
+              generating: t.reports.generating,
+              error: t.reports.error,
+            }}
+            sectionId={sectionId}
+            month={day.data.date.slice(0, 7)}
+            locale={locale}
+          />
+        </div>
+      ) : null}
+    </>
   )
 }
