@@ -52,8 +52,8 @@ export type ReportCardSubjectRow = z.infer<typeof reportCardSubjectRowSchema>
 export const reportCardAttendanceSchema = z.object({
   presentDays: z.number().int().min(0),
   totalDays: z.number().int().min(0),
-  /** `round(present / total * 100)`, §5.2. */
-  percent: z.number().min(0).max(100),
+  /** `round(present / total * 100)`, §5.2; null with no attendance taken. */
+  percent: z.number().min(0).max(100).nullable(),
   /** True when `percent` is below the school's minimum (§5.2 default 75) — a
    * warning line, never a block. */
   belowMinimum: z.boolean(),
@@ -74,7 +74,8 @@ export const reportCardDtoSchema = z
     studentNameEn: z.string().min(1),
     studentNameBn: z.string().min(1),
     studentCode: z.string().min(1),
-    rollNumber: z.number().int().positive(),
+    /** Null when the student has no roll number; the card prints "—". */
+    rollNumber: z.number().int().positive().nullable(),
     className: z.string().min(1),
     sectionName: z.string().min(1),
 

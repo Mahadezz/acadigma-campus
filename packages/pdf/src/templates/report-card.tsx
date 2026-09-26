@@ -181,7 +181,11 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
           <Field label={labels.studentCode} value={props.studentCode} />
           <Field
             label={labels.roll}
-            value={formatNumber(props.rollNumber, locale)}
+            value={
+              props.rollNumber === null
+                ? "—"
+                : formatNumber(props.rollNumber, locale)
+            }
           />
           <Field
             label={labels.classSection}
@@ -326,7 +330,7 @@ export function ReportCardDocument(props: ReportCardDocumentProps) {
             ? [styles.attendanceLine, styles.attendanceWarning]
             : styles.attendanceLine
         }
-        text={`${labels.attendance}: ${formatNumber(props.attendance.presentDays, locale)} / ${formatNumber(props.attendance.totalDays, locale)} (${formatNumber(props.attendance.percent, locale)}%)`}
+        text={`${labels.attendance}: ${formatNumber(props.attendance.presentDays, locale)} / ${formatNumber(props.attendance.totalDays, locale)} (${props.attendance.percent === null ? "—" : `${formatNumber(props.attendance.percent, locale)}%`})`}
       />
     </ReportShell>
   )

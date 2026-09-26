@@ -3,14 +3,17 @@ import { fileURLToPath } from "node:url"
 
 /**
  * Test helper: the rows between `-- parity:<name>` and `-- /parity:<name>` in
- * supabase/tests/52_grade_scales.sql, where pgTAP asserts the SQL functions
+ * a pgTAP file (default supabase/tests/52_grade_scales.sql), where pgTAP asserts the SQL functions
  * against them. The TS tests assert the domain functions against the SAME rows,
  * so the two implementations cannot drift (F-AC-06 §10 parity tests).
  */
-export function parityRows(name: string): string[][] {
+export function parityRows(
+  name: string,
+  file = "52_grade_scales.sql"
+): string[][] {
   const sql = readFileSync(
     fileURLToPath(
-      new URL("../../../../supabase/tests/52_grade_scales.sql", import.meta.url)
+      new URL(`../../../../supabase/tests/${file}`, import.meta.url)
     ),
     "utf8"
   )
