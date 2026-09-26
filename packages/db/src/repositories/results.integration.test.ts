@@ -134,7 +134,11 @@ describe.skipIf(!RUN)(
       if (sectionError || !section) throw sectionError
       const { data: subject, error: subjectError } = await serviceClient
         .from("subjects")
-        .insert({ workspace_id: workspaceId, name: "Bangla", created_by: userId })
+        .insert({
+          workspace_id: workspaceId,
+          name: "Bangla",
+          created_by: userId,
+        })
         .select("id")
         .single()
       if (subjectError || !subject) throw subjectError

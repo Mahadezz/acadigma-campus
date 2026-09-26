@@ -15,9 +15,13 @@
 --      /api/files guard) would then approve it for them. The file must now
 --      be in the same school (composite FK), and on the self path it must
 --      be the uploader's own file.
+--   C. workspace_invitations_insert/_update let an admin write role
+--      'owner' (app.create_invitation refuses that; a direct PostgREST
+--      write skipped it), and app.accept_invitation then makes the invitee
+--      an owner. Only an owner may create or set an owner invitation.
 -- =====================================================================
 begin;
-select plan(12);
+select plan(15);
 
 create schema if not exists tests;
 
@@ -56,7 +60,7 @@ end;
 $fn$;
 
 -- ---------------------------------------------------------------------
--- Fixture (as postgres). School A: owner OA, teachers T1 and T2 (each with
+-- Fixture (as postgres). School A: owner OA, admin AD, teachers T1 and T2 (each with
 -- a staff record and an own private file). School B: owner OB and a file.
 -- X is a signed-in user with no school. A pending teacher invitation in A
 -- is addressed to victim@sa23.local, who has not signed up.
@@ -66,6 +70,7 @@ select tests.mkuser('23000000-0000-4000-a000-000000000002', 't1@sa23.local', 'Te
 select tests.mkuser('23000000-0000-4000-a000-000000000003', 't2@sa23.local', 'Teacher 2');
 select tests.mkuser('23000000-0000-4000-a000-000000000004', 'ob@sa23.local', 'Owner B');
 select tests.mkuser('23000000-0000-4000-a000-000000000005', 'x@sa23.local', 'Stranger X');
+select tests.mkuser('23000000-0000-4000-a000-000000000006', 'ad@sa23.local', 'Admin A');
 
 insert into public.workspaces (id, type, name, slug, owner_id, created_by, status)
 values
@@ -77,7 +82,8 @@ values
 insert into public.workspace_members (workspace_id, user_id, role, status, joined_at)
 values
   ('23000000-0000-4000-b000-000000000001', '23000000-0000-4000-a000-000000000002', 'teacher', 'active', now()),
-  ('23000000-0000-4000-b000-000000000001', '23000000-0000-4000-a000-000000000003', 'teacher', 'active', now());
+  ('23000000-0000-4000-b000-000000000001', '23000000-0000-4000-a000-000000000003', 'teacher', 'active', now()),
+  ('23000000-0000-4000-b000-000000000001', '23000000-0000-4000-a000-000000000006', 'admin',   'active', now());
 
 insert into public.workspace_invitations
   (workspace_id, channel, email, role, token_hash, token_prefix, invited_by, expires_at)
@@ -166,6 +172,33 @@ select throws_ok(
             'nid', '23000000-0000-4000-f000-000000000003', '23000000-0000-4000-a000-000000000001')$$,
   '23503', null,
   'an owner cannot attach another school''s file to a staff record either (composite FK)');
+select tests.logout();
+
+-- =====================================================================
+-- C. owner invitations
+-- =====================================================================
+select tests.login('23000000-0000-4000-a000-000000000006');
+select throws_ok(
+  $$insert into public.workspace_invitations
+      (workspace_id, channel, email, role, token_hash, token_prefix, invited_by, expires_at)
+    values ('23000000-0000-4000-b000-000000000001', 'email', 'x@sa23.local', 'owner',
+            app.hash_token('sa23-owner'), 'sa23-own', auth.uid(), now() + interval '7 days')$$,
+  '42501', null,
+  'an admin cannot write an owner invitation directly (app.create_invitation already refused it)');
+select throws_ok(
+  $$update public.workspace_invitations set role = 'owner'
+     where workspace_id = '23000000-0000-4000-b000-000000000001' and email = 'victim@sa23.local'$$,
+  '42501', null,
+  'nor turn an existing invitation into an owner one');
+select tests.logout();
+
+select tests.login('23000000-0000-4000-a000-000000000001');
+select lives_ok(
+  $$insert into public.workspace_invitations
+      (workspace_id, channel, email, role, token_hash, token_prefix, invited_by, expires_at)
+    values ('23000000-0000-4000-b000-000000000001', 'email', 'x@sa23.local', 'owner',
+            app.hash_token('sa23-owner'), 'sa23-own', auth.uid(), now() + interval '7 days')$$,
+  'an owner still can');
 select tests.logout();
 
 select * from finish();

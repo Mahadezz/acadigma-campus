@@ -1,5 +1,5 @@
 -- =====================================================================
--- Security audit Part 1 (D-75): two fixes found auditing main.
+-- Security audit Part 1 (D-75): three fixes found auditing main.
 -- Tests: supabase/tests/23_security_audit_identity.sql.
 -- =====================================================================
 
@@ -74,4 +74,30 @@ create policy staff_documents_insert on public.staff_documents
       and verified_at is null
       and uploaded_by = (select app.current_user_id())
     )
+  );
+
+-- ---------------------------------------------------------------------
+-- 3. An admin could write an invitation with role = 'owner' (the policies
+--    only checked owner-or-admin), and app.accept_invitation then inserts
+--    the invitee as an owner: app.tg_workspace_members_guard allows a
+--    self-insert as owner. Only an owner may create or set an owner
+--    invitation, the same rule the guard applies to adding an owner.
+-- ---------------------------------------------------------------------
+drop policy workspace_invitations_insert on public.workspace_invitations;
+create policy workspace_invitations_insert on public.workspace_invitations
+  for insert to authenticated
+  with check (
+    app.has_role(workspace_id, array['owner', 'admin'])
+    and (role <> 'owner' or app.has_role(workspace_id, array['owner']))
+    and invited_by = (select auth.uid())
+    and status = 'pending'
+  );
+
+drop policy workspace_invitations_update on public.workspace_invitations;
+create policy workspace_invitations_update on public.workspace_invitations
+  for update to authenticated
+  using (app.has_role(workspace_id, array['owner', 'admin']))
+  with check (
+    app.has_role(workspace_id, array['owner', 'admin'])
+    and (role <> 'owner' or app.has_role(workspace_id, array['owner']))
   );
