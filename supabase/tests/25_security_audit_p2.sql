@@ -30,7 +30,7 @@
 --      is_adult are no longer on it).
 -- =====================================================================
 begin;
-select plan(33);
+select plan(40);
 
 create schema if not exists tests;
 
@@ -341,6 +341,75 @@ select is(
   (select revoked_at from public.workspace_member_capabilities
     where user_id = '25000000-0000-4000-a000-000000000002'),
   null, 'E4: an admin cannot revoke it either (no row matched)');
+
+-- =====================================================================
+-- G. Review follow-ups (#94)
+-- =====================================================================
+select tests.login('25000000-0000-4000-a000-000000000002');  -- T1
+select throws_ok(
+  $$insert into public.files (workspace_id, owner_id, bucket, path, original_name, mime_type,
+                              size_bytes, visibility, created_by)
+    values ('25000000-0000-4000-b000-000000000001', '25000000-0000-4000-a000-000000000002',
+            'private', '25000000-0000-4000-b000-000000000001/25000000-0000-4000-a000-000000000002/../25000000-0000-4000-a000-000000000003/nid.pdf',
+            'nid.pdf', 'application/pdf', 10, 'private', '25000000-0000-4000-a000-000000000002')$$,
+  '42501', 'new row violates row-level security policy for table "files"',
+  'G1: a `..` segment cannot climb out of the caller''s own prefix');
+
+select tests.login('25000000-0000-4000-a000-000000000001');  -- OA
+select throws_ok(
+  $$update public.data_requests set due_on = '2099-01-01'
+     where requester_user_id = '25000000-0000-4000-a000-000000000002'$$,
+  '42501', 'permission denied for table data_requests',
+  'G2: an owner cannot move a request''s deadline');
+
+select throws_ok(
+  $$update public.data_requests set requester_user_id = '25000000-0000-4000-a000-000000000001'
+     where requester_user_id = '25000000-0000-4000-a000-000000000002'$$,
+  '42501', 'permission denied for table data_requests',
+  'G3: an owner cannot rewrite who filed a request');
+
+select lives_ok(
+  $$update public.data_requests set status = 'refused', refusal_reason = 'duplicate'
+     where requester_user_id = '25000000-0000-4000-a000-000000000002'$$,
+  'G4: an owner can still triage a request (status and reason)');
+
+-- OA adds X directly, trying to forge provenance: the guard overrides it.
+insert into public.workspace_members
+  (workspace_id, user_id, role, status, invited_by, joined_at, created_by, created_at,
+   removed_at, removed_by)
+values ('25000000-0000-4000-b000-000000000001', '25000000-0000-4000-a000-000000000005',
+        'teacher', 'active', '25000000-0000-4000-a000-000000000004', '2001-01-01',
+        '25000000-0000-4000-a000-000000000004', '2001-01-01',
+        '2001-01-01', '25000000-0000-4000-a000-000000000004');
+
+-- OA removes T1 from school A.
+update public.workspace_members set status = 'removed'
+ where workspace_id = '25000000-0000-4000-b000-000000000001'
+   and user_id = '25000000-0000-4000-a000-000000000002';
+
+select tests.logout();
+select ok(
+  (select invited_by is null and invitation_id is null
+          and created_by = '25000000-0000-4000-a000-000000000001'
+          and joined_at > '2020-01-01' and created_at > '2020-01-01'
+          and removed_at is null and removed_by is null
+     from public.workspace_members
+    where workspace_id = '25000000-0000-4000-b000-000000000001'
+      and user_id = '25000000-0000-4000-a000-000000000005'),
+  'G5: a client INSERT cannot forge invited_by, joined_at, created_* or removal stamps');
+
+select tests.login('25000000-0000-4000-a000-000000000002');  -- T1, removed
+select is(
+  (select count(*)::int from public.files where owner_id = '25000000-0000-4000-a000-000000000002'),
+  0, 'G6: a removed teacher can no longer read their own file rows');
+
+update public.files set is_sensitive = true, original_name = 'hijacked.pdf'
+ where id = '25000000-0000-4000-f000-000000000002';
+select tests.logout();
+select ok(
+  (select not is_sensitive and original_name = 'lesson-notes.pdf'
+     from public.files where id = '25000000-0000-4000-f000-000000000002'),
+  'G7: a removed teacher can no longer update their own file rows');
 
 -- =====================================================================
 -- F. SECURITY DEFINER sweep
