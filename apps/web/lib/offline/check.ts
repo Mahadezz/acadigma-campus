@@ -1,4 +1,10 @@
 import {
+  deleteOutbox,
+  notifyOutboxChanged,
+  outboxStore,
+  outboxUserIds,
+} from "./outbox-db"
+import {
   DATA_CACHE_PREFIX,
   decidePurge,
   type OfflineSnapshot,
@@ -24,6 +30,11 @@ function readSnapshot(): OfflineSnapshot | null {
   }
 }
 
+/** The user the last successful check saw here, if any. */
+export function snapshotUserId(): string | null {
+  return readSnapshot()?.userId ?? null
+}
+
 function writeSnapshot(next: OfflineSnapshot | null): void {
   try {
     if (next) localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(next))
@@ -38,19 +49,31 @@ function writeSnapshot(next: OfflineSnapshot | null): void {
  * Asks the worker to purge first: it marks every page write in flight as
  * stale before deleting (`purge-guard.ts`), which the page cannot do. Gives up
  * after 2 s (a busy or dying worker); the page's own delete still runs.
+ *
+ * Every worker of the registration gets it — installing, waiting and active,
+ * not only this page's controller: mid-update a new worker may already be
+ * serving fetches, and a first load has no controller at all (#83 re-check).
  */
-function purgeInWorker(): Promise<void> {
-  const worker =
-    typeof navigator === "undefined"
-      ? null
-      : navigator.serviceWorker?.controller
-  if (!worker) return Promise.resolve()
-  return new Promise((resolve) => {
-    const channel = new MessageChannel()
-    channel.port1.onmessage = () => resolve()
-    setTimeout(resolve, 2000)
-    worker.postMessage({ type: PURGE_MESSAGE }, [channel.port2])
-  })
+async function purgeInWorker(): Promise<void> {
+  const sw = typeof navigator === "undefined" ? null : navigator.serviceWorker
+  if (!sw) return
+  const reg = await sw.getRegistration?.().catch(() => undefined)
+  const workers = new Set(
+    [sw.controller, reg?.installing, reg?.waiting, reg?.active].filter(
+      (w): w is ServiceWorker => w != null
+    )
+  )
+  await Promise.all(
+    [...workers].map(
+      (worker) =>
+        new Promise<void>((resolve) => {
+          const channel = new MessageChannel()
+          channel.port1.onmessage = () => resolve()
+          setTimeout(resolve, 2000)
+          worker.postMessage({ type: PURGE_MESSAGE }, [channel.port2])
+        })
+    )
+  )
 }
 
 /** Deletes every `acadigma-data-*` cache, through the worker first. */
@@ -112,12 +135,78 @@ async function fetchSessionCheck(): Promise<SessionCheck> {
  * §4.8: asks the server who is signed in here, in which workspace and with
  * which role, and wipes the page cache if any of that changed since the last
  * check. Returns whether it purged.
+ *
+ * `switchedTo`: the workspace switcher has just wiped every cache itself. If
+ * the check confirms that workspace, the change is the switch, and a second
+ * wipe would only throw away the new workspace's first page (#83 re-check).
  */
-export async function runOfflineCheck(): Promise<boolean> {
-  const decision = decidePurge(readSnapshot(), await fetchSessionCheck())
+export async function runOfflineCheck(
+  opts: { switchedTo?: string } = {}
+): Promise<boolean> {
+  return (await checkSession(opts)).purged
+}
+
+/**
+ * §4.8, the outbox half (D-309), kept apart from the page wipe: another
+ * user's outbox is never sent or shown to this user (it is kept, and only
+ * counted, while it holds work; deleted once empty), and this user's items for a workspace they are no longer an
+ * active member of are deleted. A role change keeps them — they replay under
+ * the new role, where the server decides. Signed out keeps everything: an
+ * expired session resumes for the same user (§4.6).
+ */
+async function purgeOutboxes(
+  check: Extract<SessionCheck, { kind: "signed_in" }>
+): Promise<void> {
+  if (typeof indexedDB === "undefined") return
+  const users = await outboxUserIds()
+  // Another teacher's unsent work is an official record: kept while it
+  // holds anything (only counted, never shown), deleted once empty. The
+  // choice to delete it is Part 2b's (§4.6); review, #89.
+  let waiting = 0
+  for (const id of users) {
+    if (id === check.userId) continue
+    const n = (await outboxStore(id).list()).length
+    if (n > 0) waiting += n
+    else await deleteOutbox(id)
+  }
+  others = waiting
+  // No outbox of theirs here: nothing to open (opening would create one).
+  if (users.includes(check.userId)) {
+    const store = outboxStore(check.userId)
+    for (const item of await store.list()) {
+      if (!check.activeWorkspaceIds.includes(item.workspaceId)) {
+        await store.remove(item.id)
+      }
+    }
+  }
+  notifyOutboxChanged()
+}
+
+let others = 0
+/** How many unsent changes of other users this device holds (last check). */
+export function othersWaiting(): number {
+  return others
+}
+
+/** The check and both purges; what replay needs to know who may send. */
+export async function checkSession(
+  opts: { switchedTo?: string } = {}
+): Promise<{ purged: boolean; check: SessionCheck }> {
+  const check = await fetchSessionCheck()
+  if (check.kind === "signed_in") {
+    await purgeOutboxes(check).catch(() => undefined)
+  }
+  const decision = decidePurge(readSnapshot(), check)
+  if (
+    opts.switchedTo &&
+    check.kind === "signed_in" &&
+    check.workspaceId === opts.switchedTo
+  ) {
+    decision.purge = false
+  }
   if (decision.purge) await purgeDataCaches().catch(() => undefined)
   if (decision.next !== undefined) writeSnapshot(decision.next)
-  return decision.purge
+  return { purged: decision.purge, check }
 }
 
 /** When the last check stored a user, or a data cache exists, there is something to guard. */

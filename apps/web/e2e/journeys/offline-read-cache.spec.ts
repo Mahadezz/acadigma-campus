@@ -54,6 +54,11 @@ test("opened pages read offline, generate buttons need internet, workspace switc
 
   // The worker controls the page once it has activated (clientsClaim).
   await page.waitForFunction(() => navigator.serviceWorker?.controller != null)
+  // The first check after sign-in wipes the cache (no snapshot yet, D-308);
+  // let it finish before opening pages, or it takes the first one with it.
+  await page.waitForFunction(
+    () => localStorage.getItem("acadigma-offline-snapshot") !== null
+  )
 
   // Open two pages online: a full load each, so the worker caches them.
   await page.goto("/app/reports")
@@ -169,6 +174,11 @@ test("a removed member's next open leaves no school page cached", async ({
   await page.getByRole("button", { name: "Sign in" }).click()
   await page.waitForURL(/\/app/)
   await page.waitForFunction(() => navigator.serviceWorker?.controller != null)
+  // The first check after sign-in wipes the cache (no snapshot yet, D-308);
+  // let it finish before opening pages, or it takes the first one with it.
+  await page.waitForFunction(
+    () => localStorage.getItem("acadigma-offline-snapshot") !== null
+  )
   await page.goto("/app/classes")
   await expect
     .poll(async () => (await cachedUrls(page)).length, { timeout: 15_000 })

@@ -76,4 +76,27 @@ describe("saveAttendanceSession", () => {
     expect(!result.ok && result.error.code).toBe("payment_required")
     expect(mockSave).not.toHaveBeenCalled()
   })
+  it("never sends a queued save under another user or workspace (F-ID-11 §5.8)", async () => {
+    const W = "11111111-1111-4111-8111-111111111111"
+    const U = "22222222-2222-4222-8222-222222222222"
+    ctx.workspaceId = W
+    ctx.userId = U
+    for (const queuedFor of [
+      { userId: STUDENT, workspaceId: W },
+      { userId: U, workspaceId: STUDENT },
+    ]) {
+      const result = await saveAttendanceSession({ ...INPUT, queuedFor })
+      expect(!result.ok && result.error.fieldErrors?._root).toEqual([
+        "WRONG_ACCOUNT",
+      ])
+    }
+    expect(mockSave).not.toHaveBeenCalled()
+    const result = await saveAttendanceSession({
+      ...INPUT,
+      queuedFor: { userId: U, workspaceId: W },
+    })
+    expect(result.ok).toBe(true)
+    ctx.workspaceId = "w"
+    ctx.userId = "u"
+  })
 })

@@ -95,6 +95,8 @@ export function ClassHubView({
   students,
   latestExam,
   month,
+  userId,
+  workspaceId,
 }: {
   t: Messages
   locale: Locale
@@ -116,6 +118,11 @@ export function ClassHubView({
   latestExam: SectionPrintExam | null
   /** `YYYY-MM`, this month — `null` when today's date could not be read. */
   month: string | null
+  /** Who is taking the roll, where: an offline save is queued for them
+   * (F-ID-11 Part 2a) — the same `RollCall` the full app's Attendance tab
+   * uses needs these to queue a save made offline in this hub. */
+  userId: string
+  workspaceId: string
 }) {
   const s = t.basicMode.classHub
   const [tab, setTab] = React.useState<ClassHubTabId>("attendance")
@@ -201,6 +208,8 @@ export function ClassHubView({
               students={attendance.students}
               sessionUpdatedAt={attendance.sessionUpdatedAt}
               readOnlyReason={attendance.readOnlyReason}
+              userId={userId}
+              workspaceId={workspaceId}
               basic
               basicCopy={{
                 confirmTemplate: s.attendance.confirmTemplate,

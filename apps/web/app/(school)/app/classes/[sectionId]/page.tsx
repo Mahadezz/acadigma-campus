@@ -122,6 +122,8 @@ export default async function ClassHubPage({
       studentCount={hub.data.studentCount}
       tabs={hub.data.tabs}
       month={day.ok ? day.data.today.slice(0, 7) : null}
+      userId={ctx.userId}
+      workspaceId={ctx.workspaceId}
       attendance={
         day.ok && attendanceSection && rollCall?.ok
           ? {

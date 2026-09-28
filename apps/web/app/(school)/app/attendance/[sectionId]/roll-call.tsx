@@ -12,6 +12,7 @@ import type {
   ApiError,
   AttendanceStatus,
   RollCallStudent,
+  SaveAttendanceInput,
 } from "@acadigma/contracts"
 import { Button } from "@acadigma/ui/components/button"
 import { Checkbox } from "@acadigma/ui/components/checkbox"
@@ -22,8 +23,16 @@ import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { useOfflineCopy } from "@/app/(shared)/offline/offline-provider"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
+import {
+  onOutboxSent,
+  queuedItem,
+  queueSave,
+  sendQueued,
+  useOutbox,
+} from "@/lib/offline/outbox-client"
 
 import { saveAttendanceSession } from "../actions"
 import { fill } from "../format"
@@ -68,6 +77,8 @@ export function RollCall({
   readOnlyReason,
   basic = false,
   basicCopy,
+  userId,
+  workspaceId,
 }: {
   t: T
   locale: Locale
@@ -97,6 +108,9 @@ export function RollCall({
     undoToast: string
     undo: string
   }
+  /** Who is taking the roll, where: an offline save is queued for them. */
+  userId: string
+  workspaceId: string
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -122,6 +136,44 @@ export function RollCall({
       : null
   )
   const [undoMarks, setUndoMarks] = useState<Marks | null>(null)
+  const getOfflineCopy = useOfflineCopy()
+  const entityKey = `attendance:${sectionId}:${date}`
+  // F-ID-11 Part 2a (D-309): this class's saves still on the phone, live —
+  // waiting to send, or refused (a conflict is shown, never swallowed).
+  const mine = useOutbox(userId).filter((i) => i.entityKey === entityKey)
+  const waiting = mine.some(
+    (i) => i.status === "pending" || i.status === "sending"
+  )
+  const refused = mine.find(
+    (i) => i.status === "conflict" || i.status === "needs_attention"
+  )
+
+  useEffect(() => {
+    // A roll taken offline and not sent yet shows instead of the (older)
+    // cached page's, so reopening the class offline shows what she saved.
+    let live = true
+    void queuedItem(userId, entityKey).then((item) => {
+      if (!live || !item) return
+      setMarks((m) => ({
+        ...m,
+        ...Object.fromEntries(
+          item.payload.records.map((r) => [r.studentId, r.status])
+        ),
+      }))
+      setBulkMarked(item.payload.bulkMarked)
+      setAnyway(item.payload.allowNonSchoolDay)
+    })
+    // When it lands, the version it created is the next save's base.
+    const off = onOutboxSent((key, updatedAt) => {
+      if (key !== entityKey) return
+      setVersion(updatedAt)
+      router.refresh()
+    })
+    return () => {
+      live = false
+      off()
+    }
+  }, [userId, entityKey, router])
 
   const readOnly = readOnlyReason !== null
   const counts = useMemo(() => {
@@ -167,22 +219,93 @@ export function RollCall({
     setBeforeBulk(null)
   }
 
+  /** What she entered, readable aloud to an admin from the queue sheet. */
+  function detail(toSave: Marks): string {
+    const c = getOfflineCopy()
+    const names = (status: AttendanceStatus) =>
+      students
+        .filter((s) => toSave[s.studentId] === status)
+        .map((s) =>
+          locale === "bn" && s.fullNameBn ? s.fullNameBn : s.fullName
+        )
+    const absent = names("absent")
+    const late = names("late")
+    if (absent.length === 0 && late.length === 0) return c.detailAllPresent
+    return [
+      absent.length > 0
+        ? c.detailAbsent.replace("{names}", absent.join(", "))
+        : "",
+      late.length > 0 ? c.detailLate.replace("{names}", late.join(", ")) : "",
+    ]
+      .filter(Boolean)
+      .join(" · ")
+  }
+
+  // §4.3: keep the save on the phone; a double tap is one item (same key),
+  // the next save takes a new key.
+  async function queue(input: SaveAttendanceInput, toSave: Marks) {
+    const c = getOfflineCopy()
+    let result
+    try {
+      result = await queueSave({
+        userId,
+        workspaceId,
+        kind: "attendance.save",
+        entityKey,
+        payload: input,
+        summary: c.attendanceSummary
+          .replace("{section}", title)
+          .replace("{date}", dateLabel),
+        detail: detail(toSave),
+      })
+    } catch {
+      // IndexedDB unavailable (private mode, full disk): say so plainly and
+      // keep her marks on screen to save again online.
+      setError(c.saveOnPhoneFailed)
+      return
+    }
+    if (result === "full") {
+      setError(c.queueFull)
+      return
+    }
+    setBeforeBulk(null)
+    setBulkMarked(false)
+    setKey(crypto.randomUUID())
+    if (navigator.onLine) void sendQueued(userId)
+  }
+
   function saveMarks(toSave: Marks, bulk: boolean) {
     setError(null)
+    setSaved(null)
     setConfirmOpen(false)
     startTransition(async () => {
-      const result = await saveAttendanceSession({
+      const input: SaveAttendanceInput = {
         idempotencyKey: key,
         sectionId,
         date,
         records: students.map((s) => ({
           studentId: s.studentId,
-          status: toSave[s.studentId],
+          status: toSave[s.studentId] as AttendanceStatus,
         })),
         bulkMarked: bulk,
         allowNonSchoolDay: !isSchoolDay && anyway,
         expectedUpdatedAt: version,
-      })
+      }
+      // Offline, or an earlier save of this class still waiting: queue it —
+      // sent now, ahead of the waiting one, it would conflict with her own.
+      if (!navigator.onLine || (await queuedItem(userId, entityKey))) {
+        await queue(input, toSave)
+        return
+      }
+      let result
+      try {
+        result = await saveAttendanceSession(input)
+      } catch {
+        // The request never came back (no signal, or the reply was lost):
+        // queued with the same key, a replay returns the stored result.
+        await queue(input, toSave)
+        return
+      }
       if (!result.ok) {
         setError(saveErrorText(t, result.error))
         return
@@ -351,6 +474,25 @@ export function RollCall({
           <div className="space-y-2">
             {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
             {saved ? <InlineAlert tone="success">{saved}</InlineAlert> : null}
+            {waiting && !saved ? (
+              <InlineAlert tone="offline">
+                {getOfflineCopy().savedOnPhone}
+              </InlineAlert>
+            ) : null}
+            {refused && !waiting ? (
+              <InlineAlert tone="error">
+                {refused.status === "conflict"
+                  ? getOfflineCopy().conflictReason
+                  : saveErrorText(t, {
+                      code: (refused.lastError?.code ??
+                        "internal") as ApiError["code"],
+                      message: refused.lastError?.message ?? "",
+                      ...(refused.lastError?.root
+                        ? { fieldErrors: { _root: [refused.lastError.root] } }
+                        : {}),
+                    })}
+              </InlineAlert>
+            ) : null}
             {basic && basicCopy && undoMarks ? (
               <InlineAlert tone="info">
                 <span className="flex flex-wrap items-center justify-between gap-2">
