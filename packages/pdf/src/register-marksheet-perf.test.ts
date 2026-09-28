@@ -190,6 +190,7 @@ beforeAll(async () => {
           dayOfMonth: 1,
           isSchoolDay: true,
           sessionTaken: true,
+          presentCount: 1,
         },
       ],
       students: [
