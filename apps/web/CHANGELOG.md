@@ -1,5 +1,12 @@
 # @acadigma/web
 
+## 0.11.1
+
+### Patch Changes
+
+- Updated dependencies [66f3c5d]
+  - @acadigma/db@0.10.2
+
 ## 0.11.0
 
 ### Minor Changes
