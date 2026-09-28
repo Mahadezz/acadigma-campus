@@ -77,6 +77,8 @@ values ('99990010-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '99991010-1010-1010-1010-1010101
 --    the source and target workspace (the exact shape D-36/this migration's
 --    own comment warns a role-predicate-only WITH CHECK would otherwise
 --    approve) — depth 1, not the cascade, so the exception never applies.
+--    Since D-77 (#94) `authenticated` has no UPDATE on workspace_id, so the
+--    column grant refuses it before the freeze trigger runs.
 -- =====================================================================
 select tests.login('99990010-0000-0000-0000-000000000001');
 
@@ -84,7 +86,7 @@ select throws_ok(
   $$update public.data_requests
        set workspace_id = '99991020-2020-2020-2020-202020202020'
      where id = '99990010-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
-  '42501', 'workspace_id is immutable',
+  '42501', 'permission denied for table data_requests',
   'a direct client UPDATE re-parenting data_requests to another workspace still raises, even for an owner of both ends');
 
 -- =====================================================================
@@ -96,7 +98,7 @@ select throws_ok(
   $$update public.data_requests
        set workspace_id = null
      where id = '99990010-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
-  '42501', 'workspace_id is immutable',
+  '42501', 'permission denied for table data_requests',
   'a direct client UPDATE nulling workspace_id still raises — only the FK cascade''s own nested call may do this');
 
 select tests.logout();
