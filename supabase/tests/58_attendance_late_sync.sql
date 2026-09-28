@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-ID-11 Part 2b — late sync of an offline roll call (D-310,
--- 20260926214810_attendance_late_sync.sql, spec §5.3)
+-- 20260928165204_attendance_late_sync.sql, spec §5.3)
 --
 -- A teacher's replay outside the edit window is accepted only when no
 -- session exists for that section and date, captured_at is inside
