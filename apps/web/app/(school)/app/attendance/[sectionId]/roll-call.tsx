@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 
 import dynamic from "next/dynamic"
 import Link from "next/link"
@@ -136,6 +136,14 @@ export function RollCall({
       : null
   )
   const [undoMarks, setUndoMarks] = useState<Marks | null>(null)
+  // Review fix (LOW 5): bumped once per terminal save outcome (queued or
+  // sent, success or failure) so the focus effect below fires exactly once
+  // per save attempt — never on mount, never on an unrelated re-render (an
+  // outbox item arriving for a *different* class, the 30s Undo timeout).
+  const [saveTick, setSaveTick] = useState(0)
+  const isFirstRender = useRef(true)
+  const resultRef = useRef<HTMLDivElement>(null)
+  const undoButtonRef = useRef<HTMLButtonElement>(null)
   const getOfflineCopy = useOfflineCopy()
   const entityKey = `attendance:${sectionId}:${date}`
   // F-ID-11 Part 2a (D-309): this class's saves still on the phone, live —
@@ -195,6 +203,26 @@ export function RollCall({
     return () => clearTimeout(timer)
   }, [undoMarks])
 
+  // Review fix (LOW 5): Save is disabled while `pending`, so when
+  // `ConfirmSheet` returns focus to it on close, focus lands on a disabled
+  // element and the browser drops it to `<body>`. Once the save actually
+  // finishes, move it somewhere meaningful instead: the Undo button when
+  // this save offered one, otherwise the result alert. Gated on `saveTick`
+  // (not `undoMarks`/`saved`/`error` directly) so this never fires on mount
+  // or on a re-render this screen's own save didn't cause.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    if (basic && undoMarks) {
+      undoButtonRef.current?.focus()
+    } else {
+      resultRef.current?.focus()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see comment above: keyed on saveTick only
+  }, [saveTick])
+
   function change(next: Marks) {
     setMarks(next)
     setSaved(null)
@@ -217,6 +245,26 @@ export function RollCall({
     setBulkMarked(false)
     change(beforeBulk)
     setBeforeBulk(null)
+  }
+
+  // Review fix (HIGH 1/2): the one place a save — sent or queued — commits
+  // its values to screen and, in basic mode, updates what Undo points back
+  // to. Both `saveMarks`'s online-success branch and `queue`'s own success
+  // below call this, so an offline save is no longer invisible on screen
+  // (marks stayed at the pre-save value before this fix) and Undo, after a
+  // chain of queued saves, always targets the save right before the latest
+  // one — never a stale earlier value.
+  function recordLocalSave(toSave: Marks) {
+    setMarks(toSave)
+    setBeforeBulk(null)
+    setBulkMarked(false)
+    setKey(crypto.randomUUID())
+    // §5.3 (basic mode only): only offer Undo once a prior value exists to
+    // go back to; a first save (lastSavedMarks still null) offers none.
+    if (basic) {
+      setUndoMarks(lastSavedMarks)
+      setLastSavedMarks(toSave)
+    }
   }
 
   /** What she entered, readable aloud to an admin from the queue sheet. */
@@ -262,15 +310,16 @@ export function RollCall({
       // IndexedDB unavailable (private mode, full disk): say so plainly and
       // keep her marks on screen to save again online.
       setError(c.saveOnPhoneFailed)
+      setSaveTick((n) => n + 1)
       return
     }
     if (result === "full") {
       setError(c.queueFull)
+      setSaveTick((n) => n + 1)
       return
     }
-    setBeforeBulk(null)
-    setBulkMarked(false)
-    setKey(crypto.randomUUID())
+    recordLocalSave(toSave)
+    setSaveTick((n) => n + 1)
     if (navigator.onLine) void sendQueued(userId)
   }
 
@@ -308,26 +357,18 @@ export function RollCall({
       }
       if (!result.ok) {
         setError(saveErrorText(t, result.error))
+        setSaveTick((n) => n + 1)
         return
       }
-      setMarks(toSave)
       setVersion(result.data.updatedAt)
-      setBeforeBulk(null)
-      setBulkMarked(false)
-      setKey(crypto.randomUUID())
       setSaved(
         fill(t.saved, {
           present: result.data.present,
           absent: result.data.absent,
         })
       )
-      // §5.3 (basic mode only — the full app has no post-save Undo today):
-      // only offer it when this save overwrote values already on the
-      // server; a first save has nothing to go back to.
-      if (basic) {
-        setUndoMarks(lastSavedMarks)
-        setLastSavedMarks(toSave)
-      }
+      recordLocalSave(toSave)
+      setSaveTick((n) => n + 1)
       router.refresh()
     })
   }
@@ -472,42 +513,63 @@ export function RollCall({
         // Sticky above the phone's bottom nav (56px + safe area), in the thumb zone.
         <div className="bg-background sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 border-t py-3 lg:bottom-0">
           <div className="space-y-2">
-            {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
-            {saved ? <InlineAlert tone="success">{saved}</InlineAlert> : null}
-            {waiting && !saved ? (
-              <InlineAlert tone="offline">
-                {getOfflineCopy().savedOnPhone}
-              </InlineAlert>
-            ) : null}
-            {refused && !waiting ? (
-              <InlineAlert tone="error">
-                {refused.status === "conflict"
-                  ? getOfflineCopy().conflictReason
-                  : saveErrorText(t, {
-                      code: (refused.lastError?.code ??
-                        "internal") as ApiError["code"],
-                      message: refused.lastError?.message ?? "",
-                      ...(refused.lastError?.root
-                        ? { fieldErrors: { _root: [refused.lastError.root] } }
-                        : {}),
-                    })}
-              </InlineAlert>
-            ) : null}
-            {basic && basicCopy && undoMarks ? (
-              <InlineAlert tone="info">
-                <span className="flex flex-wrap items-center justify-between gap-2">
-                  {basicCopy.undoToast}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="min-h-11"
-                    onClick={undoSave}
-                    disabled={pending}
-                  >
-                    {basicCopy.undo}
-                  </Button>
-                </span>
+            {/* Review fix (LOW 5): focus target once a save finishes — see
+             * the `saveTick` effect above. Always mounted (this block's own
+             * conditional, `!readOnly && students.length > 0`, is the
+             * outermost one already), so the ref is valid whether or not an
+             * alert is showing yet. */}
+            <div ref={resultRef} tabIndex={-1} className="space-y-2">
+              {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+              {saved ? <InlineAlert tone="success">{saved}</InlineAlert> : null}
+              {waiting && !saved ? (
+                <InlineAlert tone="offline">
+                  {getOfflineCopy().savedOnPhone}
+                </InlineAlert>
+              ) : null}
+              {refused && !waiting ? (
+                <InlineAlert tone="error">
+                  {refused.status === "conflict"
+                    ? getOfflineCopy().conflictReason
+                    : saveErrorText(t, {
+                        code: (refused.lastError?.code ??
+                          "internal") as ApiError["code"],
+                        message: refused.lastError?.message ?? "",
+                        ...(refused.lastError?.root
+                          ? {
+                              fieldErrors: { _root: [refused.lastError.root] },
+                            }
+                          : {}),
+                      })}
+                </InlineAlert>
+              ) : null}
+            </div>
+            {basic && basicCopy ? (
+              // Review fix (MEDIUM 4): always mounted rather than appearing
+              // together with `undoMarks` — an `aria-live` region has to
+              // already exist in the DOM before its content changes for most
+              // screen readers to announce it; a region that mounts with its
+              // text already inside is frequently skipped. Only the content
+              // (and visibility) changes now.
+              <InlineAlert
+                tone="info"
+                className={undoMarks ? undefined : "sr-only"}
+              >
+                {undoMarks ? (
+                  <span className="flex flex-wrap items-center justify-between gap-2">
+                    {basicCopy.undoToast}
+                    <Button
+                      ref={undoButtonRef}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="min-h-11"
+                      onClick={undoSave}
+                      disabled={pending}
+                    >
+                      {basicCopy.undo}
+                    </Button>
+                  </span>
+                ) : null}
               </InlineAlert>
             ) : null}
             <div className="flex items-center gap-3">
