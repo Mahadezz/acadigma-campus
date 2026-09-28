@@ -14,7 +14,9 @@
 --    conventions (receipts/<ws>/..., fees/<ws>/..., F-CM-*). A client
 --    write is now held to:
 --      * a path under `<workspace_id>/<own uid>/`, so nobody registers
---        a path another uploader or the server will use;
+--        a path another uploader or the server will use, and with no
+--        `..` segment to climb out of it;
+--      * an uploader's own rows only while they are still a member;
 --      * `public` (anon-era marketing assets) only for owners/admins;
 --      * no server-owned column: virus_scan_status, download_count,
 --        purge_after, deleted_at on insert; bucket/path/owner/size/mime
@@ -24,9 +26,9 @@
 --    object is served by its storage URL, which needs no row, so the
 --    row is now readable by the school's staff only.
 -- ---------------------------------------------------------------------
-drop policy files_select_public on public.files;
+drop policy if exists files_select_public on public.files;
 
-drop policy files_select_member on public.files;
+drop policy if exists files_select_member on public.files;
 create policy files_select_member on public.files
   for select to authenticated
   using (
@@ -34,13 +36,13 @@ create policy files_select_member on public.files
     and (
       (visibility in ('workspace', 'public')
         and app.has_role(workspace_id, array['owner', 'admin', 'teacher', 'staff']))
-      or owner_id = (select auth.uid())
+      or (owner_id = (select auth.uid()) and app.member_role(workspace_id) is not null)
       or app.has_role(workspace_id, array['owner', 'admin'])
       or (select app.is_platform_admin())
     )
   );
 
-drop policy files_insert on public.files;
+drop policy if exists files_insert on public.files;
 create policy files_insert on public.files
   for insert to authenticated
   with check (
@@ -48,15 +50,18 @@ create policy files_insert on public.files
     and owner_id   = (select auth.uid())
     and created_by = (select auth.uid())
     and starts_with(path, workspace_id::text || '/' || (select auth.uid())::text || '/')
+    and path !~ '(^|/)\.\.(/|$)'
     and (visibility <> 'public' or app.has_role(workspace_id, array['owner', 'admin']))
   );
 
-drop policy files_update on public.files;
+drop policy if exists files_update on public.files;
 create policy files_update on public.files
   for update to authenticated
-  using (owner_id = (select auth.uid()) or app.has_role(workspace_id, array['owner', 'admin']))
+  using ((owner_id = (select auth.uid()) and app.member_role(workspace_id) is not null)
+         or app.has_role(workspace_id, array['owner', 'admin']))
   with check (
-    (owner_id = (select auth.uid()) or app.has_role(workspace_id, array['owner', 'admin']))
+    ((owner_id = (select auth.uid()) and app.member_role(workspace_id) is not null)
+     or app.has_role(workspace_id, array['owner', 'admin']))
     and (visibility <> 'public' or app.has_role(workspace_id, array['owner', 'admin']))
   );
 
@@ -84,9 +89,10 @@ grant insert (id, workspace_id, kind, params, locale, requested_by, idempotency_
 --    school request now needs the requester to belong to that school; an
 --    ex-member or a stranger files a platform-level request (workspace_id
 --    null), which platform staff triage. The deadline, outcome and file
---    are not client-insertable (due_on is the privacy-notice clock).
+--    are not client-insertable (due_on is the privacy-notice clock), and
+--    triage may update only the status and its reasons.
 -- ---------------------------------------------------------------------
-drop policy data_requests_insert on public.data_requests;
+drop policy if exists data_requests_insert on public.data_requests;
 create policy data_requests_insert on public.data_requests
   for insert to authenticated
   with check (
@@ -95,8 +101,13 @@ create policy data_requests_insert on public.data_requests
     and (workspace_id is null or app.member_role(workspace_id) is not null)
   );
 
-revoke insert on public.data_requests from authenticated;
+revoke insert, update on public.data_requests from authenticated;
 grant insert (workspace_id, requester_user_id, subject_type, subject_id, kind, detail)
+  on public.data_requests to authenticated;
+-- Triage (data_requests_update: owners/admins, platform staff) moves the
+-- status and records its reason; the requester, subject, school, deadline
+-- and file stay as filed. No app code updates this table yet.
+grant update (status, legal_hold_reason, refusal_reason, completed_at)
   on public.data_requests to authenticated;
 
 -- ---------------------------------------------------------------------
@@ -105,7 +116,7 @@ grant insert (workspace_id, requester_user_id, subject_type, subject_id, kind, d
 --    capability is fees.cashier: separation of duties is its point, so
 --    capability writes are owner-only.
 -- ---------------------------------------------------------------------
-drop policy workspace_member_capabilities_write on public.workspace_member_capabilities;
+drop policy if exists workspace_member_capabilities_write on public.workspace_member_capabilities;
 create policy workspace_member_capabilities_write on public.workspace_member_capabilities
   for all to authenticated
   using (app.has_role(workspace_id, array['owner']))
@@ -118,8 +129,10 @@ create policy workspace_member_capabilities_write on public.workspace_member_cap
 --    only (current_user 'authenticated'; SECURITY DEFINER functions run as
 --    their owner and keep their own rules):
 --      * provenance (joined_at, invited_by, invitation_id, created_by,
---        created_at, removed_at, removed_by) is never client-set; the
---        lifecycle stamps below still set it on activation/removal;
+--        created_at, removed_at, removed_by) is never client-set: an
+--        UPDATE that changes it is refused, an INSERT has it overwritten
+--        with server stamps; the lifecycle stamps below still set it on
+--        activation/removal;
 --      * on their own row a member who is not an owner/admin may change
 --        phone, department and subjects only.
 -- ---------------------------------------------------------------------
@@ -135,6 +148,18 @@ declare
   v_returning   boolean := false;
   v_unlinked    boolean := false;
 begin
+  -- D-77 (#94): an owner/admin adding a member directly cannot forge
+  -- provenance either; the server stamps it. Definer paths keep theirs.
+  if tg_op = 'INSERT' and current_user in ('authenticated', 'anon') then
+    new.invitation_id := null;
+    new.invited_by    := null;
+    new.created_by    := v_uid;
+    new.created_at    := now();
+    new.joined_at     := case when new.status = 'active' then now() end;
+    new.removed_at    := case when new.status = 'removed' then now() end;
+    new.removed_by    := case when new.status = 'removed' then v_uid end;
+  end if;
+
   if tg_op = 'UPDATE' then
     if new.workspace_id is distinct from old.workspace_id
        or new.user_id is distinct from old.user_id then

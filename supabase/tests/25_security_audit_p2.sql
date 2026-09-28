@@ -28,6 +28,10 @@
 --      explicit allowlist in `app` (the unchecked writers log_audit_event,
 --      notify, record_consent, next_id, log_file_access and the unused
 --      is_adult are no longer on it).
+--   G. #94 review: no `..` in a client file path; owners/admins triage
+--      data_requests through status and reasons only; a client INSERT
+--      into workspace_members gets server provenance stamps; a removed
+--      uploader loses their own file rows.
 -- =====================================================================
 begin;
 select plan(40);

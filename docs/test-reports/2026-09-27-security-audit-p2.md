@@ -46,6 +46,18 @@
 | S1  | LOW (latent)    | `authenticated` held EXECUTE on `app` writers that check nothing. `log_audit_event` writes any school's audit trail with any catalogued action, `notify` writes to anyone's inbox, `record_consent` forges consent into any school, `next_id` burns any school's counters, `log_file_access` logs against any file and bumps `download_count`, and `is_adult` reports any user's age band and has no caller. `app` is not exposed by PostgREST, so a future `public` invoker wrapper was the only path in. | `25_…` F3, F4                                                                                            | **Fixed**: EXECUTE revoked from `authenticated` (all callers are definer functions or triggers); F4 pins the remaining allowlist with a reason per entry                |
 | N1  | note            | A client cannot soft-delete a `files` row: `files_select_member`'s `deleted_at is null` also applies to the updated row, so `set deleted_at = now()` fails RLS for everyone. This is true on `main` today.                                                                                                                                                                                                                                                                                                 | found writing A8                                                                                         | **Documented**: soft delete is a server action (DATA-MODEL §7.2); `deleted_at` is not in the update grant                                                               |
 
+### Review follow-ups (#94, security and DB reviewers)
+
+Each got a red `25_…` assertion first (G1–G7: 6 red, G4 already green as the keep-working check), then the fix in the same migration (edited in place; it has not been applied live).
+
+| #   | Severity | Finding                                                                                                                               | Proof      | Fix                                                                                                                                                                                           |
+| --- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | MEDIUM   | Owners/admins still had table-wide UPDATE on `data_requests`, so they could rewrite `due_on`, `requester_user_id`, `subject_id`.      | G2, G3, G4 | Table UPDATE revoked; column grant on `status, legal_hold_reason, refusal_reason, completed_at` (no app code updates the table yet). `10_tenancy_cascade` 1–2 now see the grant refuse first. |
+| R2  | LOW      | The `files` `owner_id = auth.uid()` branch had no membership check: a removed teacher could still read and update their own rows.     | G6, G7     | `and app.member_role(workspace_id) is not null` on that branch of SELECT and UPDATE                                                                                                           |
+| R3  | LOW      | `starts_with(path, '<ws>/<uid>/')` accepted `..` segments.                                                                            | G1         | `and path !~ '(^\|/)\.\.(/\|$)'` on INSERT                                                                                                                                                    |
+| R4  | LOW      | The members provenance lock covered UPDATE only; a client INSERT could forge `invited_by`, `joined_at`, `created_by`, removal stamps. | G5         | The guard overwrites them on a client INSERT (`current_user` `authenticated`/`anon`); no self-service exception, definer paths unchanged                                                      |
+| R5  | LOW (DB) | Six bare `drop policy`.                                                                                                               | —          | `drop policy if exists`                                                                                                                                                                       |
+
 ### Sweep: audited and found sound
 
 - **All SECURITY DEFINER functions in `app`/`public`** pin `search_path = ''` (`25_…` F1), and none is executable by PUBLIC (F2). `anon` holds EXECUTE on `pre_request`, `log_auth_event` and `throttle_*` only (`12_function_grants_invariant.sql`).
@@ -85,16 +97,18 @@ Checked locally against the full migration set: it parses and returns 0 rows.
 
 ### Local (every number from a real run)
 
-| Suite                                                 | Result                                                                                                           |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| pgTAP, `main` baseline                                | 48 files, 1,380 tests, PASS                                                                                      |
-| `25_security_audit_p2.sql` on `main`'s schema         | 22 of 33 red (A1–A4, A6, A7, A11, A12, B1, B2, C1–C3, C5, D1, D4, E1–E4, F3, F4)                                 |
-| pgTAP, this branch                                    | 49 files, 1,413 tests, PASS (`40_report_runs.sql` test 5 now asserts the column-level grant)                     |
-| Integration (`*.integration.test.ts`, real PostgREST) | 7 files, 18 tests passed; new `reports.integration.test.ts` red with the old table-wide grant, green after       |
-| Vitest (`pnpm test`)                                  | 160 files passed, 7 skipped; 1,632 tests passed, 18 skipped (the first run had one timeout that passed on rerun) |
-| Coverage (all files)                                  | statements 87.36 %, branches 78.22 %, functions 86.83 %, lines 90.00 %                                           |
-| typecheck / lint / format / every `scripts/check-*`   | pass                                                                                                             |
-| `pnpm --filter @acadigma/web build`                   | pass                                                                                                             |
+| Suite                                                 | Result                                                                                                             |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| pgTAP, `main` baseline                                | 48 files, 1,380 tests, PASS                                                                                        |
+| `25_security_audit_p2.sql` on `main`'s schema         | 22 of 33 red (A1–A4, A6, A7, A11, A12, B1, B2, C1–C3, C5, D1, D4, E1–E4, F3, F4)                                   |
+| pgTAP, this branch                                    | 49 files, 1,413 tests, PASS (`40_report_runs.sql` test 5 now asserts the column-level grant)                       |
+| #94 follow-ups: `25_…` G1–G7 before the fix           | 6 of 7 red (G4 is the keep-working check); after: 40/40 pass                                                       |
+| #94 follow-ups: every pgTAP file with the migration   | pass, except `22_` and `36_`, which fail identically without it (local seed data on the shared stack; CI is clean) |
+| Integration (`*.integration.test.ts`, real PostgREST) | 7 files, 18 tests passed; new `reports.integration.test.ts` red with the old table-wide grant, green after         |
+| Vitest (`pnpm test`)                                  | 160 files passed, 7 skipped; 1,632 tests passed, 18 skipped (the first run had one timeout that passed on rerun)   |
+| Coverage (all files)                                  | statements 87.36 %, branches 78.22 %, functions 86.83 %, lines 90.00 %                                             |
+| typecheck / lint / format / every `scripts/check-*`   | pass                                                                                                               |
+| `pnpm --filter @acadigma/web build`                   | pass                                                                                                               |
 
 ### CI
 
@@ -111,9 +125,9 @@ Checked locally against the full migration set: it parses and returns 0 rows.
 
 ## 5. Security checks
 
-The findings table in §3 is this Part's security check. New migration: `20260926215147_security_audit_p2.sql`. It changes the `files` policies and column grants, the `report_runs` and `data_requests` insert column grants, the `data_requests_insert` and `workspace_member_capabilities_write` policies and `app.tg_workspace_members_guard`, and revokes EXECUTE on six `app` functions from `authenticated`. It adds no function and no table.
+The findings table in §3 is this Part's security check. New migration: `20260926215147_security_audit_p2.sql`. It changes the `files` policies and column grants, the `report_runs` and `data_requests` insert column grants, the `data_requests_insert` and `workspace_member_capabilities_write` policies, the `data_requests` update column grant and `app.tg_workspace_members_guard`, and revokes EXECUTE on six `app` functions from `authenticated`. It adds no function and no table.
 
-**Safe to apply live:** it changes only policies, grants and one trigger function: no table rewrite, no index, no data change. Every table it touches is near-empty in production, and each statement takes only a brief lock. Generated types are unchanged, because grants and policies are not part of them.
+**Safe to apply live:** it changes only policies, grants and one trigger function: no table rewrite, no index, no data change. It runs as one transaction, so the policy drops and creates hold an AccessExclusiveLock on four small tables until commit. They are near-empty in production and the migration finishes in well under a second, so this is fine as it is. Generated types are unchanged, because grants and policies are not part of them.
 
 ---
 
