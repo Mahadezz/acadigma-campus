@@ -112,7 +112,9 @@ Checked locally against the full migration set: it parses and returns 0 rows.
 
 ### CI
 
-[Run 36274683185](https://github.com/Mahadezz/acadigma-campus/actions/runs/36274683185) on `a20e113` (draft; `e2e` and `lighthouse` are skipped on drafts):
+After the #94 follow-ups, [run 36454228439](https://github.com/Mahadezz/acadigma-campus/actions/runs/36454228439) on `fbdb5d4` (ready for review): every job passed, including `e2e` and `lighthouse`; pgTAP `Files=49, Tests=1420, Result: PASS`; `db-integration` 7 files; `unit` 160 files passed, 7 skipped.
+
+Before them, [run 36274683185](https://github.com/Mahadezz/acadigma-campus/actions/runs/36274683185) on `a20e113` (draft; `e2e` and `lighthouse` are skipped on drafts):
 
 | Job                                                                                                  | Result                                                                                                    |
 | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
