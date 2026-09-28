@@ -272,15 +272,32 @@ export async function signInWithPassword(
   })
 
   if (error) {
-    await Promise.all([
-      throttleRecordFailure(supabase, "loginByEmail", emailKey),
-      throttleRecordFailure(supabase, "loginByIp", ipKey),
-    ])
     const log = await requestLogger({ route: "auth.login" })
-    // One generic message regardless of which half was wrong (§4.2).
     log.warn({ status: error.status, code: error.code }, "sign-in rejected")
+
+    // Only a genuine wrong email/password counts against the brute-force
+    // throttle (§9 AC5/AC6) -- a GoTrue hiccup (timeout, 5xx, unreachable)
+    // is not a guessed password, and must not spend the same budget a real
+    // attacker would. Found the hard way: under CI's local-stack load,
+    // transient errors on otherwise-correct sign-ins tripped this bucket
+    // for the shared seeded owner account, then blocked every later
+    // journey's legitimate sign-in for the rest of the run (D-76).
+    if (error.code === "invalid_credentials") {
+      await Promise.all([
+        throttleRecordFailure(supabase, "loginByEmail", emailKey),
+        throttleRecordFailure(supabase, "loginByIp", ipKey),
+      ])
+      // One generic message regardless of which half was wrong (§4.2).
+      return err(
+        apiError("unauthenticated", t.auth.login.errorInvalidCredentials)
+      )
+    }
+
     return err(
-      apiError("unauthenticated", t.auth.login.errorInvalidCredentials)
+      apiError(
+        "dependency_unavailable",
+        "Could not sign you in. Try again shortly."
+      )
     )
   }
 

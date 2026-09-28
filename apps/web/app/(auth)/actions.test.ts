@@ -295,7 +295,10 @@ describe("signInWithPassword (F-ID-03 review: stale workspace cookie on a shared
   it("does not clear the cookie when the credentials are rejected", async () => {
     mockSignInWithPassword.mockImplementation(async () => {
       mockCallOrder.push("signInWithPassword")
-      return { data: { user: null }, error: { status: 400, code: "invalid" } }
+      return {
+        data: { user: null },
+        error: { status: 400, code: "invalid_credentials" },
+      }
     })
 
     const result = await signInWithPassword({
