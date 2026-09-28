@@ -184,7 +184,14 @@ beforeAll(async () => {
       sectionName: "ক",
       year: 2026,
       month: 1,
-      days: [{ date: "2026-01-01", dayOfMonth: 1, isSchoolDay: true, sessionTaken: true }],
+      days: [
+        {
+          date: "2026-01-01",
+          dayOfMonth: 1,
+          isSchoolDay: true,
+          sessionTaken: true,
+        },
+      ],
       students: [
         {
           studentId: "00000000-0000-0000-0000-000000000001",
