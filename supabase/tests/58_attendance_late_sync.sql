@@ -10,7 +10,7 @@
 -- event. Any replay's audit row carries queued_offline (AC-2).
 -- =====================================================================
 begin;
-select plan(20);
+select plan(28);
 
 create schema if not exists tests;
 grant usage on schema tests to authenticated;
@@ -133,8 +133,15 @@ begin
 end
 $$;
 -- A register the owner saved late (admins may), before any teacher replay.
-select tests.save('c3100000-0000-4000-8000-000000000001', tests.today() - 5);
+select lives_ok(
+  $$select tests.save('c3100000-0000-4000-8000-000000000001', tests.today() - 5)$$,
+  'an owner saves a register online after the window (admins may)');
 select tests.logout();
+select is((tests.session(tests.today() - 5)).edited_after_window::text || '/' || (tests.session(tests.today() - 5)).synced_late::text,
+  'true/false', '... it is edited_after_window, not synced_late');
+
+select col_not_null('public', 'attendance_sessions', 'queued_offline',
+  'queued_offline is never null (generated from captured_at)');
 
 -- The edit window is the default 2 days throughout.
 
@@ -176,11 +183,11 @@ select throws_ok(
 select throws_ok(
   $$select tests.save('c3100000-0000-4000-8000-000000000012', tests.today() - 3,
       jsonb_build_object('captured_at', tests.at10(tests.today() - 3) - interval '11 hours'))$$,
-  '42501', 'OUTSIDE_EDIT_WINDOW', 'captured before the session date: refused');
+  '22023', 'VALIDATION', 'captured before the session date: refused');
 select throws_ok(
   $$select tests.save('c3100000-0000-4000-8000-000000000013', tests.today() - 3,
       jsonb_build_object('captured_at', now() + interval '1 hour'))$$,
-  '42501', 'OUTSIDE_EDIT_WINDOW', 'captured in the future: refused');
+  '22023', 'VALIDATION', 'captured in the future: refused');
 select throws_ok(
   $$select tests.save('c3100000-0000-4000-8000-000000000014', tests.today() - 6,
       jsonb_build_object('captured_at', tests.at10(tests.today() - 3)))$$,
@@ -229,6 +236,38 @@ select is((select (after ->> 'queued_offline')::boolean from public.audit_events
   'an online save''s audit row carries queued_offline: false');
 select ok((tests.session(tests.today())).captured_at is null,
   'an online save has no captured_at');
+
+-- =====================================================================
+-- captured_at is bounded on every save, not only the late path: a forged
+-- time cannot fake the audit's offline flag (security review, #93)
+-- =====================================================================
+select tests.login('f3100000-0000-0000-0000-000000000002');
+select throws_ok(
+  $$select tests.save('c3100000-0000-4000-8000-000000000030', tests.today() - 2,
+      jsonb_build_object('captured_at', now() + interval '1 hour'))$$,
+  '22023', 'VALIDATION', 'a teacher''s in-window save captured in the future: VALIDATION');
+select throws_ok(
+  $$select tests.save('c3100000-0000-4000-8000-000000000031', tests.today() - 2,
+      jsonb_build_object('captured_at', '1990-01-01T00:00:00Z'))$$,
+  '22023', 'VALIDATION', 'a teacher''s in-window save captured in 1990: VALIDATION');
+select lives_ok(
+  $$select tests.save('c3100000-0000-4000-8000-000000000032', tests.today() - 2,
+      jsonb_build_object('captured_at', now() + interval '2 minutes'))$$,
+  'a device clock up to 5 minutes fast is tolerated');
+select tests.logout();
+
+select tests.login('f3100000-0000-0000-0000-000000000001');
+select throws_ok(
+  $$select tests.save('c3100000-0000-4000-8000-000000000033', tests.today() - 5,
+      jsonb_build_object('captured_at', now() + interval '1 day',
+                         'expected_updated_at', (tests.session(tests.today() - 5)).updated_at))$$,
+  '22023', 'VALIDATION', 'an owner''s save captured in the future: VALIDATION');
+select throws_ok(
+  $$select tests.save('c3100000-0000-4000-8000-000000000034', tests.today() - 5,
+      jsonb_build_object('captured_at', '1990-01-01T00:00:00Z',
+                         'expected_updated_at', (tests.session(tests.today() - 5)).updated_at))$$,
+  '22023', 'VALIDATION', 'an owner''s save captured before the session date: VALIDATION');
+select tests.logout();
 
 select * from finish();
 rollback;
