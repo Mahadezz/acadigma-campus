@@ -172,7 +172,7 @@ export type Database = {
           id: string
           late_count: number
           present_count: number
-          queued_offline: boolean | null
+          queued_offline: boolean
           section_id: string
           status: Database["public"]["Enums"]["attendance_session_status"]
           synced_late: boolean
@@ -197,7 +197,7 @@ export type Database = {
           id?: string
           late_count?: number
           present_count?: number
-          queued_offline?: boolean | null
+          queued_offline?: boolean
           section_id: string
           status?: Database["public"]["Enums"]["attendance_session_status"]
           synced_late?: boolean
@@ -222,7 +222,7 @@ export type Database = {
           id?: string
           late_count?: number
           present_count?: number
-          queued_offline?: boolean | null
+          queued_offline?: boolean
           section_id?: string
           status?: Database["public"]["Enums"]["attendance_session_status"]
           synced_late?: boolean
