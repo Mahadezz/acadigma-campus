@@ -34,9 +34,8 @@ vi.mock("@/app/(school)/app/attendance/actions", () => ({
   saveAttendanceSession: (input: unknown) => save(input),
 }))
 
-const { outboxPaused, sendQueued, watchSuccessfulRequests } = await import(
-  "./outbox-client"
-)
+const { outboxPaused, sendQueued, watchSuccessfulRequests } =
+  await import("./outbox-client")
 
 const waiting = (id: string): OutboxItem => ({
   id,

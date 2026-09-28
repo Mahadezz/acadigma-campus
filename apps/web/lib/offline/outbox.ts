@@ -108,11 +108,7 @@ export type SendReply =
   | { ok: false; error: Pick<ApiError, "code" | "message" | "fieldErrors"> }
 
 export type Outcome =
-  | "sent"
-  | "retry"
-  | "paused"
-  | "conflict"
-  | "needs_attention"
+  "sent" | "retry" | "paused" | "conflict" | "needs_attention"
 
 /** Replies that say "not now", not "no": the item waits for the next trigger. */
 const RETRY_CODES = new Set([
