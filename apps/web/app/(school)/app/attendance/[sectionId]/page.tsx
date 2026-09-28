@@ -93,6 +93,8 @@ export default async function RollCallPage({
         students={students.data}
         sessionUpdatedAt={section.session?.updatedAt ?? null}
         readOnlyReason={!mayMark ? "cannotMark" : !inWindow ? "window" : null}
+        userId={ctx.userId}
+        workspaceId={ctx.workspaceId}
       />
       {can(ctx.role, "report.render.attendance_register") ? (
         <div className="mx-auto mt-4 max-w-xl">

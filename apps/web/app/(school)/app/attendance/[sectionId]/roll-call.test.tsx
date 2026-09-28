@@ -10,6 +10,21 @@ vi.mock("../actions", () => ({
   saveAttendanceSession: (...a: unknown[]) => mockSave(...a),
 }))
 
+const mockQueued = vi.fn()
+const mockQueueSave = vi.fn()
+const mockSendQueued = vi.fn()
+vi.mock("@/lib/offline/outbox-client", () => ({
+  queuedItem: (...a: unknown[]) => mockQueued(...a),
+  queueSave: (...a: unknown[]) => mockQueueSave(...a),
+  sendQueued: (...a: unknown[]) => mockSendQueued(...a),
+  onOutboxSent: () => () => undefined,
+  useOutbox: () => mockOutbox(),
+}))
+const mockOutbox = vi.fn()
+vi.mock("@/app/(shared)/offline/offline-provider", () => ({
+  useOfflineCopy: () => () => en.offline,
+}))
+
 const { RollCall, saveErrorText } = await import("./roll-call")
 
 const students = [1, 2, 3].map((n) => ({
@@ -31,10 +46,25 @@ const BASE = {
   students,
   sessionUpdatedAt: null,
   readOnlyReason: null,
+  userId: "11111111-1111-4111-8111-111111111111",
+  workspaceId: "22222222-2222-4222-8222-222222222222",
 }
 
 beforeEach(() => {
   mockSave.mockReset()
+  mockQueued.mockReset().mockResolvedValue(undefined)
+  mockOutbox.mockReset().mockReturnValue([])
+  // Once queued, the live outbox holds a waiting item for this class.
+  mockQueueSave
+    .mockReset()
+    .mockImplementation(async (d: { entityKey: string }) => {
+      mockOutbox.mockReturnValue([
+        { entityKey: d.entityKey, status: "pending" },
+      ])
+      return "queued"
+    })
+  mockSendQueued.mockReset().mockResolvedValue(undefined)
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(true)
   mockSave.mockResolvedValue({
     ok: true,
     data: { sessionId: "s", updatedAt: "t", present: 2, absent: 1 },
@@ -143,5 +173,110 @@ describe("saveErrorText", () => {
     expect(saveErrorText(t, { code: "internal", message: "x" })).toBe(
       t.errors.generic
     )
+  })
+})
+
+const ENTITY = `attendance:${BASE.sectionId}:${BASE.date}`
+
+describe("RollCall offline (F-ID-11 Part 2a)", () => {
+  it("a queued roll refused as a CONFLICT says so, not 'waiting'", () => {
+    mockOutbox.mockReturnValue([{ entityKey: ENTITY, status: "conflict" }])
+    render(<RollCall {...BASE} />)
+    expect(screen.getByText(en.offline.conflictReason)).toBeTruthy()
+    expect(screen.queryByText(en.offline.savedOnPhone)).toBeNull()
+  })
+
+  function markAndSave() {
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+  }
+
+  it("offline: keeps the roll on the phone instead of sending it", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    render(<RollCall {...BASE} />)
+    markAndSave()
+    await screen.findByText(en.offline.savedOnPhone)
+    expect(mockSave).not.toHaveBeenCalled()
+    expect(mockQueueSave.mock.calls[0]?.[0]).toMatchObject({
+      userId: BASE.userId,
+      workspaceId: BASE.workspaceId,
+      kind: "attendance.save",
+      entityKey: `attendance:${BASE.sectionId}:${BASE.date}`,
+      summary: "Attendance · Class 6 – ক · 25 Sept 2026",
+      detail: "Everyone present",
+      payload: { bulkMarked: true, expectedUpdatedAt: null },
+    })
+    expect(mockSendQueued).not.toHaveBeenCalled()
+  })
+
+  it("a request that never came back is queued under the same key", async () => {
+    mockSave.mockRejectedValue(new TypeError("Failed to fetch"))
+    render(<RollCall {...BASE} />)
+    markAndSave()
+    await screen.findByText(en.offline.savedOnPhone)
+    expect(mockQueueSave.mock.calls[0]?.[0].payload.idempotencyKey).toBe(
+      mockSave.mock.calls[0]?.[0].idempotencyKey
+    )
+  })
+
+  it("online with an earlier save still waiting: queues behind it, then sends", async () => {
+    mockQueued.mockResolvedValue({ payload: { records: [] } })
+    render(<RollCall {...BASE} />)
+    markAndSave()
+    await vi.waitFor(() => expect(mockQueueSave).toHaveBeenCalled())
+    expect(mockSave).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(mockSendQueued).toHaveBeenCalledWith(BASE.userId)
+    )
+  })
+
+  it("says so when the phone's waiting list is full, and keeps the marks", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    mockQueueSave.mockResolvedValue("full")
+    render(<RollCall {...BASE} />)
+    markAndSave()
+    await screen.findByText(en.offline.queueFull)
+    expect(screen.queryByText(en.offline.savedOnPhone)).toBeNull()
+  })
+
+  it("reopened offline, shows the roll she queued rather than the cached one", async () => {
+    mockOutbox.mockReturnValue([{ entityKey: ENTITY, status: "pending" }])
+    mockQueued.mockResolvedValue({
+      payload: {
+        records: students.map((s) => ({
+          studentId: s.studentId,
+          status: "absent",
+        })),
+      },
+    })
+    render(<RollCall {...BASE} />)
+    await screen.findByText(en.offline.savedOnPhone)
+    expect(screen.getByText("P 0 · A 3 · L 0")).toBeTruthy()
+  })
+  it("if the phone cannot keep it (no IndexedDB), says so and keeps the marks", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    mockQueueSave.mockRejectedValue(new Error("QuotaExceededError"))
+    render(<RollCall {...BASE} />)
+    markAndSave()
+    await screen.findByText(en.offline.saveOnPhoneFailed)
+    expect(screen.getByText("P 3 · A 0 · L 0")).toBeTruthy()
+  })
+
+  it("a refused queued roll shows the reason in the reader's language", () => {
+    mockOutbox.mockReturnValue([
+      {
+        entityKey: ENTITY,
+        status: "needs_attention",
+        lastError: {
+          code: "forbidden",
+          message: "This day is past the correction window. Ask an admin.",
+          root: "OUTSIDE_EDIT_WINDOW",
+        },
+      },
+    ])
+    render(<RollCall {...BASE} t={bn.attendance.roll} locale="bn" />)
+    expect(
+      screen.getByText(bn.attendance.roll.errors.OUTSIDE_EDIT_WINDOW)
+    ).toBeTruthy()
   })
 })

@@ -58,7 +58,7 @@ const keepOnActivate = (name: string) =>
   name.startsWith("serwist-precache") || STATIC_CACHES.includes(name)
 
 /** Refuses page writes that started before the latest purge (D-308). */
-const guard = createPurgeGuard()
+const guard = createPurgeGuard(DATA_PAGES)
 
 async function deleteDataCaches(): Promise<void> {
   const names = await caches.keys()

@@ -88,6 +88,16 @@ export const saveAttendanceInputSchema = z
     allowNonSchoolDay: z.boolean().default(false),
     /** The session version the screen loaded; null for a first save. */
     expectedUpdatedAt: z.string().max(40).nullable().default(null),
+    /**
+     * F-ID-11 Part 2a: set by an offline replay — the user and workspace that
+     * queued the save. The action refuses it under any other session, so a
+     * queued roll call is never sent as someone else or into another school.
+     * Not passed to `save_attendance`.
+     */
+    queuedFor: z
+      .object({ userId: uuidSchema, workspaceId: uuidSchema })
+      .strict()
+      .optional(),
   })
   .strict()
 export type SaveAttendanceInput = z.infer<typeof saveAttendanceInputSchema>
