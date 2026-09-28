@@ -19,12 +19,21 @@
 --     attendance.synced_late event records capture and arrival
 --     time. Anything else is OUTSIDE_EDIT_WINDOW, as before. Every other
 --     rule is unchanged.
+--   * captured_at is bounded on EVERY save (any role, in or out of the
+--     window): >= the start of the session date (school timezone) and
+--     <= now() + 5 minutes (device clock slack), else VALIDATION — so a
+--     forged time cannot fake the audit's offline flag (#93 review).
 --   * attendance_day returns synced_late with each session (admin overview).
+--
+-- Lock note: adding a STORED generated column rewrites attendance_sessions
+-- under ACCESS EXCLUSIVE for the length of the rewrite. Live holds only demo
+-- data (a few rows), so this is accepted; on a large table it would need a
+-- plain column + trigger or a quiet window.
 -- =====================================================================
 
 alter table public.attendance_sessions
   add column if not exists captured_at timestamptz,
-  add column if not exists queued_offline boolean generated always as (captured_at is not null) stored,
+  add column if not exists queued_offline boolean not null generated always as (captured_at is not null) stored,
   add column if not exists synced_late boolean not null default false;
 
 comment on column public.attendance_sessions.captured_at is
@@ -101,6 +110,14 @@ begin
       raise exception 'VALIDATION' using errcode = '22023';
     end if;
     v_captured := (p_input ->> 'captured_at')::timestamptz;
+    -- #93 review: bounded on every save, not only the late path.
+    v_tz := coalesce(
+      (select sp.timezone from public.school_profiles sp where sp.workspace_id = p_workspace_id),
+      'Asia/Dhaka');
+    if v_captured > now() + interval '5 minutes'
+       or v_captured < (v_date::timestamp at time zone v_tz) then
+      raise exception 'VALIDATION' using errcode = '22023';
+    end if;
   end if;
 
   -- §5.11: a replayed save returns what the first one stored.
@@ -144,9 +161,7 @@ begin
   if v_late and not v_is_admin then
     -- §5.3 (D-310): a roll taken offline inside its window, arriving within
     -- 7 days, may still create the register (no session yet: checked below).
-    v_tz := coalesce(
-      (select sp.timezone from public.school_profiles sp where sp.workspace_id = p_workspace_id),
-      'Asia/Dhaka');
+    -- v_tz is set whenever v_captured is.
     if v_captured is null
        or v_captured < (v_date::timestamp at time zone v_tz)
        or v_captured > now()

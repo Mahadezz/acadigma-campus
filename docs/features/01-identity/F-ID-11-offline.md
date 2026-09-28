@@ -252,4 +252,6 @@ Deviations (D-310):
 - "Who saved" on the sheet is the register's `taken_by` (there is no `updated_by` column).
 - Not built: the late-sync footnote on the register PDF.
 - The conflict sheet loads on demand (`next/dynamic`) to keep the roll call under the 250 kB budget (257 → 239 kB).
-- Part 3 notes (kind → action registry, `oldVersion` upgrade switch, marks paper as one item) stay documented: 2b did not need them (`capturedAt` lives in the payload, no store change).
+- `captured_at` is bounded on every save, any role (≥ the start of the session date, ≤ server `now()` + 5 minutes, else `VALIDATION`), not only on the late path — a forged time cannot fake the audit's offline flag (#93 security review). `queued_offline` is `not null`.
+- **Known limitation (#93 security review, LOW):** another account's unsent outbox stays in IndexedDB **unencrypted** for up to 14 days on a shared phone. It is never shown or sent, but anyone with devtools on that phone can read it.
+- Part 3 backlog (stays documented, not built in 2b): a kind → action registry, an `oldVersion` switch in `onupgradeneeded` (2b needed neither: `capturedAt` lives in the payload, no store change), a marks paper as one item, the late-sync footnote on the register PDF, and per-user encryption of the outbox or a shorter keep time for another account's queue (the limitation above).
