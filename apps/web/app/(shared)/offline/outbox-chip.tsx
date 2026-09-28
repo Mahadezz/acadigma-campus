@@ -2,6 +2,8 @@
 
 import * as React from "react"
 
+import dynamic from "next/dynamic"
+
 import { CloudUploadIcon, TriangleAlertIcon } from "lucide-react"
 
 import type { ApiError } from "@acadigma/contracts"
@@ -26,9 +28,13 @@ import {
 import { outboxEvents } from "@/lib/offline/outbox-db"
 import { useOnline } from "@/lib/offline/use-online"
 
-import { ConflictSheet } from "./conflict-sheet"
 import { useOfflineCopy, type OfflineCopy } from "./offline-provider"
 import { useGuardedSignOut } from "./sign-out-guard"
+
+// Opened only on a conflict (D-310): kept out of every page's first load.
+const ConflictSheet = dynamic(() =>
+  import("./conflict-sheet").then((m) => m.ConflictSheet)
+)
 
 const WEEK_MS = 7 * 24 * 60 * 60_000
 /** "{count} …", or the singular sentence for one (Bangla has the same). */

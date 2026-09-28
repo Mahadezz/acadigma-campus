@@ -227,7 +227,7 @@ describe("RollCall offline (F-ID-11 Part 2a)", () => {
     vi.mocked(Date.now).mockRestore()
   })
 
-  it("a conflict on the screen opens the choice sheet (D-310)", () => {
+  it("a conflict on the screen opens the choice sheet (D-310)", async () => {
     mockOutbox.mockReturnValue([
       { id: "i1", entityKey: ENTITY, status: "conflict" },
     ])
@@ -235,7 +235,7 @@ describe("RollCall offline (F-ID-11 Part 2a)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: en.offline.compareAndChoose })
     )
-    expect(screen.getByRole("dialog")).toBeTruthy()
+    expect(await screen.findByRole("dialog")).toBeTruthy()
   })
 
   it("a request that never came back is queued under the same key", async () => {

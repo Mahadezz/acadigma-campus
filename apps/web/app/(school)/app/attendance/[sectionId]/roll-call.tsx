@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react"
 
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -21,7 +22,6 @@ import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
-import { ConflictSheet } from "@/app/(shared)/offline/conflict-sheet"
 import { useOfflineCopy } from "@/app/(shared)/offline/offline-provider"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
@@ -36,6 +36,11 @@ import {
 
 import { saveAttendanceSession } from "../actions"
 import { fill } from "../format"
+
+// Opened only on a conflict (D-310): kept out of the roll call's first load.
+const ConflictSheet = dynamic(() =>
+  import("@/app/(shared)/offline/conflict-sheet").then((m) => m.ConflictSheet)
+)
 
 type T = Messages["attendance"]["roll"]
 type Marks = Record<string, AttendanceStatus | null>
