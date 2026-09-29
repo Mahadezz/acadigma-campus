@@ -383,6 +383,128 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_members: {
+        Row: {
+          channel_id: string
+          created_at: string
+          id: string
+          last_read_at: string | null
+          left_at: string | null
+          member_id: string
+          muted_until: string | null
+          role: Database["public"]["Enums"]["channel_member_role"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          id?: string
+          last_read_at?: string | null
+          left_at?: string | null
+          member_id: string
+          muted_until?: string | null
+          role?: Database["public"]["Enums"]["channel_member_role"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          id?: string
+          last_read_at?: string | null
+          left_at?: string | null
+          member_id?: string
+          muted_until?: string | null
+          role?: Database["public"]["Enums"]["channel_member_role"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_members_channel_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "channel_members_member_fkey"
+            columns: ["member_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "channel_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      channels: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          key: string
+          kind: Database["public"]["Enums"]["channel_kind"]
+          name: string | null
+          section_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key: string
+          kind: Database["public"]["Enums"]["channel_kind"]
+          name?: string | null
+          section_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key?: string
+          kind?: Database["public"]["Enums"]["channel_kind"]
+          name?: string | null
+          section_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channels_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channels_section_fkey"
+            columns: ["section_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "channels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_records: {
         Row: {
           channel: string
@@ -1608,6 +1730,58 @@ export type Database = {
           },
           {
             foreignKeyName: "marks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          channel_id: string
+          client_nonce: string
+          created_at: string
+          id: string
+          sender_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          body: string
+          channel_id: string
+          client_nonce: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          body?: string
+          channel_id?: string
+          client_nonce?: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_channel_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -4177,6 +4351,8 @@ export type Database = {
       audit_actor_kind: "user" | "platform_staff" | "system" | "webhook"
       audit_severity: "info" | "notable" | "critical"
       billing_interval: "monthly" | "yearly"
+      channel_kind: "general" | "staff" | "section" | "custom" | "dm"
+      channel_member_role: "member" | "moderator"
       device_platform: "web" | "android" | "windows" | "ios"
       email_status:
         | "queued"
@@ -4423,6 +4599,8 @@ export const Constants = {
       audit_actor_kind: ["user", "platform_staff", "system", "webhook"],
       audit_severity: ["info", "notable", "critical"],
       billing_interval: ["monthly", "yearly"],
+      channel_kind: ["general", "staff", "section", "custom", "dm"],
+      channel_member_role: ["member", "moderator"],
       device_platform: ["web", "android", "windows", "ios"],
       email_status: [
         "queued",
