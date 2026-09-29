@@ -1121,6 +1121,45 @@
         "termNameTaken": "This year already has a term with that name.",
         "weightsNot100": "The weights must add up to 100, or be left empty."
       }
+    },
+    "membership": {
+      "title": "Your membership",
+      "link": "Your membership: leave or hand over this school",
+      "description": "Leave this school, or hand its ownership to someone else.",
+      "yourRole": "You are {role} at {school}.",
+      "leave": {
+        "title": "Leave this school",
+        "lead": "You will lose access to {school} straight away. Your name stays on the records you made.",
+        "start": "Leave {school}…",
+        "confirm": "Yes, leave {school}",
+        "cancel": "Stay"
+      },
+      "transfer": {
+        "title": "Transfer ownership",
+        "lead": "An owner can hand over the school, manage billing and change anything in it. Any owner can transfer it back.",
+        "noCandidates": "There is no active admin or teacher to hand the school to yet. Add one from Team & access first.",
+        "to": "New owner",
+        "choose": "Choose a person",
+        "keepOwner": "Keep me as an owner too",
+        "targetOwner": "{name} will become an owner.",
+        "becomeAdmin": "You will become an admin.",
+        "stayOwner": "You will stay an owner.",
+        "lose": "You will no longer be able to:",
+        "password": "Your password",
+        "passwordHelp": "We ask again because only an owner can undo this.",
+        "confirmName": "Type the school's name to confirm: {school}",
+        "submit": "Transfer ownership",
+        "done": "{name} is now an owner of {school}."
+      },
+      "errors": {
+        "generic": "Something went wrong. Please try again.",
+        "forbidden": "You cannot do this in this school.",
+        "lastOwner": "A school must always have an owner. Hand ownership to an admin or teacher first.",
+        "notEligible": "That person can no longer receive ownership. Choose someone else.",
+        "password": "That password is not correct.",
+        "name": "The name you typed does not match the school's name.",
+        "readOnly": "This school is read-only. Upgrade the plan to transfer ownership."
+      }
     }
   },
   "dangerZone": {
@@ -1990,7 +2029,7 @@
       "workPhone": "Work phone",
       "saveStaff": "Save staff details",
       "staffSaved": "Staff details saved.",
-      "ownerNote": "This member is an owner. Ownership changes happen in Settings, under Ownership.",
+      "ownerNote": "This member is an owner. Ownership changes happen under Your membership.",
       "capabilities": {
         "manageTeam": "Manage the team and roles",
         "manageBilling": "See and manage billing",
@@ -2004,7 +2043,18 @@
         "ownerTarget": "Only an owner can change another owner.",
         "selfEdit": "You cannot change your own role.",
         "codeTaken": "Another member already has that employee code."
-      }
+      },
+      "ownershipLink": "Open Your membership",
+      "removeTitle": "Remove from the school",
+      "removeStart": "Remove {name}…",
+      "removeLead": "{name} will lose access straight away.",
+      "removeConsequences": [
+        "Their next tap in this school fails — they cannot open any class, student or record.",
+        "Their name stays on the attendance, marks and other records they made."
+      ],
+      "removeConfirm": "Yes, remove {name}",
+      "removeCancel": "Keep {name}",
+      "removed": "{name} was removed from the school."
     }
   },
   "labels": {

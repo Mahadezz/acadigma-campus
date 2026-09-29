@@ -27,12 +27,19 @@ export const EXEMPT = {
     "user-level profiles/onboarding_progress write, no workspace",
   "apps/web/app/(onboarding)/actions.ts#createSchoolWorkspace":
     "creates the workspace; tg_require_writable passes a fresh workspace",
+<<<<<<< HEAD
   "apps/web/app/(school)/app/settings/danger/actions.ts#archiveSchool": D211,
   "apps/web/app/(school)/app/settings/danger/actions.ts#unarchiveSchool": D211,
   "apps/web/app/(school)/app/settings/danger/actions.ts#scheduleSchoolDeletion":
     D211,
   "apps/web/app/(school)/app/settings/danger/actions.ts#cancelSchoolDeletion":
     D211,
+=======
+  "apps/web/app/(school)/app/staff/team/actions.ts#removeMember":
+    "removing access is always allowed, even read-only (D-300, D-112)",
+  "apps/web/app/(school)/app/settings/membership/actions.ts#leaveWorkspace":
+    "ending your own access is always allowed, even read-only (D-300, D-112)",
+>>>>>>> origin/main
 }
 
 const READ_NAME =

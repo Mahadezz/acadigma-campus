@@ -85,8 +85,11 @@ select throws_ok(
   '42501', null,
   'a teacher cannot promote themselves to admin');
 
+-- D-112: `active -> removed` on your own row is now leaving, which every
+-- member may do (39c_leave_and_transfer.sql); any other self-change of
+-- status is still refused.
 select throws_ok(
-  $$update public.workspace_members set status = 'removed'
+  $$update public.workspace_members set status = 'pending'
      where id = 'dddd0003-0000-0000-0000-000000000003'$$,
   '42501', null,
   'a teacher cannot rewrite their own membership status');

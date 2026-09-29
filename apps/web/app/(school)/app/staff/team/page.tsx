@@ -62,6 +62,7 @@ export default async function TeamPage({
       members={page.ok ? page.data.items : []}
       nextCursor={page.ok ? page.data.nextCursor : null}
       labels={labels.ok ? labels.data : []}
+      actorRole={ctx.role}
     />
   )
 }

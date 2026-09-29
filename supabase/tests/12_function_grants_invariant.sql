@@ -140,6 +140,7 @@ with allowed as (
     ('public.list_workspace_members(uuid, public.member_status, text, uuid, integer)'),  -- F-ID-03 Part 5, D-110
     ('public.set_current_academic_year(uuid, uuid)'),  -- F-OP-07 Part 2, D-210
     ('public.update_member_staff_fields(uuid, uuid, text, text, text)'),  -- F-ID-03 Part 6, D-111
+    ('public.transfer_ownership(uuid, uuid, boolean)'),  -- F-ID-03 Part 7, D-112
     ('public.archive_workspace(uuid, text)'),  -- F-OP-07 Part 6, D-211
     ('public.unarchive_workspace(uuid, text)'),  -- F-OP-07 Part 6, D-211
     ('public.schedule_workspace_deletion(uuid, text)'),  -- F-OP-07 Part 6, D-211

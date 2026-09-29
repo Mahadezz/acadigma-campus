@@ -50,6 +50,7 @@ describe("TeamView (D-110)", () => {
         members={[member()]}
         nextCursor={null}
         labels={[]}
+        actorRole="owner"
       />
     )
     const current = screen.getByRole("link", { name: t.tabs.pending })
@@ -73,6 +74,7 @@ describe("TeamView (D-110)", () => {
         members={[member()]}
         nextCursor={null}
         labels={[]}
+        actorRole="owner"
       />
     )
     fireEvent.click(
@@ -104,6 +106,7 @@ describe("TeamView (D-110)", () => {
         members={[member()]}
         nextCursor={null}
         labels={[]}
+        actorRole="owner"
       />
     )
     fireEvent.click(
@@ -132,6 +135,7 @@ describe("TeamView (D-110)", () => {
         ]}
         nextCursor={null}
         labels={[]}
+        actorRole="owner"
       />
     )
     expect(screen.getAllByText(t.rejectedChip).length).toBeGreaterThan(0)
@@ -148,6 +152,7 @@ describe("TeamView (D-110)", () => {
         members={[member({ status: "active" })]}
         nextCursor="00000000-0000-4000-8000-000000000009"
         labels={[]}
+        actorRole="owner"
       />
     )
     expect(
@@ -167,6 +172,7 @@ describe("TeamView (D-110)", () => {
         members={[]}
         nextCursor={null}
         labels={[]}
+        actorRole="owner"
       />
     )
     expect(screen.getByText(bn.team.empty.pending)).toBeTruthy()
