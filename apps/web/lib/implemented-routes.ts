@@ -22,6 +22,7 @@ export const IMPLEMENTED_NAV_ROUTES: ReadonlySet<string> = new Set([
   "/app/attendance",
   "/app/students",
   "/app/staff",
+  "/app/staff/team",
   // Not a nav item; the dashboard's setup checklist links here (D-400).
   "/app/settings/branding",
   "/personal",

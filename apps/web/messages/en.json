@@ -1753,5 +1753,67 @@
     "saveChoices": "Save my choices",
     "conflictLoadFailed": "Could not load their roll call. Connect to the internet and try again.",
     "conflictLoading": "Loading their roll call…"
+  },
+  "team": {
+    "title": "Team & access",
+    "lead": "Everyone who can open this school, and the people asking to join. Approve someone and they can use the school on their next tap.",
+    "tabsLabel": "Show members by status",
+    "tabs": {
+      "active": "Active",
+      "pending": "Waiting",
+      "removed": "Removed"
+    },
+    "searchLabel": "Search by name or email",
+    "searchPlaceholder": "Name or email",
+    "search": "Search",
+    "caption": "Team members",
+    "columns": {
+      "name": "Name",
+      "role": "Role",
+      "how": "Asked with",
+      "date": "Date",
+      "status": "Status",
+      "actions": "Decision"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "teacher": "Teacher",
+      "staff": "Staff",
+      "parent": "Parent"
+    },
+    "via": {
+      "invitation": "An invitation",
+      "code": "The school's join code"
+    },
+    "asked": "Asked {date}",
+    "joined": "Joined {date}",
+    "left": "Removed {date}",
+    "rejectedChip": "Request turned down",
+    "removedChip": "Removed",
+    "activeChip": "Active",
+    "approve": "Approve",
+    "reject": "Turn down",
+    "approveLabel": "Approve {name}",
+    "rejectLabel": "Turn down {name}",
+    "approved": "{name} can now use the school as a {role}.",
+    "rejected": "{name}'s request was turned down.",
+    "empty": {
+      "active": "Just you so far — invite your teachers",
+      "pending": "No one is waiting",
+      "removed": "No one has been removed"
+    },
+    "emptyPendingDescription": "When a teacher asks to join with your school's code, they appear here for you to approve.",
+    "noMatches": "No one matches that search.",
+    "next": "Next page",
+    "first": "Back to the first page",
+    "pageNav": "More members",
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "forbidden": "Only an owner or an admin can do this.",
+      "readOnly": "This school is read-only. Ask the owner to upgrade.",
+      "NOT_PENDING": "Someone already decided this request. The list has been refreshed.",
+      "notFound": "That person is no longer on this list."
+    }
   }
 }
