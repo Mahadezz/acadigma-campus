@@ -1,19 +1,22 @@
 import { z } from "zod"
 
 import {
+  cursorPageSchema,
   isoDateSchema,
+  paginated,
   paisaSchema,
   uuidSchema,
   workspaceIdSchema,
 } from "../common"
 
 /**
- * F-OP-06 Part 1 — schema, RLS and the compensation split.
+ * F-OP-06 Part 1 — schema, RLS and the compensation split. Part 2 adds the
+ * directory's own input/response shapes (`listStaff`) below.
  * Row shapes for `staff_records`, `staff_compensation`, `staff_documents`
  * (`supabase/migrations/20260925000900_staff_schema.sql`), mirrored here so
  * the repository layer (Part 1) and every later Part's server actions share
  * one definition. Endpoint input/output schemas (`createStaffRecord`,
- * `setStaffCompensation`, ...) are NOT modelled yet — those are Parts 2-5,
+ * `setStaffCompensation`, ...) are NOT modelled yet — those are Parts 3-5,
  * spec §7.
  */
 
@@ -98,13 +101,18 @@ export const staffRecordSchema = z.object({
 })
 export type StaffRecord = z.infer<typeof staffRecordSchema>
 
-/** `public.staff_directory` (F-OP-06 §3.1) — the subset every non-parent
- * active member may read. Never carries compensation, NID or documents. */
+/** `public.staff_directory` (F-OP-06 §3.1, widened Part 2 / D-209) — the
+ * subset every active non-parent member may read, for EVERY active
+ * non-parent member of the workspace, whether or not a `staff_records` row
+ * exists for them yet (a school's owner never gets one automatically).
+ * `membershipId` is always present; `id` (the `staff_records` row) is null
+ * until one exists. Never carries compensation, NID or documents. */
 export const staffDirectoryRowSchema = z.object({
-  id: uuidSchema,
+  id: uuidSchema.nullable(),
+  membershipId: uuidSchema,
   workspaceId: workspaceIdSchema,
   userId: uuidSchema.nullable(),
-  staffCode: z.string(),
+  staffCode: z.string().nullable(),
   fullName: z.string(),
   avatarUrl: z.string().nullable(),
   designationLabelId: uuidSchema.nullable(),
@@ -118,6 +126,23 @@ export const staffDirectoryRowSchema = z.object({
   joinedOn: isoDateSchema.nullable(),
 })
 export type StaffDirectoryRow = z.infer<typeof staffDirectoryRowSchema>
+
+// ---------------------------------------------------------------------------
+// listStaff (F-OP-06 Part 2, spec §7/§8) — the directory's search, filter
+// and cursor-paginated list.
+// ---------------------------------------------------------------------------
+export const listStaffInputSchema = z
+  .object({
+    /** Free-text match over name, staff code and work email/phone. */
+    q: z.string().trim().max(100).optional(),
+    role: z.enum(["owner", "admin", "teacher", "staff"]).optional(),
+    status: staffStatusSchema.optional(),
+  })
+  .merge(cursorPageSchema)
+export type ListStaffInput = z.infer<typeof listStaffInputSchema>
+
+export const staffDirectoryPageSchema = paginated(staffDirectoryRowSchema)
+export type StaffDirectoryPage = z.infer<typeof staffDirectoryPageSchema>
 
 // ---------------------------------------------------------------------------
 // staff_compensation (F-OP-06 §3.2) — owner/admin, or the row's own person.

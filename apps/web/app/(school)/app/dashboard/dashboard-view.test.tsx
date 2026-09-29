@@ -52,6 +52,10 @@ describe("DashboardView", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Acadigma Demo School" })
     ).toBeTruthy()
+    // D-407: exactly one eyebrow on the whole screen (the page date) —
+    // DESIGN-SYSTEM §8.1's "one per screen at most, and usually none".
+    expect(document.querySelectorAll(".eyebrow")).toHaveLength(1)
+    expect(screen.getByRole("region", { name: "Today" })).toBeTruthy()
     expect(screen.getByText("14 days left in your trial")).toBeTruthy()
     expect(screen.getByText("3 active")).toBeTruthy()
     expect(screen.getByText("No staff records yet")).toBeTruthy()
