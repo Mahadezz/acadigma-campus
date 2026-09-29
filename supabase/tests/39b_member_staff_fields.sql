@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-ID-03 Part 6 — role changes, staff fields, labels
---   (20260929065654_member_staff_fields.sql, D-111)
+--   (20260929065654_member_staff_fields.sql, 20260929121412, D-111)
 --
 --   A. public.update_member_staff_fields: an owner/admin sets a member's
 --      employee code, department and work phone; a blank code is generated
@@ -13,7 +13,7 @@
 --      touching the role; a teacher cannot assign a label to someone else.
 -- =====================================================================
 begin;
-select plan(20);
+select plan(24);
 
 create schema if not exists tests;
 
@@ -300,7 +300,47 @@ select is(
      '39b00000-0000-4000-b000-000000000001', '39b00000-0000-4000-e000-000000000009')),
   'TCH-' || extract(year from now() at time zone 'Asia/Dhaka')::int || '-0003',
   'a blank save skips a hand-typed code already in the generated shape');
+
+-- workspace_invitations.label_id: app.create_invitation never checked
+-- p_label_id, so the composite FK is what stops another school's label.
+select throws_ok(
+  format($$select app.create_invitation(
+      '39b00000-0000-4000-b000-000000000001', 'teacher'::public.member_role,
+      'sf-invitee-b@test.local', null, %L)$$, tests.label_b()),
+  '23503', null,
+  'app.create_invitation refuses another school''s label (workspace_invitations.label_id)');
+select app.create_invitation(
+  '39b00000-0000-4000-b000-000000000001', 'teacher'::public.member_role,
+  'sf-invitee@test.local', null, '39b00000-0000-4000-c000-000000000001');
 select tests.logout();
+select throws_ok(
+  format($$update public.workspace_invitations set label_id = %L
+            where email = 'sf-invitee@test.local'$$, tests.label_b()),
+  '23503', null,
+  'no one can point an invitation''s label_id at another school''s label');
+
+-- The migration's deploy cleanup (same statement as 20260929121412):
+-- plant a cross-school label with FK triggers off, run the cleanup, and
+-- only that reference is nulled; T2's same-school label is untouched.
+set local session_replication_role = replica;
+update public.workspace_members set label_id = tests.label_b()
+ where id = '39b00000-0000-4000-e000-000000000009';
+set local session_replication_role = origin;
+update public.workspace_members set label_id = null
+ where label_id is not null
+   and not exists (select 1 from public.custom_labels l
+                    where l.id = workspace_members.label_id
+                      and l.workspace_id = workspace_members.workspace_id);
+select is(
+  (select label_id from public.workspace_members
+    where id = '39b00000-0000-4000-e000-000000000009'),
+  null,
+  'deploy cleanup nulls a pre-existing cross-school label reference');
+select is(
+  (select label_id::text from public.workspace_members
+    where id = '39b00000-0000-4000-e000-000000000004'),
+  '39b00000-0000-4000-c000-000000000001',
+  'deploy cleanup leaves a same-school label untouched');
 
 select * from finish();
 rollback;
