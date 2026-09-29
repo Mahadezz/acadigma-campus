@@ -4188,6 +4188,21 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_member_staff_fields: {
+        Args: {
+          p_department?: string
+          p_employee_code?: string
+          p_member_id: string
+          p_phone?: string
+          p_workspace_id: string
+        }
+        Returns: {
+          department: string
+          employee_code: string
+          id: string
+          phone: string
+        }[]
+      }
     }
     Enums: {
       access_mode: "normal" | "read_only"

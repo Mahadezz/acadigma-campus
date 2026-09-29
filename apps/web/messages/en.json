@@ -933,6 +933,11 @@
         "title": "Display",
         "description": "Text size and basic mode",
         "keywords": "text size font large extra basic mode accessibility"
+      },
+      "labels": {
+        "title": "Custom labels",
+        "description": "Titles like Principal or Coordinator",
+        "keywords": "label title principal coordinator vice head badge"
       }
     },
     "notSet": "Not set",
@@ -1716,7 +1721,8 @@
       "how": "Asked with",
       "date": "Date",
       "status": "Status",
-      "actions": "Decision"
+      "actions": "Decision",
+      "manage": "Manage"
     },
     "roles": {
       "owner": "Owner",
@@ -1757,6 +1763,80 @@
       "readOnly": "This school is read-only. Ask the owner to upgrade.",
       "NOT_PENDING": "Someone already decided this request. The list has been refreshed.",
       "notFound": "That person is no longer on this list."
+    },
+    "manage": {
+      "open": "Manage",
+      "openLabel": "Manage {name}",
+      "changeRole": "Role",
+      "applyRole": "Apply role change",
+      "roleChanged": "{name} is now a {role}.",
+      "assignLabel": "Label",
+      "noLabel": "No label",
+      "labelHelp": "A label changes the title shown next to a name. It does not change what they can do.",
+      "saveLabel": "Save label",
+      "labelSaved": "Label updated.",
+      "staffDetails": "Staff details",
+      "employeeCode": "Employee code",
+      "employeeCodePlaceholder": "Leave blank to generate",
+      "employeeCodeHelp": "Left blank, a code is created automatically on the first save.",
+      "department": "Department",
+      "workPhone": "Work phone",
+      "saveStaff": "Save staff details",
+      "staffSaved": "Staff details saved.",
+      "ownerNote": "This member is an owner. Ownership changes happen in Settings, under Ownership.",
+      "capabilities": {
+        "manageTeam": "Manage the team and roles",
+        "manageBilling": "See and manage billing",
+        "manageSettings": "Change school settings",
+        "editMarks": "Enter and edit marks",
+        "takeAttendance": "Take attendance",
+        "viewReports": "Open reports"
+      },
+      "errors": {
+        "lastOwner": "A school must always have at least one owner. Transfer ownership first.",
+        "ownerTarget": "Only an owner can change another owner.",
+        "selfEdit": "You cannot change your own role.",
+        "codeTaken": "Another member already has that employee code."
+      }
+    }
+  },
+  "labels": {
+    "title": "Custom labels",
+    "lead": "Titles like Principal or Coordinator, shown next to a name.",
+    "notPermissions": "A label changes the title shown next to a name. It does not change what they can do — that is the role.",
+    "add": "New label",
+    "addTitle": "New label",
+    "editTitle": "Edit label",
+    "editLabel": "Edit {name}",
+    "deleteLabelAria": "Delete {name}",
+    "delete": "Delete",
+    "deleteTitle": "Delete this label?",
+    "deleteConfirm": "\"{name}\" will be removed from anyone who has it. Their role and access do not change.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Vice-Principal",
+    "baseRole": "Base role",
+    "baseRoleHelp": "The permissions the person keeps. The label only changes their title.",
+    "roles": {
+      "admin": "Admin",
+      "teacher": "Teacher",
+      "staff": "Staff"
+    },
+    "color": "Colour",
+    "save": "Save",
+    "cancel": "Cancel",
+    "overRole": "Over {role}",
+    "empty": "No labels yet",
+    "emptyDescription": "Titles like Principal or Coordinator live here.",
+    "created": "\"{name}\" created.",
+    "updated": "\"{name}\" updated.",
+    "deleted": "\"{name}\" deleted.",
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "forbidden": "Only an owner or an admin can do this.",
+      "readOnly": "This school is read-only. Ask the owner to upgrade.",
+      "nameTaken": "A label with that name already exists.",
+      "notFound": "That label was no longer there.",
+      "validation": "Please check the details you entered."
     }
   }
 }
