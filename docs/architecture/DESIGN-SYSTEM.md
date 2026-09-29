@@ -618,8 +618,9 @@ xl  1280  tables gain optional columns; detail pages gain a right rail
   action bar (attendance, marks).
 - For a **parent**, the workspace switcher is replaced by the **child
   switcher** when they are linked to more than one student.
-- **Back (D-408).** Every page that is not a top-level nav destination gets
-  one back control at the far left of the TopBar, where every phone app puts
+- **Back (D-408).** Every page except a shell root, basic home or a nav
+  destination with nothing above it in the URL gets one back control at the
+  far left of the TopBar, where every phone app puts
   it (Jakob). Below `lg` (phone and tablet) it is a 44px chevron, and the
   workspace switcher steps aside on that page. From `lg` up it is the
   chevron plus the parent page's name. With in-app history it calls
@@ -627,7 +628,7 @@ xl  1280  tables gain optional columns; detail pages gain a right rail
   agree. With none (a deep link, a new tab, a reload) it is a plain link to
   the logical parent, so it never dead-ends and never leaves the app. The
   parent comes from the URL: drop segments until what is left is a nav
-  destination, a named non-nav page (`PARENT_PAGES`) or the shell root
+  destination (`IMPLEMENTED_NAV_ROUTES`), a named non-nav page (`PARENT_PAGES`) or the shell root
   (`apps/web/lib/back-route.ts`). Pages carry no back links of their own
   (a few still do, see the D-408 test report).
 

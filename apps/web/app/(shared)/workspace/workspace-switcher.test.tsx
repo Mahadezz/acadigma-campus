@@ -222,7 +222,12 @@ describe("WorkspaceSwitcher — shell back (D-408)", () => {
   it("names a nav parent once the nav config has loaded (desktop label)", async () => {
     mockPathname = "/app/exams/e1"
     render(<WorkspaceSwitcher {...props} />)
-    const back = await screen.findByRole("link", { name: /^Back to Exams/ })
+    const back = await screen.findByRole(
+      "link",
+      { name: /^Back to Exams/ },
+      // A real dynamic import: slower under a full parallel run.
+      { timeout: 10_000 }
+    )
     expect(back.getAttribute("href")).toBe("/app/exams")
   })
 })

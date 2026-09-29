@@ -51,13 +51,13 @@ The owner asked for liquid glass and both themes: _"the UI that you are building
 | Suite                          | Files | Tests | Passed | Failed | Duration |
 | ------------------------------ | ----- | ----- | ------ | ------ | -------- |
 | `packages/ui` (`--project ui`) | 14    | 116   | 116    | 0      | 10.0 s   |
-| `apps/web` (`--project web`)   | 61    | 487   | 487    | 0      | 29.6 s   |
+| `apps/web` (`--project web`)   | 61    | 489   | 489    | 0      | 31.2 s   |
 
 New or changed in this pass:
 
-- `lib/back-route.test.ts`: top-level pages get no back; parents are walked up and named; and for **every role's nav config**, every real `page.tsx` resolves to a parent that is a real page.
+- `lib/back-route.test.ts`: top-level pages get no back; a nested nav destination (Team & access) goes up to Staff; unnamed intermediate segments are skipped; every real `page.tsx` resolves to a parent that is a real page; `navLabel` names a nav destination from the member's config.
 - `(shared)/workspace/shell-back.test.ts`: A→B→A→B through Links counts as four visits, and only `popstate` steps back.
-- `workspace-switcher.test.tsx`: no back on `/app/dashboard`; on `/app/exams/e1/results` there is a "Back to Exam" link to `/app/exams/e1`.
+- `workspace-switcher.test.tsx`: no back on `/app/dashboard`; on `/app/exams/e1/results` there is a "Back to Exam" link to `/app/exams/e1`; on `/app/exams/e1` the name "Back to Exams" arrives after the lazy nav-config load.
 - `dashboard-view.test.tsx`: zero eyebrows; the attendance progress bar is named "3 of 5 classes marked"; the primary action appears only with `attendanceHref`.
 - `test/page-routes.ts`: the page-route scan moved out of `implemented-routes.test.ts`, which now shares it.
 
@@ -147,16 +147,16 @@ Deliberately not tested: Safari and Firefox rendering. Chromium only; the `-webk
 
 ## 9. Sign-off
 
-| Definition of Done                        | Met                                                  |
-| ----------------------------------------- | ---------------------------------------------------- |
-| Spec written and matches the build        | ☑ DESIGN-SYSTEM §1.8/§3.1, D-408 items 1–10          |
-| Migration + pgTAP                         | n/a                                                  |
-| Unit tests                                | ☑ 603/603 (ui 116, web 487); ☐ coverage not measured |
-| UI at 360×800 and 1280×800 (and 820×1180) | ☑ exact-viewport screenshots, both themes            |
-| Playwright journey at both viewports      | ☐ CI `e2e` pending                                   |
-| a11y: zero serious/critical               | ☑ axe, 10 runs, 0 violations                         |
-| This test report, with real numbers       | ☑                                                    |
-| Docs updated in the same PR               | ☑ DESIGN-SYSTEM, DECISION-LOG D-408, changeset       |
+| Definition of Done                        | Met                                                                                      |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Spec written and matches the build        | ☑ DESIGN-SYSTEM §1.8/§3.1, D-408 items 1–10                                              |
+| Migration + pgTAP                         | n/a                                                                                      |
+| Unit tests                                | ☑ 605/605 (ui 116, web 489; web run twice in a row, both green); ☐ coverage not measured |
+| UI at 360×800 and 1280×800 (and 820×1180) | ☑ exact-viewport screenshots, both themes                                                |
+| Playwright journey at both viewports      | ☐ CI `e2e` pending                                                                       |
+| a11y: zero serious/critical               | ☑ axe, 10 runs, 0 violations                                                             |
+| This test report, with real numbers       | ☑                                                                                        |
+| Docs updated in the same PR               | ☑ DESIGN-SYSTEM, DECISION-LOG D-408, changeset                                           |
 
 **Signed off by:** Claude (design lane) · 2026-09-29
 
