@@ -12,17 +12,27 @@ import { revalidatePath } from "next/cache"
 import {
   apiError,
   apiErrorFromZod,
+  assignMemberLabelInputSchema,
+  changeMemberRoleInputSchema,
   err,
   memberDecisionInputSchema,
   planReadOnlyApiError,
+  updateMemberStaffFieldsInputSchema,
   type ApiError,
+  type AssignableRole,
   type MemberDecision,
+  type MemberDetail,
+  type MemberStaffFields,
   type Result,
 } from "@acadigma/contracts"
 import {
   approveMember as approveMemberRow,
+  assignMemberLabel as assignMemberLabelRow,
+  changeMemberRole as changeMemberRoleRow,
+  getMemberDetail as getMemberDetailRow,
   rejectMember as rejectMemberRow,
   requireWritable,
+  updateMemberStaffFields as updateMemberStaffFieldsRow,
 } from "@acadigma/db"
 import { can } from "@acadigma/domain"
 
@@ -62,4 +72,72 @@ export async function rejectMember(
   input: unknown
 ): Promise<Result<MemberDecision, ApiError>> {
   return decide(input, rejectMemberRow)
+}
+
+// ---------------------------------------------------------------------------
+// Part 6 (D-111) — role changes, staff fields, labels
+// ---------------------------------------------------------------------------
+
+/** Read a member's staff fields and label for the detail sheet (owner/admin). */
+export async function getMemberDetail(
+  input: unknown
+): Promise<Result<MemberDetail, ApiError>> {
+  const parsed = memberDecisionInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+  const ctx = await requireWorkspace()
+  if (!can(ctx.role, "members.contact.read")) return err(FORBIDDEN)
+  return getMemberDetailRow(ctx, await createClient(), parsed.data.memberId)
+}
+
+export async function changeMemberRole(
+  input: unknown
+): Promise<Result<{ id: string; role: AssignableRole }, ApiError>> {
+  const parsed = changeMemberRoleInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+  const ctx = await requireWorkspace()
+  if (!can(ctx.role, "members.role.write")) return err(FORBIDDEN)
+  const supabase = await createClient()
+  const writable = await requireWritable(ctx, supabase)
+  if (!writable.ok) return err(planReadOnlyApiError(writable.error))
+
+  const result = await changeMemberRoleRow(
+    ctx,
+    supabase,
+    parsed.data.memberId,
+    parsed.data.role
+  )
+  if (result.ok) revalidatePath("/app/staff/team")
+  return result
+}
+
+export async function updateMemberStaffFields(
+  input: unknown
+): Promise<Result<MemberStaffFields, ApiError>> {
+  const parsed = updateMemberStaffFieldsInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+  const ctx = await requireWorkspace()
+  if (!can(ctx.role, "members.staff_fields.write")) return err(FORBIDDEN)
+  const supabase = await createClient()
+  const writable = await requireWritable(ctx, supabase)
+  if (!writable.ok) return err(planReadOnlyApiError(writable.error))
+
+  const result = await updateMemberStaffFieldsRow(ctx, supabase, parsed.data)
+  if (result.ok) revalidatePath("/app/staff/team")
+  return result
+}
+
+export async function assignMemberLabel(
+  input: unknown
+): Promise<Result<{ id: string; labelId: string | null }, ApiError>> {
+  const parsed = assignMemberLabelInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+  const ctx = await requireWorkspace()
+  if (!can(ctx.role, "labels.assign")) return err(FORBIDDEN)
+  const supabase = await createClient()
+  const writable = await requireWritable(ctx, supabase)
+  if (!writable.ok) return err(planReadOnlyApiError(writable.error))
+
+  const result = await assignMemberLabelRow(ctx, supabase, parsed.data)
+  if (result.ok) revalidatePath("/app/staff/team")
+  return result
 }
