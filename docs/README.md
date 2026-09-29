@@ -18,6 +18,8 @@ Documents marked **binding** are contracts. Deviating from one requires a decisi
 | [`GLOSSARY-EN-BN.md`](product/GLOSSARY-EN-BN.md)       | **Binding for UI copy.** English ↔ Bengali domain vocabulary; add a term here before using it in feature code, PDFs or notifications.        |
 | [`OWNER-QUESTIONS.md`](product/OWNER-QUESTIONS.md)     | Batched, non-blocking questions for the owner, each with the default the code assumes until answered.                                        |
 | [`COMPLIANCE-PDPA.md`](product/COMPLIANCE-PDPA.md)     | Draft data-protection compliance plan for Bangladesh's PDPA 2026 — internal working document, for lawyer review, not legal advice.           |
+| [`PRICE-PROPOSAL.md`](product/PRICE-PROPOSAL.md)       | **Provisional (D-78).** The plan grid in BDT, what's live vs. coming, the founding-school offer, payment terms and per-price rationale.      |
+| [`LOI-TEMPLATE.md`](product/LOI-TEMPLATE.md)           | **Provisional (D-78).** One-page, non-binding founding-school Letter of Intent, English and Bengali.                                         |
 
 ### product/legal/ — draft legal documents (not legal advice)
 
