@@ -1,0 +1,94 @@
+name: Demo seed
+
+# D-80: fills the ONE fictional demo school on production ("Acadigma Demo
+# School (ডেমো)") for investor and school demos. Manual only, no inputs: the
+# school's name and the three demo accounts are fixed in the scripts.
+#
+#   scripts/demo-seed.sh           accounts through the Auth admin API, then
+#   supabase/seed/demo-school.sql  → demo-class-6-ka.sql (D-103) → demo-school-history.sql
+#
+# Every tenant write goes through the app's own functions as a real member
+# (RLS, role checks, audit triggers). It refuses when the name matches more
+# than one workspace or one not owned by the demo owner, touches no other
+# workspace, and a second run adds nothing (proved by
+# packages/db/src/demo-seed.integration.test.ts in CI / db-integration).
+#
+# Secrets: SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_ID (already used by
+# db.yml) and DEMO_ACCOUNT_PASSWORD (new, >= 12 characters). The service key
+# is fetched with the access token at run time; set SUPABASE_SERVICE_ROLE_KEY
+# only if that lookup fails.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: demo-seed
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    name: seed
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.117.0
+
+      - name: Seed the demo school
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          # Used by `supabase link` / `db query --linked`: the CLI connects to the
+          # database itself (it asks for a link when it cannot), as in db.yml.
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_ACCOUNT_PASSWORD }}
+          SERVICE_KEY_OVERRIDE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DEMO_PASSWORD:-}" ]; then
+            echo "::error::add the DEMO_ACCOUNT_PASSWORD secret to the production environment first"
+            exit 1
+          fi
+          supabase link --project-ref "$PROJECT_REF"
+
+          key="${SERVICE_KEY_OVERRIDE:-}"
+          if [ -z "$key" ]; then
+            key=$(supabase projects api-keys --project-ref "$PROJECT_REF" --reveal -o json \
+              | jq -r 'first(.[] | select(.name == "service_role") | .api_key) //
+                       first(.[] | select(.type == "secret") | .api_key) // empty')
+          fi
+          if [ -z "$key" ]; then
+            echo "::error::no service key found; add SUPABASE_SERVICE_ROLE_KEY as a secret"
+            exit 1
+          fi
+          echo "::add-mask::$key"
+
+          SUPABASE_URL="https://$PROJECT_REF.supabase.co" SUPABASE_SERVICE_KEY="$key" \
+            DB_TARGET=--linked bash scripts/demo-seed.sh
+
+          # No platform path extends a trial yet (D-80): say when the demo
+          # school turns read-only (D-62), so nobody plans a demo past it.
+          supabase db query --linked \
+            "select to_char((trial_ends_at at time zone 'Asia/Dhaka')::date, 'YYYY-MM-DD') as trial_ends_on
+               from public.workspaces where name = 'Acadigma Demo School (ডেমো)' and type = 'school'" \
+            > trial.txt
+          cat trial.txt
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Demo seed"
+            echo "School: Acadigma Demo School (ডেমো) — accounts owner.demo@example.com,"
+            echo "teacher.demo@example.com, parent.demo@example.com (password: the DEMO_ACCOUNT_PASSWORD secret)."
+            echo "Trial ends on (read-only after, D-62): $(grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' trial.txt 2>/dev/null | head -1 || true)"
+            echo "Walkthrough: docs/product/DEMO-SCRIPT.md"
+          } >> "$GITHUB_STEP_SUMMARY"
