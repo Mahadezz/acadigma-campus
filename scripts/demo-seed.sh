@@ -92,8 +92,8 @@ ensure_user() {
   # Not ours: delete it in one transaction and create it afresh. The Auth
   # admin API's delete cannot do this alone: the personal workspace's
   # owner_id is ON DELETE RESTRICT, so it must go first. auth.users cascades
-  # to identities, sessions, refresh tokens, MFA factors and the profile
-  # (with its preferences and memberships); audit and consent rows are
+  # to identities, sessions, refresh tokens and MFA factors; the profile
+  # (with its preferences and memberships) is deleted after it (D-113); audit and consent rows are
   # FK-free and stay.
   db "do \$\$
       declare v uuid := '$id';
@@ -109,6 +109,8 @@ ensure_user() {
         end if;
         delete from public.workspaces w where w.type = 'personal' and w.owner_id = v;
         delete from auth.users u where u.id = v;
+        -- D-113: profiles no longer cascades from auth.users.
+        delete from public.profiles p where p.id = v;
       end \$\$" >/dev/null || { echo "::error::replacing $email failed" >&2; exit 1; }
   admin POST /admin/users "$body" >/dev/null || { echo "::error::recreating $email failed" >&2; exit 1; }
   echo "replaced $email"

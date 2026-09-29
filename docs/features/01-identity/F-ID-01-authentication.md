@@ -322,3 +322,16 @@ All in `apps/web/app/(auth)/actions.ts` unless noted. Schemas live in `packages/
 
 - **Rate-limit copy:** a throttled form shows the wait once, in the banner, in whole minutes ("Try again in 15 min."); the submit button stays its normal label, disabled. `ApiError.retryAfterSeconds` carries the seconds for the countdown.
 - **Per-user throttle keys** (`changePassword`, `eiinCheck`, `createSchool`) are derived from `auth.uid()` inside the database, so no caller can fill or clear another user's bucket.
+
+### Part 7 — account deletion (D-113, 2026-09-29, pulled forward by the owner)
+
+Built on `feat/identity-account-deletion`. Where this differs from §3, §4.9 and §7 above, this section wins:
+
+- **Where:** `/account/security` → **Delete account** (Settings → Your account → Delete account for owners/admins; the grace banner links there too). A "Delete account" entry in the user menu waits for open PR #109, which rewrites `user-menu.tsx`.
+- **Blocked** while the person is the only active owner of **any** school (not only one with other members — owner, 2026-09-29). The card lists those schools, each with **Transfer ownership**, which switches to that school and opens `/app/settings/membership` (F-ID-03 Part 7).
+- **Ceremony:** a sheet with two steps — (1) what is removed and what the school keeps; (2) type `DELETE` and the password, then the red **Delete my account**. Phone-OTP re-authentication waits for Part 5 (every account has a password until then).
+- **State** lives in `account_deletion_requests` (clients: SELECT own row only) and no `profiles.status` column is added: pending = a `pending` request row; deleted = `profiles.deleted_at`.
+- **Request** (`requestAccountDeletion`): password re-auth (failures count against the per-user re-auth bucket, 10/h), `public.request_account_deletion()` (idempotent, `SOLE_OWNER_BLOCKED`, 3/day), then **every session is signed out** and the person lands on `/login` with a notice showing the date.
+- **Grace banner** on every signed-in shell and on `/account/security`: "Your account will be deleted on {date}." + **Keep my account** (`cancelAccountDeletion`, idempotent: nothing pending is a success).
+- **Purge** is SQL, run nightly by pg_cron (`account-purge`, 02:30 Asia/Dhaka): `app.run_account_purges()` → `app.purge_account(id)`, one transaction per account. Removed / anonymised / kept per table: D-113 §2. The profile becomes a tombstone ("Deleted user", `deleted_at`) and `auth.users` is deleted; `profiles.id` no longer references `auth.users`. `audit_events` is never touched. A person who became a sole owner during the grace has the request cancelled, not the school orphaned.
+- **Not built in this Part:** confirmation email and notifications (F-ID-07), platform-staff cancel, OTP re-auth (Part 5), storage-object removal (no personal-workspace uploads exist; the purge refuses with `FILES_PRESENT` if any appear).
