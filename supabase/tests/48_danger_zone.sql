@@ -357,7 +357,9 @@ select is(
                  'f2110000-0000-0000-0000-000000000003')),
   3, 'the people keep their accounts');
 select is(
-  (select count(*)::int from public.workspace_members where user_id = 'f2110000-0000-0000-0000-000000000004'),
+  (select count(*)::int from public.workspace_members
+    where user_id = 'f2110000-0000-0000-0000-000000000004'
+      and workspace_id = (select id from ids where label = 'b')),
   1, 'owner B keeps their own membership');
 
 select * from finish();

@@ -24,6 +24,14 @@ export const EXEMPT = {
     "user-level profiles/onboarding_progress write, no workspace",
   "apps/web/app/(onboarding)/actions.ts#createSchoolWorkspace":
     "creates the workspace; tg_require_writable passes a fresh workspace",
+  "apps/web/app/(school)/app/settings/danger/actions.ts#archiveSchool":
+    "D-211: a read-only or archived school must still be able to archive, unarchive, schedule or cancel its own deletion; the DB functions check owner-only",
+  "apps/web/app/(school)/app/settings/danger/actions.ts#unarchiveSchool":
+    "D-211: a read-only or archived school must still be able to archive, unarchive, schedule or cancel its own deletion; the DB functions check owner-only",
+  "apps/web/app/(school)/app/settings/danger/actions.ts#scheduleSchoolDeletion":
+    "D-211: a read-only or archived school must still be able to archive, unarchive, schedule or cancel its own deletion; the DB functions check owner-only",
+  "apps/web/app/(school)/app/settings/danger/actions.ts#cancelSchoolDeletion":
+    "D-211: a read-only or archived school must still be able to archive, unarchive, schedule or cancel its own deletion; the DB functions check owner-only",
 }
 
 const READ_NAME =
