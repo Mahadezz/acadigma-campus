@@ -35,7 +35,7 @@ test("owner adds an academic year and a term, with the out-of-range error surfac
   await expect(page.getByText("2099", { exact: true })).toBeVisible()
 
   await page.getByRole("tab", { name: "Terms" }).click()
-  await page.getByLabel("Academic year").selectOption({ label: /2099/ })
+  await page.getByLabel("Academic year").selectOption({ label: "2099" })
   await page.getByRole("button", { name: "Add term" }).click()
   await page.getByLabel("Name").fill("Out of range")
   await page.getByLabel("Starts").fill("2098-12-01")

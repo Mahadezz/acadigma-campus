@@ -81,6 +81,11 @@ test("owner locks marks, computes results and reads the ranked class", async ({
   await expect(
     page.getByText(new RegExp(`Results computed: ${count} students`))
   ).toBeVisible()
+  // The notice lands before the buttons leave their pending (disabled,
+  // half-opacity) state; axe mid-way read them at 3.58:1 (e2e-live, D-76).
+  await expect(
+    page.getByRole("button", { name: "Compute results" })
+  ).toBeEnabled()
   await expectNoA11yViolations(page, testInfo)
 
   await page.getByRole("link", { name: "View results" }).click()
