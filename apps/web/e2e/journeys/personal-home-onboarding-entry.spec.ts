@@ -91,4 +91,10 @@ test("personal home offers Create a school / Join a school with a code, both rea
   await expect(
     sheet.getByRole("link", { name: "Join a school with a code" })
   ).toHaveAttribute("href", "/onboarding")
+
+  // Back to the school, as switch-workspace.spec.ts does: the switch persists
+  // `last_active_workspace_id`, and every later journey in an e2e-live shard
+  // signs in as this owner expecting /app (D-76).
+  await sheet.getByRole("button", { name: "Acadigma Model School" }).click()
+  await expect(page).toHaveURL(/\/app(\/.*)?$/)
 })
