@@ -4,6 +4,12 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 ---
 
+## 2026-09-30
+
+- #118 merged: legal/compliance audit (docs/product/legal/LEGAL-AUDIT-2026-09-29.md) — 24 issues, 12 lawyer questions; website false claims being fixed.
+- NVIDIA SkillSpector installed; skills scanned before install (apple-design, taste-skill, 7 Agency agents).
+- Recovered cleanly from the 02:30 usage limit; all six builders resumed.
+
 ## 2026-09-29
 
 ### Merged to main (each: reviews passed, CI green; migrations verified live with the Database run + smoke)

@@ -100,6 +100,9 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 
 ## 13. Owner-only items (record; don't nag)
 
+- 👤 Vercel: set a spend limit (Settings → Billing); Supabase: check the plan's spend cap — from the owner-shared hosting-bill post (invisible meters cause bill shock).
+- 👤 Decide whether to keep the US-region version of acadigma.com (US phone number, placeholder US pricing).
+
 - 👤 `DEMO_ACCOUNT_PASSWORD` secret (see §1) — the only thing blocking the demo.
 - 👤 Supabase Campus: Authentication → Email → **Confirm email** ON; Project Settings → Data API → **Max rows 1000**. Or re-connect the Supabase connector while signed in to the Campus account so the lead can do it (today it only sees the other account).
 - 👤 Sentry: revoke the auth token pasted in chat; send the project **DSN** (not urgent — before the first pilot school).
