@@ -181,6 +181,8 @@ function SectionRow({
                           time: timeLabel(locale, s.session.takenAt),
                         })
                       : null,
+                    // F-ID-11 §5.3 (D-310): an offline roll that landed late.
+                    s.session.syncedLate ? t.today.syncedLate : null,
                   ]
                     .filter(Boolean)
                     .join(" · ")

@@ -5,7 +5,7 @@ import * as React from "react"
 import { Button } from "@acadigma/ui/components/button"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 
-import { purgeOnSignOut, snapshotUserId } from "@/lib/offline/check"
+import { purgeOnSignOut } from "@/lib/offline/check"
 import {
   countQueued,
   deleteOwnOutbox,
@@ -22,8 +22,15 @@ import { useOfflineCopy } from "./offline-provider"
  * is neither counted nor deleted (D-309). (The unconditional wipe on
  * arriving at /login clears pages only: an expired session keeps its
  * queue, §4.6.)
+ *
+ * `userId` is who the server says is signed in (`ctx.userId`), never the
+ * device's last snapshot: that can still name the previous teacher on a
+ * shared phone when a check never got through (D-310, review of #89).
  */
-export function useGuardedSignOut(signOutNow: () => Promise<void>): {
+export function useGuardedSignOut(
+  signOutNow: () => Promise<void>,
+  userId: string
+): {
   request: () => void
   pending: boolean
   dialog: React.ReactNode
@@ -33,14 +40,14 @@ export function useGuardedSignOut(signOutNow: () => Promise<void>): {
   const getCopy = useOfflineCopy()
 
   async function finish() {
-    await deleteOwnOutbox(snapshotUserId()).catch(() => undefined)
+    await deleteOwnOutbox(userId).catch(() => undefined)
     await purgeOnSignOut()
     await signOutNow()
   }
 
   function request() {
     start(async () => {
-      const n = await countQueued(snapshotUserId()).catch(() => 0)
+      const n = await countQueued(userId).catch(() => 0)
       if (n > 0) setWaiting(n)
       else await finish()
     })
@@ -48,8 +55,7 @@ export function useGuardedSignOut(signOutNow: () => Promise<void>): {
 
   function stay() {
     setWaiting(0)
-    const userId = snapshotUserId()
-    if (userId && navigator.onLine) void sendQueued(userId)
+    if (navigator.onLine) void sendQueued(userId)
   }
 
   const dialog =
@@ -90,14 +96,17 @@ export function useGuardedSignOut(signOutNow: () => Promise<void>): {
 /** A plain sign-out button with the same guard (basic mode's essentials row). */
 export function GuardedSignOutButton({
   signOutNow,
+  userId,
   className,
   children,
 }: {
   signOutNow: () => Promise<void>
+  /** The signed-in user (`ctx.userId`). */
+  userId: string
   className?: string
   children: React.ReactNode
 }) {
-  const { request, pending, dialog } = useGuardedSignOut(signOutNow)
+  const { request, pending, dialog } = useGuardedSignOut(signOutNow, userId)
   return (
     <>
       <button

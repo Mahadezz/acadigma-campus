@@ -6,6 +6,8 @@ import {
   classify,
   enqueue,
   OUTBOX_LIMIT,
+  othersExpired,
+  resolveConflict,
   replay,
   type OutboxDraft,
   type OutboxItem,
@@ -121,7 +123,7 @@ describe("classify (§4.4)", () => {
     [fail("dependency_unavailable"), "retry"],
     [fail("internal"), "retry"],
     [fail("rate_limited"), "retry"],
-    [fail("unauthenticated"), "retry"],
+    [fail("unauthenticated"), "paused"],
     [fail("conflict", "WRONG_ACCOUNT"), "retry"],
     [fail("conflict", "CONFLICT"), "conflict"],
     [fail("forbidden", "OUTSIDE_EDIT_WINDOW"), "needs_attention"],
@@ -338,5 +340,66 @@ describe("replay", () => {
       await replay(store, { userId: U, workspaceId: W, send })
       expect(store.items.size).toBe(0)
     }
+  })
+})
+
+describe("Part 2b (D-310)", () => {
+  it("an expired session pauses the queue (§4.6): the item waits, the run stops and says so", async () => {
+    const store = memoryStore()
+    await enqueue(store, draft("k1", { entityKey: "a" }), 1)
+    await enqueue(store, draft("k2", { entityKey: "b" }), 2)
+    const send = vi.fn(async () => fail("unauthenticated"))
+    expect(await replay(store, { userId: U, workspaceId: W, send })).toBe(
+      "paused"
+    )
+    expect(send).toHaveBeenCalledTimes(1)
+    expect([...store.items.values()].map((i) => i.status)).toEqual([
+      "pending",
+      "pending",
+    ])
+  })
+
+  it("a run that sends everything reports done; a network error reports retry", async () => {
+    const store = memoryStore()
+    await enqueue(store, draft("k1"), 1)
+    const failing = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"))
+    expect(
+      await replay(store, { userId: U, workspaceId: W, send: failing })
+    ).toBe("retry")
+    expect(
+      await replay(store, { userId: U, workspaceId: W, send: async () => ok() })
+    ).toBe("done")
+  })
+
+  it("another user's outbox expires only when everything in it is 14 days old", () => {
+    const now = 100 * 86_400_000
+    const at = (days: number) => ({ createdAt: now - days * 86_400_000 })
+    expect(othersExpired([at(15), at(14)], now)).toBe(true)
+    expect(othersExpired([at(15), at(13)], now)).toBe(false)
+    expect(othersExpired([], now)).toBe(true)
+  })
+
+  it("resolve (conflict sheet): the chosen records go on the colleague's version under a new key, waiting", async () => {
+    const store = memoryStore()
+    await enqueue(store, draft("k1"), 1)
+    const [item] = [...store.items.values()]
+    await replay(store, {
+      userId: U,
+      workspaceId: W,
+      send: async () => fail("conflict", "CONFLICT"),
+    })
+    const records = [{ studentId: "st1", status: "absent" as const }]
+    await resolveConflict(store, item!.id, records, "v9", "k-new")
+    const [after] = [...store.items.values()]
+    expect(after).toMatchObject({
+      status: "pending",
+      lastError: null,
+      attempts: 0,
+      payload: {
+        idempotencyKey: "k-new",
+        expectedUpdatedAt: "v9",
+        records,
+      },
+    })
   })
 })

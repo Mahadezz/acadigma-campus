@@ -16,7 +16,14 @@ import { expectNoA11yViolations } from "../axe"
  *    register for the day, with her marks.
  * 2. While she is offline a colleague saves the same class: on reconnect her
  *    roll comes back as a conflict — shown on the screen and in the queue
- *    sheet under "Needs your choice" — and the colleague's register stands.
+ *    sheet under "Needs your choice" — and the colleague's register stands
+ *    until she chooses. Part 2b (D-310): the conflict sheet shows the
+ *    differing students, she keeps hers for one, and the audit trail holds
+ *    both values.
+ * 3. Part 2b (D-310), a shared phone: her session ends with a roll waiting;
+ *    the sign-in screen counts it; another teacher signs in and is told
+ *    (a count only), nothing of hers is sent or deleted; she signs in again
+ *    and it sends.
  *
  * Each test makes its own owner, school and three-student class through the
  * local service key, so the two viewports and other lanes' journeys never
@@ -175,15 +182,20 @@ async function makeSchool(): Promise<School> {
 }
 
 let school: School
+let other: School | null = null
 test.beforeEach(async () => {
   // Setup makes a user, a school and a class through the API: give it room.
   test.setTimeout(90_000)
   school = await makeSchool()
 })
 test.afterEach(async () => {
-  const { data } = await school.colleague.auth.getUser()
-  await school.admin.from("workspaces").delete().eq("id", school.workspaceId)
-  if (data.user) await school.admin.auth.admin.deleteUser(data.user.id)
+  for (const s of [school, other]) {
+    if (!s) continue
+    const { data } = await s.colleague.auth.getUser()
+    await s.admin.from("workspaces").delete().eq("id", s.workspaceId)
+    if (data.user) await s.admin.auth.admin.deleteUser(data.user.id)
+  }
+  other = null
 })
 
 const cachedPaths = (page: Page) =>
@@ -229,6 +241,14 @@ async function mark(page: Page, row: number, status: "Absent" | "Present") {
 }
 
 /** Signs in and opens the class with a full load, so the worker keeps it. */
+async function signIn(page: Page, who: School) {
+  await page.goto("/login")
+  await page.getByLabel("Email").fill(who.email)
+  await page.getByLabel("Password").fill(who.password)
+  await page.getByRole("button", { name: "Sign in" }).click()
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"))
+}
+
 async function openClassOnline(page: Page): Promise<string> {
   await page.goto("/login")
   await page.getByLabel("Email").fill(school.email)
@@ -353,4 +373,80 @@ test("a colleague's save meanwhile comes back as a conflict, nothing overwritten
   expect(await registers()).toEqual([
     expect.objectContaining({ absent_count: 3, present_count: 0 }),
   ])
+
+  // D-310: she compares and chooses. All three differ (hers present, theirs
+  // absent); she keeps hers for the first student only.
+  await sheet.getByRole("button", { name: "Compare and choose" }).click()
+  const choose = page.getByRole("dialog", {
+    name: "Choose which roll call to keep",
+  })
+  await expect(
+    choose.getByText("3 students differ.", { exact: false })
+  ).toBeVisible()
+  await expectNoA11yViolations(page, testInfo)
+  await choose
+    .getByRole("group")
+    .first()
+    .getByRole("radio", { name: /Mine/ })
+    .click()
+  await choose.getByRole("button", { name: "Save my choices" }).click()
+  await expect(needsYou).toBeHidden({ timeout: 20_000 })
+  await expect
+    .poll(registers)
+    .toEqual([expect.objectContaining({ absent_count: 2, present_count: 1 })])
+
+  // Both values are in the audit trail: the colleague's absent, her present.
+  const { data: audit } = await school.admin
+    .from("audit_events")
+    .select("before, after")
+    .eq("action", "attendance_records.update")
+    .eq("workspace_id", school.workspaceId)
+  expect(audit).toEqual([
+    expect.objectContaining({
+      before: expect.objectContaining({ status: "absent" }),
+      after: expect.objectContaining({ status: "present" }),
+    }),
+  ])
+})
+
+test("a shared phone: another teacher never sends or deletes her waiting roll; she signs in again and it sends", async ({
+  page,
+  context,
+}, testInfo) => {
+  other = await makeSchool()
+  await openClassOnline(page)
+  await context.setOffline(true)
+  await page.getByRole("button", { name: "Mark all present" }).click()
+  await page.getByRole("button", { name: "Save" }).click()
+  await expect(page.getByRole("button", { name: "1 waiting" })).toBeVisible()
+
+  // Her session ends while the roll waits (§4.6).
+  await context.clearCookies()
+  await context.setOffline(false)
+  await page.goto("/login")
+  await expect(
+    page.getByText(/1 change saved on this phone has not been sent yet/)
+  ).toBeVisible()
+  await expectNoA11yViolations(page, testInfo)
+  expect(await registers()).toEqual([])
+
+  // Another teacher signs in: a count and a choice, never her roll.
+  await signIn(page, other)
+  const told = page.getByRole("dialog", {
+    name: "Another teacher's changes are waiting on this phone",
+  })
+  await expect(told).toBeVisible({ timeout: 15_000 })
+  await expectNoA11yViolations(page, testInfo)
+  await told.getByRole("button", { name: "Continue" }).click()
+  await expect(page.getByRole("button", { name: /waiting/ })).toHaveCount(0)
+  await expect.poll(() => queuedMarks(page)).toEqual(["ppp"])
+  expect(await registers()).toEqual([])
+
+  // She signs in again on the same phone: it sends, once.
+  await context.clearCookies()
+  await signIn(page, school)
+  await expect
+    .poll(registers, { timeout: 20_000 })
+    .toEqual([expect.objectContaining({ absent_count: 0, present_count: 3 })])
+  await expect.poll(() => queuedMarks(page)).toEqual([])
 })

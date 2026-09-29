@@ -1,5 +1,11 @@
 # @acadigma/db
 
+## 0.10.2
+
+### Patch Changes
+
+- 66f3c5d: `createReportRun` is proven through real PostgREST under the new `report_runs` column-level insert grant: a client can no longer insert a run that is already `ready` or carries a `file_id` (D-77).
+
 ## 0.10.1
 
 ### Patch Changes

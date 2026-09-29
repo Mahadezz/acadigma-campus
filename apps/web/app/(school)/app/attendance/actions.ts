@@ -9,17 +9,27 @@
 
 import { revalidatePath } from "next/cache"
 
+import { z } from "zod"
+
 import {
   apiError,
   apiErrorFromZod,
   err,
+  ok,
   planReadOnlyApiError,
   saveAttendanceInputSchema,
+  uuidSchema,
   type ApiError,
   type Result,
+  type RollCallStudent,
   type SaveAttendanceResult,
 } from "@acadigma/contracts"
-import { requireWritable, saveAttendance } from "@acadigma/db"
+import {
+  getAttendanceDay,
+  getRollCall,
+  requireWritable,
+  saveAttendance,
+} from "@acadigma/db"
 import { can } from "@acadigma/domain"
 
 import { createClient } from "@/lib/supabase/server"
@@ -66,4 +76,57 @@ export async function saveAttendanceSession(
     revalidatePath("/app/dashboard")
   }
   return result
+}
+
+const conflictInputSchema = z
+  .object({
+    sectionId: uuidSchema,
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  })
+  .strict()
+
+export type AttendanceConflict = {
+  /** The colleague's version: the base for "Use mine" / "Save my choices". */
+  updatedAt: string
+  takenByName: string | null
+  students: Pick<
+    RollCallStudent,
+    "studentId" | "fullName" | "fullNameBn" | "status"
+  >[]
+}
+
+/**
+ * F-ID-11 §4.5 (D-310): the register a queued roll call conflicted with, for
+ * the conflict sheet — read with the caller's own session and RLS, exactly
+ * what the roll-call page shows them.
+ */
+export async function getAttendanceConflict(
+  input: unknown
+): Promise<Result<AttendanceConflict, ApiError>> {
+  const parsed = conflictInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+  const ctx = await requireWorkspace()
+  if (!can(ctx.role, "attendance.read") || ctx.role === "parent") {
+    return err(apiError("forbidden", "You cannot read attendance here."))
+  }
+  const supabase = await createClient()
+  const { sectionId, date } = parsed.data
+  const day = await getAttendanceDay(supabase, ctx, date)
+  if (!day.ok) return day
+  const session = day.data.sections.find(
+    (s) => s.sectionId === sectionId
+  )?.session
+  if (!session) return err(apiError("not_found", "No register to compare."))
+  const students = await getRollCall(supabase, ctx, sectionId, date, session.id)
+  if (!students.ok) return students
+  return ok({
+    updatedAt: session.updatedAt,
+    takenByName: session.takenByName,
+    students: students.data.map((s) => ({
+      studentId: s.studentId,
+      fullName: s.fullName,
+      fullNameBn: s.fullNameBn,
+      status: s.status,
+    })),
+  })
 }

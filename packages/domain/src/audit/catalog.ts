@@ -522,6 +522,14 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn: "{actor} একটি পরীক্ষার পেপারে নম্বর সংরক্ষণ করেছেন ({n})",
     isGeneric: false,
   },
+  // F-ID-11 Part 2b (D-310) — an offline roll call accepted late (§5.3).
+  {
+    action: "attendance.synced_late",
+    severity: "notable",
+    sentenceEn: "{actor}'s roll call taken offline reached the server late",
+    sentenceBn: "{actor}-এর অফলাইনে নেওয়া হাজিরা দেরিতে সার্ভারে পৌঁছেছে",
+    isGeneric: false,
+  },
   // F-AC-06 Part 4 (D-307) — submit, lock and unlock a paper.
   {
     action: "marks.submitted",

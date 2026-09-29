@@ -21,7 +21,8 @@ vi.mock("@/app/(school)/app/attendance/actions", () => ({
   saveAttendanceSession: vi.fn(),
 }))
 
-const { countQueued, deleteOwnOutbox } = await import("./outbox-client")
+const { countOnDevice, countQueued, deleteOwnOutbox } =
+  await import("./outbox-client")
 
 beforeEach(() => {
   deleted.length = 0
@@ -36,6 +37,10 @@ describe("sign-out touches only the signed-in user's outbox", () => {
   it("deletes only their own outbox", async () => {
     await deleteOwnOutbox("u1")
     expect(deleted).toEqual(["u1"])
+  })
+
+  it("the sign-in screen counts everything waiting on the phone, whoever saved it (D-310)", async () => {
+    expect(await countOnDevice()).toBe(5)
   })
 
   it("deletes nothing when the user is unknown", async () => {
