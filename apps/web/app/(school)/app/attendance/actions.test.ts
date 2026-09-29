@@ -18,12 +18,17 @@ vi.mock("@/lib/workspace", () => ({
 
 const mockRequireWritable = vi.fn()
 const mockSave = vi.fn()
+const mockDay = vi.fn()
+const mockRoll = vi.fn()
 vi.mock("@acadigma/db", () => ({
   requireWritable: (...a: unknown[]) => mockRequireWritable(...a),
   saveAttendance: (...a: unknown[]) => mockSave(...a),
+  getAttendanceDay: (...a: unknown[]) => mockDay(...a),
+  getRollCall: (...a: unknown[]) => mockRoll(...a),
 }))
 
-const { saveAttendanceSession } = await import("./actions")
+const { getAttendanceConflict, saveAttendanceSession } =
+  await import("./actions")
 
 const STUDENT = "55555555-5555-4555-8555-555555555555"
 const INPUT = {
@@ -98,5 +103,68 @@ describe("saveAttendanceSession", () => {
     expect(result.ok).toBe(true)
     ctx.workspaceId = "w"
     ctx.userId = "u"
+  })
+})
+
+describe("getAttendanceConflict (F-ID-11 §4.5, D-310)", () => {
+  const SECTION = INPUT.sectionId
+  const session = {
+    id: "sess",
+    updatedAt: "2026-09-25T03:12:00Z",
+    takenByName: "Nadia",
+  }
+
+  it("returns the colleague's register: version, who took it, every status", async () => {
+    mockDay.mockResolvedValue({
+      ok: true,
+      data: { sections: [{ sectionId: SECTION, session }] },
+    })
+    mockRoll.mockResolvedValue({
+      ok: true,
+      data: [{ studentId: STUDENT, fullName: "Rahim", status: "absent" }],
+    })
+    const result = await getAttendanceConflict({
+      sectionId: SECTION,
+      date: INPUT.date,
+    })
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        updatedAt: session.updatedAt,
+        takenByName: "Nadia",
+        students: [{ studentId: STUDENT, fullName: "Rahim", status: "absent" }],
+      },
+    })
+    expect(mockDay.mock.calls[0]?.[2]).toBe(INPUT.date)
+    expect(mockRoll.mock.calls[0]?.slice(2)).toEqual([
+      SECTION,
+      INPUT.date,
+      "sess",
+    ])
+  })
+
+  it("refuses a caller who cannot read attendance, and bad input", async () => {
+    ctx.role = "parent"
+    const denied = await getAttendanceConflict({
+      sectionId: SECTION,
+      date: INPUT.date,
+    })
+    expect(!denied.ok && denied.error.code).toBe("forbidden")
+    ctx.role = "teacher"
+    const bad = await getAttendanceConflict({ sectionId: "x", date: "y" })
+    expect(!bad.ok && bad.error.code).toBe("validation_failed")
+    expect(mockDay).not.toHaveBeenCalled()
+  })
+
+  it("no register on the server (nothing to compare) is not_found", async () => {
+    mockDay.mockResolvedValue({
+      ok: true,
+      data: { sections: [{ sectionId: SECTION, session: null }] },
+    })
+    const result = await getAttendanceConflict({
+      sectionId: SECTION,
+      date: INPUT.date,
+    })
+    expect(!result.ok && result.error.code).toBe("not_found")
   })
 })

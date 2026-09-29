@@ -132,7 +132,11 @@ export default async function SchoolLayout({
       >
         {lastUpdated}
         <div className="mb-3 flex justify-end empty:hidden">
-          <OutboxChip userId={ctx.userId} rollCopy={t.attendance.roll} />
+          <OutboxChip
+            userId={ctx.userId}
+            rollCopy={t.attendance.roll}
+            locale={locale}
+          />
         </div>
         {staleOutbox}
         {readOnlyBanner}
@@ -198,7 +202,11 @@ export default async function SchoolLayout({
           )}
           actions={
             <>
-              <OutboxChip userId={ctx.userId} rollCopy={t.attendance.roll} />
+              <OutboxChip
+                userId={ctx.userId}
+                rollCopy={t.attendance.roll}
+                locale={locale}
+              />
               <Button
                 variant="ghost"
                 size="icon"
@@ -208,6 +216,7 @@ export default async function SchoolLayout({
               </Button>
               <UserMenu
                 locale={locale}
+                userId={ctx.userId}
                 t={{
                   ...t.workspace.userMenu,
                   ...t.auth.languageToggle,

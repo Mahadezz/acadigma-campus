@@ -12,6 +12,7 @@ vi.mock("@acadigma/db", () => ({
   resolveWorkspaceContext: (...args: unknown[]) => mockResolve(...args),
 }))
 const mockGetUser = vi.fn()
+const mockGetSession = vi.fn()
 /** `{ data, error }` for the caller's `guardian_users` / `workspace_members`. */
 const mockLinks = vi.fn()
 const mockMembers = vi.fn()
@@ -25,7 +26,7 @@ const query = (rows: () => unknown) => {
 }
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { getUser: mockGetUser },
+    auth: { getUser: mockGetUser, getSession: mockGetSession },
     from: (table: string) =>
       query(table === "guardian_users" ? mockLinks : mockMembers),
   }),
@@ -102,6 +103,36 @@ describe("GET /api/offline/session", () => {
 
   it("unauthenticated → signed_out", async () => {
     mockResolve.mockResolvedValue(fail("unauthenticated"))
+    expect((await check()).body).toEqual({ kind: "signed_out" })
+  })
+
+  it.each(["user_not_found", "user_banned"])(
+    "a %s account → revoked, naming the session's user (D-310, §4.8)",
+    async (code) => {
+      mockResolve.mockResolvedValue(fail("unauthenticated"))
+      mockGetUser.mockResolvedValue({ data: { user: null }, error: { code } })
+      mockGetSession.mockResolvedValue({
+        data: { session: { user: { id: "u1" } } },
+      })
+      expect((await check()).body).toEqual({ kind: "revoked", userId: "u1" })
+    }
+  )
+
+  it("an expired session (any other auth error, or no session) stays signed_out", async () => {
+    mockResolve.mockResolvedValue(fail("unauthenticated"))
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { code: "session_expired" },
+    })
+    mockGetSession.mockResolvedValue({
+      data: { session: { user: { id: "u1" } } },
+    })
+    expect((await check()).body).toEqual({ kind: "signed_out" })
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { code: "user_not_found" },
+    })
+    mockGetSession.mockResolvedValue({ data: { session: null } })
     expect((await check()).body).toEqual({ kind: "signed_out" })
   })
 

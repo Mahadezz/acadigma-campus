@@ -24,6 +24,12 @@ const mockOutbox = vi.fn()
 vi.mock("@/app/(shared)/offline/offline-provider", () => ({
   useOfflineCopy: () => () => en.offline,
 }))
+// The server is 90 s ahead of this phone's clock.
+vi.mock("@/lib/offline/check", () => ({ serverClockOffset: () => 90_000 }))
+vi.mock("@/app/(shared)/offline/conflict-sheet", () => ({
+  ConflictSheet: ({ open }: { open: boolean }) =>
+    open ? <div role="dialog">conflict sheet</div> : null,
+}))
 
 const { RollCall, saveErrorText } = await import("./roll-call")
 
@@ -379,6 +385,29 @@ describe("RollCall offline (F-ID-11 Part 2a)", () => {
     expect(mockSendQueued).not.toHaveBeenCalled()
   })
 
+  it("an offline save records when it was taken, on the server's clock (D-310)", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-09-25T04:00:00Z"))
+    render(<RollCall {...BASE} />)
+    markAndSave()
+    await screen.findByText(en.offline.savedOnPhone)
+    expect(mockQueueSave.mock.calls[0]?.[0].payload.capturedAt).toBe(
+      "2026-09-25T04:01:30.000Z"
+    )
+    vi.mocked(Date.now).mockRestore()
+  })
+
+  it("a conflict on the screen opens the choice sheet (D-310)", async () => {
+    mockOutbox.mockReturnValue([
+      { id: "i1", entityKey: ENTITY, status: "conflict" },
+    ])
+    render(<RollCall {...BASE} />)
+    fireEvent.click(
+      screen.getByRole("button", { name: en.offline.compareAndChoose })
+    )
+    expect(await screen.findByRole("dialog")).toBeTruthy()
+  })
+
   it("a request that never came back is queued under the same key", async () => {
     mockSave.mockRejectedValue(new TypeError("Failed to fetch"))
     render(<RollCall {...BASE} />)
@@ -387,6 +416,8 @@ describe("RollCall offline (F-ID-11 Part 2a)", () => {
     expect(mockQueueSave.mock.calls[0]?.[0].payload.idempotencyKey).toBe(
       mockSave.mock.calls[0]?.[0].idempotencyKey
     )
+    // The same payload too: it may have landed, and a replay must match it.
+    expect(mockQueueSave.mock.calls[0]?.[0].payload.capturedAt).toBeUndefined()
   })
 
   it("online with an earlier save still waiting: queues behind it, then sends", async () => {

@@ -38,7 +38,7 @@ export default async function InvitePage() {
         t={t.invite}
         relations={t.students.relation}
         locale={locale}
-        signedIn={Boolean(user)}
+        userId={user?.id ?? null}
       />
     </AuthCard>
   )
