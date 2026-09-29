@@ -313,13 +313,13 @@ select tests.login('39c00000-0000-4000-a000-000000000001');
 update public.workspace_members set status = 'removed'
  where id = '39c00000-0000-4000-e000-000000000004';
 select throws_ok(
-  $update public.workspace_members set status = 'active'
-     where id = '39c00000-0000-4000-e000-000000000004'$,
+  $$update public.workspace_members set status = 'active'
+     where id = '39c00000-0000-4000-e000-000000000004'$$,
   '42501', 'ownership is granted only through transfer_ownership',
   're-activating a removed owner as an owner is refused (no re-auth)');
 select lives_ok(
-  $update public.workspace_members set status = 'active', role = 'admin'
-     where id = '39c00000-0000-4000-e000-000000000004'$,
+  $$update public.workspace_members set status = 'active', role = 'admin'
+     where id = '39c00000-0000-4000-e000-000000000004'$$,
   'an owner re-activates a removed owner as an admin');
 select tests.logout();
 select is(tests.m('4'), 'admin/active', 'the re-activated member is an active admin');
