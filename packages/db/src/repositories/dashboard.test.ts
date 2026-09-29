@@ -73,7 +73,7 @@ function happy(call: Call): Result {
         branding: { header_line_1: "Acadigma Demo School", logo_file_id: null },
       },
     }
-  if (call.table === "staff_directory") return { count: 7 }
+  if (call.table === "staff_records") return { count: 7 }
   if (call.table === "academic_years") return { count: 1 }
   if (call.table === "grade_levels") return { count: 12 }
   const role = call.filters.find((f) => f[1] === "role")?.[2] as string
@@ -118,7 +118,7 @@ describe("getDashboardSummary", () => {
       expect(m.filters).toContainEqual(["eq", "status", "active"])
     const years = counts.find((c) => c.table === "academic_years")
     expect(years?.filters).toContainEqual(["eq", "is_current", true])
-    const staff = counts.find((c) => c.table === "staff_directory")
+    const staff = counts.find((c) => c.table === "staff_records")
     expect(staff?.filters).toContainEqual([
       "in",
       "employment_status",
@@ -147,7 +147,7 @@ describe("getDashboardSummary", () => {
 
   it("fails closed when any count errors", async () => {
     const { client } = fakeClient((call) =>
-      call.table === "staff_directory"
+      call.table === "staff_records"
         ? { error: { message: "boom" } }
         : happy(call)
     )

@@ -1471,6 +1471,63 @@
       "whatsappText": "Your child's school invites you to see {student}'s results on Acadigma Campus. Open this link: {url}"
     }
   },
+  "staff": {
+    "title": "Staff",
+    "searchLabel": "Search by name, code, email or phone",
+    "searchPlaceholder": "Name, TCH-…, email or phone",
+    "search": "Search",
+    "filters": {
+      "all": "All",
+      "teacher": "Teachers",
+      "admin": "Admin",
+      "staff": "Staff",
+      "on_notice": "On notice",
+      "pending_join": "Pending"
+    },
+    "caption": "Staff directory",
+    "columns": {
+      "name": "Name",
+      "role": "Role",
+      "department": "Department",
+      "subjects": "Subjects",
+      "contact": "Contact",
+      "status": "Status"
+    },
+    "you": "You",
+    "noSubjects": "—",
+    "noContact": "No contact on file",
+    "empty": "No staff yet",
+    "emptyDescription": "Invite your teachers to get started.",
+    "noMatches": "No one matches your search.",
+    "clearFilters": "Clear filters",
+    "loadMore": "Load more",
+    "retry": "Retry",
+    "errorGeneric": "The staff directory could not load. Try again.",
+    "status": {
+      "pending_join": "Pending",
+      "active": "Active",
+      "on_notice": "On notice",
+      "left": "Left"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "teacher": "Teacher",
+      "staff": "Staff"
+    },
+    "profile": {
+      "backToDirectory": "Back to staff",
+      "department": "Department",
+      "subjects": "Subjects",
+      "workEmail": "Work email",
+      "workPhone": "Work phone",
+      "call": "Call",
+      "joined": "Joined",
+      "staffCode": "Staff ID",
+      "notFound": "This person could not be found.",
+      "noRecordYet": "No staff record yet. Employment details, documents and pay will show here once one is created."
+    }
+  },
   "marks": {
     "title": "Enter marks",
     "back": "Back to the exam",

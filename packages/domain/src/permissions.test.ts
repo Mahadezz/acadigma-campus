@@ -268,6 +268,9 @@ describe("F-ID-03 §2 tenancy & membership matrix — transcribed exactly", () =
     // F-AC-02 §2 (D-103); RLS narrows teachers to the class teacher.
     "students.read_sensitive": ["owner", "admin", "teacher"],
     "students.import": ["owner", "admin"],
+    // F-OP-06 §2 Part 2 (D-209): asserted for real, matching the spec's
+    // permission table exactly — never a parent.
+    "staff.view": ["owner", "admin", "teacher", "staff"],
   }
 
   it("gives every declared action in ACTIONS an entry in this table", () => {
