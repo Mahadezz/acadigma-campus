@@ -1,9 +1,6 @@
 import { redirect } from "next/navigation"
 
-import {
-  getPendingAccountDeletion,
-  listAccountDeletionBlockers,
-} from "@acadigma/db/repositories/account-deletion"
+import { listAccountDeletionBlockers } from "@acadigma/db/repositories/account-deletion"
 import { ACCOUNT_DELETION_GRACE_DAYS } from "@acadigma/domain/auth"
 import {
   Card,
@@ -14,6 +11,7 @@ import {
 } from "@acadigma/ui/components/card"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { getPendingDeletion } from "@/lib/account-deletion"
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 
@@ -41,7 +39,7 @@ export default async function SecurityPage() {
   const { t } = await getMessages()
   const d = t.auth.deleteAccount
   const [pending, blockers] = await Promise.all([
-    getPendingAccountDeletion(supabase, user.id),
+    getPendingDeletion(user.id),
     listAccountDeletionBlockers(supabase),
   ])
   const scheduled = pending.ok && pending.data !== null

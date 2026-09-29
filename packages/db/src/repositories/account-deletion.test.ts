@@ -112,6 +112,7 @@ describe("requestAccountDeletion", () => {
   it.each([
     [{ message: "SOLE_OWNER_BLOCKED", code: "P0001" }, "forbidden"],
     [{ message: "RATE_LIMITED", code: "54000" }, "rate_limited"],
+    [{ message: "REAUTH_REQUIRED", code: "42501" }, "unauthenticated"],
     [{ message: "connection reset" }, "dependency_unavailable"],
   ])("maps %o to %s", async (error, code) => {
     const result = await requestAccountDeletion(

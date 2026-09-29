@@ -165,14 +165,15 @@
       "sheetTitle": "Delete your account?",
       "removedTitle": "Removed after {days} days",
       "removedItems": [
-        "Your sign-in, name, email and phone number",
+        "Your sign-in, and the name, email and phone number on your account",
         "Your personal workspace and everything in it",
         "Your settings, devices and notifications"
       ],
       "keptTitle": "Kept by your schools",
       "keptItems": [
         "Students, marks, attendance and other records you created stay with the school, shown as “Deleted user”",
-        "The security log (audit records) is kept as evidence and cannot be erased"
+        "What a school holds about you itself (a staff record, contact details it entered) stays with that school — ask the school to remove it",
+        "The security log (audit records, which include your name) is kept as evidence and cannot be erased"
       ],
       "graceNote": "You can sign in and keep your account any time in the next {days} days.",
       "continueButton": "Continue",

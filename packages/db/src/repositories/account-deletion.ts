@@ -62,6 +62,12 @@ export async function requestAccountDeletion(
         )
       )
     }
+    // The database wants a password sign-in from the last 5 minutes (D-113).
+    if (error.message === "REAUTH_REQUIRED") {
+      return err(
+        apiError("unauthenticated", "Enter your password again to continue.")
+      )
+    }
     if (error.code === "54000") {
       return err(
         apiError("rate_limited", "Too many requests today. Try again tomorrow.")

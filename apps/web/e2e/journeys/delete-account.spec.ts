@@ -92,7 +92,7 @@ test("request deletion, sign back in, keep the account", async ({
   await submit.click()
 
   // Every session ended; /login says when.
-  await expect(page).toHaveURL(/\/login\?deletion=/)
+  await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByText(/Your account will be deleted on/)).toBeVisible()
 
   await signIn(page, email, password)

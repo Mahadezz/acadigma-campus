@@ -17,6 +17,10 @@ import {
   requestAccountDeletion as requestDeletion,
 } from "@acadigma/db/repositories/account-deletion"
 
+import {
+  DELETION_NOTICE_COOKIE,
+  DELETION_NOTICE_COOKIE_OPTS,
+} from "@/lib/account-deletion"
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -88,6 +92,11 @@ export async function requestAccountDeletion(
   cookieStore.delete(WORKSPACE_COOKIE)
   cookieStore.delete(UI_MODE_COOKIE)
   cookieStore.delete(TEXT_SIZE_COOKIE)
+  cookieStore.set(
+    DELETION_NOTICE_COOKIE,
+    result.data.scheduledPurgeAt,
+    DELETION_NOTICE_COOKIE_OPTS
+  )
 
   return ok(result.data)
 }

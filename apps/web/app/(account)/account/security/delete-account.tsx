@@ -135,9 +135,7 @@ function Ceremony({
         // Every session was just ended server-side; clear this device too.
         await deleteOwnOutbox(userId).catch(() => undefined)
         await purgeOnSignOut().catch(() => undefined)
-        window.location.assign(
-          `/login?deletion=${encodeURIComponent(result.data.scheduledPurgeAt)}`
-        )
+        window.location.assign("/login")
       } catch {
         setError("Could not reach the server. Try again.")
       }
@@ -239,6 +237,7 @@ function Ceremony({
               <Label htmlFor="delete-confirmation">{t.confirmLabel}</Label>
               <Input
                 id="delete-confirmation"
+                autoFocus
                 autoComplete="off"
                 autoCapitalize="characters"
                 spellCheck={false}

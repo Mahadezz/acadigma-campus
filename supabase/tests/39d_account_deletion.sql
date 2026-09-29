@@ -20,7 +20,7 @@
 --      purged.
 -- =====================================================================
 begin;
-select plan(38);
+select plan(42);
 
 create schema if not exists tests;
 
@@ -44,7 +44,10 @@ returns void language plpgsql as $fn$
 begin
   perform set_config('request.jwt.claims',
     json_build_object('sub', p_id::text, 'role', 'authenticated',
-      'email', (select u.email from auth.users u where u.id = p_id))::text, true);
+      'email', (select u.email from auth.users u where u.id = p_id),
+      -- a password sign-in just now, as Supabase puts it in the JWT
+      'amr', json_build_array(json_build_object(
+        'method', 'password', 'timestamp', extract(epoch from now())::bigint)))::text, true);
   perform set_config('role', 'authenticated', true);
 end;
 $fn$;
@@ -85,6 +88,11 @@ values
   ('39d00000-0000-4000-b000-000000000002', '39d00000-0000-4000-a000-000000000004',
    'owner', 'active', now(), null);
 
+-- A pending invitation to U's address (from school T).
+insert into public.workspace_invitations (workspace_id, email, role, token_hash, token_prefix, invited_by)
+values ('39d00000-0000-4000-b000-000000000002', 'del-user@test.local', 'teacher',
+        decode('01', 'hex'), 'x39d', '39d00000-0000-4000-a000-000000000003');
+
 -- =====================================================================
 -- A. Sole-owner guard
 -- =====================================================================
@@ -98,6 +106,7 @@ select throws_ok(
   'P0001', 'SOLE_OWNER_BLOCKED',
   'A2: the only owner of a school cannot request deletion');
 
+select tests.logout();
 select tests.login('39d00000-0000-4000-a000-000000000003');
 select is(
   (select count(*)::int from public.account_deletion_blockers()), 0,
@@ -107,6 +116,16 @@ select tests.logout();
 -- =====================================================================
 -- B. Isolation + escalation
 -- =====================================================================
+-- A session whose last password sign-in is old (a stolen token) cannot.
+select set_config('request.jwt.claims',
+  '{"sub":"39d00000-0000-4000-a000-000000000001","role":"authenticated","amr":[{"method":"password","timestamp":1}]}', true),
+  set_config('role', 'authenticated', true);
+select throws_ok(
+  $$select public.request_account_deletion()$$,
+  '42501', 'REAUTH_REQUIRED',
+  'B0: a request needs a password sign-in from the last 5 minutes');
+select tests.logout();
+
 select tests.login('39d00000-0000-4000-a000-000000000001');
 select ok(
   (select public.request_account_deletion()) >= now() + interval '30 days' - interval '1 minute',
@@ -131,6 +150,7 @@ select throws_ok(
   '42501', 'an account is deleted only by the purge job',
   'B6: nobody marks their own profile deleted');
 
+select tests.logout();
 select tests.login('39d00000-0000-4000-a000-000000000005');
 select is(
   (select count(*)::int from public.account_deletion_requests), 0,
@@ -265,6 +285,21 @@ select ok(
         where workspace_id = '39d00000-0000-4000-b000-000000000001' and status = 'active') = 1,
   'E9: nobody else''s account or membership changed');
 select is(app.run_account_purges(), 0, 'E10: a second run is a no-op');
+select is(
+  (select status::text from public.workspace_invitations where email = 'del-user@test.local'),
+  'revoked',
+  'E11: a pending invitation to the deleted address is revoked');
+select ok(
+  not exists (select 1 from public.audit_events
+               where table_name = 'public.profiles'
+                 and coalesce(before::text, '') || coalesce(after::text, '') like '%Delia Deleter%'),
+  'E12: no profiles audit row holds the deleted person''s name (identity text is free-text)');
+select tests.login('39d00000-0000-4000-a000-000000000001');
+select throws_ok(
+  $$update public.profiles set full_name = 'Back again' where id = '39d00000-0000-4000-a000-000000000001'$$,
+  '42501', 'a deleted account cannot be changed',
+  'E13: a leftover token cannot write to the tombstone');
+select tests.logout();
 
 -- =====================================================================
 -- F. Became a sole owner during the grace → cancelled, not purged

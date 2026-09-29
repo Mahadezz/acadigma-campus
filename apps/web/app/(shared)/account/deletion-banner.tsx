@@ -1,8 +1,6 @@
-import { getPendingAccountDeletion } from "@acadigma/db/repositories/account-deletion"
-
+import { getPendingDeletion } from "@/lib/account-deletion"
 import { formatDhakaDate } from "@/lib/format"
 import { getMessages } from "@/lib/i18n"
-import { createClient } from "@/lib/supabase/server"
 
 import { KeepAccountButton } from "./keep-account-button"
 
@@ -13,7 +11,7 @@ import { KeepAccountButton } from "./keep-account-button"
  * the banner is a reminder, never a gate).
  */
 export async function DeletionBanner({ userId }: { userId: string }) {
-  const pending = await getPendingAccountDeletion(await createClient(), userId)
+  const pending = await getPendingDeletion(userId)
   if (!pending.ok || !pending.data) return null
 
   const { t, locale } = await getMessages()

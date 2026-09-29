@@ -3,8 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const calls: string[] = []
 const mockCookieDelete = vi.fn()
+const mockCookieSet = vi.fn()
 vi.mock("next/headers", () => ({
-  cookies: vi.fn(async () => ({ delete: mockCookieDelete })),
+  cookies: vi.fn(async () => ({
+    delete: mockCookieDelete,
+    set: mockCookieSet,
+  })),
 }))
 
 let user: { id: string; email?: string } | null = { id: "u1", email: "a@b.c" }
@@ -80,6 +84,11 @@ describe("requestAccountDeletion", () => {
     })
     expect(calls).toEqual(["reauth", "rpc", "signOut:global"])
     expect(mockCookieDelete).toHaveBeenCalledWith("acadigma_workspace")
+    expect(mockCookieSet).toHaveBeenCalledWith(
+      "acadigma_deletion_notice",
+      "2026-10-29T18:00:00Z",
+      expect.objectContaining({ httpOnly: true })
+    )
   })
 
   it("refuses anything but the exact word DELETE, before touching auth", async () => {
