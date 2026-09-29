@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-OP-07 Part 6 (D-211) — the danger zone
--- (20260929172327_danger_zone.sql).
+-- (20260929213326_danger_zone.sql).
 --
 -- Proves, in the database and not the UI:
 --   * every action is owner-only (an admin, a teacher and another school's

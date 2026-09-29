@@ -8,7 +8,7 @@
 --      through log_workspace_export in the last 10 minutes (audited,
 --      3-a-day, not suspended) — a direct RPC can no longer bulk-read every
 --      table without the audit row and the limit.
--- Bodies otherwise identical to 20260929172327_danger_zone.sql §9-§10.
+-- Bodies otherwise identical to 20260929213326_danger_zone.sql §9-§10.
 -- =====================================================================
 
 create or replace function public.purge_due_workspace(p_workspace_id uuid)

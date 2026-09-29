@@ -25,7 +25,10 @@ export async function GET(request: Request): Promise<Response> {
   // quota) with the owner's cookies: the page's own fetch is same-origin.
   const site = request.headers.get("sec-fetch-site")
   if (site && site !== "same-origin") {
-    const error = apiError("forbidden", "Start the export from the Danger zone page.")
+    const error = apiError(
+      "forbidden",
+      "Start the export from the Danger zone page."
+    )
     return NextResponse.json(error, { status: 403, headers: noStore })
   }
   const ctx = await requireWorkspace()

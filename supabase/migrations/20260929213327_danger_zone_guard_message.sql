@@ -3,7 +3,7 @@
 -- original refusal text for plan / trial / status / access mode (pinned by
 -- 16_billing_bootstrap_guard.sql since D-59); the two danger-zone columns
 -- get their own message. Body otherwise identical to
--- 20260929172327_danger_zone.sql §2.
+-- 20260929213326_danger_zone.sql §2.
 -- =====================================================================
 create or replace function app.tg_workspaces_guard()
 returns trigger

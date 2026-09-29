@@ -1,7 +1,7 @@
 /**
  * F-OP-07 Part 6 (D-211) — the danger zone. Every write is a SECURITY DEFINER
  * function that re-checks owner-only and the typed school name itself
- * (`20260929172327_danger_zone.sql`); this file only calls them and maps
+ * (`20260929213326_danger_zone.sql`); this file only calls them and maps
  * their named refusals. The export reads through `export_workspace_table`,
  * SECURITY INVOKER, so the caller's own RLS decides what leaves.
  */
@@ -252,7 +252,9 @@ export async function purgeDueWorkspaces(
     if (res.error)
       failed.push({
         id,
-        code: PURGE_CODES.has(res.error.message) ? res.error.message : "UNKNOWN",
+        code: PURGE_CODES.has(res.error.message)
+          ? res.error.message
+          : "UNKNOWN",
       })
     else purged.push(id)
   }
