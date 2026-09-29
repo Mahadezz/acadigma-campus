@@ -16,6 +16,7 @@
     "./repositories/staff": "./src/repositories/staff.ts",
     "./repositories/grading": "./src/repositories/grading.ts",
     "./repositories/exams": "./src/repositories/exams.ts",
+    "./repositories/academic-years": "./src/repositories/academic-years.ts",
     "./repositories/marks": "./src/repositories/marks.ts",
     "./repositories/results": "./src/repositories/results.ts",
     "./repositories/guardian-links": "./src/repositories/guardian-links.ts",
