@@ -4072,6 +4072,26 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      list_workspace_members: {
+        Args: {
+          p_after?: string
+          p_limit?: number
+          p_q?: string
+          p_status: Database["public"]["Enums"]["member_status"]
+          p_workspace_id: string
+        }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          joined_at: string
+          removed_at: string
+          role: Database["public"]["Enums"]["member_role"]
+          status: Database["public"]["Enums"]["member_status"]
+          via_invitation: boolean
+        }[]
+      }
       lock_exam_subject: {
         Args: { p_exam_subject_id: string; p_workspace_id: string }
         Returns: undefined
