@@ -107,6 +107,7 @@ describe.skipIf(!RUN)("demo school seed (D-80, local Supabase)", () => {
       email: "owner.demo@example.com",
       password: attackerPassword,
       email_confirm: true,
+      user_metadata: { full_name: "Planted Name" },
     })
     expect(pre.error).toBeNull()
     const attacker = createClient(API_URL, ANON_KEY as string, {
@@ -118,14 +119,16 @@ describe.skipIf(!RUN)("demo school seed (D-80, local Supabase)", () => {
     })
     expect(signedIn.error).toBeNull()
     const refreshToken = signedIn.data.session?.refresh_token as string
+    const accessToken = signedIn.data.session?.access_token as string
+    const oldId = pre.data.user?.id as string
 
     const before = SEED_SCHOOLS
     const othersBefore = fingerprint(before)
 
     seed()
 
-    // Taken back: the registrant's password and session no longer work, the
-    // demo password does.
+    // Replaced: the registrant's password, session and token no longer work,
+    // the demo password does.
     const fresh = () =>
       createClient(API_URL, ANON_KEY as string, {
         auth: { persistSession: false, autoRefreshToken: false },
@@ -144,6 +147,19 @@ describe.skipIf(!RUN)("demo school seed (D-80, local Supabase)", () => {
       password: PASSWORD,
     })
     expect(demo.error).toBeNull()
+    // A new account, not the registrant's: new id, their access token is
+    // refused, and nothing they planted survives.
+    expect(demo.data.user?.id).not.toBe(oldId)
+    const stale = await fresh().auth.getUser(accessToken)
+    expect(stale.error).not.toBeNull()
+    expect(
+      sql(`select count(*) from public.profiles where full_name = 'Planted Name'
+             or id = '${oldId}'`)
+    ).toBe("0")
+    expect(
+      sql(`select full_name from public.profiles p join auth.users u on u.id = p.id
+            where u.email = 'owner.demo@example.com'`)
+    ).toBe("Mahbuba Sultana")
 
     expect(
       demoCount(
