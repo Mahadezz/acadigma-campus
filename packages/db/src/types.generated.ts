@@ -3106,11 +3106,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "staff_records_designation_label_id_fkey"
-            columns: ["designation_label_id"]
+            foreignKeyName: "staff_records_designation_label_same_workspace_fkey"
+            columns: ["workspace_id", "designation_label_id"]
             isOneToOne: false
             referencedRelation: "custom_labels"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
           },
           {
             foreignKeyName: "staff_records_membership_id_fkey"
@@ -3797,11 +3797,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "workspace_invitations_label_id_fkey"
-            columns: ["label_id"]
+            foreignKeyName: "workspace_invitations_label_same_workspace_fkey"
+            columns: ["workspace_id", "label_id"]
             isOneToOne: false
             referencedRelation: "custom_labels"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
           },
           {
             foreignKeyName: "workspace_invitations_revoked_by_fkey"
@@ -3965,11 +3965,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "workspace_members_label_id_fkey"
-            columns: ["label_id"]
+            foreignKeyName: "workspace_members_label_same_workspace_fkey"
+            columns: ["workspace_id", "label_id"]
             isOneToOne: false
             referencedRelation: "custom_labels"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
           },
           {
             foreignKeyName: "workspace_members_removed_by_fkey"
