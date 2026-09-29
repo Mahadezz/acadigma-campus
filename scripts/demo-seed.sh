@@ -31,14 +31,15 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 bearer=()
 case "$SUPABASE_SERVICE_KEY" in eyJ*) bearer=(-H "Authorization: Bearer $SUPABASE_SERVICE_KEY") ;; esac
 
-# Auth admin API call: prints the body, fails on anything but 2xx.
+# Auth admin API call: the JSON body goes in on stdin (never on a command
+# line, where it would show in the process list). Prints the response body,
+# fails on anything but 2xx.
 admin() {
-  local method="$1" path="$2" out status data=()
-  [ -z "${3:-}" ] || data=(--data-binary "$3")
+  local method="$1" path="$2" out status
   out="$(mktemp)"
-  status=$(curl -sS -o "$out" -w '%{http_code}' -X "$method" "$SUPABASE_URL/auth/v1$path" \
-    -H "apikey: $SUPABASE_SERVICE_KEY" "${bearer[@]}" \
-    -H 'Content-Type: application/json' "${data[@]}")
+  status=$(printf '%s' "${3:-}" | curl -sS -o "$out" -w '%{http_code}' -X "$method" \
+    "$SUPABASE_URL/auth/v1$path" -H "apikey: $SUPABASE_SERVICE_KEY" "${bearer[@]}" \
+    -H 'Content-Type: application/json' ${3:+--data-binary @-})
   if [ "${status:0:1}" != 2 ]; then
     echo "HTTP $status $(jq -c '{code: (.error_code // .code), msg: (.msg // .message // .error)}' "$out" 2>/dev/null)"
     rm -f "$out"
@@ -48,14 +49,18 @@ admin() {
   rm -f "$out"
 }
 
+db() { (cd "$root" && supabase db query "$DB_TARGET" "$1"); }
+
 # The fixed, fictional demo accounts. example.com never delivers mail.
-# app_metadata.acadigma_demo marks an account the seed owns (users cannot
-# edit app_metadata). Signup is open, so an account may already exist under
-# a demo email that someone else registered: it is taken back — password
-# reset to the secret, marked, and every session it had revoked — and the
-# SQL then refuses any demo account that belongs to another school.
+# app_metadata.acadigma_demo marks an account the seed created (users cannot
+# edit app_metadata). Signup is open, so a demo email may already belong to
+# someone else's account: that account is deleted and created afresh, which
+# voids every token it was issued and drops whatever its registrant planted
+# (name, metadata, MFA factors, personal workspace). The SQL refuses to
+# delete an account that is a member of any workspace but its own personal
+# one, so no other school is ever touched.
 ensure_user() {
-  local email="$1" name="$2" body found id marked token
+  local email="$1" name="$2" body found id marked
   body=$(jq -n --arg e "$email" --arg p "$DEMO_PASSWORD" --arg n "$name" \
     '{email: $e, password: $p, email_confirm: true,
       user_metadata: {full_name: $n}, app_metadata: {acadigma_demo: true}}')
@@ -68,33 +73,45 @@ ensure_user() {
   # no email filter, and its user listing fails outright on rows inserted by
   # SQL, as seed.sql's are.) The marker is printed with the id in one token,
   # so any output format of `supabase db query` can be read.
-  found=$(cd "$root" && supabase db query "$DB_TARGET" \
-    "select 'DEMO_USER=' || id || ':' || coalesce(raw_app_meta_data ->> 'acadigma_demo', 'false')
-       from auth.users where email = '$email'" \
+  found=$(db "select 'DEMO_USER=' || id || ':' || coalesce(raw_app_meta_data ->> 'acadigma_demo', 'false')
+                from auth.users where email = '$email'" \
     | grep -oE 'DEMO_USER=[0-9a-f-]{36}:[a-z]+' | head -1) || true
   [ -n "$found" ] || { echo "::error::$email exists but was not found" >&2; exit 1; }
   id=${found#DEMO_USER=}
   marked=${id#*:}
   id=${id%%:*}
 
-  # Every run: the password is the secret's (so rotation reaches it), marked.
-  admin PUT "/admin/users/$id" "$(jq -n --arg p "$DEMO_PASSWORD" \
-    '{password: $p, email_confirm: true, app_metadata: {acadigma_demo: true}}')" >/dev/null \
-    || { echo "::error::resetting $email failed" >&2; exit 1; }
-
-  if [ "$marked" != true ]; then
-    # Not ours until now: sign in with the new password and end every session
-    # (scope=global), so whoever registered it is signed out everywhere.
-    token=$(admin POST "/token?grant_type=password" \
-      "$(jq -n --arg e "$email" --arg p "$DEMO_PASSWORD" '{email: $e, password: $p}')" \
-      | jq -r .access_token) || { echo "::error::signing in as $email failed" >&2; exit 1; }
-    curl -sS -o /dev/null -f -X POST "$SUPABASE_URL/auth/v1/logout?scope=global" \
-      -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $token" \
-      || { echo "::error::revoking $email's sessions failed" >&2; exit 1; }
-    echo "took back $email"
-  else
+  if [ "$marked" = true ]; then
+    # Ours: the password follows the secret, so rotation reaches it.
+    admin PUT "/admin/users/$id" "$(jq -n --arg p "$DEMO_PASSWORD" '{password: $p}')" >/dev/null \
+      || { echo "::error::resetting $email failed" >&2; exit 1; }
     echo "exists  $email"
+    return
   fi
+
+  # Not ours: delete it in one transaction and create it afresh. The Auth
+  # admin API's delete cannot do this alone: the personal workspace's
+  # owner_id is ON DELETE RESTRICT, so it must go first. auth.users cascades
+  # to identities, sessions, refresh tokens, MFA factors and the profile
+  # (with its preferences and memberships); audit and consent rows are
+  # FK-free and stay.
+  db "do \$\$
+      declare v uuid := '$id';
+      begin
+        if exists (select 1 from auth.users u
+                    where u.id = v and u.raw_app_meta_data ->> 'acadigma_demo' = 'true') then
+          raise exception 'refusing: % is a seed account', v;
+        end if;
+        if exists (select 1 from public.workspace_members m
+                     join public.workspaces w on w.id = m.workspace_id
+                    where m.user_id = v and not (w.type = 'personal' and w.owner_id = v)) then
+          raise exception 'refusing: the account registered under a demo email belongs to another workspace';
+        end if;
+        delete from public.workspaces w where w.type = 'personal' and w.owner_id = v;
+        delete from auth.users u where u.id = v;
+      end \$\$" >/dev/null || { echo "::error::replacing $email failed" >&2; exit 1; }
+  admin POST /admin/users "$body" >/dev/null || { echo "::error::recreating $email failed" >&2; exit 1; }
+  echo "replaced $email"
 }
 ensure_user owner.demo@example.com "Mahbuba Sultana"
 ensure_user teacher.demo@example.com "Abdur Rashid"
