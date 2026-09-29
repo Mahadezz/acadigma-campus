@@ -478,6 +478,16 @@ Notes that matter:
 
 **Functions** — `app.is_school_day(workspace_id, date)`: override → weekly pattern (`school_profiles.working_days`, default Sat–Thu) → holiday → true. `app.school_days(workspace_id, from, to)` (at most two years) and `app.school_day_count(...)`. All `STABLE`, **SECURITY DEFINER** behind `app.can_read_school_calendar(workspace_id)` (D-203): any active member, parents included, gets the school's real answer; anyone else gets NULL / `FORBIDDEN`. Executable by `authenticated` and `service_role`. `holidays` has `unique (workspace_id, name, starts_on)`; `created_by` is immutable on both tables (`app.tg_created_by_immutable`).
 
+### 2.2 Academic years and terms _(F-OP-07 Part 2, `20260929160707_academic_terms.sql`, D-210)_
+
+**`terms`** — `id`, `workspace_id`, `academic_year_id` (composite FK to `academic_years(id, workspace_id)`), `name` (1–60), `starts_on`, `ends_on` (`ends_on >= starts_on`), `sort_order`, `created_by`, timestamps. `unique (academic_year_id, lower(name))`. Unlike `sections`/`subjects`, DELETE is allowed — nothing downstream reads `term_id` yet (F-AC-06 Part 2/D-303: exams do not either), so a mistake is delete-and-recreate. Validation (a term inside its year, no overlap with another term of the same year) is domain-level (`packages/domain/src/academic/terms.ts` `checkTermRange`), re-checked in the server action and not a DB constraint — terms are added one at a time (like `holidays`), so an incomplete year is a normal, temporary state, not an error.
+
+**`academic_years.exam_weights`** (jsonb, already on the table since `20260925300101_create_school_workspace.sql`, D-100) is now written from Settings → Academic: exam id → weight %, edited as a whole map (`public.set_current_academic_year`'s sibling write path, `updateExamWeights`), replacing the map outright each save so no stale exam id survives a form edit. An empty map means weighting is off; a non-empty map must sum to 100 (`checkExamWeights`), checked in the domain layer, not a DB constraint. (`school_profiles.academic_settings.exam_weights` is a separate, older jsonb key that nothing reads — the two are not synchronised; only the per-year column here is live.)
+
+**`public.set_current_academic_year(p_workspace_id, p_academic_year_id)`** — `SECURITY DEFINER` with an explicit `app.has_role(..., ['owner','admin'])` check inside (same shape as `public.save_grade_scale`, D-302), because moving `is_current` is two UPDATEs that must not straddle a moment where zero or two years are current under `academic_years_one_current`'s partial unique index. Each UPDATE still fires the generic audit trigger, so the change reads both ways ("2026 → not current", "2027 → current"). `revoke ... grant execute ... to authenticated` (D-54).
+
+**RLS** — same class T2 shape as `sections`/`academic_years`: SELECT active owner/admin/teacher/staff; INSERT/UPDATE/DELETE owner/admin. **Triggers** — tenant freeze, `updated_at`, generic audit, `app.tg_require_writable` (D-300), `created_by` immutable.
+
 ---
 
 ## 3. Teaching intelligence

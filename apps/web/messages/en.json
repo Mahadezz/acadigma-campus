@@ -927,6 +927,11 @@
         "description": "Grade bands, letters and grade points",
         "keywords": "grade scale gpa letter band point pass fail a+ bangladesh"
       },
+      "academic": {
+        "title": "Academic",
+        "description": "Academic years, terms, exam weighting and pass-mark rules",
+        "keywords": "academic year term terms current weighting weight exam pass mark gpa rank"
+      },
       "display": {
         "title": "Display",
         "description": "Text size and basic mode",
@@ -1050,6 +1055,72 @@
       "overlap": "Two bands both cover {at} %.",
       "readOnly": "Only an owner or admin can change grading.",
       "pointsDecrease": "Grade points cannot go down as the bands go up (at {at} %)."
+    },
+    "academic": {
+      "title": "Academic",
+      "description": "Academic years, terms, exam weighting and the pass-mark rules.",
+      "tabs": {
+        "years": "Years",
+        "terms": "Terms",
+        "weighting": "Weighting",
+        "rules": "Rules"
+      },
+      "current": "Current",
+      "noYear": "No academic year yet.",
+      "yearPickerLabel": "Academic year",
+      "addYear": "Add year",
+      "addYearTitle": "Add an academic year",
+      "addYearDescription": "1-730 days, end date after the start date.",
+      "setCurrent": "Set current",
+      "setCurrentTitle": "Set the current academic year",
+      "setCurrentDescription": "Enrolments, timetable and reports will default to {name}. This is logged.",
+      "confirmSetCurrent": "Set as current",
+      "noTerms": "No terms yet.",
+      "addTerm": "Add term",
+      "addTermTitle": "Add a term",
+      "addTermDescription": "Dates must fall inside the academic year and not overlap another term.",
+      "deleteTermTitle": "Delete this term?",
+      "deleteTermDescription": "This removes {name}. Nothing else refers to it yet.",
+      "noExams": "No exams in this year yet — create one under Academics first.",
+      "weightingHelp": "Rows of exam → weight %. Leave every weight blank to turn weighting off; otherwise they must add up to 100.",
+      "weightLabel": "Weight %",
+      "weightSum": "Total: {sum} %",
+      "rulesHelp": "These apply to every exam created from now on; existing exams keep the rule they were created under.",
+      "gradeScaleCodeHelp": "The grade scale used for new exams. Default: BD_GPA5.",
+      "fields": {
+        "name": "Name",
+        "startsOn": "Starts",
+        "endsOn": "Ends",
+        "passMark": "Pass mark %",
+        "failZeroGpa": "A failed subject makes the GPA zero",
+        "rankBy": "Rank by",
+        "gradeScaleCode": "Grade scale code"
+      },
+      "rankByOptions": {
+        "gpa_then_total": "GPA, then total marks",
+        "total_marks": "Total marks"
+      },
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "confirmDelete": "Delete",
+      "removed": "Removed.",
+      "error": "Something went wrong. Try again.",
+      "errors": {
+        "forbidden": "Only an owner or admin can change academic settings.",
+        "readOnly": "This school's plan is read-only.",
+        "conflict": "That name is already used.",
+        "notFound": "That no longer exists.",
+        "badRange": "The end date must be after the start date.",
+        "termOutsideYear": "A term must fall inside its academic year.",
+        "termOverlap": "This term overlaps another term in the same year.",
+        "yearNameTaken": "This school already has a year with that name.",
+        "termNameTaken": "This year already has a term with that name.",
+        "weightsNot100": "The weights must add up to 100, or be left empty."
+      }
     }
   },
   "reports": {

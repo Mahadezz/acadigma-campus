@@ -138,6 +138,7 @@ with allowed as (
     ('public.attendance_register(uuid, uuid, date)'),  -- F-OP-03 Part 6 review, D-208
     ('public.can_read_results(uuid, uuid)'),  -- F-OP-03 Part 6 review, D-208
     ('public.list_workspace_members(uuid, public.member_status, text, uuid, integer)'),  -- F-ID-03 Part 5, D-110
+    ('public.set_current_academic_year(uuid, uuid)'),  -- F-OP-07 Part 2, D-210
     ('public.update_member_staff_fields(uuid, uuid, text, text, text)')  -- F-ID-03 Part 6, D-111
   ) as a(sig)
   union all

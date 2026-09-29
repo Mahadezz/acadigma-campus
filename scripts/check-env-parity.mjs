@@ -40,6 +40,7 @@ const PROVIDED_BY_PLATFORM = new Set([
   // Handed to the CI scripts by the workflow, not by a .env file.
   "BASE_REF",
   "PR_BODY",
+  "HEAD_REF",
   "PR_LABELS",
 ])
 

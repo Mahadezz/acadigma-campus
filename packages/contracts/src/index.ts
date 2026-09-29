@@ -1,3 +1,4 @@
+export * from "./academics/academic-years"
 export * from "./academics/grading"
 export * from "./academics/structure"
 export * from "./academics/attendance"
