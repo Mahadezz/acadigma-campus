@@ -11,7 +11,7 @@
 -- tenant isolation still holds under the new join.
 -- =====================================================================
 begin;
-select plan(11);
+select plan(15);
 
 create schema if not exists tests;
 
@@ -53,12 +53,18 @@ $fn$;
 -- an admin added directly with a workspace_members.label_id/department/
 -- phone but no staff_records row (the pre-Part-2 "existing school" case),
 -- a teacher WITH a staff_records row, and a parent (must never appear).
+-- Also a pending joiner and a removed ex-member (review fix, #100): the
+-- `where wm.status = 'active'` clause must hold both as the subject row
+-- (neither is ever listed, to anyone) and via app.has_role() as the
+-- caller (neither can read the directory at all).
 -- School D: a single owner, for the isolation case.
 -- ---------------------------------------------------------------------
 select tests.mkuser('cccccccc-0000-0000-0000-000000000001', 'owner.c@test.local',   'Owner C');
 select tests.mkuser('cccccccc-0000-0000-0000-000000000002', 'admin.c@test.local',   'Admin C');
 select tests.mkuser('cccccccc-0000-0000-0000-000000000003', 'teacher.c@test.local', 'Teacher C');
 select tests.mkuser('cccccccc-0000-0000-0000-000000000004', 'parent.c@test.local',  'Parent C');
+select tests.mkuser('cccccccc-0000-0000-0000-000000000005', 'pending.c@test.local', 'Pending C');
+select tests.mkuser('cccccccc-0000-0000-0000-000000000006', 'removed.c@test.local', 'Removed C');
 select tests.mkuser('dddddddd-0000-0000-0000-000000000001', 'owner.d@test.local',   'Owner D');
 
 insert into public.workspaces (id, type, name, slug, owner_id, created_by)
@@ -84,7 +90,14 @@ insert into public.workspace_members (id, workspace_id, user_id, role, status, j
 values ('55550003-0000-0000-0000-000000000003', '33333333-3333-3333-3333-333333333333',
         'cccccccc-0000-0000-0000-000000000003', 'teacher', 'active', now()),
        ('55550004-0000-0000-0000-000000000004', '33333333-3333-3333-3333-333333333333',
-        'cccccccc-0000-0000-0000-000000000004', 'parent', 'active', now());
+        'cccccccc-0000-0000-0000-000000000004', 'parent', 'active', now()),
+       ('55550005-0000-0000-0000-000000000005', '33333333-3333-3333-3333-333333333333',
+        'cccccccc-0000-0000-0000-000000000005', 'teacher', 'pending', null),
+       ('55550006-0000-0000-0000-000000000006', '33333333-3333-3333-3333-333333333333',
+        'cccccccc-0000-0000-0000-000000000006', 'teacher', 'active', now());
+
+update public.workspace_members set status = 'removed'
+where id = '55550006-0000-0000-0000-000000000006';
 
 insert into public.staff_records
   (id, workspace_id, user_id, membership_id, staff_code, full_name, employment_status, joined_on)
@@ -169,7 +182,50 @@ select is(
 select tests.logout();
 
 -- =====================================================================
--- 5. Tenant isolation still holds under the new join: School D's owner
+-- 5. A pending joiner and a removed ex-member of School C are NOT listed
+--    to the owner (review fix, #100): `where wm.status = 'active'` on the
+--    subject row holds regardless of who is asking.
+-- =====================================================================
+select tests.login('cccccccc-0000-0000-0000-000000000001');
+
+select is(
+  (select count(*)::int from public.staff_directory
+    where workspace_id = '33333333-3333-3333-3333-333333333333'
+      and user_id = 'cccccccc-0000-0000-0000-000000000005'),
+  0, 'the owner does not see the pending joiner in staff_directory');
+
+select is(
+  (select count(*)::int from public.staff_directory
+    where workspace_id = '33333333-3333-3333-3333-333333333333'
+      and user_id = 'cccccccc-0000-0000-0000-000000000006'),
+  0, 'the owner does not see the removed ex-member in staff_directory');
+
+select tests.logout();
+
+-- =====================================================================
+-- 6. A caller whose own membership is pending or removed reads zero
+--    rows, from any school (review fix, #100): app.has_role() requires
+--    status = 'active', so neither passes the view's caller check.
+-- =====================================================================
+select tests.login('cccccccc-0000-0000-0000-000000000005');
+
+select is(
+  (select count(*)::int from public.staff_directory
+    where workspace_id = '33333333-3333-3333-3333-333333333333'),
+  0, 'a caller with a pending membership reads 0 staff_directory rows');
+
+select tests.logout();
+select tests.login('cccccccc-0000-0000-0000-000000000006');
+
+select is(
+  (select count(*)::int from public.staff_directory
+    where workspace_id = '33333333-3333-3333-3333-333333333333'),
+  0, 'a caller with a removed membership reads 0 staff_directory rows');
+
+select tests.logout();
+
+-- =====================================================================
+-- 7. Tenant isolation still holds under the new join: School D's owner
 --    reads zero School C rows, and vice versa.
 -- =====================================================================
 select tests.login('dddddddd-0000-0000-0000-000000000001');

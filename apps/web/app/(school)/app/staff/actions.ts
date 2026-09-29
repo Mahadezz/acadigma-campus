@@ -5,6 +5,7 @@ import {
   apiErrorFromZod,
   err,
   listStaffInputSchema,
+  uuidSchema,
   type ApiError,
   type Result,
   type StaffDirectoryPage,
@@ -56,6 +57,9 @@ export async function getStaffDirectoryRow(
   const ctx = await requireWorkspace()
   if (!can(ctx.role, "staff.view")) return err(FORBIDDEN)
 
+  const parsed = uuidSchema.safeParse(membershipId)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+
   const client = await createClient()
-  return getStaffDirectoryRowRepo(client, ctx, membershipId)
+  return getStaffDirectoryRowRepo(client, ctx, parsed.data)
 }

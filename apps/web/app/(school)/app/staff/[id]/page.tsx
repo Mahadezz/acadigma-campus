@@ -3,6 +3,7 @@ import { forbidden, notFound } from "next/navigation"
 
 import { ArrowLeftIcon, PhoneIcon } from "lucide-react"
 
+import { uuidSchema } from "@acadigma/contracts"
 import { getStaffDirectoryRow, listSubjects } from "@acadigma/db/repositories"
 import { can } from "@acadigma/domain/permissions"
 import { Avatar, AvatarFallback } from "@acadigma/ui/components/avatar"
@@ -36,6 +37,8 @@ export default async function StaffProfilePage({
   if (!can(ctx.role, "staff.view")) forbidden()
 
   const { id } = await params
+  if (!uuidSchema.safeParse(id).success) notFound()
+
   const { t } = await getMessages()
   const supabase = await createClient()
 
