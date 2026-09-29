@@ -325,24 +325,24 @@ alter table public.messages        enable row level security;
 drop policy if exists channels_select on public.channels;
 create policy channels_select on public.channels
   for select to authenticated
-  using (id = any ((select app.my_channel_ids())));
+  using (id = any ((select app.my_channel_ids())::uuid[]));
 
 drop policy if exists channel_members_select on public.channel_members;
 create policy channel_members_select on public.channel_members
   for select to authenticated
-  using (channel_id = any ((select app.my_channel_ids())));
+  using (channel_id = any ((select app.my_channel_ids())::uuid[]));
 
 drop policy if exists messages_select on public.messages;
 create policy messages_select on public.messages
   for select to authenticated
-  using (channel_id = any ((select app.my_channel_ids())));
+  using (channel_id = any ((select app.my_channel_ids())::uuid[]));
 
 drop policy if exists messages_insert on public.messages;
 create policy messages_insert on public.messages
   for insert to authenticated
   with check (
     sender_id = (select auth.uid())
-    and channel_id = any ((select app.my_channel_ids()))
+    and channel_id = any ((select app.my_channel_ids())::uuid[])
     and app.has_role(workspace_id, array['owner', 'admin', 'teacher', 'staff'])
   );
 
