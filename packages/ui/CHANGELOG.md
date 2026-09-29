@@ -1,5 +1,12 @@
 # @acadigma/ui
 
+## 0.5.5
+
+### Patch Changes
+
+- Updated dependencies [cd1c1a4]
+  - @acadigma/domain@0.10.3
+
 ## 0.5.4
 
 ### Patch Changes

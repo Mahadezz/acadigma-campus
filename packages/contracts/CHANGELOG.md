@@ -1,5 +1,12 @@
 # @acadigma/contracts
 
+## 0.12.0
+
+### Minor Changes
+
+- 68244d6: F-ID-03 Part 5 (D-110): Team & Access at `/app/staff/team` — the staff roster by status (active, waiting, removed) with server-side search and keyset paging, and approve / turn down for join requests, for owners and admins. New `public.list_workspace_members` function (migration `20260929015813_team_roster.sql`).
+- cd1c1a4: F-OP-06 Part 2 (D-209): the staff directory, `/app/staff` — server-side search, a six-way filter chip row (All/Teachers/Admin/Staff/On notice/Pending), cursor pagination, an own-record "You" badge — and the read-only person sheet `/app/staff/[id]`. `staff_directory` now shows every active non-parent member, not only those with a `staff_records` row (a brand-new school's owner now appears from day one); a member with no record falls back to `workspace_members`' pre-existing label/department/phone. New: `staff.view` permission, `listStaff`/`getStaffDirectoryRow` (`@acadigma/db`), `listStaffInputSchema`/`staffDirectoryPageSchema` (`@acadigma/contracts`, `staffDirectoryRowSchema.id` is now nullable, `membershipId` added and always present).
+
 ## 0.11.0
 
 ### Minor Changes
