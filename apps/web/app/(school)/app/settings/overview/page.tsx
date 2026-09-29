@@ -84,6 +84,14 @@ export default async function SettingsOverviewPage() {
       >
         {t.settings.rows.display.title}
       </Link>
+      {/* D-112: every member's way to leave the school (and an owner's to
+          hand it over) — this is the one settings page every role reaches. */}
+      <Link
+        href="/app/settings/membership"
+        className="text-muted-foreground hover:text-foreground -ml-2 inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm underline-offset-4 hover:underline"
+      >
+        {t.settings.membership.link}
+      </Link>
       <div className="grid gap-4 lg:grid-cols-2">
         {groups.map((group) => (
           <section key={group.title} className="rounded-lg border p-4">

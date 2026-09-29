@@ -25,6 +25,7 @@ import {
   type MemberErrorMarker,
   type MemberPage,
   type MemberStaffFields,
+  type OwnershipCandidate,
   type Result,
   type UpdateMemberStaffFieldsInput,
 } from "@acadigma/contracts"
@@ -226,6 +227,7 @@ export async function changeMemberRole(
 
 const memberDetailRowSchema = z.object({
   id: z.string(),
+  user_id: z.string(),
   role: memberRoleSchema,
   status: memberStatusSchema,
   employee_code: z.string().nullable(),
@@ -246,7 +248,7 @@ export async function getMemberDetail(
   const { data, error } = await client
     .from("workspace_members")
     .select(
-      "id, role, status, employee_code, department, phone, label_id, custom_labels(id, name, color)"
+      "id, user_id, role, status, employee_code, department, phone, label_id, custom_labels(id, name, color)"
     )
     .eq("workspace_id", ctx.workspaceId)
     .eq("id", memberId)
@@ -265,6 +267,7 @@ export async function getMemberDetail(
     phone: row.data.phone,
     labelId: row.data.label_id,
     label: row.data.custom_labels,
+    isSelf: row.data.user_id === ctx.userId,
   })
 }
 
@@ -350,4 +353,162 @@ export async function assignMemberLabel(
   }
   if (updated.data.length === 0) return err(NOT_FOUND)
   return ok({ id: input.memberId, labelId: input.labelId })
+}
+
+// ---------------------------------------------------------------------------
+// Part 7 (D-112) — remove, leave, transfer ownership
+// ---------------------------------------------------------------------------
+
+/**
+ * Owner/admin end an active member's access: `status = 'removed'` (never a
+ * delete, §3). The guard trigger is the wall (self, admin-touching-owner,
+ * last owner); the pre-read only names those cases for the UI. Removing a
+ * member who is already removed is success (a double tap).
+ */
+export async function removeMember(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  memberId: string
+): Promise<Result<MemberDecision, ApiError>> {
+  const target = await client
+    .from("workspace_members")
+    .select("id, user_id, role, status")
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("id", memberId)
+    .neq("role", "parent")
+    .maybeSingle()
+  if (target.error) return err(UNAVAILABLE)
+  if (!target.data) return err(NOT_FOUND)
+  if (target.data.user_id === ctx.userId) return err(SELF_EDIT)
+  if (target.data.role === "owner" && ctx.role !== "owner") {
+    return err(OWNER_TARGET)
+  }
+  if (target.data.status === "removed") {
+    return ok({ id: memberId, status: "removed" })
+  }
+  // A waiting request is turned down, not removed (Part 5).
+  if (target.data.status !== "active") return err(NOT_FOUND)
+
+  const updated = await client
+    .from("workspace_members")
+    .update({ status: "removed" })
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("id", memberId)
+    .eq("status", "active")
+    .select("id")
+  if (updated.error) {
+    if (updated.error.code === "23514") return err(LAST_OWNER)
+    if (updated.error.code === "42501") return err(FORBIDDEN)
+    return err(UNAVAILABLE)
+  }
+  if (updated.data.length === 0) return err(NOT_FOUND)
+  return ok({ id: memberId, status: "removed" })
+}
+
+/**
+ * The caller ends their own membership of this school (§4.6). A plain
+ * UPDATE of their own row, which the guard allows only as exactly
+ * active → removed (D-112). The sole owner is refused (LAST_OWNER_BLOCKED).
+ */
+export async function leaveWorkspace(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient
+): Promise<Result<{ workspaceId: string }, ApiError>> {
+  const updated = await client
+    .from("workspace_members")
+    .update({ status: "removed" })
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("user_id", ctx.userId)
+    .eq("status", "active")
+    .select("id")
+  if (updated.error) {
+    if (updated.error.code === "23514") return err(LAST_OWNER)
+    if (updated.error.code === "42501") return err(FORBIDDEN)
+    return err(UNAVAILABLE)
+  }
+  if (updated.data.length === 0) return err(NOT_FOUND)
+  return ok({ workspaceId: ctx.workspaceId })
+}
+
+const candidateRowSchema = z.object({
+  id: z.string(),
+  role: z.enum(["admin", "teacher"]),
+  profiles: z.object({ full_name: z.string().nullable() }).nullable(),
+})
+
+// ponytail: one query, capped at 200 rows, sorted here; a server-side search
+// replaces it if a school ever has more than 200 admins and teachers.
+const CANDIDATE_LIMIT = 200
+
+/** §4.7 step 1: the active admins and teachers the owner may hand over to. */
+export async function listOwnershipCandidates(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient
+): Promise<Result<OwnershipCandidate[], ApiError>> {
+  const { data, error } = await client
+    .from("workspace_members")
+    .select("id, role, profiles!workspace_members_user_id_fkey(full_name)")
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("status", "active")
+    .in("role", ["admin", "teacher"])
+    .neq("user_id", ctx.userId)
+    .limit(CANDIDATE_LIMIT)
+  if (error) return err(error.code === "42501" ? FORBIDDEN : UNAVAILABLE)
+  const rows = z.array(candidateRowSchema).safeParse(data)
+  if (!rows.success) return err(UNAVAILABLE)
+  return ok(
+    rows.data
+      .map((r) => ({
+        id: r.id,
+        role: r.role,
+        fullName: r.profiles?.full_name?.trim() || "—",
+      }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName))
+  )
+}
+
+/**
+ * §4.7: make `memberId` an owner and, unless `keepOwner`, the caller an
+ * admin — one transaction in `public.transfer_ownership`. Re-authentication
+ * and the typed name are the server action's job, before this runs.
+ */
+export async function transferOwnership(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  input: { memberId: string; keepOwner: boolean }
+): Promise<Result<{ id: string }, ApiError>> {
+  const { error } = await client.rpc("transfer_ownership", {
+    p_workspace_id: ctx.workspaceId,
+    p_member_id: input.memberId,
+    p_keep_owner: input.keepOwner,
+  })
+  if (error) {
+    if (error.code === "P0002") {
+      return err(
+        marked(
+          "conflict",
+          "That person can no longer receive ownership.",
+          MEMBER_ERROR.TARGET_NOT_ELIGIBLE
+        )
+      )
+    }
+    if (error.code === "42501") return err(FORBIDDEN)
+    return err(UNAVAILABLE)
+  }
+  return ok({ id: input.memberId })
+}
+
+/** The school's display name — what the owner types to confirm a transfer. */
+export async function getWorkspaceName(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient
+): Promise<Result<string, ApiError>> {
+  const { data, error } = await client
+    .from("workspaces")
+    .select("name")
+    .eq("id", ctx.workspaceId)
+    .maybeSingle()
+  if (error) return err(UNAVAILABLE)
+  if (!data) return err(NOT_FOUND)
+  return ok(data.name)
 }
