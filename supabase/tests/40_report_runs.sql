@@ -90,8 +90,9 @@ select ok(not has_table_privilege('anon', 'public.report_run_items', 'select'),
 -- =====================================================================
 select ok(has_table_privilege('authenticated', 'public.report_runs', 'select'),
   'authenticated can select report_runs (RLS still scopes rows)');
-select ok(has_table_privilege('authenticated', 'public.report_runs', 'insert'),
-  'authenticated can insert report_runs (RLS still checks requested_by)');
+select ok(has_any_column_privilege('authenticated', 'public.report_runs', 'insert')
+     and not has_column_privilege('authenticated', 'public.report_runs', 'status', 'insert'),
+  'authenticated can insert report_runs, but not its server-owned columns (D-77)');
 select ok(not has_table_privilege('authenticated', 'public.report_runs', 'update'),
   'authenticated has no UPDATE grant on report_runs at all');
 select ok(not has_table_privilege('authenticated', 'public.report_run_items', 'insert'),
