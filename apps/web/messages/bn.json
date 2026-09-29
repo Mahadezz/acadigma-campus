@@ -393,10 +393,7 @@
     "switchWorkspace": "ওয়ার্কস্পেস পরিবর্তন করুন"
   },
   "dashboard": {
-    "eyebrowToday": "আজ",
-    "eyebrowSetup": "সেটআপ",
-    "eyebrowPeople": "লোকজন",
-    "eyebrowActivity": "কার্যকলাপ",
+    "sectionToday": "আজ",
     "plan": {
       "title": "প্ল্যান",
       "trialDaysLeft": "ট্রায়ালের আর {days} দিন বাকি",
