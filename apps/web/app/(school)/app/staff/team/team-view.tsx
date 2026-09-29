@@ -14,6 +14,7 @@ import type {
   MemberRow,
   MemberStatusValue,
 } from "@acadigma/contracts"
+import type { WorkspaceRole } from "@acadigma/domain/permissions"
 import { Button } from "@acadigma/ui/components/button"
 import { Input } from "@acadigma/ui/components/input"
 import { Label } from "@acadigma/ui/components/label"
@@ -121,6 +122,7 @@ export function TeamView({
   members,
   nextCursor,
   labels,
+  actorRole,
 }: {
   t: T
   locale: Locale
@@ -128,6 +130,7 @@ export function TeamView({
   members: MemberRow[]
   nextCursor: string | null
   labels: CustomLabel[]
+  actorRole: WorkspaceRole
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -353,7 +356,15 @@ export function TeamView({
           t={t}
           member={managing}
           labels={labels}
+          actorRole={actorRole}
           onClose={() => setManaging(null)}
+          onRemoved={() => {
+            setNotice({
+              tone: "success",
+              text: t.manage.removed.replace("{name}", managing.fullName),
+            })
+            setManaging(null)
+          }}
         />
       ) : null}
     </div>
