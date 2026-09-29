@@ -7,7 +7,12 @@ import { useRouter } from "next/navigation"
 
 import { ChevronLeftIcon } from "lucide-react"
 
-import { DANGER_ERROR, type ApiError } from "@acadigma/contracts"
+import {
+  apiErrorSchema,
+  DANGER_ERROR,
+  type ApiError,
+  type Result,
+} from "@acadigma/contracts"
 import { Button } from "@acadigma/ui/components/button"
 import { Input } from "@acadigma/ui/components/input"
 import { Label } from "@acadigma/ui/components/label"
@@ -73,7 +78,7 @@ export function DangerZoneView({
   const [pending, startTransition] = useTransition()
 
   function run(
-    action: () => Promise<{ ok: boolean; error?: ApiError }>,
+    action: () => Promise<Result<unknown, ApiError>>,
     success: string
   ) {
     setNotice(null)
@@ -83,7 +88,7 @@ export function DangerZoneView({
         setMode(null)
         setNotice({ tone: "success", text: success })
         router.refresh()
-      } else if (result.error) {
+      } else {
         setNotice({ tone: "error", text: errorText(t, result.error) })
       }
     })
@@ -91,25 +96,31 @@ export function DangerZoneView({
 
   async function downloadExport() {
     setNotice({ tone: "success", text: t.export.working })
-    const response = await fetch("/api/settings/export")
-    if (!response.ok) {
-      const error = (await response.json().catch(() => null)) as ApiError | null
-      setNotice({
-        tone: "error",
-        text: error ? errorText(t, error) : t.errors.generic,
-      })
-      return
+    try {
+      const response = await fetch("/api/settings/export")
+      if (!response.ok) {
+        const error = apiErrorSchema.safeParse(
+          await response.json().catch(() => null)
+        )
+        setNotice({
+          tone: "error",
+          text: error.success ? errorText(t, error.data) : t.errors.generic,
+        })
+        return
+      }
+      const url = URL.createObjectURL(await response.blob())
+      const a = document.createElement("a")
+      a.href = url
+      a.download =
+        /filename="([^"]+)"/.exec(
+          response.headers.get("content-disposition") ?? ""
+        )?.[1] ?? "acadigma-export.zip"
+      a.click()
+      URL.revokeObjectURL(url)
+      setNotice({ tone: "success", text: t.export.done })
+    } catch {
+      setNotice({ tone: "error", text: t.errors.generic })
     }
-    const url = URL.createObjectURL(await response.blob())
-    const a = document.createElement("a")
-    a.href = url
-    a.download =
-      /filename="([^"]+)"/.exec(
-        response.headers.get("content-disposition") ?? ""
-      )?.[1] ?? "acadigma-export.zip"
-    a.click()
-    URL.revokeObjectURL(url)
-    setNotice({ tone: "success", text: t.export.done })
   }
 
   const alert = notice ? (

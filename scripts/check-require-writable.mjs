@@ -16,6 +16,9 @@ import { readFile, readdir } from "node:fs/promises"
 import { join, relative } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
+const D211 =
+  "D-211: a read-only or archived school must still be able to archive, unarchive, schedule or cancel its own deletion; the DB functions check owner-only"
+
 /** `"<file relative to repo root, forward slashes>#<export name>"` → reason. */
 export const EXEMPT = {
   "apps/web/app/(onboarding)/actions.ts#saveOnboardingDraft":
@@ -24,14 +27,12 @@ export const EXEMPT = {
     "user-level profiles/onboarding_progress write, no workspace",
   "apps/web/app/(onboarding)/actions.ts#createSchoolWorkspace":
     "creates the workspace; tg_require_writable passes a fresh workspace",
-  "apps/web/app/(school)/app/settings/danger/actions.ts#archiveSchool":
-    "D-211: a read-only or archived school must still be able to archive, unarchive, schedule or cancel its own deletion; the DB functions check owner-only",
-  "apps/web/app/(school)/app/settings/danger/actions.ts#unarchiveSchool":
-    "D-211: a read-only or archived school must still be able to archive, unarchive, schedule or cancel its own deletion; the DB functions check owner-only",
+  "apps/web/app/(school)/app/settings/danger/actions.ts#archiveSchool": D211,
+  "apps/web/app/(school)/app/settings/danger/actions.ts#unarchiveSchool": D211,
   "apps/web/app/(school)/app/settings/danger/actions.ts#scheduleSchoolDeletion":
-    "D-211: a read-only or archived school must still be able to archive, unarchive, schedule or cancel its own deletion; the DB functions check owner-only",
+    D211,
   "apps/web/app/(school)/app/settings/danger/actions.ts#cancelSchoolDeletion":
-    "D-211: a read-only or archived school must still be able to archive, unarchive, schedule or cancel its own deletion; the DB functions check owner-only",
+    D211,
 }
 
 const READ_NAME =

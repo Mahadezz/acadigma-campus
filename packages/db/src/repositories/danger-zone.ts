@@ -116,13 +116,6 @@ function refusal(error: {
     : known
 }
 
-const stateRowSchema = z.object({
-  name: z.string(),
-  status: z.string(),
-  archived_at: z.string().nullable(),
-  deletion_scheduled_at: z.string().nullable(),
-})
-
 /** Name, status and the lifecycle dates of the current school. */
 export async function getDangerZoneState(
   ctx: WorkspaceContext,
@@ -134,12 +127,11 @@ export async function getDangerZoneState(
     .eq("id", ctx.workspaceId)
     .maybeSingle()
   if (error || !data) return err(UNAVAILABLE)
-  const row = stateRowSchema.parse(data)
   const parsed = dangerZoneStateSchema.safeParse({
-    name: row.name,
-    status: row.status,
-    archivedAt: row.archived_at,
-    deletionScheduledAt: row.deletion_scheduled_at,
+    name: data.name,
+    status: data.status,
+    archivedAt: data.archived_at,
+    deletionScheduledAt: data.deletion_scheduled_at,
   })
   return parsed.success ? ok(parsed.data) : err(UNAVAILABLE)
 }
@@ -232,15 +224,14 @@ export async function exportWorkspaceData(
  * one refusal (FILES_PRESENT) never blocks the others. Ids only, never names.
  */
 export async function purgeDueWorkspaces(
-  client: AcadigmaSupabaseClient,
-  now: Date = new Date()
+  client: AcadigmaSupabaseClient
 ): Promise<
   Result<{ purged: string[]; failed: { id: string; code: string }[] }, ApiError>
 > {
   const { data, error } = await client
     .from("workspaces")
     .select("id")
-    .lte("deletion_scheduled_at", now.toISOString())
+    .lte("deletion_scheduled_at", new Date().toISOString())
     .limit(50)
   if (error) return err(UNAVAILABLE)
 
