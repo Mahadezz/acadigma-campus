@@ -31,19 +31,67 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 bearer=()
 case "$SUPABASE_SERVICE_KEY" in eyJ*) bearer=(-H "Authorization: Bearer $SUPABASE_SERVICE_KEY") ;; esac
 
-# The fixed, fictional demo accounts. example.com never delivers mail.
-ensure_user() {
-  local email="$1" name="$2" body status
-  body=$(jq -n --arg e "$email" --arg p "$DEMO_PASSWORD" --arg n "$name" \
-    '{email: $e, password: $p, email_confirm: true, user_metadata: {full_name: $n}}')
-  status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$SUPABASE_URL/auth/v1/admin/users" \
+# Auth admin API call: prints the body, fails on anything but 2xx.
+admin() {
+  local method="$1" path="$2" out status data=()
+  [ -z "${3:-}" ] || data=(--data-binary "$3")
+  out="$(mktemp)"
+  status=$(curl -sS -o "$out" -w '%{http_code}' -X "$method" "$SUPABASE_URL/auth/v1$path" \
     -H "apikey: $SUPABASE_SERVICE_KEY" "${bearer[@]}" \
-    -H 'Content-Type: application/json' --data-binary @- <<<"$body")
-  case "$status" in
-    200 | 201) echo "created $email" ;;
-    422) echo "exists  $email" ;; # email_exists: idempotent re-run
-    *) echo "::error::creating $email failed with HTTP $status" >&2; exit 1 ;;
-  esac
+    -H 'Content-Type: application/json' "${data[@]}")
+  if [ "${status:0:1}" != 2 ]; then
+    rm -f "$out"
+    echo "HTTP $status"
+    return 1
+  fi
+  cat "$out"
+  rm -f "$out"
+}
+
+# The fixed, fictional demo accounts. example.com never delivers mail.
+# app_metadata.acadigma_demo marks an account the seed owns (users cannot
+# edit app_metadata). Signup is open, so an account may already exist under
+# a demo email that someone else registered: it is taken back — password
+# reset to the secret, marked, and every session it had revoked — and the
+# SQL then refuses any demo account that belongs to another school.
+ensure_user() {
+  local email="$1" name="$2" body id marked page=1 users token
+  body=$(jq -n --arg e "$email" --arg p "$DEMO_PASSWORD" --arg n "$name" \
+    '{email: $e, password: $p, email_confirm: true,
+      user_metadata: {full_name: $n}, app_metadata: {acadigma_demo: true}}')
+  if admin POST /admin/users "$body" >/dev/null; then
+    echo "created $email"
+    return
+  fi
+
+  # Already there (email_exists): find it. No email filter in the admin API,
+  # so page through; the project has few users.
+  while [ -z "${id:-}" ]; do
+    users=$(admin GET "/admin/users?page=$page&per_page=500") || { echo "::error::listing users failed" >&2; exit 1; }
+    [ "$(jq '.users | length' <<<"$users")" -gt 0 ] || { echo "::error::$email exists but was not found" >&2; exit 1; }
+    id=$(jq -r --arg e "$email" 'first(.users[] | select(.email == $e) | .id) // empty' <<<"$users")
+    marked=$(jq -r --arg e "$email" 'first(.users[] | select(.email == $e) | .app_metadata.acadigma_demo) // false' <<<"$users")
+    page=$((page + 1))
+  done
+
+  # Every run: the password is the secret's (so rotation reaches it), marked.
+  admin PUT "/admin/users/$id" "$(jq -n --arg p "$DEMO_PASSWORD" \
+    '{password: $p, email_confirm: true, app_metadata: {acadigma_demo: true}}')" >/dev/null \
+    || { echo "::error::resetting $email failed" >&2; exit 1; }
+
+  if [ "$marked" != true ]; then
+    # Not ours until now: sign in with the new password and end every session
+    # (scope=global), so whoever registered it is signed out everywhere.
+    token=$(admin POST "/token?grant_type=password" \
+      "$(jq -n --arg e "$email" --arg p "$DEMO_PASSWORD" '{email: $e, password: $p}')" \
+      | jq -r .access_token) || { echo "::error::signing in as $email failed" >&2; exit 1; }
+    curl -sS -o /dev/null -f -X POST "$SUPABASE_URL/auth/v1/logout?scope=global" \
+      -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $token" \
+      || { echo "::error::revoking $email's sessions failed" >&2; exit 1; }
+    echo "took back $email"
+  else
+    echo "exists  $email"
+  fi
 }
 ensure_user owner.demo@example.com "Mahbuba Sultana"
 ensure_user teacher.demo@example.com "Abdur Rashid"

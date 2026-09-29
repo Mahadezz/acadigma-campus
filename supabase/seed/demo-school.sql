@@ -56,6 +56,21 @@ begin
     raise exception 'refusing: "%" exists but is not a school owned by the demo owner', c_name;
   end if;
 
+  -- The demo accounts must be the seed's (app_metadata, which users cannot
+  -- edit) and belong to no workspace but the demo school and their own
+  -- personal one — so a demo login can never open a real school.
+  if exists (
+       select 1 from auth.users u
+        where u.email in ('owner.demo@example.com', 'teacher.demo@example.com', 'parent.demo@example.com')
+          and (coalesce(u.raw_app_meta_data ->> 'acadigma_demo', '') <> 'true'
+               or exists (select 1 from public.workspace_members m
+                            join public.workspaces w on w.id = m.workspace_id
+                           where m.user_id = u.id
+                             and w.id is distinct from v_ws
+                             and not (w.type = 'personal' and w.owner_id = u.id)))) then
+    raise exception 'refusing: a demo account is not seed-owned or belongs to another workspace';
+  end if;
+
   -- ---- act as the demo owner, exactly as PostgREST would ----------------
   perform set_config('request.jwt.claims', json_build_object(
     'sub', v_owner, 'role', 'authenticated', 'email', 'owner.demo@example.com')::text, true);

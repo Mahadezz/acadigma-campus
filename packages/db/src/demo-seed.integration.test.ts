@@ -16,6 +16,7 @@ import { execFileSync } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { fileURLToPath } from "node:url"
 
+import { createClient } from "@supabase/supabase-js"
 import { describe, expect, it } from "vitest"
 
 const API_URL = process.env.DB_LOCAL_SUPABASE_URL ?? "http://127.0.0.1:54321"
@@ -96,11 +97,53 @@ function demoCount(query: string): number {
 }
 
 describe.skipIf(!RUN)("demo school seed (D-80, local Supabase)", () => {
-  it("builds the demo school once, a second run changes nothing, other workspaces are untouched", () => {
+  it("builds the demo school once, a second run changes nothing, other workspaces are untouched", async () => {
+    // Someone registers a demo email before the first run (signup is open).
+    const admin = createClient(API_URL, SERVICE_KEY as string, {
+      auth: { persistSession: false },
+    })
+    const attackerPassword = `Mine-${randomUUID()}`
+    const pre = await admin.auth.admin.createUser({
+      email: "owner.demo@example.com",
+      password: attackerPassword,
+      email_confirm: true,
+    })
+    expect(pre.error).toBeNull()
+    const attacker = createClient(API_URL, ANON_KEY as string, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const signedIn = await attacker.auth.signInWithPassword({
+      email: "owner.demo@example.com",
+      password: attackerPassword,
+    })
+    expect(signedIn.error).toBeNull()
+    const refreshToken = signedIn.data.session?.refresh_token as string
+
     const before = SEED_SCHOOLS
     const othersBefore = fingerprint(before)
 
     seed()
+
+    // Taken back: the registrant's password and session no longer work, the
+    // demo password does.
+    const fresh = () =>
+      createClient(API_URL, ANON_KEY as string, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+    const old = await fresh().auth.signInWithPassword({
+      email: "owner.demo@example.com",
+      password: attackerPassword,
+    })
+    expect(old.error).not.toBeNull()
+    const refreshed = await fresh().auth.refreshSession({
+      refresh_token: refreshToken,
+    })
+    expect(refreshed.error).not.toBeNull()
+    const demo = await fresh().auth.signInWithPassword({
+      email: "owner.demo@example.com",
+      password: PASSWORD,
+    })
+    expect(demo.error).toBeNull()
 
     expect(
       demoCount(

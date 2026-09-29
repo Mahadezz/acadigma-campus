@@ -6,9 +6,9 @@ A five-minute investor walkthrough on the live app, on a phone (360×800), plus 
 
 | When               | What                                                                                                                                                                                                                                                                                              |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Once               | The owner adds the `DEMO_ACCOUNT_PASSWORD` secret (≥ 12 characters) to the `production` environment in GitHub.                                                                                                                                                                                    |
+| Once               | The owner adds the `DEMO_ACCOUNT_PASSWORD` secret (≥ 12 characters) to the `production` environment in GitHub. Anyone given it can sign in, so **rotate it after each demo day** and re-run the workflow to apply it.                                                                             |
 | **The day before** | Actions → **Demo seed** → Run workflow (on `main`). A run takes about a minute. The attendance history ends the day before the run, so a run a week earlier leaves a week of empty registers; a second run adds nothing (it does not top the history up).                                         |
-| Within 30 days     | The demo school is on the 30-day Pro trial like any new school. After it, the school is read-only (D-62) and the roll call cannot be saved — see Known limits.                                                                                                                                    |
+| Within 30 days     | The **first** seed run must be within 30 days of the demo: the demo school is on the 30-day Pro trial like any new school and is read-only after it (D-62). The job summary prints "Trial ends on". No platform path extends a trial yet.                                                         |
 | Morning of         | Sign the teacher in on the demo phone (`teacher.demo@example.com`), open Class 6 – ক once **while online** (this caches it for the offline moment), then leave the app on the basic home. Sign the parent in on a second phone or browser tab (`parent.demo@example.com`). Charge both; Wi-Fi on. |
 
 Accounts (all fictional, password = the secret):
@@ -48,7 +48,7 @@ If the live app is unreachable, show the Playwright screenshots in the latest te
 
 ## Known limits
 
-- **Trial:** the demo school becomes read-only 30 days after the first seed run (D-62). The seed does not reset it; until a platform-admin path exists, the lead extends it by hand or the demo moves before then.
+- **Trial:** the demo school becomes read-only 30 days after the first seed run (D-62); the job summary shows the date. Nothing extends it yet (no reviewed platform-admin path exists), so plan the first run within 30 days of the demo.
 - **History gap:** the 18 days of attendance end the day before the first run. Run the workflow the day before the demo; re-running later does not add days.
 - **Past registers are stamped:** days older than the 2-day edit window were saved by the head teacher and carry `edited_after_window` — true to the rule for an admin entering past registers (D-104).
 - **Class hub:** the basic-mode class hub (F-ID-10 Part 3, PR #82) is not merged at the time of writing; until it is, the teacher reaches attendance and marks from the basic home's class block and the app's own links.
