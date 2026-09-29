@@ -1632,7 +1632,8 @@
       },
       "students": {
         "empty": "No students are enrolled in this class.",
-        "roll": "Roll {roll}"
+        "roll": "Roll {roll}",
+        "seeAll": "See all {count} students"
       },
       "print": {
         "empty": "No report cards are ready yet for this class.",

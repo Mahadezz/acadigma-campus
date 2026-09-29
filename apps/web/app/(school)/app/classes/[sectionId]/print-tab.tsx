@@ -7,12 +7,11 @@ import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
+import { fill } from "../../home/format"
 import { GenerateAttendanceRegisterButton } from "../../reports/generate-attendance-register-button"
 import { GenerateMarkSheetButton } from "../../reports/generate-mark-sheet-button"
 import { GenerateReportCardBulkButton } from "../../reports/generate-report-card-bulk-button"
 import { GenerateReportCardButton } from "../../reports/generate-report-card-button"
-
-import { fill } from "./format"
 
 /**
  * F-ID-10 §4.5/§8 Part 3 — "Print attendance register", "Print mark sheet"

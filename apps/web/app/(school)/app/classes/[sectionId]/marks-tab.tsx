@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import type { SectionPaper } from "@acadigma/contracts"
 import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
@@ -11,7 +13,7 @@ import {
 import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
-import { fill } from "./format"
+import { fill } from "../../home/format"
 
 const PAPER_STATUS_TONE: Record<
   SectionPaper["status"],
@@ -44,7 +46,7 @@ export function MarksTab({
     <ul className="divide-border divide-y border-y">
       {papers.map((paper) => (
         <li key={paper.examSubjectId}>
-          <a
+          <Link
             href={`/app/marks/${paper.examSubjectId}`}
             className="hover:bg-muted/50 flex min-h-16 flex-col justify-center gap-1 px-2 py-3"
           >
@@ -73,7 +75,7 @@ export function MarksTab({
                 total: paper.enrolled,
               })}
             </span>
-          </a>
+          </Link>
         </li>
       ))}
     </ul>

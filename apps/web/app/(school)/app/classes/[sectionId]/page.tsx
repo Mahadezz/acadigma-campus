@@ -2,8 +2,8 @@ import { forbidden, notFound } from "next/navigation"
 
 import { studentSearchQuerySchema, uuidSchema } from "@acadigma/contracts"
 import {
+  currentYear,
   getAttendanceDay,
-  getClassesOverview,
   getRollCall,
   listRoster,
 } from "@acadigma/db"
@@ -72,10 +72,13 @@ export default async function ClassHubPage({
     return <InlineAlert tone="error">{s.errorGeneric}</InlineAlert>
   }
 
-  const [day, papers, overview, latestExam] = await Promise.all([
+  // Ponytail cut (review): only `year.id` is needed here — `currentYear`
+  // alone, not the heavier `getClassesOverview` (which also fetches every
+  // grade level and this year's sections, neither used on this page).
+  const [day, papers, year, latestExam] = await Promise.all([
     getAttendanceDay(supabase, ctx),
     listSectionPapers(supabase, ctx, sectionId),
-    getClassesOverview(supabase, ctx),
+    currentYear(supabase, ctx),
     getLatestSectionExam(supabase, ctx, sectionId),
   ])
 
@@ -93,7 +96,7 @@ export default async function ClassHubPage({
         )
       : null
 
-  const yearId = overview.ok ? (overview.data.year?.id ?? null) : null
+  const yearId = year.ok ? (year.data?.id ?? null) : null
   const rosterQuery = studentSearchQuerySchema.parse({
     sectionId,
     page: 1,
@@ -145,6 +148,7 @@ export default async function ClassHubPage({
       }
       papers={papers.ok ? papers.data : []}
       students={roster.ok ? roster.data.students : []}
+      hasMoreStudents={roster.ok && roster.data.hasMore}
       latestExam={latestExam.ok ? latestExam.data : null}
     />
   )

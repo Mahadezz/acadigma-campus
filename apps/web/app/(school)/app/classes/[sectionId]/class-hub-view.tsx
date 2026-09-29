@@ -93,6 +93,7 @@ export function ClassHubView({
   attendance,
   papers,
   students,
+  hasMoreStudents,
   latestExam,
   month,
   userId,
@@ -115,6 +116,10 @@ export function ClassHubView({
   } | null
   papers: SectionPaper[]
   students: RosterStudent[]
+  /** MEDIUM 1 review fix: `listRoster` returns one page (`ROSTER_PAGE_SIZE`,
+   * 50) — `true` once a section outgrows it, so the Students tab can point
+   * to the full roster instead of silently cutting it off. */
+  hasMoreStudents: boolean
   latestExam: SectionPrintExam | null
   /** `YYYY-MM`, this month — `null` when today's date could not be read. */
   month: string | null
@@ -227,7 +232,14 @@ export function ClassHubView({
           <MarksTab t={s} locale={locale} papers={papers} />
         </TabsContent>
         <TabsContent value="students" className="pt-2">
-          <StudentsTab t={s} locale={locale} students={students} />
+          <StudentsTab
+            t={s}
+            locale={locale}
+            students={students}
+            hasMore={hasMoreStudents}
+            sectionId={sectionId}
+            totalCount={studentCount}
+          />
         </TabsContent>
         <TabsContent value="print" className="pt-2">
           <PrintTab

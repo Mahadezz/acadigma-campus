@@ -116,11 +116,12 @@ type SectionPaperRow = {
   id: string
   status: string
   exam_id: string
-  teacher_id: string | null
   exams: { name: string } | null
   subjects: { name: string; name_bn: string | null } | null
-  sections: { class_teacher_id: string | null } | null
 }
+
+const PAPER_COLUMNS =
+  "id, status, exam_id, exams(name), subjects(name, name_bn)"
 
 /**
  * Marks tab (§8 Part 3): this section's papers the caller teaches. Same
@@ -135,32 +136,46 @@ export async function listSectionPapers(
   ctx: WorkspaceContext,
   sectionId: string
 ): Promise<Result<SectionPaper[], ApiError>> {
-  const [allRowsResult, member] = await Promise.all([
+  const member = await supabase
+    .from("workspace_members")
+    .select("id")
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("user_id", ctx.userId)
+    .eq("status", "active")
+    .maybeSingle()
+  if (member.error) return err(UNAVAILABLE)
+  const memberId = member.data?.id ?? null
+  if (!memberId) return ok([])
+
+  // Ponytail cut (review): filtered in the query — the same two-query,
+  // "class teacher OR subject teacher" shape `listMySections` (academics.ts)
+  // already uses for this identical choice, instead of fetching every paper
+  // of the section and filtering in JS. A caller who is both (the class
+  // teacher also teaching a subject here) can match both queries; `byId`
+  // below dedupes on `exam_subjects.id`.
+  const [bySubject, byClassTeacher] = await Promise.all([
     supabase
       .from("exam_subjects")
-      .select(
-        "id, status, exam_id, teacher_id, exams(name), subjects(name, name_bn), " +
-          "sections(class_teacher_id)"
-      )
+      .select(PAPER_COLUMNS)
       .eq("workspace_id", ctx.workspaceId)
-      .eq("section_id", sectionId),
+      .eq("section_id", sectionId)
+      .eq("teacher_id", memberId),
     supabase
-      .from("workspace_members")
-      .select("id")
+      .from("exam_subjects")
+      .select(`${PAPER_COLUMNS}, sections!inner(class_teacher_id)`)
       .eq("workspace_id", ctx.workspaceId)
-      .eq("user_id", ctx.userId)
-      .eq("status", "active")
-      .maybeSingle(),
+      .eq("section_id", sectionId)
+      .eq("sections.class_teacher_id", memberId),
   ])
-  if (allRowsResult.error || member.error) return err(UNAVAILABLE)
-  const memberId = member.data?.id ?? null
-  const allRows = (allRowsResult.data ?? []) as unknown as SectionPaperRow[]
-  const rows = memberId
-    ? allRows.filter(
-        (r) =>
-          r.teacher_id === memberId || r.sections?.class_teacher_id === memberId
-      )
-    : []
+  if (bySubject.error || byClassTeacher.error) return err(UNAVAILABLE)
+  const byId = new Map<string, SectionPaperRow>()
+  for (const r of [
+    ...((bySubject.data ?? []) as unknown as SectionPaperRow[]),
+    ...((byClassTeacher.data ?? []) as unknown as SectionPaperRow[]),
+  ]) {
+    byId.set(r.id, r)
+  }
+  const rows = [...byId.values()]
   if (rows.length === 0) return ok([])
 
   // `exam_marks_progress` (already shipped, F-AC-06 Part 2) counts a whole
@@ -196,8 +211,9 @@ export async function listSectionPapers(
 }
 
 type SectionExamRow = {
-  exam_id: string
-  exams: { name: string; status: string } | null
+  id: string
+  name: string
+  status: string
 }
 
 /**
@@ -205,6 +221,17 @@ type SectionExamRow = {
  * section. `exams.status` of `marks_locked` (results computed, not yet
  * published) or `published` — the two statuses `/app/exams/[id]/results`
  * (D-207) already renders from. `null` means neither exists yet.
+ *
+ * Ponytail cut (review): queried from `exams` directly (`workspace_id` is
+ * its own column — `exams_id_workspace_key`), filtered through the
+ * `exam_subjects!inner` embed instead of reduced in JS. "published" sorts
+ * after "marks_locked" alphabetically, so a plain descending `status` order
+ * already ranks it first; the most recently started exam wins within a
+ * status. `exam_subjects!inner` can duplicate the winning exam's row (one
+ * exam can have several subjects in this section), but every duplicate
+ * carries the same `status`/`starts_on` (properties of the exam, not the
+ * subject), so the first row after this order and `limit(1)` is already
+ * the answer regardless of which duplicate the database picks.
  */
 export async function getLatestSectionExam(
   supabase: AcadigmaSupabaseClient,
@@ -212,47 +239,20 @@ export async function getLatestSectionExam(
   sectionId: string
 ): Promise<Result<SectionPrintExam | null, ApiError>> {
   const { data, error } = await supabase
-    .from("exam_subjects")
-    .select("exam_id, exams!inner(name, status, starts_on)")
+    .from("exams")
+    .select("id, name, status, exam_subjects!inner(section_id)")
     .eq("workspace_id", ctx.workspaceId)
-    .eq("section_id", sectionId)
-    .in("exams.status", ["marks_locked", "published"])
+    .eq("exam_subjects.section_id", sectionId)
+    .in("status", ["marks_locked", "published"])
+    .order("status", { ascending: false })
+    .order("starts_on", { ascending: false, nullsFirst: false })
+    .limit(1)
   if (error) return err(UNAVAILABLE)
-  const rows = (data ?? []) as unknown as (SectionExamRow & {
-    exams: { starts_on: string | null } | null
-  })[]
-
-  type Candidate = {
-    examId: string
-    name: string
-    status: string
-    startsOn: string | null
-  }
-  // Multiple rows can share one exam_id (one exam_subjects row per subject);
-  // reducing straight over `rows` needs no separate dedupe step, since a row
-  // sharing the current best's exam_id has identical status/startsOn (both
-  // are properties of the exam, not the subject) and so never wins the
-  // comparison below.
-  const latest = rows.reduce<Candidate | null>((best, r) => {
-    if (!r.exams) return best
-    const candidate: Candidate = {
-      examId: r.exam_id,
-      name: r.exams.name,
-      status: r.exams.status,
-      startsOn: r.exams.starts_on,
-    }
-    if (!best) return candidate
-    // Published outranks merely-computed; within the same status, the most
-    // recently started exam wins. Neither field is user input.
-    if (candidate.status !== best.status) {
-      return candidate.status === "published" ? candidate : best
-    }
-    return (candidate.startsOn ?? "") > (best.startsOn ?? "") ? candidate : best
-  }, null)
-  if (!latest) return ok(null)
+  const row = ((data ?? []) as unknown as SectionExamRow[])[0]
+  if (!row) return ok(null)
   return ok({
-    examId: latest.examId,
-    examName: latest.name,
-    status: latest.status as SectionPrintExam["status"],
+    examId: row.id,
+    examName: row.name,
+    status: row.status as SectionPrintExam["status"],
   })
 }

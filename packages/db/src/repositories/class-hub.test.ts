@@ -11,7 +11,8 @@ vi.mock("./academics", () => ({
   listMySections: (...a: unknown[]) => listMySectionsMock(...a),
 }))
 
-const { getClassHub, isNotAssignedError } = await import("./class-hub")
+const { getClassHub, getLatestSectionExam, isNotAssignedError } =
+  await import("./class-hub")
 
 const SECTION_ID = "55555555-5555-4555-8555-555555555555"
 const OTHER_SECTION_ID = "66666666-6666-4666-8666-666666666666"
@@ -144,5 +145,67 @@ describe("getClassHub", () => {
 describe("isNotAssignedError", () => {
   it("is false for an ordinary error", () => {
     expect(isNotAssignedError({ code: "not_found", message: "x" })).toBe(false)
+  })
+})
+
+/**
+ * Ponytail cut (review): the "published outranks marks_locked, latest
+ * starts_on wins" choice moved from a JS `reduce` into the query's own
+ * `order`/`limit(1)` — these prove `getLatestSectionExam`'s own contract
+ * (maps the query's first row, `null` on empty, `UNAVAILABLE` on error).
+ * The order/limit themselves are the database's job, not re-proven here.
+ */
+function fakeExamsClient(
+  rows: { id: string; name: string; status: string }[] | null,
+  queryError = false
+): AcadigmaSupabaseClient {
+  return {
+    from: (table: string) => {
+      if (table !== "exams") throw new Error(`unexpected table ${table}`)
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              in: () => ({
+                order: () => ({
+                  order: () => ({
+                    limit: async () => ({
+                      data: queryError ? null : rows,
+                      error: queryError ? { message: "down" } : null,
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      }
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any as AcadigmaSupabaseClient
+}
+
+describe("getLatestSectionExam", () => {
+  it("null when no marks_locked/published exam exists for the section", async () => {
+    const client = fakeExamsClient([])
+    const result = await getLatestSectionExam(client, ctx("owner"), SECTION_ID)
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it("maps the query's first row to a SectionPrintExam", async () => {
+    const client = fakeExamsClient([
+      { id: "e1", name: "Half-yearly", status: "published" },
+    ])
+    const result = await getLatestSectionExam(client, ctx("owner"), SECTION_ID)
+    expect(result).toEqual({
+      ok: true,
+      data: { examId: "e1", examName: "Half-yearly", status: "published" },
+    })
+  })
+
+  it("dependency_unavailable on a query error", async () => {
+    const client = fakeExamsClient(null, true)
+    const result = await getLatestSectionExam(client, ctx("owner"), SECTION_ID)
+    expect(!result.ok && result.error.code).toBe("dependency_unavailable")
   })
 })

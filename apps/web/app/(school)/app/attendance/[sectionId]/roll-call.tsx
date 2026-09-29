@@ -335,14 +335,23 @@ export function RollCall({
     setSaved(null)
     setConfirmOpen(false)
     startTransition(async () => {
+      // Review fix (MEDIUM 2): `toSave` can be `lastSavedMarks` (Undo) or
+      // `marks` (an ordinary save). A student enrolled after the last save
+      // has no entry in `lastSavedMarks` — sending `null` as a cast-away
+      // `AttendanceStatus` would reach the server (which never accepts it,
+      // §5.3 "nothing is presumed present") for real; `flatMap` narrows the
+      // type instead of hiding the gap behind a cast, and drops that one
+      // entry rather than sending an invalid status for them.
       const input: SaveAttendanceInput = {
         idempotencyKey: key,
         sectionId,
         date,
-        records: students.map((s) => ({
-          studentId: s.studentId,
-          status: toSave[s.studentId] as AttendanceStatus,
-        })),
+        records: students.flatMap((s) => {
+          const status = toSave[s.studentId]
+          return status === null || status === undefined
+            ? []
+            : [{ studentId: s.studentId, status }]
+        }),
         bulkMarked: bulk,
         allowNonSchoolDay: !isSchoolDay && anyway,
         expectedUpdatedAt: version,

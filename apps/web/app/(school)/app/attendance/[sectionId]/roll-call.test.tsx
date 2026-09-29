@@ -190,6 +190,29 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
   })
 
+  // LOW 4 review fix (spec §10 coverage gap): the confirm sentence unit
+  // coverage above was English-only — this proves `fill()` substitutes the
+  // Bangla template's counts the same way, not just that a Bangla string
+  // constant exists.
+  it("confirms the plain sentence in Bangla with counts before saving", async () => {
+    render(
+      <RollCall
+        {...BASE}
+        t={bn.attendance.roll}
+        locale="bn"
+        basic
+        basicCopy={bn.basicMode.classHub.attendance}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "সবাই উপস্থিত" }))
+    fireEvent.click(screen.getByRole("button", { name: "সংরক্ষণ" }))
+    expect(
+      await screen.findAllByText(
+        "Class 6 – ক-এর হাজিরা সংরক্ষণ করবেন? 3 জন উপস্থিত, 0 জন অনুপস্থিত।"
+      )
+    ).toHaveLength(1)
+  })
+
   it("Go back closes the sheet without saving", async () => {
     render(<RollCall {...BASE} basic basicCopy={basicCopy} />)
     fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
@@ -199,10 +222,29 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
   })
 
   it("offers Undo after editing an already-saved session, and Undo re-saves the previous values as one edit", async () => {
+    // MEDIUM 2 review fix: an already-saved session (`sessionUpdatedAt` set)
+    // can never have an unmarked student for real — the server rejects an
+    // incomplete save (§5.3, "nothing is presumed present") — so the
+    // fixture now carries real prior statuses instead of `status: null`,
+    // proving Undo's re-save against a payload the server would accept.
+    const savedStudents = students.map((s, i) => ({
+      ...s,
+      status: (["present", "absent", "present"] as const)[i]!,
+    }))
     render(
-      <RollCall {...BASE} sessionUpdatedAt="t0" basic basicCopy={basicCopy} />
+      <RollCall
+        {...BASE}
+        students={savedStudents}
+        sessionUpdatedAt="t0"
+        basic
+        basicCopy={basicCopy}
+      />
     )
-    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    // Edit: Student 2 (absent) -> present.
+    const present2 = screen
+      .getByRole("radiogroup", { name: "Student 2" })
+      .querySelector('[aria-label="Present"]') as HTMLButtonElement
+    fireEvent.click(present2)
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
     fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
@@ -217,10 +259,59 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
 
     fireEvent.click(undoButton)
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
-    // The undo re-save carries the ORIGINAL (all-unmarked) statuses, not the
-    // values this save just wrote — restoring what was on the server before.
+    // The undo re-save carries the ORIGINAL (real, previously-saved)
+    // statuses, not the edit this save just wrote — restoring what was on
+    // the server before.
     expect(mockSave.mock.calls[1]?.[0]).toMatchObject({
-      records: students.map((s) => ({ studentId: s.studentId, status: null })),
+      records: savedStudents.map((s) => ({
+        studentId: s.studentId,
+        status: s.status,
+      })),
+    })
+  })
+
+  it("skips a student who joined after the last save when Undo re-sends the previous values (MEDIUM 2)", async () => {
+    // A student enrolled after the last save has no entry in that save's
+    // records — `lastSavedMarks` seeds `null` for them from the roster's
+    // own `status` field. Undo must never send that `null` on as a
+    // cast-away status (the server rejects it, §5.3); it skips that one
+    // entry instead of sending an invalid status for them.
+    const mixedStudents = students.map((s, i) => ({
+      ...s,
+      status: (["present", "absent", null] as const)[i]!,
+    }))
+    render(
+      <RollCall
+        {...BASE}
+        students={mixedStudents}
+        sessionUpdatedAt="t0"
+        basic
+        basicCopy={basicCopy}
+      />
+    )
+    // Student 3 is new and unmarked — mark them present so Save is enabled.
+    const present3 = screen
+      .getByRole("radiogroup", { name: "Student 3" })
+      .querySelector('[aria-label="Present"]') as HTMLButtonElement
+    fireEvent.click(present3)
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+    await screen.findByText(basicCopy.undoToast)
+    const undoButton = screen.getByRole("button", {
+      name: basicCopy.undo,
+    }) as HTMLButtonElement
+    await vi.waitFor(() => expect(undoButton.disabled).toBe(false))
+
+    fireEvent.click(undoButton)
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
+    // Only students 1-2 (their real prior statuses) — student 3 has no
+    // record to go back to and is left out, not sent as an invalid status.
+    expect(mockSave.mock.calls[1]?.[0]).toMatchObject({
+      records: [
+        { studentId: mixedStudents[0]!.studentId, status: "present" },
+        { studentId: mixedStudents[1]!.studentId, status: "absent" },
+      ],
     })
   })
 
