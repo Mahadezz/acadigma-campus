@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url"
 
 import { describe, expect, it } from "vitest"
 
-const URL = process.env.DB_LOCAL_SUPABASE_URL ?? "http://127.0.0.1:54321"
+const API_URL = process.env.DB_LOCAL_SUPABASE_URL ?? "http://127.0.0.1:54321"
 const ANON_KEY = process.env.DB_LOCAL_SUPABASE_ANON_KEY
 const SERVICE_KEY = process.env.DB_LOCAL_SUPABASE_SERVICE_KEY
 const RUN = process.env.DB_LOCAL_SUPABASE === "1" && !!ANON_KEY && !!SERVICE_KEY
@@ -58,7 +58,7 @@ function seed(): void {
     cwd: ROOT,
     env: {
       ...process.env,
-      SUPABASE_URL: URL,
+      SUPABASE_URL: API_URL,
       SUPABASE_SERVICE_KEY: SERVICE_KEY,
       DEMO_PASSWORD: PASSWORD,
       DB_TARGET: "--local",
