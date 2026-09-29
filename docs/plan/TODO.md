@@ -52,7 +52,7 @@ Last updated: 2026-09-29 ~23:10 Dhaka.
 
 **Owner:** "dont forget to add the account and workspace deletation". Spec: 30-day grace with banner + cancel; blocked while sole owner of a school (points to ownership transfer); nightly purge job anonymises, keeps audit rows. Was scheduled for M4 (~Apr 2027) — pulled forward; log the pull-forward as a decision in the PR.
 
-## 6. Workspace (school) deletion — F-OP-07 Part 6 "danger zone" · ⚪ (ops lane, next after #110)
+## 6. Workspace (school) deletion — F-OP-07 Part 6 "danger zone" · 🟡 (ops lane, fresh Opus builder, branch feat/operations-danger-zone, started 2026-09-29 ~23:30)
 
 Owner-only; type the school name to confirm; 30-day cancellable grace with daily banner; refused while a subscription or unpaid balance exists; final platform audit record. Same Part: transfer ownership, export all data (CSV zip, 7-day link), archive/unarchive. Pulled forward; log it.
 
@@ -66,7 +66,7 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 
 ## 9. Lane Parts in progress
 
-- **#110 (ops)** F-OP-07 Part 2 — academic years, terms, exam weighting, pass/GPA/promotion rules (D-210). Draft.
+- **#110 (ops)** F-OP-07 Part 2 — academic years, terms, exam weighting, pass/GPA/promotion rules (D-210). READY, CI green, builder's full review set done; lead's independent Opus security review running → merge + verify live migration.
 - **#112 (identity)** F-ID-03 Part 7 — remove a member, leave a school, transfer ownership. Draft.
 - Each needs: green CI → lead reviews (security Opus for anything touching roles/RLS, DB review for migrations, React/TS) → one fix batch → re-verify → merge → verify live migration + smoke.
 
