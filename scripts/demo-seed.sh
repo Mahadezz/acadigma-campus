@@ -55,7 +55,7 @@ admin() {
 # reset to the secret, marked, and every session it had revoked — and the
 # SQL then refuses any demo account that belongs to another school.
 ensure_user() {
-  local email="$1" name="$2" body id marked page=1 users token
+  local email="$1" name="$2" body found id marked token
   body=$(jq -n --arg e "$email" --arg p "$DEMO_PASSWORD" --arg n "$name" \
     '{email: $e, password: $p, email_confirm: true,
       user_metadata: {full_name: $n}, app_metadata: {acadigma_demo: true}}')
@@ -64,15 +64,18 @@ ensure_user() {
     return
   fi
 
-  # Already there (email_exists): find it. No email filter in the admin API,
-  # so page through; the project has few users.
-  while [ -z "${id:-}" ]; do
-    users=$(admin GET "/admin/users?page=$page&per_page=100") || { echo "::error::listing users failed: $users" >&2; exit 1; }
-    [ "$(jq '.users | length' <<<"$users")" -gt 0 ] || { echo "::error::$email exists but was not found" >&2; exit 1; }
-    id=$(jq -r --arg e "$email" 'first(.users[] | select(.email == $e) | .id) // empty' <<<"$users")
-    marked=$(jq -r --arg e "$email" 'first(.users[] | select(.email == $e) | .app_metadata.acadigma_demo) // false' <<<"$users")
-    page=$((page + 1))
-  done
+  # Already there (email_exists): find it in the database. (The admin API has
+  # no email filter, and its user listing fails outright on rows inserted by
+  # SQL, as seed.sql's are.) The marker is printed with the id in one token,
+  # so any output format of `supabase db query` can be read.
+  found=$(cd "$root" && supabase db query "$DB_TARGET" \
+    "select 'DEMO_USER=' || id || ':' || coalesce(raw_app_meta_data ->> 'acadigma_demo', 'false')
+       from auth.users where email = '$email'" \
+    | grep -oE 'DEMO_USER=[0-9a-f-]{36}:[a-z]+' | head -1) || true
+  [ -n "$found" ] || { echo "::error::$email exists but was not found" >&2; exit 1; }
+  id=${found#DEMO_USER=}
+  marked=${id#*:}
+  id=${id%%:*}
 
   # Every run: the password is the secret's (so rotation reaches it), marked.
   admin PUT "/admin/users/$id" "$(jq -n --arg p "$DEMO_PASSWORD" \
