@@ -43,37 +43,42 @@ $$;
 --    Same pattern as seed.sql §1: insert into auth.users directly (fires
 --    app.handle_new_user()), bcrypt-hashed here, no hash literal in the repo.
 -- ---------------------------------------------------------------------
+-- Same NULL-token gap as seed.sql §1 (auth#1940) -- explicit '' on the four
+-- columns GoTrue scans as non-nullable strings, or every login past this
+-- row's very first 500s with "Database error querying schema" (e2e-live CI
+-- run 36457859794 / 36512053201's real root cause).
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-  raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, email_change, email_change_token_new, recovery_token)
 values
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000005',
    'authenticated', 'authenticated', 'e2e-test-user@acadigma.test',
    extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"full_name":"E2E Test User"}'::jsonb, now(), now()),
+   '{"full_name":"E2E Test User"}'::jsonb, now(), now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000006',
    'authenticated', 'authenticated', 'e2e-parent@acadigma.test',
    extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"full_name":"E2E Guardian"}'::jsonb, now(), now()),
+   '{"full_name":"E2E Guardian"}'::jsonb, now(), now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000007',
    'authenticated', 'authenticated', 'e2e-onboarding-user@acadigma.test',
    extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"full_name":"E2E Onboarding User"}'::jsonb, now(), now()),
+   '{"full_name":"E2E Onboarding User"}'::jsonb, now(), now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000008',
    'authenticated', 'authenticated', 'e2e-test-user-2@acadigma.test',
    extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"full_name":"E2E Test User 2"}'::jsonb, now(), now())
+   '{"full_name":"E2E Test User 2"}'::jsonb, now(), now(), '', '', '', '')
 on conflict (id) do nothing;
 
 update public.profiles
