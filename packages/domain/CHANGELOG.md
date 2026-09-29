@@ -1,5 +1,14 @@
 # @acadigma/domain
 
+## 0.10.3
+
+### Patch Changes
+
+- cd1c1a4: F-OP-06 Part 2 (D-209): the staff directory, `/app/staff` — server-side search, a six-way filter chip row (All/Teachers/Admin/Staff/On notice/Pending), cursor pagination, an own-record "You" badge — and the read-only person sheet `/app/staff/[id]`. `staff_directory` now shows every active non-parent member, not only those with a `staff_records` row (a brand-new school's owner now appears from day one); a member with no record falls back to `workspace_members`' pre-existing label/department/phone. New: `staff.view` permission, `listStaff`/`getStaffDirectoryRow` (`@acadigma/db`), `listStaffInputSchema`/`staffDirectoryPageSchema` (`@acadigma/contracts`, `staffDirectoryRowSchema.id` is now nullable, `membershipId` added and always present).
+- Updated dependencies [68244d6]
+- Updated dependencies [cd1c1a4]
+  - @acadigma/contracts@0.12.0
+
 ## 0.10.2
 
 ### Patch Changes
