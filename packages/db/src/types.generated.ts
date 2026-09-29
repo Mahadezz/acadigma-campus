@@ -440,6 +440,13 @@ export type Database = {
             foreignKeyName: "channel_members_member_fkey"
             columns: ["member_id", "workspace_id"]
             isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "channel_members_member_fkey"
+            columns: ["member_id", "workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspace_members"
             referencedColumns: ["id", "workspace_id"]
           },
