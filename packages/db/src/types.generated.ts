@@ -236,6 +236,13 @@ export type Database = {
             foreignKeyName: "attendance_sessions_bulk_marked_by_fkey"
             columns: ["bulk_marked_by", "workspace_id"]
             isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_sessions_bulk_marked_by_fkey"
+            columns: ["bulk_marked_by", "workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspace_members"
             referencedColumns: ["id", "workspace_id"]
           },
@@ -252,6 +259,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sections"
             referencedColumns: ["id", "academic_year_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_sessions_taken_by_fkey"
+            columns: ["taken_by", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
           },
           {
             foreignKeyName: "attendance_sessions_taken_by_fkey"
@@ -1002,6 +1016,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "subjects"
             referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "exam_subjects_teacher_fkey"
+            columns: ["teacher_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
           },
           {
             foreignKeyName: "exam_subjects_teacher_fkey"
@@ -2720,6 +2741,13 @@ export type Database = {
             foreignKeyName: "section_subjects_teacher_fkey"
             columns: ["teacher_id", "workspace_id"]
             isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "section_subjects_teacher_fkey"
+            columns: ["teacher_id", "workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspace_members"
             referencedColumns: ["id", "workspace_id"]
           },
@@ -2782,6 +2810,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "academic_years"
             referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "sections_class_teacher_fkey"
+            columns: ["class_teacher_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
           },
           {
             foreignKeyName: "sections_class_teacher_fkey"
@@ -2865,13 +2900,6 @@ export type Database = {
             foreignKeyName: "staff_compensation_staff_record_fk"
             columns: ["workspace_id", "staff_record_id"]
             isOneToOne: false
-            referencedRelation: "staff_directory"
-            referencedColumns: ["workspace_id", "id"]
-          },
-          {
-            foreignKeyName: "staff_compensation_staff_record_fk"
-            columns: ["workspace_id", "staff_record_id"]
-            isOneToOne: false
             referencedRelation: "staff_records"
             referencedColumns: ["workspace_id", "id"]
           },
@@ -2937,13 +2965,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "files"
             referencedColumns: ["id", "workspace_id"]
-          },
-          {
-            foreignKeyName: "staff_documents_staff_record_fk"
-            columns: ["workspace_id", "staff_record_id"]
-            isOneToOne: false
-            referencedRelation: "staff_directory"
-            referencedColumns: ["workspace_id", "id"]
           },
           {
             foreignKeyName: "staff_documents_staff_record_fk"
@@ -3083,6 +3104,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "custom_labels"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_records_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id"]
           },
           {
             foreignKeyName: "staff_records_membership_id_fkey"
@@ -3827,6 +3855,13 @@ export type Database = {
             foreignKeyName: "workspace_member_capabilities_member_fkey"
             columns: ["workspace_id", "user_id"]
             isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["workspace_id", "user_id"]
+          },
+          {
+            foreignKeyName: "workspace_member_capabilities_member_fkey"
+            columns: ["workspace_id", "user_id"]
+            isOneToOne: false
             referencedRelation: "workspace_members"
             referencedColumns: ["workspace_id", "user_id"]
           },
@@ -4110,6 +4145,7 @@ export type Database = {
           full_name: string | null
           id: string | null
           joined_on: string | null
+          membership_id: string | null
           staff_code: string | null
           subject_ids: string[] | null
           user_id: string | null
@@ -4119,21 +4155,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "staff_records_designation_label_id_fkey"
-            columns: ["designation_label_id"]
-            isOneToOne: false
-            referencedRelation: "custom_labels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_records_user_id_fkey"
+            foreignKeyName: "workspace_members_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "staff_records_workspace_id_fkey"
+            foreignKeyName: "workspace_members_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

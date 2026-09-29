@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import {
   emergencyContactSchema,
+  listStaffInputSchema,
+  staffDirectoryRowSchema,
   staffDocumentKindSchema,
   staffDocumentSchema,
   staffEmploymentTypeSchema,
@@ -101,6 +103,61 @@ describe("staffRecordSchema", () => {
       ...base,
       fullName: "x".repeat(201),
     })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe("staffDirectoryRowSchema (F-OP-06 Part 2, D-209)", () => {
+  const base = {
+    id: null,
+    membershipId: "3f1a2e5c-9b7d-4c2e-8f1a-2b3c4d5e6f73",
+    workspaceId: "3f1a2e5c-9b7d-4c2e-8f1a-2b3c4d5e6f71",
+    userId: "3f1a2e5c-9b7d-4c2e-8f1a-2b3c4d5e6f72",
+    staffCode: null,
+    fullName: "Owner A",
+    avatarUrl: null,
+    designationLabelId: null,
+    designationLabel: null,
+    baseRole: "owner",
+    department: null,
+    subjectIds: [],
+    workEmail: null,
+    workPhone: null,
+    employmentStatus: "active",
+    joinedOn: null,
+  }
+
+  it("accepts a null id — a member with no staff_records row yet", () => {
+    expect(staffDirectoryRowSchema.safeParse(base).success).toBe(true)
+  })
+
+  it("requires membershipId — always present, unlike id", () => {
+    const { membershipId: _drop, ...withoutMembershipId } = base
+    expect(staffDirectoryRowSchema.safeParse(withoutMembershipId).success).toBe(
+      false
+    )
+  })
+})
+
+describe("listStaffInputSchema", () => {
+  it("defaults limit and accepts an empty input", () => {
+    const result = listStaffInputSchema.safeParse({})
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.limit).toBeGreaterThan(0)
+  })
+
+  it("accepts a role, a status and a cursor together", () => {
+    const result = listStaffInputSchema.safeParse({
+      role: "teacher",
+      status: "on_notice",
+      q: "Nadia",
+      cursor: "3f1a2e5c-9b7d-4c2e-8f1a-2b3c4d5e6f73",
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it("rejects a role that is not a real base role", () => {
+    const result = listStaffInputSchema.safeParse({ role: "parent" })
     expect(result.success).toBe(false)
   })
 })

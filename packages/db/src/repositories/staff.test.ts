@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   getMyStaffRecord,
+  getStaffDirectoryRow,
   getStaffRecordById,
+  listStaff,
   listStaffCompensationHistory,
   listStaffDocuments,
 } from "./staff"
@@ -208,5 +210,121 @@ describe("listStaffDocuments", () => {
       expect(result.data[0]?.kind).toBe("nid")
       expect(result.data[0]?.expiresOn).toBe("2027-01-01")
     }
+  })
+})
+
+const DIRECTORY_ROW = {
+  id: null,
+  membership_id: "dddd0001-0000-0000-0000-000000000001",
+  workspace_id: WORKSPACE_ID,
+  user_id: USER_ID,
+  staff_code: null,
+  full_name: "Owner A",
+  avatar_url: null,
+  designation_label_id: null,
+  designation_label: null,
+  base_role: "owner",
+  department: null,
+  subject_ids: null,
+  work_email: null,
+  work_phone: null,
+  employment_status: "active",
+  joined_on: "2026-01-01",
+}
+
+/** Chainable stand-in for the supabase-js query builder `listStaff` and
+ * `getStaffDirectoryRow` build (`.select().eq()...eq()/.or()/.gt() ...
+ * .order().limit()` or `...maybeSingle()`): every chain method returns the
+ * same thenable object, which resolves to `{ data, error }` however the
+ * chain ends — matching that a real supabase-js query builder is itself
+ * awaitable. */
+function fakeDirectoryClient(options: {
+  rows?: unknown[]
+  error?: boolean
+}): AcadigmaSupabaseClient {
+  const { rows = [], error = false } = options
+  const result = {
+    data: error ? null : rows,
+    error: error ? { message: "connection reset" } : null,
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chain: any = {
+    select: () => chain,
+    eq: () => chain,
+    or: () => chain,
+    gt: () => chain,
+    order: () => chain,
+    limit: () => chain,
+    maybeSingle: async () => ({
+      data: error ? null : (rows[0] ?? null),
+      error: result.error,
+    }),
+    then: (resolve: (value: typeof result) => void) => resolve(result),
+  }
+  return {
+    from: (calledTable: string) => {
+      if (calledTable !== "staff_directory")
+        throw new Error(`unexpected table ${calledTable}`)
+      return chain
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any as AcadigmaSupabaseClient
+}
+
+describe("listStaff", () => {
+  it("maps directory rows, including one with no staff_records id (D-209)", async () => {
+    const client = fakeDirectoryClient({ rows: [DIRECTORY_ROW] })
+    const result = await listStaff(client, CTX, { limit: 30 })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.items).toHaveLength(1)
+      expect(result.data.items[0]?.id).toBeNull()
+      expect(result.data.items[0]?.membershipId).toBe(
+        "dddd0001-0000-0000-0000-000000000001"
+      )
+      expect(result.data.items[0]?.subjectIds).toEqual([])
+      expect(result.data.nextCursor).toBeNull()
+    }
+  })
+
+  it("returns a nextCursor when more than `limit` rows come back", async () => {
+    const rows = Array.from({ length: 3 }, (_, i) => ({
+      ...DIRECTORY_ROW,
+      membership_id: `dddd000${i}-0000-0000-0000-00000000000${i}`,
+    }))
+    const client = fakeDirectoryClient({ rows })
+    const result = await listStaff(client, CTX, { limit: 2 })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data.items).toHaveLength(2)
+      expect(result.data.nextCursor).toBe(result.data.items[1]?.membershipId)
+    }
+  })
+
+  it("returns dependency_unavailable on a query error", async () => {
+    const client = fakeDirectoryClient({ error: true })
+    const result = await listStaff(client, CTX, { limit: 30 })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("dependency_unavailable")
+  })
+})
+
+describe("getStaffDirectoryRow", () => {
+  it("maps a single row by membership id", async () => {
+    const client = fakeDirectoryClient({ rows: [DIRECTORY_ROW] })
+    const result = await getStaffDirectoryRow(
+      client,
+      CTX,
+      DIRECTORY_ROW.membership_id
+    )
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.data.baseRole).toBe("owner")
+  })
+
+  it("returns not_found when RLS (or a bad membership id) yields no row", async () => {
+    const client = fakeDirectoryClient({ rows: [] })
+    const result = await getStaffDirectoryRow(client, CTX, "does-not-exist")
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("not_found")
   })
 })
