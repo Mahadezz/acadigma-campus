@@ -359,6 +359,14 @@ test("a colleague's save meanwhile comes back as a conflict, nothing overwritten
   await context.setOffline(false)
   const needsYou = page.getByRole("button", { name: "1 needs you" })
   await expect(needsYou).toBeVisible({ timeout: 20_000 })
+  // The chip is a fourth top-bar target: with it, a long school name used to
+  // push the bar past 360 px, and the sideways-scrolled page then swallowed
+  // taps on the sheet's buttons (e2e-live, D-76).
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth
+    )
+  ).toBeLessThanOrEqual(0)
   await expect(
     page.getByText(/Someone else saved this class meanwhile/)
   ).toBeVisible()
@@ -384,8 +392,10 @@ test("a colleague's save meanwhile comes back as a conflict, nothing overwritten
     choose.getByText("3 students differ.", { exact: false })
   ).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
+  // A single-choice ToggleGroup is a `radiogroup` (e2e-live, D-76: `group`
+  // matched nothing and the click waited out the test).
   await choose
-    .getByRole("group")
+    .getByRole("radiogroup")
     .first()
     .getByRole("radio", { name: /Mine/ })
     .click()

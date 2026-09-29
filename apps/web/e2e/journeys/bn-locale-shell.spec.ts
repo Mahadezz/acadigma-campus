@@ -68,9 +68,14 @@ test("switching to বাংলা from the school shell's user menu translates 
 
   // Dashboard: the shell chrome and the page itself both read বাংলা.
   await expect(page).toHaveURL(/\/app\/dashboard$/)
-  await expect(page.getByRole("heading", { name: /^আজ/ })).toBeVisible()
+  // The real dashboard (D-400/D-407) replaced the "Workspace resolved"
+  // placeholder this journey was written against; "আজ" alone, since
+  // "আজকের হাজিরা" also starts with it (e2e-live, D-76).
   await expect(
-    page.getByRole("heading", { name: "ওয়ার্কস্পেস নিশ্চিত হয়েছে" })
+    page.getByRole("heading", { name: "আজ", exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "আজকের হাজিরা" })
   ).toBeVisible()
   await expect(page.getByText(/সাইন ইন করা আছে/)).toBeVisible()
   await expectNoHorizontalScroll(page)
@@ -105,6 +110,6 @@ test("switching back to English is reachable from the same menu", async ({
   await page.getByRole("menuitemradio", { name: "English" }).click()
   await expect(page.locator("html")).toHaveAttribute("lang", "en")
   await expect(
-    page.getByRole("heading", { name: "Workspace resolved" })
+    page.getByRole("heading", { name: "Today's attendance" })
   ).toBeVisible()
 })

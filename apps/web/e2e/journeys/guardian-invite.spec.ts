@@ -58,7 +58,9 @@ async function publishAnExam(page: Page, name: string) {
     .first()
     .click()
   await expect(page).toHaveURL(/\/app\/marks\/[0-9a-f-]{36}$/)
-  await page.waitForLoadState("networkidle") // typed marks need a hydrated page
+  // "load", not "networkidle": the latter never came on the e2e-live
+  // runner and ran out the test timeout (D-76).
+  await page.waitForLoadState("load")
   const inputs = page.getByRole("textbox")
   const count = await inputs.count()
   await inputs.first().click()

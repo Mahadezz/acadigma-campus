@@ -21,6 +21,18 @@ export async function expectNoA11yViolations(
   /** CSS selectors to exclude, e.g. a third-party widget we do not control. */
   exclude: string[] = []
 ): Promise<void> {
+  // Scan the settled screen, not a frame mid fade-in: axe measured a badge
+  // and a button part-way through their enter transitions as 1.57:1 and
+  // 2.74:1 (e2e-live, D-76). Finite animations only — a spinner never ends.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().endTime !== Infinity)
+        .map((a) => a.finished.catch(() => undefined))
+    )
+  )
+
   let builder = new AxeBuilder({ page }).withTags(TAGS)
   for (const selector of exclude) {
     builder = builder.exclude(selector)
