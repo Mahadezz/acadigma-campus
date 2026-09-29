@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs"
 
 const baseRef = process.env.BASE_REF ?? "origin/main"
 const prBody = process.env.PR_BODY ?? ""
+const headRef = process.env.HEAD_REF ?? ""
 
 function git(...args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim()
@@ -46,7 +47,14 @@ if (touched("supabase/migrations/")) {
 if (touched("apps/") || touched("packages/")) {
   applied.push("code → docs/** or an explicit opt-out")
   const optOut = /^docs:\s*none\s*[—-]\s*\S/m.test(prBody)
-  if (changedDocs.length === 0 && !optOut) {
+  // The changesets release PR only bumps versions and writes CHANGELOGs; the bot
+  // rewrites its description on every merge, so an opt-out line never survives.
+  const releaseOnly =
+    headRef.startsWith("changeset-release/") &&
+    changed.every((file) =>
+      /(^|\/)(CHANGELOG\.md|package\.json)$|^\.changeset\//.test(file)
+    )
+  if (changedDocs.length === 0 && !optOut && !releaseOnly) {
     failures.push(
       "apps/** or packages/** changed with no docs/** change. Update the docs, or put a line `docs: none — <reason>` in the PR description."
     )

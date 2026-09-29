@@ -61,7 +61,8 @@ const T = {
   pendingApproval: "Pending approval",
   pendingDescription:
     "Your request to join is waiting for an owner or admin to approve it.",
-  createOrJoin: "Create or join a workspace",
+  createSchool: "Create a school",
+  joinWithCode: "Join a school with a code",
   switchError: "Could not switch workspaces. Check your connection.",
   myChildren: "My children",
   schoolApp: "School app",
@@ -191,6 +192,49 @@ describe("WorkspaceSwitcher", () => {
       screen.getByRole("button", { name: /switch workspace/i }).click()
     })
     expect(screen.queryByRole("link", { name: "My children" })).toBeNull()
+  })
+
+  /**
+   * Owner report 2026-09-29: a personal-only account (every account starts
+   * here) had no way to reach "Create a school" / "Join a school with a
+   * code" — §6's "only one workspace → not tappable" shortcut fired for it
+   * too, and the pinned actions live inside the sheet it never opened.
+   */
+  it("keeps the chip tappable for a lone PERSONAL workspace, so the pinned onboarding actions stay reachable", async () => {
+    render(
+      <WorkspaceSwitcher
+        workspaces={[WORKSPACES[1]!]}
+        currentWorkspaceId={WORKSPACES[1]!.workspaceId}
+        t={T}
+      />
+    )
+
+    const trigger = screen.getByRole("button", { name: /switch workspace/i })
+    await act(async () => {
+      trigger.click()
+    })
+
+    expect(
+      screen.getByRole("link", { name: "Create a school" }).getAttribute("href")
+    ).toBe("/onboarding/create-school")
+    expect(
+      screen
+        .getByRole("link", { name: "Join a school with a code" })
+        .getAttribute("href")
+    ).toBe("/onboarding")
+  })
+
+  it("keeps §6's non-tappable shortcut for a lone SCHOOL workspace (nothing to switch to or create from there)", () => {
+    render(
+      <WorkspaceSwitcher
+        workspaces={[WORKSPACES[0]!]}
+        currentWorkspaceId={WORKSPACES[0]!.workspaceId}
+        t={T}
+      />
+    )
+    expect(
+      screen.queryByRole("button", { name: /switch workspace/i })
+    ).toBeNull()
   })
 })
 
