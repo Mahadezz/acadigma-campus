@@ -10,6 +10,7 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { Logo } from "@acadigma/ui/primitives/logo"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
 
+import { DeletionBanner } from "@/app/(shared)/account/deletion-banner"
 import { LastUpdated } from "@/app/(shared)/offline/last-updated"
 import {
   OutboxChip,
@@ -79,6 +80,8 @@ export default async function SchoolLayout({
   const lastUpdated = <LastUpdated renderedAt={Date.now()} locale={locale} />
   // F-ID-11 Part 2a (D-309): changes saved on the phone, waiting to send.
   const staleOutbox = <OutboxStaleBanner userId={ctx.userId} />
+  // F-ID-01 §4.9 (D-113): a pending account deletion, on every screen.
+  const deletionBanner = <DeletionBanner userId={ctx.userId} />
 
   const readOnlyBanner = writable.ok ? null : (
     // F-CM-06 Part 4 (D-62): a Pro trial past trial_ends_at (or any other
@@ -137,6 +140,7 @@ export default async function SchoolLayout({
             locale={locale}
           />
         </div>
+        {deletionBanner}
         {staleOutbox}
         {readOnlyBanner}
         {children}
@@ -232,6 +236,7 @@ export default async function SchoolLayout({
       }
     >
       {lastUpdated}
+      {deletionBanner}
       {staleOutbox}
       {readOnlyBanner}
       {children}

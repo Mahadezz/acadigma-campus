@@ -154,6 +154,39 @@
       "submittingButton": "Changing password…",
       "successMessage": "Your password was changed."
     },
+    "deleteAccount": {
+      "title": "Delete account",
+      "description": "Your account is deleted {days} days after you ask. Until then you can keep it with one tap.",
+      "openButton": "Delete account",
+      "blockedTitle": "Hand over your schools first",
+      "blockedBody": "You are the only owner of the schools below. Make someone else an owner (or delete the school) before deleting your account.",
+      "transferButton": "Transfer ownership",
+      "step": "Step {n} of 2",
+      "sheetTitle": "Delete your account?",
+      "removedTitle": "Removed after {days} days",
+      "removedItems": [
+        "Your sign-in, name, email and phone number",
+        "Your personal workspace and everything in it",
+        "Your settings, devices and notifications"
+      ],
+      "keptTitle": "Kept by your schools",
+      "keptItems": [
+        "Students, marks, attendance and other records you created stay with the school, shown as “Deleted user”",
+        "The security log (audit records) is kept as evidence and cannot be erased"
+      ],
+      "graceNote": "You can sign in and keep your account any time in the next {days} days.",
+      "continueButton": "Continue",
+      "backButton": "Back",
+      "cancelButton": "Cancel",
+      "confirmLabel": "Type DELETE to confirm",
+      "passwordLabel": "Your password",
+      "submitButton": "Delete my account",
+      "submittingButton": "Deleting…",
+      "banner": "Your account will be deleted on {date}.",
+      "keepButton": "Keep my account",
+      "keepingButton": "Keeping…",
+      "scheduledNotice": "Your account will be deleted on {date}. Sign in before then if you want to keep it."
+    },
     "passwordStrength": {
       "0": "Too weak",
       "1": "Weak",
@@ -936,6 +969,11 @@
         "title": "Display",
         "description": "Text size and basic mode",
         "keywords": "text size font large extra basic mode accessibility"
+      },
+      "account": {
+        "title": "Your account",
+        "description": "Password, security and account deletion",
+        "keywords": "account password security delete deletion close remove profile"
       },
       "labels": {
         "title": "Custom labels",

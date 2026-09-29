@@ -4,6 +4,7 @@ import { AuthCard } from "@acadigma/ui/primitives/auth-card"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import { WaitingOnDevice } from "@/app/(shared)/offline/waiting-on-device"
+import { formatDhakaDate } from "@/lib/format"
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 
@@ -20,9 +21,9 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>
+  searchParams: Promise<{ next?: string; error?: string; deletion?: string }>
 }) {
-  const { next, error } = await searchParams
+  const { next, error, deletion } = await searchParams
 
   // Already signed in? Skip the form. getUser() re-validates with the auth server,
   // unlike getSession(), which only reads the cookie.
@@ -51,6 +52,17 @@ export default async function LoginPage({
         <div className="mb-4">
           <InlineAlert tone="error">
             {t.auth.login.linkExpiredBanner}
+          </InlineAlert>
+        </div>
+      ) : null}
+      {/* D-113: just scheduled an account deletion (every session ended). */}
+      {deletion && !Number.isNaN(Date.parse(deletion)) ? (
+        <div className="mb-4">
+          <InlineAlert tone="info">
+            {t.auth.deleteAccount.scheduledNotice.replace(
+              "{date}",
+              formatDhakaDate(deletion, locale)
+            )}
           </InlineAlert>
         </div>
       ) : null}
