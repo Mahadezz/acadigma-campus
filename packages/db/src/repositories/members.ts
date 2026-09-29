@@ -319,7 +319,7 @@ export async function updateMemberStaffFields(
 
 /**
  * Owner/admin set (or clear, with `null`) a member's custom label. The label
- * must belong to this workspace — a cross-workspace id is `LABEL_NOT_FOUND`.
+ * must belong to this workspace (a composite FK enforces it) — else `LABEL_NOT_FOUND`.
  * Changing a label never changes the role (§4.8).
  */
 export async function assignMemberLabel(
@@ -327,25 +327,6 @@ export async function assignMemberLabel(
   client: AcadigmaSupabaseClient,
   input: AssignMemberLabelInput
 ): Promise<Result<{ id: string; labelId: string | null }, ApiError>> {
-  if (input.labelId !== null) {
-    const label = await client
-      .from("custom_labels")
-      .select("id")
-      .eq("workspace_id", ctx.workspaceId)
-      .eq("id", input.labelId)
-      .maybeSingle()
-    if (label.error) return err(UNAVAILABLE)
-    if (!label.data) {
-      return err(
-        marked(
-          "not_found",
-          "That label was not found.",
-          MEMBER_ERROR.LABEL_NOT_FOUND
-        )
-      )
-    }
-  }
-
   const updated = await client
     .from("workspace_members")
     .update({ label_id: input.labelId })
@@ -354,6 +335,17 @@ export async function assignMemberLabel(
     .neq("role", "parent")
     .select("id")
   if (updated.error) {
+    // 23503: the composite FK (workspace_id, label_id) -> custom_labels
+    // refuses a label that is missing or belongs to another school.
+    if (updated.error.code === "23503") {
+      return err(
+        marked(
+          "not_found",
+          "That label was not found.",
+          MEMBER_ERROR.LABEL_NOT_FOUND
+        )
+      )
+    }
     return err(updated.error.code === "42501" ? FORBIDDEN : UNAVAILABLE)
   }
   if (updated.data.length === 0) return err(NOT_FOUND)

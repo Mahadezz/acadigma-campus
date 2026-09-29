@@ -13,7 +13,7 @@
 --      touching the role; a teacher cannot assign a label to someone else.
 -- =====================================================================
 begin;
-select plan(14);
+select plan(20);
 
 create schema if not exists tests;
 
@@ -215,6 +215,92 @@ select is(
     where id = '39b00000-0000-4000-e000-000000000004'),
   '39b00000-0000-4000-c000-000000000001',
   'a non-admin member cannot clear another member''s label (RLS blocks the update)');
+
+-- ---------------------------------------------------------------------
+-- D. Review follow-ups (20260929121412_label_same_workspace_fk.sql).
+-- ---------------------------------------------------------------------
+-- School B's rows, read as their definer (school A's owner cannot see them).
+create or replace function tests.label_b()
+returns uuid language sql security definer as $fn$
+  select id from public.custom_labels
+   where workspace_id = '39b00000-0000-4000-b000-000000000002'
+   order by name limit 1
+$fn$;
+create or replace function tests.member_b()
+returns uuid language sql security definer as $fn$
+  select id from public.workspace_members
+   where workspace_id = '39b00000-0000-4000-b000-000000000002' limit 1
+$fn$;
+
+select tests.mkuser('39b00000-0000-4000-a000-000000000007', 'sf-pending@test.local', 'Pending Pia');
+select tests.mkuser('39b00000-0000-4000-a000-000000000008', 'sf-removed@test.local', 'Removed Rafi');
+select tests.mkuser('39b00000-0000-4000-a000-000000000009', 'sf-teacher3@test.local', 'Teacher Three');
+insert into public.workspace_members (id, workspace_id, user_id, role, status, joined_at)
+values
+  ('39b00000-0000-4000-e000-000000000007', '39b00000-0000-4000-b000-000000000001',
+   '39b00000-0000-4000-a000-000000000007', 'admin', 'pending', null),
+  ('39b00000-0000-4000-e000-000000000008', '39b00000-0000-4000-b000-000000000001',
+   '39b00000-0000-4000-a000-000000000008', 'admin', 'removed', now()),
+  ('39b00000-0000-4000-e000-000000000009', '39b00000-0000-4000-b000-000000000001',
+   '39b00000-0000-4000-a000-000000000009', 'teacher', 'active', now());
+insert into public.staff_records (id, workspace_id, user_id, membership_id, staff_code, full_name)
+values ('39b00000-0000-4000-f000-000000000004', '39b00000-0000-4000-b000-000000000001',
+        '39b00000-0000-4000-a000-000000000004', '39b00000-0000-4000-e000-000000000004',
+        'STF-39B-1', 'Teacher Two');
+
+-- Another school's label cannot be referenced at all (composite FK).
+select tests.login('39b00000-0000-4000-a000-000000000001');
+select throws_ok(
+  format($$update public.workspace_members set label_id = %L
+            where id = '39b00000-0000-4000-e000-000000000004'$$, tests.label_b()),
+  '23503', null,
+  'an owner cannot give a member another school''s label (workspace_members.label_id)');
+select tests.logout();
+select throws_ok(
+  format($$update public.staff_records set designation_label_id = %L
+            where id = '39b00000-0000-4000-f000-000000000004'$$, tests.label_b()),
+  '23503', null,
+  'no one can point staff_records.designation_label_id at another school''s label');
+
+-- This school's id with another school's member id touches nothing.
+select tests.login('39b00000-0000-4000-a000-000000000001');
+select throws_ok(
+  format($$select public.update_member_staff_fields(
+      '39b00000-0000-4000-b000-000000000001', %L, 'X-3')$$, tests.member_b()),
+  'P0002', 'MEMBER_NOT_FOUND',
+  'the RPC with this school''s id and another school''s member id finds no row');
+
+-- A pending and a removed admin hold no power over the RPC.
+select tests.logout();
+select tests.login('39b00000-0000-4000-a000-000000000007');
+select throws_ok(
+  $$select public.update_member_staff_fields(
+      '39b00000-0000-4000-b000-000000000001',
+      '39b00000-0000-4000-e000-000000000009', 'X-4')$$,
+  '42501', 'FORBIDDEN',
+  'a pending admin cannot set staff fields');
+select tests.logout();
+select tests.login('39b00000-0000-4000-a000-000000000008');
+select throws_ok(
+  $$select public.update_member_staff_fields(
+      '39b00000-0000-4000-b000-000000000001',
+      '39b00000-0000-4000-e000-000000000009', 'X-5')$$,
+  '42501', 'FORBIDDEN',
+  'a removed admin cannot set staff fields');
+
+-- Generation skips a code someone typed by hand in the generated shape.
+-- One code has been generated so far (T2's), so the next is -0002.
+select tests.logout();
+select tests.login('39b00000-0000-4000-a000-000000000001');
+select public.update_member_staff_fields(
+  '39b00000-0000-4000-b000-000000000001', '39b00000-0000-4000-e000-000000000002',
+  'TCH-' || extract(year from now() at time zone 'Asia/Dhaka')::int || '-0002');
+select is(
+  (select employee_code from public.update_member_staff_fields(
+     '39b00000-0000-4000-b000-000000000001', '39b00000-0000-4000-e000-000000000009')),
+  'TCH-' || extract(year from now() at time zone 'Asia/Dhaka')::int || '-0003',
+  'a blank save skips a hand-typed code already in the generated shape');
+select tests.logout();
 
 select * from finish();
 rollback;
