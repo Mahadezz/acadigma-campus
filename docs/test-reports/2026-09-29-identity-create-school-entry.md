@@ -84,8 +84,8 @@ Not measured in isolation for this change — a UI-only diff to two already-cove
 
 No migration in this change. New coverage added for the existing `public.create_school_workspace` function, called by an already-onboarded caller — split into a new file (`30b_...sql`) rather than appended to `30_create_school_workspace.sql`, which is mid-edit in open PR #90.
 
-| Assertion group                                                                                                                                                                    | File                                                      | Result               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | -------------------- |
+| Assertion group                                                                                                                                                                    | File                                                     | Result              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------- |
 | A caller who "completed" onboarding via the tutoring exit creates a school cleanly, still has exactly one personal workspace, `onboarding_progress` overwritten to `create_school` | `supabase/tests/30b_create_school_already_onboarded.sql` | not run — see below |
 
 Originally also had a second scenario ("owner of one school creates a second"); cut after `ponytail-review` (background reviewer) correctly pointed out that population's switcher chip already had more than one workspace and was already tappable before this PR — that scenario proved nothing this diff changed. `plan(6)` now matches the six remaining assertions exactly.
@@ -110,12 +110,12 @@ Not run live (same gate as above). Both new CTAs reuse existing, already axe-cle
 
 ### Manual checks
 
-| Check                                        | 360 × 800                                                                                                                                      | 1280 × 800 |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Check                                        | 360 × 800                                                                                                                                                                                                                 | 1280 × 800 |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | Touch targets ≥ 44 px                        | `h-11` on every new button (personal home's primary + both switcher outline buttons; the switcher pair was `react-reviewer`-flagged at the default 36px `h-9` and fixed), `min-h-11` on the one text-style secondary link | same       |
-| Visible focus ring                           | inherited from `Button`/`Link` primitives, unchanged                                                                                           | same       |
-| Primary action completable by keyboard alone | plain `<a>` via `next/link`, unchanged pattern                                                                                                 | same       |
-| No horizontal scroll                         | single-column `flex flex-col` action group                                                                                                     | n/a        |
+| Visible focus ring                           | inherited from `Button`/`Link` primitives, unchanged                                                                                                                                                                      | same       |
+| Primary action completable by keyboard alone | plain `<a>` via `next/link`, unchanged pattern                                                                                                                                                                            | same       |
+| No horizontal scroll                         | single-column `flex flex-col` action group                                                                                                                                                                                | n/a        |
 
 Not verified with a live browser render in this session — code-review-level confidence only, pending the live e2e run above.
 
