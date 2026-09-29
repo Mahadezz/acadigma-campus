@@ -1159,9 +1159,7 @@
       "body": "Archived on {date}. Restore it to make changes again.",
       "action": "Restore school…",
       "confirmTitle": "Restore {school}?",
-      "consequences": [
-        "Everyone can add and change records again."
-      ],
+      "consequences": ["Everyone can add and change records again."],
       "confirm": "Restore school",
       "done": "The school is restored."
     },
