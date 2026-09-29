@@ -393,10 +393,7 @@
     "switchWorkspace": "Switch workspace"
   },
   "dashboard": {
-    "eyebrowToday": "Today",
-    "eyebrowSetup": "Setup",
-    "eyebrowPeople": "People",
-    "eyebrowActivity": "Activity",
+    "sectionToday": "Today",
     "plan": {
       "title": "Plan",
       "trialDaysLeft": "{days} days left in your trial",
