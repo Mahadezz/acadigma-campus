@@ -4436,6 +4436,14 @@ export type Database = {
           retry_after_seconds: number
         }[]
       }
+      transfer_ownership: {
+        Args: {
+          p_keep_owner?: boolean
+          p_member_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
       unlock_exam_subject: {
         Args: {
           p_exam_subject_id: string

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import {
@@ -12,7 +13,8 @@ import {
   type MemberDetail,
   type MemberRow,
 } from "@acadigma/contracts"
-import { roleChangeDelta } from "@acadigma/domain/workspace"
+import type { WorkspaceRole } from "@acadigma/domain/permissions"
+import { removalBlock, roleChangeDelta } from "@acadigma/domain/workspace"
 import { Button } from "@acadigma/ui/components/button"
 import { Input } from "@acadigma/ui/components/input"
 import { Label } from "@acadigma/ui/components/label"
@@ -30,6 +32,7 @@ import {
   assignMemberLabel,
   changeMemberRole,
   getMemberDetail,
+  removeMember,
   updateMemberStaffFields,
 } from "./actions"
 
@@ -59,12 +62,16 @@ export function MemberSheet({
   t,
   member,
   labels,
+  actorRole,
   onClose,
+  onRemoved,
 }: {
   t: T
   member: MemberRow
   labels: CustomLabel[]
+  actorRole: WorkspaceRole
   onClose: () => void
+  onRemoved: () => void
 }) {
   const router = useRouter()
   const [detail, setDetail] = useState<MemberDetail | null>(null)
@@ -144,9 +151,15 @@ export function MemberSheet({
         ) : (
           <>
             {isOwnerTarget ? (
-              <p className="text-muted-foreground text-sm">
-                {t.manage.ownerNote}
-              </p>
+              <div className="space-y-1 text-sm">
+                <p className="text-muted-foreground">{t.manage.ownerNote}</p>
+                <Link
+                  href="/app/settings/membership"
+                  className="inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+                >
+                  {t.manage.ownershipLink}
+                </Link>
+              </div>
             ) : (
               <RoleSection
                 key={`role-${rev}`}
@@ -176,6 +189,30 @@ export function MemberSheet({
               pending={pending}
               run={run}
             />
+
+            {detail.status === "active" &&
+            removalBlock(actorRole, detail.role, detail.isSelf) === null ? (
+              <RemoveSection
+                t={t}
+                member={member}
+                pending={pending}
+                onRemove={() => {
+                  setNotice(null)
+                  startTransition(async () => {
+                    const result = await removeMember({ memberId: member.id })
+                    if (result.ok) {
+                      router.refresh()
+                      onRemoved()
+                    } else {
+                      setNotice({
+                        tone: "error",
+                        text: errorText(t, result.error),
+                      })
+                    }
+                  })
+                }}
+              />
+            ) : null}
           </>
         )}
       </div>
@@ -400,6 +437,64 @@ function StaffSection({
           {t.manage.saveStaff}
         </Button>
       </form>
+    </section>
+  )
+}
+
+function RemoveSection({
+  t,
+  member,
+  pending,
+  onRemove,
+}: {
+  t: T
+  member: MemberRow
+  pending: boolean
+  onRemove: () => void
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const name = (text: string) => text.replace("{name}", member.fullName)
+
+  return (
+    <section className="space-y-3 border-t pt-4">
+      <h3 className="text-sm font-medium">{t.manage.removeTitle}</h3>
+      {confirming ? (
+        <div className="space-y-3">
+          <p className="text-sm font-medium">{name(t.manage.removeLead)}</p>
+          <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
+            {t.manage.removeConsequences.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          <Button
+            type="button"
+            variant="destructive"
+            className="h-11 w-full"
+            disabled={pending}
+            onClick={onRemove}
+          >
+            {name(t.manage.removeConfirm)}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full"
+            disabled={pending}
+            onClick={() => setConfirming(false)}
+          >
+            {name(t.manage.removeCancel)}
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          className="text-destructive h-11 w-full"
+          onClick={() => setConfirming(true)}
+        >
+          {name(t.manage.removeStart)}
+        </Button>
+      )}
     </section>
   )
 }

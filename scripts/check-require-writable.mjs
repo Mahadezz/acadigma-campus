@@ -24,6 +24,10 @@ export const EXEMPT = {
     "user-level profiles/onboarding_progress write, no workspace",
   "apps/web/app/(onboarding)/actions.ts#createSchoolWorkspace":
     "creates the workspace; tg_require_writable passes a fresh workspace",
+  "apps/web/app/(school)/app/staff/team/actions.ts#removeMember":
+    "removing access is always allowed, even read-only (D-300, D-112)",
+  "apps/web/app/(school)/app/settings/membership/actions.ts#leaveWorkspace":
+    "ending your own access is always allowed, even read-only (D-300, D-112)",
 }
 
 const READ_NAME =

@@ -487,7 +487,6 @@ select is(
     'tg_audit',                     -- trigger only (A2, D-75)
     'tg_workspace_billing_bootstrap', -- trigger only (A2, D-75)
     'tg_workspace_bootstrap',       -- trigger only (A2, D-75)
-    'transfer_ownership',           -- checks member_role itself
     'within_limit',                 -- checks membership itself
     'workspace_plan'                -- checks membership itself
   ]::text[],
