@@ -275,29 +275,37 @@ export async function signInWithPassword(
     const log = await requestLogger({ route: "auth.login" })
     log.warn({ status: error.status, code: error.code }, "sign-in rejected")
 
-    // Only a genuine wrong email/password counts against the brute-force
-    // throttle (§9 AC5/AC6) -- a GoTrue hiccup (timeout, 5xx, unreachable)
-    // is not a guessed password, and must not spend the same budget a real
-    // attacker would. Found the hard way: under CI's local-stack load,
-    // transient errors on otherwise-correct sign-ins tripped this bucket
-    // for the shared seeded owner account, then blocked every later
-    // journey's legitimate sign-in for the rest of the run (D-76).
-    if (error.code === "invalid_credentials") {
+    // Only a rejection of THIS credential attempt counts against the
+    // brute-force throttle (§9 AC5/AC6) -- a GoTrue hiccup (timeout, 5xx,
+    // unreachable) never evaluated the password at all, and must not spend
+    // the same budget a real attacker would. Found the hard way: under
+    // CI's local-stack load, transient errors on otherwise-correct
+    // sign-ins tripped this bucket for the shared seeded owner account,
+    // then blocked every later journey's legitimate sign-in for the rest
+    // of the run (D-76). `over_request_rate_limit` is GoTrue's own
+    // volumetric signal, not tied to one email, so it only weighs on the
+    // IP bucket. The response is byte-identical across every branch below
+    // (security review of D-76's fix): if the message ever told an
+    // unconfirmed/banned/rate-limited account apart from a wrong password,
+    // that would be a new account-enumeration oracle this function exists
+    // to prevent (§4.2).
+    if (
+      error.code === "invalid_credentials" ||
+      error.code === "email_not_confirmed" ||
+      error.code === "user_banned"
+    ) {
       await Promise.all([
         throttleRecordFailure(supabase, "loginByEmail", emailKey),
         throttleRecordFailure(supabase, "loginByIp", ipKey),
       ])
-      // One generic message regardless of which half was wrong (§4.2).
-      return err(
-        apiError("unauthenticated", t.auth.login.errorInvalidCredentials)
-      )
+    } else if (error.code === "over_request_rate_limit") {
+      await throttleRecordFailure(supabase, "loginByIp", ipKey)
     }
 
+    // One generic message regardless of which half was wrong, or whether
+    // this was a rejection vs. an infra hiccup.
     return err(
-      apiError(
-        "dependency_unavailable",
-        "Could not sign you in. Try again shortly."
-      )
+      apiError("unauthenticated", t.auth.login.errorInvalidCredentials)
     )
   }
 

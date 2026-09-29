@@ -311,6 +311,56 @@ describe("signInWithPassword (F-ID-03 review: stale workspace cookie on a shared
     expect(mockCookieDelete).not.toHaveBeenCalled()
   })
 
+  it("does not spend the brute-force throttle on a GoTrue infra error (D-76 fix)", async () => {
+    mockSignInWithPassword.mockImplementation(async () => {
+      mockCallOrder.push("signInWithPassword")
+      return {
+        data: { user: null },
+        error: { status: 503, code: "unexpected_failure" },
+      }
+    })
+
+    const result = await signInWithPassword({
+      email: "person@test.local",
+      password: "whatever-they-typed",
+      remember: true,
+    })
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.message).toBe("Email or password is incorrect.")
+    }
+    expect(mockThrottleRecordFailure).not.toHaveBeenCalled()
+  })
+
+  it("still spends the brute-force throttle when the account is unconfirmed or banned", async () => {
+    mockSignInWithPassword.mockImplementation(async () => {
+      mockCallOrder.push("signInWithPassword")
+      return {
+        data: { user: null },
+        error: { status: 400, code: "email_not_confirmed" },
+      }
+    })
+
+    const result = await signInWithPassword({
+      email: "person@test.local",
+      password: "whatever-they-typed",
+      remember: true,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(mockThrottleRecordFailure).toHaveBeenCalledWith(
+      expect.anything(),
+      "loginByEmail",
+      expect.anything()
+    )
+    expect(mockThrottleRecordFailure).toHaveBeenCalledWith(
+      expect.anything(),
+      "loginByIp",
+      expect.anything()
+    )
+  })
+
   it("still clears the cookie even when the account turns out to be suspended", async () => {
     mockMaybeSingleProfile.mockImplementation(async () => {
       mockCallOrder.push("profiles.maybeSingle")
