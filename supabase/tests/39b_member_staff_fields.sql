@@ -186,11 +186,13 @@ select throws_ok(
   '42501', 'only an owner can grant or remove ownership',
   'an admin cannot promote anyone to owner');
 
--- owner assigns a label to T2 without changing the role
+-- owner assigns a label to T2 without changing the role. The label row is
+-- seeded as postgres (custom_labels_insert requires created_by = auth.uid(),
+-- which the repository's createCustomLabel sets; a fixture insert does not).
+select tests.logout();
 insert into public.custom_labels (id, workspace_id, base_role, name, color)
 values ('39b00000-0000-4000-c000-000000000001',
         '39b00000-0000-4000-b000-000000000001', 'teacher', 'Head of Science', '#3B82F6');
-select tests.logout();
 select tests.login('39b00000-0000-4000-a000-000000000001');
 update public.workspace_members set label_id = '39b00000-0000-4000-c000-000000000001'
  where id = '39b00000-0000-4000-e000-000000000004';

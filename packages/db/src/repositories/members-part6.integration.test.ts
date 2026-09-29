@@ -189,8 +189,12 @@ describe.skipIf(!RUN)(
     })
 
     it("creates, lists, blocks a duplicate name, updates and deletes a label", async () => {
+      // A school seeds nine default labels (F-OP-06 §3.4), so use names that
+      // are not in that set to test create/duplicate cleanly.
+      const uniq = randomUUID().slice(0, 8)
+      const name = `Exam Controller ${uniq}`
       const created = await createCustomLabel(ownerCtx, owner, {
-        name: "Vice-Principal",
+        name,
         baseRole: "admin",
         color: "#3B82F6",
       })
@@ -198,7 +202,7 @@ describe.skipIf(!RUN)(
       const labelId = created.ok ? created.data.id : ""
 
       const dup = await createCustomLabel(ownerCtx, owner, {
-        name: "vice-principal",
+        name: name.toLowerCase(),
         baseRole: "admin",
         color: "#111111",
       })
@@ -209,13 +213,14 @@ describe.skipIf(!RUN)(
       const listed = await listCustomLabels(ownerCtx, owner)
       expect(listed.ok && listed.data.some((l) => l.id === labelId)).toBe(true)
 
+      const renamed = `Section Head ${uniq}`
       const updated = await updateCustomLabel(ownerCtx, owner, {
         id: labelId,
-        name: "Head Teacher",
+        name: renamed,
         baseRole: "teacher",
         color: "#222222",
       })
-      expect(updated.ok && updated.data.name).toBe("Head Teacher")
+      expect(updated.ok && updated.data.name).toBe(renamed)
 
       // assign it, then delete the label and confirm it is nulled on the member
       const assigned = await assignMemberLabel(ownerCtx, owner, {
@@ -224,7 +229,7 @@ describe.skipIf(!RUN)(
       })
       expect(assigned.ok).toBe(true)
       const detail = await getMemberDetail(ownerCtx, owner, teacherMemberId)
-      expect(detail.ok && detail.data.label?.name).toBe("Head Teacher")
+      expect(detail.ok && detail.data.label?.name).toBe(renamed)
 
       const del = await deleteCustomLabel(ownerCtx, owner, labelId)
       expect(del.ok).toBe(true)
