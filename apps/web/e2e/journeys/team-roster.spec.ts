@@ -48,7 +48,14 @@ test("owner searches the roster and moves between the tabs", async ({
   await page.getByLabel("Search by name or email").fill(email ?? "")
   await page.getByRole("button", { name: "Search" }).click()
   await expect(page).toHaveURL(/[?&]q=/)
-  await expect(page.getByText(email ?? "").first()).toBeVisible()
+  // DataList renders the card list and the table, one hidden per viewport:
+  // assert on the one this viewport shows (e2e-live, D-76).
+  await expect(
+    page
+      .getByText(email ?? "")
+      .filter({ visible: true })
+      .first()
+  ).toBeVisible()
 
   await page.getByLabel("Search by name or email").fill("no-such-person-e2e")
   await page.getByRole("button", { name: "Search" }).click()

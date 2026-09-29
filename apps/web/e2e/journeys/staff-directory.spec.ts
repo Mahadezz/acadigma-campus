@@ -33,11 +33,17 @@ test("owner sees the whole directory, searches Farhana, and opens her sheet", as
   // live: they still appear, by their own directory search.
   await page.getByLabel("Search by name, code, email or phone").fill("Rezaul")
   await page.getByRole("button", { name: "Search" }).click()
-  await expect(page.getByText("Rezaul Karim")).toBeVisible()
+  // DataList renders the card list and the table, one hidden per viewport:
+  // assert on the one this viewport shows (e2e-live, D-76).
+  await expect(
+    page.getByText("Rezaul Karim").filter({ visible: true })
+  ).toBeVisible()
 
   await page.getByLabel("Search by name, code, email or phone").fill("Farhana")
   await page.getByRole("button", { name: "Search" }).click()
-  await expect(page.getByText("Farhana Akter")).toBeVisible()
+  await expect(
+    page.getByText("Farhana Akter").filter({ visible: true })
+  ).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 
   await page

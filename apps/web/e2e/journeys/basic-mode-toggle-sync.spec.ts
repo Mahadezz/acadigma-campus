@@ -41,6 +41,12 @@ test.afterEach(async ({ page }, testInfo) => {
   // rest of the e2e-live shard (D-76).
   testInfo.setTimeout(testInfo.timeout + 30_000)
   if (!/\/app/.test(page.url())) return
+  // Both language switches below live on known pages: the full shell's
+  // account menu, or basic mode's essentials row on /app/home only. The AC3
+  // test ends on /app/dashboard in basic mode + বাংলা, where neither exists,
+  // so the reset found no switch and left the owner in বাংলা (e2e-live,
+  // D-76). /app/home shows one or the other in either mode.
+  await page.goto("/app/home")
 
   // Review fix (nit #5): the বাংলা + Extra large test below switches locale
   // from the shell's own menu; reset it to English FIRST, the same "narrow
@@ -144,6 +150,9 @@ test("Switch to full app is one tap, no confirmation (AC2)", async ({
 test("বাংলা with Extra large text size overflows neither the dashboard nor the basic-mode home at 360px (AC3)", async ({
   page,
 }, testInfo) => {
+  // Sign-in, three preference writes, two page loads and two axe scans:
+  // over the 30 s default on the e2e-live runner (D-76).
+  test.setTimeout(90_000)
   await signIn(page, "owner@acadigma.test")
   await page.goto("/app/settings/display")
 
