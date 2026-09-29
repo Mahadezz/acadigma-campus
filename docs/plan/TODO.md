@@ -50,7 +50,9 @@ Last updated: 2026-09-29 ~23:10 Dhaka.
 
 **Owner:** "dont forget to add the account and workspace deletation". Spec: 30-day grace with banner + cancel; blocked while sole owner of a school (points to ownership transfer); nightly purge job anonymises, keeps audit rows. Was scheduled for M4 (~Apr 2027) — pulled forward; log the pull-forward as a decision in the PR.
 
-## 6. Workspace (school) deletion — F-OP-07 Part 6 "danger zone" · 🟡 (ops lane, fresh Opus builder, branch feat/operations-danger-zone, started 2026-09-29 ~23:30)
+## 6. Workspace (school) deletion — F-OP-07 Part 6 "danger zone" · 🟡 PR #117 ready (D-211) — lead's independent Opus security + DB reviews running
+
+Built: owner-only export (CSV zip, 3/day, downloads directly — deviation from the spec's emailed 7-day link; files not included), archive/restore (read-only, restorable 12 months), delete with 30-day grace + banner + cancel, daily service-role purge; blocks on subscription/unpaid balance; purge refuses a school with files (FILES_PRESENT). Deferred: module visibility + ID patterns (next ops Part), stop billing at period end. 👤 Decision: a deleted school's audit trail is kept 7 years — confirm with a PDPA lawyer (added to the lawyer questions).
 
 Owner-only; type the school name to confirm; 30-day cancellable grace with daily banner; refused while a subscription or unpaid balance exists; final platform audit record. Same Part: transfer ownership, export all data (CSV zip, 7-day link), archive/unarchive. Pulled forward; log it.
 
