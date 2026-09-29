@@ -4057,10 +4057,8 @@ export type Database = {
           access_mode: Database["public"]["Enums"]["access_mode"]
           access_mode_reason: string | null
           access_mode_set_at: string | null
-          archived_at: string | null
           created_at: string
           created_by: string | null
-          deletion_scheduled_at: string | null
           hidden_modules: string[]
           id: string
           invite_code: string | null
@@ -4080,10 +4078,8 @@ export type Database = {
           access_mode?: Database["public"]["Enums"]["access_mode"]
           access_mode_reason?: string | null
           access_mode_set_at?: string | null
-          archived_at?: string | null
           created_at?: string
           created_by?: string | null
-          deletion_scheduled_at?: string | null
           hidden_modules?: string[]
           id?: string
           invite_code?: string | null
@@ -4103,10 +4099,8 @@ export type Database = {
           access_mode?: Database["public"]["Enums"]["access_mode"]
           access_mode_reason?: string | null
           access_mode_set_at?: string | null
-          archived_at?: string | null
           created_at?: string
           created_by?: string | null
-          deletion_scheduled_at?: string | null
           hidden_modules?: string[]
           id?: string
           invite_code?: string | null
@@ -4276,10 +4270,6 @@ export type Database = {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
       }
-      archive_workspace: {
-        Args: { p_confirm_name: string; p_workspace_id: string }
-        Returns: string
-      }
       attendance_day: {
         Args: { p_date?: string; p_workspace_id: string }
         Returns: Json
@@ -4291,10 +4281,6 @@ export type Database = {
       can_read_results: {
         Args: { p_section_id: string; p_workspace_id: string }
         Returns: boolean
-      }
-      cancel_workspace_deletion: {
-        Args: { p_workspace_id: string }
-        Returns: undefined
       }
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       compute_results: {
@@ -4308,10 +4294,6 @@ export type Database = {
         Returns: Json
       }
       expire_pro_trials: { Args: never; Returns: number }
-      export_workspace_table: {
-        Args: { p_table: string; p_workspace_id: string }
-        Returns: Json
-      }
       family_results: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -4384,18 +4366,10 @@ export type Database = {
         Args: { p_attempted_workspace_id: string }
         Returns: undefined
       }
-      log_workspace_export: {
-        Args: { p_workspace_id: string }
-        Returns: undefined
-      }
       pre_request: { Args: never; Returns: undefined }
       publish_results: {
         Args: { p_exam_id: string; p_withhold?: Json; p_workspace_id: string }
         Returns: Json
-      }
-      purge_due_workspace: {
-        Args: { p_workspace_id: string }
-        Returns: undefined
       }
       revoke_guardian_link: {
         Args: { p_link_id: string; p_workspace_id: string }
@@ -4417,10 +4391,6 @@ export type Database = {
       save_marks: {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
-      }
-      schedule_workspace_deletion: {
-        Args: { p_confirm_name: string; p_workspace_id: string }
-        Returns: string
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
       set_current_academic_year: {
@@ -4466,17 +4436,12 @@ export type Database = {
           retry_after_seconds: number
         }[]
       }
-<<<<<<< HEAD
-      unarchive_workspace: {
-        Args: { p_confirm_name: string; p_workspace_id: string }
-=======
       transfer_ownership: {
         Args: {
           p_keep_owner?: boolean
           p_member_id: string
           p_workspace_id: string
         }
->>>>>>> origin/main
         Returns: undefined
       }
       unlock_exam_subject: {
@@ -4502,7 +4467,6 @@ export type Database = {
           phone: string
         }[]
       }
-      workspace_export_tables: { Args: never; Returns: string[] }
     }
     Enums: {
       access_mode: "normal" | "read_only"
