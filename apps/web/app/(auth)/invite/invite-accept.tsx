@@ -73,19 +73,25 @@ export function InviteAccept({
   t,
   relations,
   locale,
-  signedIn,
+  userId,
 }: {
   t: Messages["invite"]
   relations: Messages["students"]["relation"]
   locale: Locale
-  signedIn: boolean
+  /** The signed-in user, or null when signed out. */
+  userId: string | null
 }) {
   const [state, setState] = useState<State>({ kind: "loading" })
   const [pending, startTransition] = useTransition()
   const [acceptError, setAcceptError] = useState<ApiError | null>(null)
   // F-ID-11 §4.7 (D-308, D-309): this sign-out ends on /register, not
   // /login, so the guard wipes the outbox and the page cache itself.
-  const guardedSignOut = useGuardedSignOut(() => signOut("/invite"))
+  // The server's user (D-310); signed out never shows the button.
+  const guardedSignOut = useGuardedSignOut(
+    () => signOut("/invite"),
+    userId ?? ""
+  )
+  const signedIn = userId !== null
 
   function errorView(e: ApiError) {
     const code = errorCode(e, t.errors)

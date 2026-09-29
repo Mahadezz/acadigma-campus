@@ -3,7 +3,7 @@
 |                  |                                                                                                                                               |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Area             | platform                                                                                                                                      |
-| Status           | Part 1 built (D-308, PR #83); Part 2a built (D-309, PR #89); Parts 2b–5 planned — D-71                                                        |
+| Status           | Part 1 built (D-308, PR #83); Part 2a built (D-309, PR #89); Part 2b built (D-310, PR #93); Parts 3–5 planned — D-71                          |
 | Owner branch     | `feat/platform-offline`                                                                                                                       |
 | Depends on       | F-ID-01 (sessions, sign-out), F-ID-03 (membership status, `WorkspaceContext`), F-AC-03 (attendance save, D-104), F-AC-06 Part 3 (marks entry) |
 | Offline          | this spec defines the rule every other spec declares against (§5.1)                                                                           |
@@ -239,3 +239,19 @@ Deviations (D-309):
 - The conflict sheet is Part 2b; 2a shows the conflict and offers Delete.
 - `OUTBOX_KINDS` stays in `apps/web/lib/offline/outbox.ts` until a second feature registers; the queue sheet is a dialog on desktop (`FormSheet`).
 - "A failed request counts as offline" (§4.1) covers saves only: a thrown request queues the roll call; the banner still follows `navigator.onLine`.
+
+### Status — Part 2b (D-310, PR #93)
+
+Built: the attendance conflict sheet ("Compare and choose" in the queue sheet and on the roll-call screen: who saved when, only the differing students with theirs/mine, Keep theirs / Use mine / Save my choices; the choice is re-sent through the outbox on their version under a new key); late sync in `save_attendance` (`captured_at`, `synced_late`, the `attendance.synced_late` audit event, the §5.3 bounds) and "Sent late from offline" on the Today overview; `queued_offline` in the audit row (generated from `captured_at`); the session-expiry pause ("Sign in again to send…", a count on the sign-in screen, same-user resume); another account's queue kept for its owner, with a one-time notice and a sign-out choice; a deleted or banned account's queue purged (`revoked` check); sign-out by `ctx.userId`; the "after a successful request" trigger. Tests: `58_attendance_late_sync.sql` (20), `outbox.test.ts`, `check-outbox.test.ts`, `outbox-client-2b.test.ts`, `conflict-sheet.test.tsx`, `sign-out-guard.test.tsx`, the session route, `actions.test.ts`, `roll-call.test.tsx`, `attendance-today.test.tsx`, `attendance-replay.integration.test.ts` (capturedAt and late sync through PostgREST), Playwright `offline-roll-call` (conflict choice with audit; shared phone).
+
+Deviations (D-310):
+
+- **Different user (§4.6):** their queue is **kept** (never sent, shown beyond a count, or deleted by the new user) until its owner signs in or all of it is 14 days old; the new user may sign out to hand the phone back. The spec's "Continue deletes them" is replaced.
+- The sign-in screen shows a count, not the masked email of whose items wait.
+- The audit action is `attendance.synced_late` (the catalogue takes two segments).
+- "Who saved" on the sheet is the register's `taken_by` (there is no `updated_by` column).
+- Not built: the late-sync footnote on the register PDF.
+- The conflict sheet loads on demand (`next/dynamic`) to keep the roll call under the 250 kB budget (257 → 239 kB).
+- `captured_at` is bounded on every save, any role (≥ the start of the session date, ≤ server `now()` + 5 minutes, else `VALIDATION`), not only on the late path — a forged time cannot fake the audit's offline flag (#93 security review). `queued_offline` is `not null`.
+- **Known limitation (#93 security review, LOW):** another account's unsent outbox stays in IndexedDB **unencrypted** for up to 14 days on a shared phone. It is never shown or sent, but anyone with devtools on that phone can read it.
+- Part 3 backlog (stays documented, not built in 2b): a kind → action registry, an `oldVersion` switch in `onupgradeneeded` (2b needed neither: `capturedAt` lives in the payload, no store change), a marks paper as one item, the late-sync footnote on the register PDF, and per-user encryption of the outbox or a shorter keep time for another account's queue (the limitation above).

@@ -49,6 +49,7 @@ const ROW_BUTTON_CLASSNAME = buttonVariants({
 export function EssentialsRow({
   t,
   locale,
+  userId,
 }: {
   t: {
     settingsLabel: string
@@ -57,6 +58,8 @@ export function EssentialsRow({
     languageToggle: { bn: string; en: string }
   }
   locale: Locale
+  /** The signed-in user: whose outbox a sign-out deletes (D-310). */
+  userId: string
 }) {
   return (
     <div className="flex flex-wrap gap-3">
@@ -69,6 +72,7 @@ export function EssentialsRow({
       {/* F-ID-11 §4.7 (D-309): asks first if changes wait on the phone. */}
       <GuardedSignOutButton
         signOutNow={signOut}
+        userId={userId}
         className={ROW_BUTTON_CLASSNAME}
       >
         <LogOutIcon className="size-7" aria-hidden="true" />

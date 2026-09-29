@@ -30,6 +30,7 @@ const DAY: AttendanceDay = {
         takenAt: "2026-09-25T03:05:00Z",
         takenByName: "Nadia Rahman",
         bulkMarked: true,
+        syncedLate: false,
         expected: 40,
         present: 37,
         absent: 3,
@@ -52,6 +53,22 @@ const DAY: AttendanceDay = {
 }
 
 describe("AttendanceToday", () => {
+  it("footnotes a register that arrived late from offline (F-ID-11 §5.3, D-310)", () => {
+    const late = structuredClone(DAY)
+    late.sections[0]!.session!.syncedLate = true
+    render(
+      <AttendanceToday
+        t={en.attendance}
+        locale="en"
+        day={late}
+        dateLabel="25 Sept 2026"
+        policy={POLICY}
+        canMark
+      />
+    )
+    expect(screen.getByText(/Sent late from offline/)).toBeTruthy()
+  })
+
   it("gives the owner the 9:30 picture: marked count, rate, who and when", () => {
     render(
       <AttendanceToday
