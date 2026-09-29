@@ -195,7 +195,7 @@ Fails when the diff touches `apps/` or `packages/` and `.changeset/*.md` has no 
 The mechanical half of "a docs change is part of every PR" (HANDBOOK §10):
 
 - Diff touches `supabase/migrations/**` → `docs/architecture/DATA-MODEL.md` must also change.
-- Diff touches `apps/**` or `packages/**` → either some `docs/**` file changed, or the PR body contains an explicit `docs: none — <reason>` line. The job prints which rule it applied.
+- Diff touches `apps/**` or `packages/**` → either some `docs/**` file changed, or the PR body contains an explicit `docs: none — <reason>` line. The job prints which rule it applied. The changesets release PR (`changeset-release/*`) is exempt when every changed file is a `CHANGELOG.md`, a `package.json` or under `.changeset/`: the bot rewrites its description on every merge, so an opt-out line never survives.
 - A new file in `docs/` → `docs/README.md` must list it.
 - A new `supabase/tests/rls/<table>.sql` without the matching migration, or the reverse, fails.
 - A new `D-nn` heading in `DECISION-LOG.md` must not reuse an existing number.

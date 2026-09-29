@@ -846,6 +846,7 @@ jobs:
         env:
           BASE_REF: origin/${{ github.base_ref }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.head_ref }}
         run: node scripts/check-docs-sync.mjs
 
   # Deliberately not a required check: it runs on always() and would block on an
