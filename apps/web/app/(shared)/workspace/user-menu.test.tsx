@@ -1,16 +1,11 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-const mockUpdateLocale = vi.fn(async () => ({
-  ok: true,
-  data: { locale: "bn" },
-}))
 const mockUpdateUiPreferences = vi.fn(async () => ({
   ok: true,
   data: { uiMode: "basic", textSize: "normal" },
 }))
 vi.mock("./actions", () => ({
-  updateLocale: mockUpdateLocale,
   updateUiPreferences: mockUpdateUiPreferences,
 }))
 
@@ -23,6 +18,18 @@ const mockRefresh = vi.fn()
 const mockPush = vi.fn()
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mockRefresh, push: mockPush }),
+}))
+
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }))
 
 const { UserMenu } = await import("./user-menu")
@@ -72,21 +79,25 @@ describe("UserMenu", () => {
     expect(mockSignOut).toHaveBeenCalledTimes(1)
   })
 
-  it("still switches language from the same menu", async () => {
+  it("D-408: links to Settings > Appearance instead of switching language inline", async () => {
     render(<UserMenu locale="en" userId="u1" t={T} />)
     await openMenu(screen.getByRole("button", { name: "Account menu" }))
 
-    const bengaliOption = await screen.findByRole("menuitemradio", {
-      name: "বাংলা",
+    expect(screen.queryByRole("menuitemradio", { name: "বাংলা" })).toBeNull()
+    const appearanceLink = await screen.findByRole("menuitem", {
+      name: "Theme & language",
     })
+    expect(appearanceLink.closest("a")?.getAttribute("href")).toBe(
+      "/app/settings/appearance"
+    )
+  })
 
-    await act(async () => {
-      fireEvent.pointerDown(bengaliOption)
-      fireEvent.pointerUp(bengaliOption)
-      fireEvent.click(bengaliOption)
-    })
+  it("D-408: shows the Bengali label for the same link in bn", async () => {
+    render(<UserMenu locale="bn" userId="u1" t={T} />)
+    await openMenu(screen.getByRole("button", { name: "Account menu" }))
 
-    expect(mockUpdateLocale).toHaveBeenCalledWith("bn")
+    const link = await screen.findByRole("menuitem", { name: "থিম ও ভাষা" })
+    expect(link).not.toBeNull()
   })
 
   it("has no basic-mode switch item when showBasicModeSwitch is not passed (personal/family shells)", async () => {
