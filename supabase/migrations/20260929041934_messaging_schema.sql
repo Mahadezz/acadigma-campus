@@ -29,9 +29,6 @@ begin
   if not exists (select 1 from pg_type where typname = 'channel_kind') then
     create type public.channel_kind as enum ('general', 'staff', 'section', 'custom', 'dm');
   end if;
-  if not exists (select 1 from pg_type where typname = 'channel_member_role') then
-    create type public.channel_member_role as enum ('member', 'moderator');
-  end if;
 end
 $$;
 
@@ -51,7 +48,6 @@ create table if not exists public.channels (
   archived_at  timestamptz,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
-  created_by   uuid references public.profiles (id) on delete set null,
   constraint channels_workspace_key_key unique (workspace_id, key),
   constraint channels_id_workspace_key unique (id, workspace_id),
   -- Sections are archive-only for clients (no delete policy); only a
@@ -69,11 +65,11 @@ comment on table public.channels is
   'per section are created by triggers; membership of those three kinds is '
   'derived by app.channel_ids_for(), custom and dm use channel_members rows.';
 
-create index if not exists channels_created_by_idx
-  on public.channels (created_by) where created_by is not null;
--- justification: FK column. workspace_id is the prefix of the unique key;
--- section_id is covered by the unique 'section:<id>' key per workspace and
--- is only ever joined from the channel side.
+-- No extra index: workspace_id is the prefix of the unique key. section_id
+-- has none on purpose: it is read only from the channel side, and the FK
+-- cascade runs only on a privileged section delete, where scanning one
+-- school's few dozen channels is free. created_by, moderators and
+-- last_read_at come with the Parts that write them (D-311 item 4).
 
 -- ---------------------------------------------------------------------
 -- channel_members
@@ -83,9 +79,7 @@ create table if not exists public.channel_members (
   workspace_id uuid not null references public.workspaces (id) on delete cascade,
   channel_id   uuid not null,
   member_id    uuid not null,
-  role         public.channel_member_role not null default 'member',
   muted_until  timestamptz,
-  last_read_at timestamptz,
   left_at      timestamptz,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
@@ -100,7 +94,8 @@ create table if not exists public.channel_members (
 comment on table public.channel_members is
   'F-OP-05 §3.2 (D-311). member_id is workspace_members.id, like '
   'sections.class_teacher_id. A row is membership for custom/dm channels '
-  '(left_at null) and per-person state (muted_until, last_read_at) for all.';
+  '(left_at null) and per-person state (muted_until now) for every kind. '
+  'Each person reads only their own rows (D-311 item 8).';
 
 create index if not exists channel_members_member_idx on public.channel_members (member_id);
 -- justification: FK column; "my channels" for a member.
@@ -328,9 +323,14 @@ create policy channels_select on public.channels
   using (id = any ((select app.my_channel_ids())::uuid[]));
 
 drop policy if exists channel_members_select on public.channel_members;
+-- Own rows only: a mute is a sanction, not something peers read (security
+-- review of #101). Member lists and read receipts get their own paths in
+-- Parts 3 and 5.
 create policy channel_members_select on public.channel_members
   for select to authenticated
-  using (channel_id = any ((select app.my_channel_ids())::uuid[]));
+  using (exists (
+    select 1 from public.workspace_members m
+     where m.id = member_id and m.user_id = (select auth.uid()) and m.status = 'active'));
 
 drop policy if exists messages_select on public.messages;
 create policy messages_select on public.messages

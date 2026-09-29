@@ -6,27 +6,29 @@
 --      personal workspaces get none.
 --   B. Derived membership: owner/admin see every automatic channel, a
 --      class teacher general + their section, a teacher with no section
---      only general (AC-3), staff general + staff, a parent nothing.
+--      only general (AC-3), staff general + staff, a parent and a pending
+--      member nothing.
 --   C. Isolation: another school's owner sees none of School A's channels
 --      or messages (AC-1); a parent sees no message.
 --   D. Posting: NOT_A_MEMBER for a non-member, a parent, a stranger and a
 --      forged sender; RLS refuses a forged workspace_id; one row per
---      client_nonce (AC-7); 4000-character and blank bodies refused.
+--      client_nonce (AC-7); 4000-character and blank bodies refused; a
+--      member of two schools cannot file a message under the other one.
 --   E. Assigning a teacher to a section subject puts them in the section
 --      channel in the same transaction (the Part 1 demo, AC-12).
 --   F. A removed member loses every channel and message at once (AC-5).
---   G. MUTED names when the mute ends; an archived section's channel is
---      ARCHIVED_CHANNEL.
+--   G. MUTED names when the mute ends; a peer cannot read someone's mute;
+--      an archived section's channel is ARCHIVED_CHANNEL.
 --   H. Custom channels and DMs follow channel_members rows; an owner
---      cannot read a DM between two other members (AC-4); left_at ends
---      membership.
+--      cannot read a DM (or its member rows) between two other members
+--      (AC-4); left_at ends membership; demotion to parent ends a DM.
 --   I. Escalation: no client update/delete of messages, no client write
 --      to channels or channel_members; anon holds nothing; only
 --      app.my_channel_ids is client-callable.
 --   J. Read-only refuses a post and keeps reads.
 -- =====================================================================
 begin;
-select plan(46);
+select plan(53);
 
 create schema if not exists tests;
 grant usage on schema tests to authenticated;
@@ -78,7 +80,8 @@ create or replace function tests.my_keys() returns text[] language sql as $fn$
 $fn$;
 
 -- Users: a1 owner A, a2 teacher A (class teacher of 6-A), a3 teacher A2
--- (no section yet), a4 staff A, a5 parent A, a6 owner B, a7 admin A
+-- (no section yet), a4 staff A, a5 parent A, a6 owner B, a7 admin A,
+-- a8 pending A
 select tests.mkuser('59000000-0000-4000-a000-000000000001', 'msg-owner-a@test.local',    'Owner A');
 select tests.mkuser('59000000-0000-4000-a000-000000000002', 'msg-teacher-a@test.local',  'Teacher A');
 select tests.mkuser('59000000-0000-4000-a000-000000000003', 'msg-teacher-a2@test.local', 'Teacher A2');
@@ -86,6 +89,7 @@ select tests.mkuser('59000000-0000-4000-a000-000000000004', 'msg-staff-a@test.lo
 select tests.mkuser('59000000-0000-4000-a000-000000000005', 'msg-parent-a@test.local',   'Parent A');
 select tests.mkuser('59000000-0000-4000-a000-000000000006', 'msg-owner-b@test.local',    'Owner B');
 select tests.mkuser('59000000-0000-4000-a000-000000000007', 'msg-admin-a@test.local',    'Admin A');
+select tests.mkuser('59000000-0000-4000-a000-000000000008', 'msg-pending-a@test.local',  'Pending A');
 
 insert into public.workspaces (id, type, name, slug, owner_id, created_by, status)
 values
@@ -100,7 +104,8 @@ values
   ('59000000-0000-4000-d000-000000000003', '59000000-0000-4000-b000-000000000001', '59000000-0000-4000-a000-000000000003', 'teacher', 'active', now()),
   ('59000000-0000-4000-d000-000000000004', '59000000-0000-4000-b000-000000000001', '59000000-0000-4000-a000-000000000004', 'staff',   'active', now()),
   ('59000000-0000-4000-d000-000000000005', '59000000-0000-4000-b000-000000000001', '59000000-0000-4000-a000-000000000005', 'parent',  'active', now()),
-  ('59000000-0000-4000-d000-000000000007', '59000000-0000-4000-b000-000000000001', '59000000-0000-4000-a000-000000000007', 'admin',   'active', now());
+  ('59000000-0000-4000-d000-000000000007', '59000000-0000-4000-b000-000000000001', '59000000-0000-4000-a000-000000000007', 'admin',   'active', now()),
+  ('59000000-0000-4000-d000-000000000008', '59000000-0000-4000-b000-000000000001', '59000000-0000-4000-a000-000000000008', 'teacher', 'pending', null);
 
 insert into public.academic_years (id, workspace_id, name, starts_on, ends_on)
 values
@@ -186,6 +191,15 @@ select is(tests.my_keys(), '{}'::text[], 'a parent is in no channel');
 select is((select count(*)::int from public.messages), 0, 'a parent reads no message');
 select tests.logout();
 
+select tests.login('59000000-0000-4000-a000-000000000008');
+select is(tests.my_keys(), '{}'::text[], 'a pending member is in no channel');
+select throws_ok(
+  $insert into public.messages (workspace_id, channel_id, sender_id, body, client_nonce)
+    values ('59000000-0000-4000-b000-000000000001', tests.ch('general'),
+            '59000000-0000-4000-a000-000000000008', 'am I in?', gen_random_uuid())$,
+  '42501', 'NOT_A_MEMBER', 'a pending member cannot post');
+select tests.logout();
+
 -- ---------------------------------------------------------------------
 -- C. Isolation
 -- ---------------------------------------------------------------------
@@ -269,6 +283,19 @@ select throws_ok(
   '42501', 'NOT_A_MEMBER', 'a channel that does not exist gets the same refusal (no probing)');
 select tests.logout();
 
+-- Staff A also works at School B.
+insert into public.workspace_members (id, workspace_id, user_id, role, status, joined_at)
+values ('59000000-0000-4000-d000-000000000009', '59000000-0000-4000-b000-000000000002',
+        '59000000-0000-4000-a000-000000000004', 'staff', 'active', now());
+select tests.login('59000000-0000-4000-a000-000000000004');
+select throws_ok(
+  $insert into public.messages (workspace_id, channel_id, sender_id, body, client_nonce)
+    values ('59000000-0000-4000-b000-000000000002', tests.ch('general'),
+            '59000000-0000-4000-a000-000000000004', 'which school?', gen_random_uuid())$,
+  '23503', 'insert or update on table "messages" violates foreign key constraint "messages_channel_fkey"',
+  'a member of two schools cannot file a School A message under School B');
+select tests.logout();
+
 -- ---------------------------------------------------------------------
 -- E. The Part 1 demo: assignment is membership, same transaction
 -- ---------------------------------------------------------------------
@@ -318,6 +345,15 @@ select throws_ok(
     values ('59000000-0000-4000-b000-000000000001', tests.ch('general'),
             '59000000-0000-4000-a000-000000000004', 'muted?', gen_random_uuid())$$,
   '42501', 'MUTED', 'AC-11: a muted member cannot post');
+select is(
+  (select count(*)::int from public.channel_members where channel_id = tests.ch('general')),
+  1, 'a member reads their own mute');
+select tests.logout();
+
+select tests.login('59000000-0000-4000-a000-000000000001');
+select is(
+  (select count(*)::int from public.channel_members where member_id = '59000000-0000-4000-d000-000000000004'),
+  0, 'even the owner does not read another member''s mute row');
 select tests.logout();
 
 update public.channel_members set muted_until = now() - interval '1 minute'
@@ -374,6 +410,9 @@ select is(
 select is(
   (select count(*)::int from public.messages where channel_id = '59000000-0000-4000-f000-000000000002'),
   0, 'AC-4: and reads none of its messages');
+select is(
+  (select count(*)::int from public.channel_members where channel_id = '59000000-0000-4000-f000-000000000002'),
+  0, 'AC-4: or its member rows');
 select tests.logout();
 
 update public.channel_members set left_at = now()
@@ -381,6 +420,11 @@ update public.channel_members set left_at = now()
 
 select tests.login('59000000-0000-4000-a000-000000000003');
 select ok(not ('maths-dept' = any (tests.my_keys())), 'left_at ends membership of a custom channel');
+select tests.logout();
+
+update public.workspace_members set role = 'parent' where id = '59000000-0000-4000-d000-000000000003';
+select tests.login('59000000-0000-4000-a000-000000000003');
+select is(tests.my_keys(), '{}'::text[], 'demoted to parent, a member loses even a DM they still have a row in');
 
 -- ---------------------------------------------------------------------
 -- I. Escalation and grants
