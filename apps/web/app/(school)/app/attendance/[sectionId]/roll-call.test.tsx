@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import bn from "@/messages/bn.json"
 import en from "@/messages/en.json"
 
+import type { Marks } from "./roll-call"
+
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 const mockSave = vi.fn()
 vi.mock("../actions", () => ({
@@ -31,7 +33,7 @@ vi.mock("@/app/(shared)/offline/conflict-sheet", () => ({
     open ? <div role="dialog">conflict sheet</div> : null,
 }))
 
-const { RollCall, saveErrorText } = await import("./roll-call")
+const { RollCall, saveErrorText, undoPayload } = await import("./roll-call")
 
 const students = [1, 2, 3].map((n) => ({
   studentId: `00000000-0000-4000-8000-00000000000${n}`,
@@ -270,12 +272,14 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
     })
   })
 
-  it("skips a student who joined after the last save when Undo re-sends the previous values (MEDIUM 2)", async () => {
-    // A student enrolled after the last save has no entry in that save's
-    // records — `lastSavedMarks` seeds `null` for them from the roster's
-    // own `status` field. Undo must never send that `null` on as a
-    // cast-away status (the server rejects it, §5.3); it skips that one
-    // entry instead of sending an invalid status for them.
+  it("Undo keeps a student's CURRENT mark when they joined after the last save (MEDIUM 2, corrected)", async () => {
+    // `save_attendance` requires a status for EVERY currently enrolled
+    // student (§5.3, `UNMARKED_STUDENTS`) — a student enrolled after the
+    // last save has no entry in that save's records, so `lastSavedMarks`
+    // seeds `null` for them. Undo cannot omit them (the server would still
+    // reject the save, just with a different error) and cannot invent a
+    // status they never had; the only sensible restore is their CURRENT
+    // mark, which the "mark them so Save is enabled" step below sets.
     const mixedStudents = students.map((s, i) => ({
       ...s,
       status: (["present", "absent", null] as const)[i]!,
@@ -289,7 +293,9 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
         basicCopy={basicCopy}
       />
     )
-    // Student 3 is new and unmarked — mark them present so Save is enabled.
+    // Student 3 is new and unmarked — mark them present so Save is enabled
+    // (the `blocked` gate already refuses a save with any unmarked
+    // student, before Undo is ever offered).
     const present3 = screen
       .getByRole("radiogroup", { name: "Student 3" })
       .querySelector('[aria-label="Present"]') as HTMLButtonElement
@@ -305,12 +311,14 @@ describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
 
     fireEvent.click(undoButton)
     await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
-    // Only students 1-2 (their real prior statuses) — student 3 has no
-    // record to go back to and is left out, not sent as an invalid status.
+    // Every enrolled student is present, with a real status: students 1-2
+    // restore their real prior statuses; student 3 keeps the mark she just
+    // gave them (present) since there was never a saved value to go back to.
     expect(mockSave.mock.calls[1]?.[0]).toMatchObject({
       records: [
         { studentId: mixedStudents[0]!.studentId, status: "present" },
         { studentId: mixedStudents[1]!.studentId, status: "absent" },
+        { studentId: mixedStudents[2]!.studentId, status: "present" },
       ],
     })
   })
@@ -440,6 +448,52 @@ describe("saveErrorText", () => {
     expect(saveErrorText(t, { code: "internal", message: "x" })).toBe(
       t.errors.generic
     )
+  })
+})
+
+describe("undoPayload (MEDIUM 2)", () => {
+  const roster = students.map((s) => ({ studentId: s.studentId }))
+
+  it("null when there is nothing to go back to (undoMarks null)", () => {
+    expect(undoPayload(roster, null, { s1: "present" })).toBeNull()
+  })
+
+  it("falls back to a student's current mark when the saved snapshot has none for them", () => {
+    const [s1, s2, s3] = students
+    const undoMarks: Marks = {
+      [s1!.studentId]: "present",
+      [s2!.studentId]: "absent",
+    }
+    const marks: Marks = {
+      [s1!.studentId]: "late",
+      [s2!.studentId]: "excused",
+      [s3!.studentId]: "half_day",
+    }
+    // s3 has no entry in `undoMarks` (enrolled after that save) — Undo
+    // keeps her CURRENT mark from `marks`, not a fabricated or missing one.
+    expect(undoPayload(roster, undoMarks, marks)).toEqual({
+      [s1!.studentId]: "present",
+      [s2!.studentId]: "absent",
+      [s3!.studentId]: "half_day",
+    })
+  })
+
+  it("no Undo offered when a student has no mark at all — not in the saved snapshot, not marked now", () => {
+    const [s1, s2, s3] = students
+    const undoMarks: Marks = {
+      [s1!.studentId]: "present",
+      [s2!.studentId]: "absent",
+    }
+    // s3 is missing from `undoMarks` AND still unmarked in `marks` — the
+    // component's own `blocked` gate makes this unreachable through the
+    // UI (every visible student must already be marked before any save
+    // can succeed), so it is proven directly against the pure function.
+    const marks: Marks = {
+      [s1!.studentId]: "present",
+      [s2!.studentId]: "absent",
+      [s3!.studentId]: null,
+    }
+    expect(undoPayload(roster, undoMarks, marks)).toBeNull()
   })
 })
 

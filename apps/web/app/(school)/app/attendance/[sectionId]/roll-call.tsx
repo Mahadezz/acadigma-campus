@@ -58,7 +58,7 @@ const ConflictSheet = dynamic(() =>
 )
 
 type T = Messages["attendance"]["roll"]
-type Marks = Record<string, AttendanceStatus | null>
+export type Marks = Record<string, AttendanceStatus | null>
 
 /** Every error the save can return, in the reader's language. */
 export function saveErrorText(t: T, error: ApiError): string {
@@ -68,6 +68,38 @@ export function saveErrorText(t: T, error: ApiError): string {
     return t.errors[code as keyof T["errors"]]
   }
   return t.errors.generic
+}
+
+// Review fix (lead, MEDIUM 2 — corrected): `save_attendance` requires a
+// status for EVERY currently enrolled student (§5.3, the `UNMARKED_
+// STUDENTS` check) — a student enrolled after the last save has no entry
+// in `undoMarks` (`lastSavedMarks` never covered them), and simply
+// omitting them from the payload only swaps a validation error for that
+// same server rejection, it does not fix Undo. There is no "previous
+// value" to restore for a student who did not exist in the saved version,
+// so the only sensible undo leaves their mark exactly as it is right now
+// (`marks[studentId]`, read live at Undo time, not a frozen snapshot — she
+// may have marked them between the save and tapping Undo). If they have
+// no current mark either, there is no valid payload to send at all and
+// Undo is not offered (`null`).
+//
+// Exported and pure (takes its inputs, not `RollCall`'s state) so the
+// "no current mark either" branch can be unit-tested directly: the
+// component's own `blocked` gate makes that state unreachable through
+// simulated user interaction (every visible student must already be
+// marked before any save — including the one that first sets
+// `undoMarks` — can succeed), so it can only be proven this way.
+export function undoPayload(
+  students: { studentId: string }[],
+  undoMarks: Marks | null,
+  marks: Marks
+): Marks | null {
+  if (!undoMarks) return null
+  const merged: Marks = {}
+  for (const s of students) {
+    merged[s.studentId] = undoMarks[s.studentId] ?? marks[s.studentId] ?? null
+  }
+  return Object.values(merged).some((status) => status === null) ? null : merged
 }
 
 export function RollCall({
@@ -222,7 +254,7 @@ export function RollCall({
       isFirstRender.current = false
       return
     }
-    if (basic && undoMarks) {
+    if (basic && undoPayload(students, undoMarks, marks)) {
       undoButtonRef.current?.focus()
     } else {
       resultRef.current?.focus()
@@ -335,13 +367,13 @@ export function RollCall({
     setSaved(null)
     setConfirmOpen(false)
     startTransition(async () => {
-      // Review fix (MEDIUM 2): `toSave` can be `lastSavedMarks` (Undo) or
-      // `marks` (an ordinary save). A student enrolled after the last save
-      // has no entry in `lastSavedMarks` — sending `null` as a cast-away
-      // `AttendanceStatus` would reach the server (which never accepts it,
-      // §5.3 "nothing is presumed present") for real; `flatMap` narrows the
-      // type instead of hiding the gap behind a cast, and drops that one
-      // entry rather than sending an invalid status for them.
+      // `toSave` is `marks` (an ordinary save — `blocked` already refuses
+      // one with any unmarked student) or `undoPayload()`'s result (Undo —
+      // guaranteed complete or not called at all, see its own comment
+      // above). Both callers guarantee every enrolled student has a real
+      // status; `flatMap` here is a defensive no-op, not the fix itself —
+      // it narrows the type instead of casting, so a future gap would drop
+      // a record rather than silently lie to the type checker about it.
       const input: SaveAttendanceInput = {
         idempotencyKey: key,
         sectionId,
@@ -404,14 +436,17 @@ export function RollCall({
   }
 
   function undoSave() {
-    if (!undoMarks) return
-    const restore = undoMarks
+    const restore = undoPayload(students, undoMarks, marks)
+    if (!restore) return
     setUndoMarks(null)
     saveMarks(restore, false)
   }
 
   const blocked =
     readOnly || counts.unmarked > 0 || (!isSchoolDay && !anyway) || pending
+  // A complete restore payload, or `null` when one isn't offered at all —
+  // see `undoPayload`'s own comment for why this can differ from `undoMarks`.
+  const undoable = undoPayload(students, undoMarks, marks)
 
   const bigButton = basic ? "min-h-14 text-base" : "h-11"
   // See the header's own comment: the class hub already has the page's `<h1>`.
@@ -583,16 +618,19 @@ export function RollCall({
             </div>
             {basic && basicCopy ? (
               // Review fix (MEDIUM 4): always mounted rather than appearing
-              // together with `undoMarks` — an `aria-live` region has to
+              // together with `undoable` — an `aria-live` region has to
               // already exist in the DOM before its content changes for most
               // screen readers to announce it; a region that mounts with its
               // text already inside is frequently skipped. Only the content
-              // (and visibility) changes now.
+              // (and visibility) changes now. Gated on `undoable`, not the
+              // raw `undoMarks` state, so a student with no current mark and
+              // no prior one either (MEDIUM 2) never shows an Undo with
+              // nothing valid for it to send.
               <InlineAlert
                 tone="info"
-                className={undoMarks ? undefined : "sr-only"}
+                className={undoable ? undefined : "sr-only"}
               >
-                {undoMarks ? (
+                {undoable ? (
                   <span className="flex flex-wrap items-center justify-between gap-2">
                     {basicCopy.undoToast}
                     <Button
