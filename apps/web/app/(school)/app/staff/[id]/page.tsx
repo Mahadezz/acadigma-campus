@@ -6,7 +6,6 @@ import { ArrowLeftIcon, PhoneIcon } from "lucide-react"
 import { getStaffDirectoryRow, listSubjects } from "@acadigma/db/repositories"
 import { can } from "@acadigma/domain/permissions"
 import { Avatar, AvatarFallback } from "@acadigma/ui/components/avatar"
-import { Button } from "@acadigma/ui/components/button"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { StatusChip } from "@acadigma/ui/primitives/status-chip"
 
@@ -155,13 +154,21 @@ export default async function StaffProfilePage({
         ) : null}
       </dl>
 
+      {/* A plain <a>, not <Button asChild>: this page has no other client
+          boundary, and pulling in Button's Slot (radix-ui) here made it the
+          route tipping a shared-chunk split that bundled several unrelated
+          Radix primitives (Tabs/Popover/Select/Dialog/Toast, ~65 kB gzipped)
+          — 275 kB first-load JS, over the 250 kB budget
+          (scripts/check-bundle-budget.mjs). Styled to match the outline
+          Button variant exactly. */}
       {row.workPhone ? (
-        <Button asChild variant="outline" className="h-11 w-full sm:w-auto">
-          <a href={`tel:${row.workPhone}`}>
-            <PhoneIcon aria-hidden="true" />
-            {t.staff.profile.call}
-          </a>
-        </Button>
+        <a
+          href={`tel:${row.workPhone}`}
+          className="border-input inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border bg-transparent px-4 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground sm:w-auto"
+        >
+          <PhoneIcon aria-hidden="true" className="size-4" />
+          {t.staff.profile.call}
+        </a>
       ) : null}
 
       {row.id === null ? (
