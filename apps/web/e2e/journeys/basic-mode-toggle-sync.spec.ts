@@ -35,7 +35,11 @@ async function expectNoHorizontalScroll(page: Page): Promise<void> {
   expect(overflow).toBeLessThanOrEqual(0)
 }
 
-test.afterEach(async ({ page }) => {
+test.afterEach(async ({ page }, testInfo) => {
+  // The reset gets its own budget: sharing the test's 30 s, a slow body left
+  // it cut off mid-way and the seeded owner stuck in বাংলা/basic mode for the
+  // rest of the e2e-live shard (D-76).
+  testInfo.setTimeout(testInfo.timeout + 30_000)
   if (!/\/app/.test(page.url())) return
 
   // Review fix (nit #5): the বাংলা + Extra large test below switches locale

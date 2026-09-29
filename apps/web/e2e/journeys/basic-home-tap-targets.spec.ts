@@ -35,7 +35,11 @@ async function turnOnBasicMode(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/app\/home$/)
 }
 
-test.afterEach(async ({ page }) => {
+test.afterEach(async ({ page }, testInfo) => {
+  // The reset gets its own budget: sharing the test's 30 s, a slow body left
+  // it cut off mid-way and the seeded owner stuck in বাংলা/basic mode for the
+  // rest of the e2e-live shard (D-76).
+  testInfo.setTimeout(testInfo.timeout + 30_000)
   // Same "narrow the contamination window on shared seeded state" rule
   // `basic-mode-toggle-sync.spec.ts` already follows.
   if (!/\/app/.test(page.url())) return

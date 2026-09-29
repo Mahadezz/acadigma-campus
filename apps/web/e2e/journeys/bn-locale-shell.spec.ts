@@ -48,7 +48,11 @@ async function expectNoHorizontalScroll(page: Page): Promise<void> {
 // eliminate a race with a test that happens to run concurrently while this
 // suite is mid-বাংলা — a dedicated account is the real fix, tracked as a
 // follow-up rather than built here).
-test.afterEach(async ({ page }) => {
+test.afterEach(async ({ page }, testInfo) => {
+  // The reset gets its own budget: sharing the test's 30 s, a slow body left
+  // it cut off mid-way and the seeded owner stuck in বাংলা/basic mode for the
+  // rest of the e2e-live shard (D-76).
+  testInfo.setTimeout(testInfo.timeout + 30_000)
   const bnMenuButton = page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" })
   if (!(await bnMenuButton.isVisible().catch(() => false))) return
   await bnMenuButton.click()
