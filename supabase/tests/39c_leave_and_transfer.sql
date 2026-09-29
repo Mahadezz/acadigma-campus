@@ -273,17 +273,17 @@ select set_config('app.ownership_transfer', '', true);
 
 -- D-112 review: ownership has one door.
 select throws_ok(
-  $update public.workspace_members set role = 'owner'
-     where id = '39c00000-0000-4000-e000-000000000004'$,
+  $$update public.workspace_members set role = 'owner'
+     where id = '39c00000-0000-4000-e000-000000000004'$$,
   '42501', 'ownership is granted only through transfer_ownership',
   'an owner cannot mint another owner with a plain update (no re-auth)');
 select tests.logout();
 select tests.mkuser('39c00000-0000-4000-a000-000000000009', 'lt-outsider@test.local', 'Outsider');
 select tests.login('39c00000-0000-4000-a000-000000000001');
 select throws_ok(
-  $insert into public.workspace_members (workspace_id, user_id, role, status)
+  $$insert into public.workspace_members (workspace_id, user_id, role, status)
     values ('39c00000-0000-4000-b000-000000000001',
-            '39c00000-0000-4000-a000-000000000009', 'owner', 'active')$,
+            '39c00000-0000-4000-a000-000000000009', 'owner', 'active')$$,
   '42501', 'ownership is granted only through transfer_ownership',
   'an owner cannot insert another person as an owner');
 select set_config('request.jwt.claims',
@@ -291,16 +291,16 @@ select set_config('request.jwt.claims',
     'amr', json_build_array(json_build_object('method', 'password',
       'timestamp', extract(epoch from now())::bigint - 3600)))::text, true);
 select throws_ok(
-  $select public.transfer_ownership('39c00000-0000-4000-b000-000000000001',
-                                     '39c00000-0000-4000-e000-000000000004')$,
+  $$select public.transfer_ownership('39c00000-0000-4000-b000-000000000001',
+                                     '39c00000-0000-4000-e000-000000000004')$$,
   '28000', 'REAUTH_REQUIRED',
   'a session without a password sign-in in the last 5 minutes cannot transfer');
 select tests.logout();
 select tests.login('39c00000-0000-4000-a000-000000000001');
 
 select lives_ok(
-  $select public.transfer_ownership('39c00000-0000-4000-b000-000000000001',
-                                     '39c00000-0000-4000-e000-000000000004', true)$,
+  $$select public.transfer_ownership('39c00000-0000-4000-b000-000000000001',
+                                     '39c00000-0000-4000-e000-000000000004', true)$$,
   'keep-owner: the owner makes a teacher a co-owner');
 select tests.logout();
 select is(tests.m('1') || ' ' || tests.m('4'), 'owner/active owner/active',
