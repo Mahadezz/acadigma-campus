@@ -705,7 +705,7 @@ xl  1280  tables gain optional columns; detail pages gain a right rail
 - **Back (D-408).** Every page except a shell root, basic home or a nav
   destination with nothing above it in the URL gets one back control at the
   far left of the TopBar, where every phone app puts
-  it (Jakob). Below `lg` (phone and tablet) it is a 44px chevron, and the
+  it (Jakob). Below `lg` (phone and tablet) it is a 48px chevron, and the
   workspace switcher steps aside on that page. From `lg` up it is the
   chevron plus the parent page's name. With in-app history it calls
   `router.back()`, so the chevron, the browser and the Android back button

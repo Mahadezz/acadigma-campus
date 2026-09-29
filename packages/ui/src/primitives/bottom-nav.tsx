@@ -400,6 +400,11 @@ export function BottomNavFromConfig({
   )
   const moreBadgeCount = aggregateMoreBadgeCount(filtered)
   const hasMore = filtered.more.length > 0
+  // D-408: a page reached through More lights the More tile (visual only —
+  // it is a button, so no aria-current).
+  const moreActive = filtered.more.some((group) =>
+    group.items.some((navItem) => isActive(navItem.href))
+  )
 
   return (
     <>
@@ -445,6 +450,7 @@ export function BottomNavFromConfig({
             aria-expanded={moreOpen}
             aria-controls={moreSheetId}
             onClick={() => setMoreOpen(true)}
+            className={moreActive ? bottomNavItemClass(true) : undefined}
           />
         ) : null}
       </BottomNav>

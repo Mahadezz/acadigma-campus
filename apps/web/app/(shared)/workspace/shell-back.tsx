@@ -13,7 +13,7 @@ import { backTarget, navLabel, type BackTarget } from "@/lib/back-route"
 
 /**
  * D-408: the shell's one back affordance — top-left, where every phone app
- * puts it (Jakob). A 44px chevron on phone and tablet; chevron + the parent
+ * puts it (Jakob). A 48px chevron on phone and tablet; chevron + the parent
  * page's name from `lg` up. Shown on every page that is not a top-level nav
  * destination (`backTarget` decides).
  *
@@ -107,7 +107,7 @@ export function ShellBack({
           router.back()
         }
       }}
-      className="text-foreground hover:bg-foreground/[0.06] focus-visible:ring-ring -ml-2 inline-flex min-h-11 min-w-11 items-center justify-center gap-0.5 rounded-xl text-sm font-medium outline-none transition-[background-color,transform] duration-150 focus-visible:ring-2 active:scale-95 lg:justify-start lg:pr-3 lg:pl-1"
+      className="text-foreground hover:bg-foreground/[0.06] focus-visible:ring-ring -ml-2 inline-flex min-h-12 min-w-12 items-center justify-center gap-0.5 rounded-xl text-sm font-medium outline-none transition-[background-color,transform] duration-150 focus-visible:ring-2 active:scale-95 lg:justify-start lg:pr-3 lg:pl-1"
     >
       <ChevronLeftIcon className="size-6 shrink-0" aria-hidden="true" />
       {/* Both languages are rendered and the page's own <html lang> picks
