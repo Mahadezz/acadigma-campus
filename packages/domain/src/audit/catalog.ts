@@ -646,7 +646,7 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "section_subjects",
   // F-AC-06 Part 7 (D-306) — 20260926023537_publish_results.sql.
   "guardian_users",
-  // F-OP-07 Part 2 (D-210) — 20260929121051_academic_terms.sql.
+  // F-OP-07 Part 2 (D-210) — 20260929160707_academic_terms.sql.
   "terms",
 ]
 

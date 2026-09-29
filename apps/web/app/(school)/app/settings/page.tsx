@@ -61,6 +61,11 @@ export default async function SettingsPage() {
       summary: s.rows.academic.description,
     },
     {
+      href: "/app/settings/labels",
+      ...s.rows.labels,
+      summary: s.rows.labels.description,
+    },
+    {
       href: "/app/settings/overview",
       ...s.rows.overview,
       summary: s.rows.overview.description,
