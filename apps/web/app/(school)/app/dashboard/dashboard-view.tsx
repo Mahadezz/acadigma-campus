@@ -74,9 +74,9 @@ export function DashboardView(props: DashboardViewProps) {
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <section aria-labelledby="dash-today" className="space-y-3">
-            <p id="dash-today" className="eyebrow">
-              {t.eyebrowToday}
-            </p>
+            <h3 id="dash-today" className={`${TITLE} text-lg`}>
+              {t.sectionToday}
+            </h3>
             <div className="grid gap-4 md:grid-cols-2">
               <SlotCard
                 title={t.attendance.title}
@@ -168,7 +168,6 @@ function Checklist({
     <section aria-labelledby="dash-setup">
       <Card>
         <CardHeader>
-          <p className="eyebrow">{t.eyebrowSetup}</p>
           <h3 id="dash-setup" className={`${TITLE} text-lg`}>
             {t.checklist.title}
           </h3>
@@ -285,7 +284,6 @@ function PeopleCard({
     <section aria-labelledby="dash-people">
       <Card className="gap-4">
         <CardHeader>
-          <p className="eyebrow">{t.eyebrowPeople}</p>
           <h3 id="dash-people" className={TITLE}>
             {t.people.title}
           </h3>
@@ -331,7 +329,6 @@ function ActivityCard({
     <section aria-labelledby="dash-activity">
       <Card className="gap-4">
         <CardHeader>
-          <p className="eyebrow">{t.eyebrowActivity}</p>
           <h3 id="dash-activity" className={TITLE}>
             {t.activity.title}
           </h3>
