@@ -3564,7 +3564,6 @@ export type Database = {
           ends_on: string
           id: string
           name: string
-          sort_order: number
           starts_on: string
           updated_at: string
           workspace_id: string
@@ -3576,7 +3575,6 @@ export type Database = {
           ends_on: string
           id?: string
           name: string
-          sort_order?: number
           starts_on: string
           updated_at?: string
           workspace_id: string
@@ -3588,7 +3586,6 @@ export type Database = {
           ends_on?: string
           id?: string
           name?: string
-          sort_order?: number
           starts_on?: string
           updated_at?: string
           workspace_id?: string
