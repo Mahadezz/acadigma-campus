@@ -285,7 +285,7 @@ select tests.logout();
 update public.workspace_members set status = 'removed'
  where id = '39a00000-0000-4000-e000-000000000002';
 select tests.login('39a00000-0000-4000-a000-000000000002');
-select throws_ok($select tests.names('pending')$, '42501', 'FORBIDDEN',
+select throws_ok($$select tests.names('pending')$$, '42501', 'FORBIDDEN',
   'a removed admin cannot read the roster');
 update public.workspace_members set status = 'active'
  where id = '39a00000-0000-4000-e000-000000000011';
