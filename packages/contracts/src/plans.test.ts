@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { ARCHIVED_READ_ONLY_REASON } from "./operations/danger-zone"
 import {
   accessModeSchema,
   getUsageOutput,
@@ -17,7 +18,6 @@ import {
   upsertPlanInput,
   usageEntrySchema,
 } from "./plans"
-import { ARCHIVED_READ_ONLY_REASON } from "./operations/danger-zone"
 
 describe("planCodeSchema", () => {
   it("accepts every seeded plan code", () => {

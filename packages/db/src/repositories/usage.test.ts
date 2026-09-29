@@ -194,7 +194,11 @@ describe("requireWritable — the PLAN_READ_ONLY guard (D-29)", () => {
   it("refuses a write when the school is archived (D-211)", async () => {
     const client = fakeClient({
       workspaces: queryResult({
-        data: { access_mode: "normal", access_mode_reason: null, status: "archived" },
+        data: {
+          access_mode: "normal",
+          access_mode_reason: null,
+          status: "archived",
+        },
         error: null,
       }),
     })
