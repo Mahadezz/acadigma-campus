@@ -6,6 +6,9 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 ## 2026-09-30
 
+- **#112 merged** (a328806): remove a member, leave a school, transfer ownership (password sign-in within 5 min; the only way to become owner; a removed owner comes back only as admin). 2 Opus security reviews; migrations live (Database run success).
+- **acadigma-website #1 merged** (50c0784): public site no longer claims biometrics, unbuilt/AI features (now "coming soon"), FERPA, or "setup fee waived / rate for life / cancel anytime"; prices match D-78 (৳15,000 onboarding never waived, 24-month price lock); "multiple languages"; US pricing hidden behind Contact us.
+
 - #118 merged: legal/compliance audit (docs/product/legal/LEGAL-AUDIT-2026-09-29.md) — 24 issues, 12 lawyer questions; website false claims being fixed.
 - NVIDIA SkillSpector installed; skills scanned before install (apple-design, taste-skill, 7 Agency agents).
 - Recovered cleanly from the 02:30 usage limit; all six builders resumed.
