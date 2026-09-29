@@ -218,4 +218,11 @@ describe("WorkspaceSwitcher — shell back (D-408)", () => {
       screen.getByRole("button", { name: /switch workspace/i })
     ).toBeTruthy()
   })
+
+  it("names a nav parent once the nav config has loaded (desktop label)", async () => {
+    mockPathname = "/app/exams/e1"
+    render(<WorkspaceSwitcher {...props} />)
+    const back = await screen.findByRole("link", { name: /^Back to Exams/ })
+    expect(back.getAttribute("href")).toBe("/app/exams")
+  })
 })

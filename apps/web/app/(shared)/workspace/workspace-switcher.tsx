@@ -68,10 +68,10 @@ export function WorkspaceSwitcher(props: WorkspaceSwitcherProps) {
   const current = props.workspaces.find(
     (w) => w.workspaceId === props.currentWorkspaceId && w.status !== "removed"
   )
-  const back = useBackTarget(current)
+  const back = useBackTarget()
   return (
     <div className="flex min-w-0 items-center gap-1">
-      {back ? <ShellBack target={back} /> : null}
+      {back ? <ShellBack target={back} workspace={current} /> : null}
       <div className={back ? "hidden min-w-0 lg:flex" : "flex min-w-0"}>
         <WorkspaceChip {...props} />
       </div>

@@ -8,10 +8,8 @@ import { usePathname, useRouter } from "next/navigation"
 import { ChevronLeftIcon } from "lucide-react"
 
 import type { MembershipSummary } from "@acadigma/contracts"
-import { getNavConfig } from "@acadigma/domain/nav"
 
-import { backTarget } from "@/lib/back-route"
-import { onlyImplemented } from "@/lib/implemented-routes"
+import { backTarget, navLabel, type BackTarget } from "@/lib/back-route"
 
 /**
  * D-408: the shell's one back affordance — top-left, where every phone app
@@ -23,6 +21,11 @@ import { onlyImplemented } from "@/lib/implemented-routes"
  * browser, the Android back button and this chevron all agree; with none
  * (a deep link, a new tab, a reload) it is a plain link to the logical
  * parent, so it never dead-ends and never leaves the app.
+ *
+ * The href is known on first render; a nav destination's *name* (desktop
+ * label, screen-reader text) comes from the nav configs, loaded lazily so
+ * they stay out of every page's first-load JS (250 kB budget). Until then
+ * it reads "Back".
  */
 
 // Pathnames visited in this tab since the app loaded. Module scope, so it
@@ -48,21 +51,53 @@ export function record(pathname: string) {
 
 export const canGoBack = () => visited.length > 1
 
-export function useBackTarget(current: MembershipSummary | undefined) {
+export function useBackTarget() {
   const pathname = usePathname()
   React.useEffect(() => record(pathname), [pathname])
-  return React.useMemo(() => {
-    const config = current ? getNavConfig(current.type, current.role) : null
-    return backTarget(pathname, config ? onlyImplemented(config) : null)
-  }, [pathname, current])
+  return backTarget(pathname)
+}
+
+type Named = { href: string; labelEn: string; labelBn: string }
+
+/** The target's name: its own, or its nav item's in the member's config. */
+function useNamed(
+  target: BackTarget,
+  workspace: MembershipSummary | undefined
+): Named | undefined {
+  const [loaded, setLoaded] = React.useState<Named>()
+  React.useEffect(() => {
+    if (target.labelEn || !workspace) return
+    let live = true
+    void import("@acadigma/domain/nav").then(({ getNavConfig }) => {
+      const label = navLabel(
+        target.href,
+        getNavConfig(workspace.type, workspace.role)
+      )
+      if (live && label) setLoaded({ href: target.href, ...label })
+    })
+    return () => {
+      live = false
+    }
+  }, [target.href, target.labelEn, workspace])
+  if (target.labelEn && target.labelBn) {
+    return {
+      href: target.href,
+      labelEn: target.labelEn,
+      labelBn: target.labelBn,
+    }
+  }
+  return loaded?.href === target.href ? loaded : undefined
 }
 
 export function ShellBack({
   target,
+  workspace,
 }: {
-  target: NonNullable<ReturnType<typeof useBackTarget>>
+  target: BackTarget
+  workspace: MembershipSummary | undefined
 }) {
   const router = useRouter()
+  const named = useNamed(target, workspace)
   return (
     <Link
       href={target.href}
@@ -79,15 +114,19 @@ export function ShellBack({
           one, so this client component needs no locale prop and server and
           client render the same markup. */}
       <span lang="en" className="[html[lang=bn]_&]:hidden">
-        <span className="sr-only">{`Back to ${target.labelEn}`}</span>
+        <span className="sr-only">
+          {named ? `Back to ${named.labelEn}` : "Back"}
+        </span>
         <span aria-hidden="true" className="hidden lg:inline">
-          {target.labelEn}
+          {named?.labelEn ?? "Back"}
         </span>
       </span>
       <span lang="bn" className="[html:not([lang=bn])_&]:hidden">
-        <span className="sr-only">{`ফিরে যান: ${target.labelBn}`}</span>
+        <span className="sr-only">
+          {named ? `ফিরে যান: ${named.labelBn}` : "ফিরে যান"}
+        </span>
         <span aria-hidden="true" className="hidden lg:inline">
-          {target.labelBn}
+          {named?.labelBn ?? "ফিরে যান"}
         </span>
       </span>
     </Link>
