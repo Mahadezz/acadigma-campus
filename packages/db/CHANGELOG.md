@@ -1,5 +1,25 @@
 # @acadigma/db
 
+## 0.13.0
+
+### Minor Changes
+
+- f47e151: F-ID-03 Part 6 — role changes, staff fields and custom labels. Owners and
+  admins can change a member's role (with a plain-language consequences step),
+  edit their staff details (employee code, department, work phone — the code is
+  generated when left blank), manage the school's custom labels
+  (`/app/settings/labels`) and assign a label to a member. Labels change the
+  title shown next to a name, never what the person can do.
+- 225cdb9: F-OP-05 Part 1 (D-311): messaging schema — `channels`, `channel_members` and `messages` with RLS by derived channel membership (`app.my_channel_ids()`), automatic general/staff/section channels, and the post-permission trigger (`NOT_A_MEMBER`, `ARCHIVED_CHANNEL`, `MUTED`). Generated types regenerated.
+
+### Patch Changes
+
+- 47e6d97: D-80 follow-up: the demo seed replaces (deletes and recreates) a demo account someone else registered, instead of resetting it; integration test updated. No runtime change.
+- 7d5528b: D-80: integration test for the production demo-school seed (`scripts/demo-seed.sh`, `supabase/seed/demo-school*.sql`, manual `Demo seed` workflow). No runtime change.
+- Updated dependencies [f47e151]
+  - @acadigma/contracts@0.13.0
+  - @acadigma/domain@0.10.4
+
 ## 0.12.0
 
 ### Minor Changes

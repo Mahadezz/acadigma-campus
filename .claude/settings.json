@@ -58,9 +58,7 @@
       "WebFetch(domain:playwright.dev)",
       "WebFetch(domain:vitest.dev)",
       "WebFetch(domain:www.w3.org)",
-      "WebFetch(domain:developer.mozilla.org)"
-    ],
-    "ask": [
+      "WebFetch(domain:developer.mozilla.org)",
       "Bash(git commit *)",
       "Bash(git rebase *)",
       "Bash(git cherry-pick *)",
@@ -84,6 +82,7 @@
       "Bash(pnpm dev)",
       "Bash(git push *)"
     ],
+ 
     "deny": [
       "Read(.env)",
       "Read(.env.*)",

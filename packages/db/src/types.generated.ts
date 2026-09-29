@@ -3556,6 +3556,64 @@ export type Database = {
           },
         ]
       }
+      terms: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          created_by: string | null
+          ends_on: string
+          id: string
+          name: string
+          starts_on: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          created_by?: string | null
+          ends_on: string
+          id?: string
+          name: string
+          starts_on: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string
+          id?: string
+          name?: string
+          starts_on?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terms_academic_year_fkey"
+            columns: ["academic_year_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "terms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "terms_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_counters: {
         Row: {
           key: string
@@ -4335,6 +4393,10 @@ export type Database = {
         Returns: Json
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
+      set_current_academic_year: {
+        Args: { p_academic_year_id: string; p_workspace_id: string }
+        Returns: string
+      }
       set_section_subjects: {
         Args: { p_section_id: string; p_subjects: Json; p_workspace_id: string }
         Returns: number
