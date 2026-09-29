@@ -13,7 +13,7 @@
 --      touching the role; a teacher cannot assign a label to someone else.
 -- =====================================================================
 begin;
-select plan(15);
+select plan(14);
 
 create schema if not exists tests;
 

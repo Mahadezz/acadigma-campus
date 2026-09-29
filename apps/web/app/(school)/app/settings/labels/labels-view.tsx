@@ -137,6 +137,7 @@ export function LabelsView({ t, labels }: { t: T; labels: CustomLabel[] }) {
 
       {sheet?.kind === "create" || sheet?.kind === "edit" ? (
         <LabelFormSheet
+          key={sheet.kind === "edit" ? sheet.label.id : "create"}
           t={t}
           pending={pending}
           label={sheet.kind === "edit" ? sheet.label : null}
@@ -222,10 +223,16 @@ function LabelFormSheet({
   )
   const [color, setColor] = useState(label?.color ?? DEFAULT_COLOR)
 
+  const dirty =
+    name !== (label?.name ?? "") ||
+    baseRole !== (label?.baseRole ?? "admin") ||
+    color !== (label?.color ?? DEFAULT_COLOR)
+
   const formId = "label-form"
   return (
     <FormSheet
       open
+      isDirty={dirty}
       onOpenChange={(open) => {
         if (!open) onClose()
       }}

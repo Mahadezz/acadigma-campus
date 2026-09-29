@@ -349,6 +349,7 @@ export function TeamView({
 
       {managing ? (
         <MemberSheet
+          key={managing.id}
           t={t}
           member={managing}
           labels={labels}

@@ -48,6 +48,7 @@ function errorText(t: T, error: ApiError): string {
     return t.manage.errors.selfEdit
   if (marker === MEMBER_ERROR.EMPLOYEE_NO_TAKEN)
     return t.manage.errors.codeTaken
+  if (marker === MEMBER_ERROR.LABEL_NOT_FOUND) return t.errors.notFound
   if (error.code === "payment_required") return t.errors.readOnly
   if (error.code === "forbidden") return t.errors.forbidden
   if (error.code === "not_found") return t.errors.notFound
@@ -68,6 +69,11 @@ export function MemberSheet({
   const router = useRouter()
   const [detail, setDetail] = useState<MemberDetail | null>(null)
   const [loadError, setLoadError] = useState(false)
+  // Bumped after every successful write; the section forms are keyed by it, so
+  // they re-seed their inputs from the fresh `detail` (e.g. a generated
+  // employee code, or the role that just changed) instead of holding stale
+  // copies of the values they mounted with.
+  const [rev, setRev] = useState(0)
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState<{
     tone: "success" | "error"
@@ -76,11 +82,15 @@ export function MemberSheet({
 
   useEffect(() => {
     let live = true
-    getMemberDetail({ memberId: member.id }).then((result) => {
-      if (!live) return
-      if (result.ok) setDetail(result.data)
-      else setLoadError(true)
-    })
+    getMemberDetail({ memberId: member.id })
+      .then((result) => {
+        if (!live) return
+        if (result.ok) setDetail(result.data)
+        else setLoadError(true)
+      })
+      .catch(() => {
+        if (live) setLoadError(true)
+      })
     return () => {
       live = false
     }
@@ -97,6 +107,7 @@ export function MemberSheet({
         setNotice({ tone: "success", text: success })
         const refetch = await getMemberDetail({ memberId: member.id })
         if (refetch.ok) setDetail(refetch.data)
+        setRev((r) => r + 1)
         router.refresh()
       } else if (result.error) {
         setNotice({ tone: "error", text: errorText(t, result.error) })
@@ -104,7 +115,7 @@ export function MemberSheet({
     })
   }
 
-  const isOwnerTarget = member.role === "owner"
+  const isOwnerTarget = detail?.role === "owner"
 
   return (
     <FormSheet
@@ -137,10 +148,18 @@ export function MemberSheet({
                 {t.manage.ownerNote}
               </p>
             ) : (
-              <RoleSection t={t} member={member} pending={pending} run={run} />
+              <RoleSection
+                key={`role-${rev}`}
+                t={t}
+                member={member}
+                currentRole={detail.role}
+                pending={pending}
+                run={run}
+              />
             )}
 
             <LabelSection
+              key={`label-${rev}`}
               t={t}
               detail={detail}
               labels={labels}
@@ -150,6 +169,7 @@ export function MemberSheet({
             />
 
             <StaffSection
+              key={`staff-${rev}`}
               t={t}
               detail={detail}
               memberId={member.id}
@@ -166,11 +186,13 @@ export function MemberSheet({
 function RoleSection({
   t,
   member,
+  currentRole,
   pending,
   run,
 }: {
   t: T
   member: MemberRow
+  currentRole: MemberDetail["role"]
   pending: boolean
   run: (
     action: () => Promise<{ ok: boolean; error?: ApiError }>,
@@ -178,9 +200,9 @@ function RoleSection({
   ) => void
 }) {
   const current: AssignableRole = ASSIGNABLE.includes(
-    member.role as AssignableRole
+    currentRole as AssignableRole
   )
-    ? (member.role as AssignableRole)
+    ? (currentRole as AssignableRole)
     : "teacher"
   const [role, setRole] = useState<AssignableRole>(current)
   const delta = roleChangeDelta(current, role)
