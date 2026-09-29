@@ -10,6 +10,8 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 | PR | What it does, in plain English | Proof |
 | --- | --- | --- |
+| #115 | A personal-only account can now **Create a school** or **Join a school with a code** from the workspace switcher (it was untappable) and from a big button on the personal home (owner report) | TS/React/ponytail reviews (44px fix); server caps (3/day, 20 memberships) already enforced; new pgTAP; lead fixed docs + merge conflict; 13a15eb |
+| #113 | Release PRs no longer fail the docs check (version-only changes are exempt) | CI; merged |
 | #110 | Settings → Academic: school years (one current), terms, exam weighting, pass mark / GPA / rank / promotion rules (D-210) | builder's full review set + lead's independent Opus security review MERGE; migration live (Database run success); 272a0ec |
 | #114 | Owner's permission change: routine commit/push/PR/test commands no longer ask for approval; every safety block kept | owner edited, lead validated JSON + deny list; 989fd02 |
 | #108 | Release PR (changelogs) | 85f2d0c |

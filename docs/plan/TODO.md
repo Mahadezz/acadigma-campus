@@ -44,9 +44,7 @@ Last updated: 2026-09-29 ~23:10 Dhaka.
 
 **Left (measured on main 2026-09-29):** loading skeletons on every data route (only 1 of 42 has `loading.tsx`); optimistic updates for small actions (0 today; never for payments/publishing); pull-to-refresh on phone data screens (not built); tap feedback on the rest of the pressables (button has no press state on main).
 
-## 4. Create / join a school from a personal account · 🟡 · PR #115 (ready; CI re-running after lead fixed docs-sync + prettier)
-
-**Owner:** "why cant personal accounts create school workspace?" **Cause:** the create-school wizard works for an onboarded user, but nothing links to it from the app. **Fix in progress:** "Create a school" + "Join a school with a code" in the workspace switcher and as a card on the personal home; server-side limit respected; test that an already-onboarded user can do it safely; Playwright journey.
+## 4. (moved to DONE — #115 merged 2026-09-29)
 
 ## 5. Account deletion — F-ID-01 Part 7 · ⚪ (identity lane, next after #112)
 
