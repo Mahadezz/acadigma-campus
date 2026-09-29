@@ -273,7 +273,18 @@ export async function signInWithPassword(
 
   if (error) {
     const log = await requestLogger({ route: "auth.login" })
-    log.warn({ status: error.status, code: error.code }, "sign-in rejected")
+    // `message` alongside status/code: GoTrue's structured `code` is only present
+    // on a typed AuthApiError (invalid_credentials and friends); a genuine 5xx
+    // crash carries no `code` at all, and `message` is the only clue to what
+    // broke (CI run 36457859794/36510216612 diagnosis — every e2e-live shard's
+    // owner sign-in failed with a bare 500 after the first successful one, and
+    // status+code alone could not say why). GoTrue's own message is a technical
+    // string (e.g. a Postgres/Go error), never account PII, so this does not
+    // relax §13's "no names/emails/health data in logs."
+    log.warn(
+      { status: error.status, code: error.code, message: error.message },
+      "sign-in rejected"
+    )
 
     // Only a rejection of THIS credential attempt counts against the
     // brute-force throttle (§9 AC5/AC6) -- a GoTrue hiccup (timeout, 5xx,
