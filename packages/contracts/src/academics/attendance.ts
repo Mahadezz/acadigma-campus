@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { uuidSchema } from "../common"
+import { isoDateTimeSchema, uuidSchema } from "../common"
 
 /**
  * F-AC-03 demo cut (D-104) — the daily roll call. Enums mirror
@@ -44,6 +44,8 @@ export type AttendanceDaySection = {
         takenAt: string
         takenByName: string | null
         bulkMarked: boolean
+        /** F-ID-11 §5.3 (D-310): an offline roll call that reached the server late. */
+        syncedLate: boolean
       })
     | null
 }
@@ -94,6 +96,13 @@ export const saveAttendanceInputSchema = z
      * queued roll call is never sent as someone else or into another school.
      * Not passed to `save_attendance`.
      */
+    /**
+     * F-ID-11 Part 2b (D-310): when the roll was taken on the phone (device
+     * clock corrected by the server offset), fixed when it is queued. Sent
+     * only by a queued save; decides the late-sync bounds (§5.3) and marks
+     * the audit row `queued_offline`.
+     */
+    capturedAt: isoDateTimeSchema.optional(),
     queuedFor: z
       .object({ userId: uuidSchema, workspaceId: uuidSchema })
       .strict()

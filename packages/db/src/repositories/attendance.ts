@@ -50,6 +50,7 @@ type DayJson = {
       excused: number
       half_day: number
       bulk_marked: boolean
+      synced_late: boolean
     } | null
   }[]
 }
@@ -87,6 +88,7 @@ export async function getAttendanceDay(
             takenAt: s.session.taken_at,
             takenByName: s.session.taken_by_name,
             bulkMarked: s.session.bulk_marked,
+            syncedLate: s.session.synced_late,
             expected: s.session.expected,
             present: s.session.present,
             absent: s.session.absent,
@@ -234,6 +236,9 @@ export async function saveAttendance(
       bulk_marked: input.bulkMarked,
       allow_non_school_day: input.allowNonSchoolDay,
       expected_updated_at: input.expectedUpdatedAt,
+      // Only a queued save carries it (dropped from the JSON when undefined,
+      // so an online save hashes as before, D-310).
+      captured_at: input.capturedAt,
     },
   })
   if (error) {

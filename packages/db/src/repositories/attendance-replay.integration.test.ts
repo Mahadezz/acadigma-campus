@@ -9,6 +9,10 @@
  *   back as CONFLICT and overwrites nothing.
  * - The same key with a different payload is IDEMPOTENCY_KEY_REUSED, never a
  *   silent second write.
+ * - D-310: `capturedAt` reaches `save_attendance` through PostgREST — the
+ *   row is stamped `queued_offline`; a TEACHER's roll taken offline four
+ *   days ago in its window lands late (`synced_late`), the same roll without
+ *   `capturedAt` is refused, and the late path never edits a register.
  *
  * Opt-in, like the other `*.integration.test.ts` (CI's `db-integration` job
  * runs it against `supabase start`); locally:
@@ -38,9 +42,12 @@ const SERVICE_KEY = process.env.DB_LOCAL_SUPABASE_SERVICE_KEY
 const RUN = process.env.DB_LOCAL_SUPABASE === "1" && !!ANON_KEY && !!SERVICE_KEY
 
 /** Today in the school's time zone: always inside the edit window. */
-const TODAY = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Dhaka",
-}).format(new Date())
+const dhaka = (d: Date) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(d)
+const TODAY = dhaka(new Date())
+/** A school day `n` days back, and 10:00 on it in Dhaka (UTC+6). */
+const daysAgo = (n: number) => dhaka(new Date(Date.now() - n * 86_400_000))
+const tenAm = (date: string) => new Date(`${date}T04:00:00Z`).toISOString()
 const YEAR = TODAY.slice(0, 4)
 
 describe.skipIf(!RUN)(
@@ -52,6 +59,9 @@ describe.skipIf(!RUN)(
     let userId: string
     let sectionId: string
     let studentIds: string[]
+    let teacherClient: AcadigmaSupabaseClient
+    let teacherId: string
+    let teacherCtx: WorkspaceContext
 
     beforeAll(async () => {
       serviceClient = createClient<Database>(URL, SERVICE_KEY as string, {
@@ -166,6 +176,41 @@ describe.skipIf(!RUN)(
         workspaceType: "school",
         plan: null,
       }
+
+      // A teacher of the school: the edit window binds them, not the owner.
+      const teacherEmail = `d310-teacher-${randomUUID()}@test.local`
+      const { data: teacher, error: teacherError } =
+        await serviceClient.auth.admin.createUser({
+          email: teacherEmail,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: "Late Teacher" },
+        })
+      if (teacherError || !teacher.user) throw teacherError
+      teacherId = teacher.user.id
+      const { error: memberError } = await serviceClient
+        .from("workspace_members")
+        .insert({
+          workspace_id: workspaceId,
+          user_id: teacherId,
+          role: "teacher",
+          status: "active",
+        })
+      if (memberError) throw memberError
+      const { data: teacherSession, error: teacherSignIn } =
+        await createClient<Database>(
+          URL,
+          ANON_KEY as string
+        ).auth.signInWithPassword({ email: teacherEmail, password })
+      if (teacherSignIn || !teacherSession.session) throw teacherSignIn
+      teacherClient = createClient<Database>(URL, ANON_KEY as string, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${teacherSession.session.access_token}`,
+          },
+        },
+      })
+      teacherCtx = { ...ctx, userId: teacherId, role: "teacher" }
     }, 60_000)
 
     afterAll(async () => {
@@ -176,16 +221,18 @@ describe.skipIf(!RUN)(
           .eq("id", ctx.workspaceId)
       }
       if (userId) await serviceClient.auth.admin.deleteUser(userId)
+      if (teacherId) await serviceClient.auth.admin.deleteUser(teacherId)
     })
 
     const input = (
       key: string,
       statuses: ("present" | "absent")[],
-      expectedUpdatedAt: string | null
+      expectedUpdatedAt: string | null,
+      date = TODAY
     ): SaveAttendanceInput => ({
       idempotencyKey: key,
       sectionId,
-      date: TODAY,
+      date,
       records: studentIds.map((studentId, i) => ({
         studentId,
         status: statuses[i]!,
@@ -265,6 +312,62 @@ describe.skipIf(!RUN)(
       expect(!reused.ok && reused.error.message).toMatch(/already submitted/)
       const [after] = await sessions()
       expect(after!.absent_count).toBe(1)
+    })
+
+    async function sessionOn(date: string) {
+      const { data } = await serviceClient
+        .from("attendance_sessions")
+        .select("id, captured_at, queued_offline, synced_late")
+        .eq("section_id", sectionId)
+        .eq("date", date)
+      return data ?? []
+    }
+
+    it("a queued save's capturedAt reaches the row: queued_offline, no late stamp (D-310)", async () => {
+      const date = daysAgo(1)
+      const capturedAt = new Date(Date.now() - 60_000).toISOString()
+      const saved = await saveAttendance(teacherClient, teacherCtx, {
+        ...input(randomUUID(), ["present", "present", "present"], null, date),
+        capturedAt,
+      })
+      expect(saved.ok).toBe(true)
+      const [row] = await sessionOn(date)
+      expect(row).toMatchObject({ queued_offline: true, synced_late: false })
+      expect(Date.parse(row!.captured_at!)).toBe(Date.parse(capturedAt))
+    })
+
+    it("a teacher's roll taken offline 4 days ago lands late; without capturedAt it is refused (§5.3)", async () => {
+      const date = daysAgo(4)
+      const refused = await saveAttendance(
+        teacherClient,
+        teacherCtx,
+        input(randomUUID(), ["absent", "present", "present"], null, date)
+      )
+      expect(!refused.ok && refused.error.fieldErrors?._root).toEqual([
+        "OUTSIDE_EDIT_WINDOW",
+      ])
+      const late = await saveAttendance(teacherClient, teacherCtx, {
+        ...input(randomUUID(), ["absent", "present", "present"], null, date),
+        capturedAt: tenAm(date),
+      })
+      expect(late.ok).toBe(true)
+      const [row] = await sessionOn(date)
+      expect(row).toMatchObject({ synced_late: true, queued_offline: true })
+
+      // A second late replay for that day would edit the register: refused.
+      if (!late.ok) return
+      const again = await saveAttendance(teacherClient, teacherCtx, {
+        ...input(
+          randomUUID(),
+          ["present", "present", "present"],
+          late.data.updatedAt,
+          date
+        ),
+        capturedAt: tenAm(date),
+      })
+      expect(!again.ok && again.error.fieldErrors?._root).toEqual([
+        "OUTSIDE_EDIT_WINDOW",
+      ])
     })
   }
 )

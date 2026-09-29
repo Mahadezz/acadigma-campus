@@ -175,6 +175,7 @@ export default async function BasicHomePage() {
       )}
 
       <EssentialsRow
+        userId={ctx.userId}
         t={{
           settingsLabel: s.settingsLabel,
           switchToFullApp: s.switchToFullApp,

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { AuthCard } from "@acadigma/ui/primitives/auth-card"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { WaitingOnDevice } from "@/app/(shared)/offline/waiting-on-device"
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 
@@ -53,6 +54,7 @@ export default async function LoginPage({
           </InlineAlert>
         </div>
       ) : null}
+      <WaitingOnDevice />
       <LoginForm
         t={t.auth.login}
         network={t.auth.network}

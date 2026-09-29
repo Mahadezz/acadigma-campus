@@ -2,6 +2,8 @@
 
 import * as React from "react"
 
+import dynamic from "next/dynamic"
+
 import { CloudUploadIcon, TriangleAlertIcon } from "lucide-react"
 
 import type { ApiError } from "@acadigma/contracts"
@@ -9,20 +11,30 @@ import { Button } from "@acadigma/ui/components/button"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { signOut } from "@/app/(auth)/actions"
 import { saveErrorText } from "@/app/(school)/app/attendance/[sectionId]/roll-call"
 import type { Messages } from "@/lib/i18n"
+import type { Locale } from "@/lib/locale"
 import { othersWaiting } from "@/lib/offline/check"
 import type { OutboxItem } from "@/lib/offline/outbox"
 import {
   deleteItem,
+  outboxPaused,
   retryItem,
   sendQueued,
   useOutbox,
+  watchSuccessfulRequests,
 } from "@/lib/offline/outbox-client"
 import { outboxEvents } from "@/lib/offline/outbox-db"
 import { useOnline } from "@/lib/offline/use-online"
 
 import { useOfflineCopy, type OfflineCopy } from "./offline-provider"
+import { useGuardedSignOut } from "./sign-out-guard"
+
+// Opened only on a conflict (D-310): kept out of every page's first load.
+const ConflictSheet = dynamic(() =>
+  import("./conflict-sheet").then((m) => m.ConflictSheet)
+)
 
 const WEEK_MS = 7 * 24 * 60 * 60_000
 /** "{count} …", or the singular sentence for one (Bangla has the same). */
@@ -51,10 +63,12 @@ function refusalText(t: RollCopy, item: OutboxItem): string {
 export function OutboxChip({
   userId,
   rollCopy,
+  locale,
 }: {
   userId: string
   /** For the refusal reasons of queued roll calls. */
   rollCopy: RollCopy
+  locale: Locale
 }) {
   const items = useOutbox(userId)
   const getCopy = useOfflineCopy()
@@ -80,10 +94,13 @@ export function OutboxChip({
     send()
     window.addEventListener("online", online)
     document.addEventListener("visibilitychange", visible)
+    // §4.4 (D-310): and after any successful request while items wait.
+    const stopWatching = watchSuccessfulRequests(send)
     return () => {
       window.removeEventListener("online", online)
       document.removeEventListener("visibilitychange", visible)
       timers.forEach(clearTimeout)
+      stopWatching()
     }
   }, [userId])
 
@@ -119,6 +136,7 @@ export function OutboxChip({
         userId={userId}
         copy={copy}
         rollCopy={rollCopy}
+        locale={locale}
       />
     </>
   )
@@ -130,22 +148,44 @@ const subscribe = (fn: () => void) => {
 }
 
 /**
- * §4.10: a banner that stays while anything has waited a week or more; and,
- * until Part 2b's choice, a plain count of another teacher's unsent changes
- * kept on this phone (never their contents).
+ * §4.10: a banner that stays while anything has waited a week or more.
+ * §4.6 (D-310): "Sign in again" while the queue is paused by an expired
+ * session; and another teacher's unsent changes on this phone — a plain
+ * count, never their contents — with a one-time choice to continue or sign
+ * out so that teacher can send them.
  */
 export function OutboxStaleBanner({ userId }: { userId: string }) {
   const items = useOutbox(userId)
   const getCopy = useOfflineCopy()
   const others = React.useSyncExternalStore(subscribe, othersWaiting, () => 0)
+  const paused = React.useSyncExternalStore(
+    subscribe,
+    outboxPaused,
+    () => false
+  )
   // Read once per render from the device clock: a week is not precise work.
   // eslint-disable-next-line react-hooks/purity -- the current time is the value
   const now = Date.now()
   const stale = items.filter((i) => now - i.createdAt >= WEEK_MS).length
-  if (stale === 0 && others === 0) return null
+  const waiting = items.filter(
+    (i) => i.status === "pending" || i.status === "sending"
+  ).length
+  const showPaused = paused && waiting > 0
+  if (stale === 0 && others === 0 && !showPaused) return null
   const copy = getCopy()
   return (
     <>
+      {showPaused ? (
+        <InlineAlert tone="offline" className="mb-3">
+          <span className="block">
+            {count(copy.pausedBanner, waiting, copy.pausedBannerOne)}
+          </span>
+          <Button asChild variant="outline" className="mt-2 h-11">
+            <a href="/login">{copy.signInAgain}</a>
+          </Button>
+        </InlineAlert>
+      ) : null}
+      {others > 0 ? <OthersOnPhone userId={userId} copy={copy} /> : null}
       {stale > 0 ? (
         <InlineAlert tone="offline" className="mb-3">
           {count(copy.staleBanner, stale, copy.staleBannerOne)}
@@ -160,6 +200,72 @@ export function OutboxStaleBanner({ userId }: { userId: string }) {
   )
 }
 
+const SEEN_KEY = "acadigma-others-seen"
+
+/**
+ * §4.6 (D-310): once per sign-in, the choice the spec asks for when a phone
+ * holds another account's unsent work. Their work is never deleted or shown
+ * here; the choice is only whether to hand the phone back.
+ */
+function OthersOnPhone({
+  userId,
+  copy,
+}: {
+  userId: string
+  copy: OfflineCopy
+}) {
+  // Client-only (the banner renders nothing on the server), so storage is
+  // readable here. No storage: asked each time the banner mounts.
+  const [open, setOpen] = React.useState(() => {
+    try {
+      return sessionStorage.getItem(SEEN_KEY) !== userId
+    } catch {
+      return true
+    }
+  })
+  const guardedSignOut = useGuardedSignOut(() => signOut(), userId)
+  function close() {
+    try {
+      sessionStorage.setItem(SEEN_KEY, userId)
+    } catch {
+      // Asked again next time.
+    }
+    setOpen(false)
+  }
+  return (
+    <>
+      {guardedSignOut.dialog}
+      <FormSheet
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) close()
+        }}
+        title={copy.othersTitle}
+        footer={
+          <>
+            <Button className="h-11" onClick={close}>
+              {copy.othersContinue}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11"
+              disabled={guardedSignOut.pending}
+              onClick={() => {
+                close()
+                guardedSignOut.request()
+              }}
+            >
+              {copy.othersSignOut}
+            </Button>
+          </>
+        }
+      >
+        <p className="pb-4 text-sm">{copy.othersBody}</p>
+      </FormSheet>
+    </>
+  )
+}
+
 function QueueSheet({
   open,
   onOpenChange,
@@ -167,6 +273,7 @@ function QueueSheet({
   userId,
   copy,
   rollCopy,
+  locale,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -174,6 +281,7 @@ function QueueSheet({
   userId: string
   copy: OfflineCopy
   rollCopy: RollCopy
+  locale: Locale
 }) {
   const online = useOnline()
   const [sending, startSending] = React.useTransition()
@@ -229,6 +337,7 @@ function QueueSheet({
                     copy={copy}
                     rollCopy={rollCopy}
                     online={online}
+                    locale={locale}
                   />
                 ))}
               </ul>
@@ -246,14 +355,17 @@ function QueueRow({
   copy,
   rollCopy,
   online,
+  locale,
 }: {
   item: OutboxItem
   userId: string
   copy: OfflineCopy
   rollCopy: RollCopy
   online: boolean
+  locale: Locale
 }) {
   const [shown, setShown] = React.useState(false)
+  const [choosing, setChoosing] = React.useState(false)
   const [confirming, setConfirming] = React.useState(false)
   const [busy, startBusy] = React.useTransition()
   const detailId = React.useId()
@@ -306,6 +418,15 @@ function QueueRow({
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
+          {item.status === "conflict" ? (
+            <Button
+              className="h-11"
+              disabled={!online}
+              onClick={() => setChoosing(true)}
+            >
+              {copy.compareAndChoose}
+            </Button>
+          ) : null}
           {item.status === "needs_attention" ? (
             <Button
               variant="outline"
@@ -336,6 +457,16 @@ function QueueRow({
           )}
         </div>
       )}
+      {choosing ? (
+        <ConflictSheet
+          item={item}
+          userId={userId}
+          copy={copy}
+          locale={locale}
+          open
+          onOpenChange={setChoosing}
+        />
+      ) : null}
     </li>
   )
 }

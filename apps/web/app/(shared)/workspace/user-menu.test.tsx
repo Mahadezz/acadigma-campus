@@ -56,7 +56,7 @@ async function openMenu(trigger: HTMLElement): Promise<void> {
  */
 describe("UserMenu", () => {
   it("shows a Sign out item that calls the existing signOut action", async () => {
-    render(<UserMenu locale="en" t={T} />)
+    render(<UserMenu locale="en" userId="u1" t={T} />)
     await openMenu(screen.getByRole("button", { name: "Account menu" }))
 
     const signOutItem = await screen.findByRole("menuitem", {
@@ -73,7 +73,7 @@ describe("UserMenu", () => {
   })
 
   it("still switches language from the same menu", async () => {
-    render(<UserMenu locale="en" t={T} />)
+    render(<UserMenu locale="en" userId="u1" t={T} />)
     await openMenu(screen.getByRole("button", { name: "Account menu" }))
 
     const bengaliOption = await screen.findByRole("menuitemradio", {
@@ -90,7 +90,7 @@ describe("UserMenu", () => {
   })
 
   it("has no basic-mode switch item when showBasicModeSwitch is not passed (personal/family shells)", async () => {
-    render(<UserMenu locale="en" t={T} />)
+    render(<UserMenu locale="en" userId="u1" t={T} />)
     await openMenu(screen.getByRole("button", { name: "Account menu" }))
 
     expect(
@@ -99,7 +99,7 @@ describe("UserMenu", () => {
   })
 
   it("switches to basic mode and navigates to /app/home (F-ID-10 §4.2, D-403)", async () => {
-    render(<UserMenu locale="en" t={T} showBasicModeSwitch />)
+    render(<UserMenu locale="en" userId="u1" t={T} showBasicModeSwitch />)
     await openMenu(screen.getByRole("button", { name: "Account menu" }))
 
     const item = await screen.findByRole("menuitem", {

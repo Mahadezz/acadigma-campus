@@ -8,6 +8,7 @@ import { checkSession } from "./check"
 import {
   enqueue,
   replay,
+  resolveConflict,
   type OutboxDraft,
   type OutboxItem,
   type OutboxStore,
@@ -17,6 +18,7 @@ import {
   notifyOutboxChanged,
   outboxEvents,
   outboxStore,
+  outboxUserIds,
 } from "./outbox-db"
 
 /**
@@ -84,6 +86,21 @@ async function send(item: OutboxItem) {
   })
 }
 
+let paused = false
+function setPaused(next: boolean) {
+  if (paused === next) return
+  paused = next
+  changed()
+}
+/**
+ * §4.6 (D-310): the session expired with items waiting. The queue holds the
+ * work; it needs this user to sign in again to send it — "Sign in again",
+ * not "Try again". Cleared by the next check that confirms this user.
+ */
+export function outboxPaused(): boolean {
+  return paused
+}
+
 async function runOnce(userId: string): Promise<void> {
   if (!navigator.onLine) return
   // Nothing waiting: no request at all (triggers are frequent and cheap).
@@ -94,10 +111,12 @@ async function runOnce(userId: string): Promise<void> {
     return
   }
   const { check } = await checkSession()
+  if (check.kind === "signed_out") setPaused(true)
   if (check.kind !== "signed_in" || check.userId !== userId) return
+  setPaused(false)
   const workspaceId = check.workspaceId
   if (!workspaceId) return
-  await withLock("replay", () =>
+  const outcome = await withLock("replay", () =>
     replay(liveStore(userId), {
       userId,
       workspaceId,
@@ -107,6 +126,46 @@ async function runOnce(userId: string): Promise<void> {
         sentListeners.forEach((fn) => fn(item.entityKey, updatedAt)),
     })
   )
+  if (outcome === "paused") setPaused(true)
+}
+
+/**
+ * §4.4: "after any successful request while items are pending" — any fetch
+ * the page made that came back (the Resource Timing entry; Safari has no
+ * status and counts as a success) triggers a send, at most once per window.
+ * The send reads the outbox first, so with nothing waiting it costs nothing.
+ *
+ * ponytail: our own replay requests also count, which the window bounds to
+ * one extra check per 30 s while items wait for another school.
+ */
+export function watchSuccessfulRequests(
+  send: () => void,
+  windowMs = 30_000,
+  now: () => number = Date.now
+): () => void {
+  if (typeof PerformanceObserver === "undefined") return () => undefined
+  let last = -Infinity
+  const observer = new PerformanceObserver((list) => {
+    const ok = list.getEntries().some((e) => {
+      const r = e as PerformanceResourceTiming & { responseStatus?: number }
+      if (r.initiatorType !== "fetch" && r.initiatorType !== "xmlhttprequest") {
+        return false
+      }
+      return (
+        r.responseStatus === undefined ||
+        (r.responseStatus >= 200 && r.responseStatus < 400)
+      )
+    })
+    if (!ok || now() - last < windowMs) return
+    last = now()
+    send()
+  })
+  try {
+    observer.observe({ type: "resource", buffered: false })
+  } catch {
+    return () => undefined
+  }
+  return () => observer.disconnect()
 }
 
 let running: Promise<void> | null = null
@@ -159,6 +218,28 @@ export async function retryItem(userId: string, id: string): Promise<void> {
   await sendQueued(userId)
 }
 
+/**
+ * The conflict sheet (§4.5, D-310): her choice — all of hers, or her picks
+ * per student — goes out on the colleague's version under a new key.
+ */
+export async function resolveItem(
+  userId: string,
+  id: string,
+  records: OutboxItem["payload"]["records"],
+  theirVersion: string
+): Promise<void> {
+  await storeLock(() =>
+    resolveConflict(
+      liveStore(userId),
+      id,
+      records,
+      theirVersion,
+      crypto.randomUUID()
+    )
+  )
+  await sendQueued(userId)
+}
+
 /** Delete (§4.10): only ever the user's own choice. */
 export function deleteItem(userId: string, id: string): Promise<void> {
   return storeLock(() => liveStore(userId).remove(id))
@@ -172,6 +253,18 @@ export function deleteItem(userId: string, id: string): Promise<void> {
 export async function countQueued(userId: string | null): Promise<number> {
   if (!userId) return 0
   return (await outboxStore(userId).list()).length
+}
+
+/**
+ * The sign-in screen (§4.6, D-310): how many changes wait on this phone, from
+ * any account — a count only, so the right person signs in to send them.
+ */
+export async function countOnDevice(): Promise<number> {
+  let n = 0
+  for (const id of await outboxUserIds()) {
+    n += (await outboxStore(id).list()).length
+  }
+  return n
 }
 
 /** Sign-out (§4.7): the signed-in user's outbox goes with their session. */

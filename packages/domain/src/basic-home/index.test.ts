@@ -40,6 +40,7 @@ const SESSION = {
   takenAt: "",
   takenByName: null,
   bulkMarked: false,
+  syncedLate: false,
   expected: 38,
   present: 36,
   absent: 2,
