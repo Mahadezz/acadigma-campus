@@ -40,9 +40,14 @@ test("owner sees the whole directory, searches Farhana, and opens her sheet", as
   await expect(page.getByText("Farhana Akter")).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 
-  await page.getByRole("link", { name: /Farhana Akter/ }).first().click()
+  await page
+    .getByRole("link", { name: /Farhana Akter/ })
+    .first()
+    .click()
   await expect(page).toHaveURL(/\/app\/staff\/.+/)
-  await expect(page.getByRole("heading", { name: "Farhana Akter" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Farhana Akter" })
+  ).toBeVisible()
   await expect(page.getByText("Senior Teacher")).toBeVisible()
   await expect(page.getByText("Science")).toBeVisible()
   await expect(page.getByRole("link", { name: "Call" })).toHaveAttribute(

@@ -27,8 +27,11 @@ create or replace view public.staff_directory
 with (security_barrier = true)
 as
 select
+  -- `create or replace view` may only APPEND columns, never reorder or
+  -- rename an existing one (Postgres refuses "cannot change name of view
+  -- column ... to ..." otherwise) — every column Part 1 already had stays
+  -- in its original position; membership_id is new, so it goes last.
   sr.id,
-  wm.id as membership_id,
   wm.workspace_id,
   wm.user_id,
   sr.staff_code,
@@ -42,7 +45,8 @@ select
   sr.work_email,
   coalesce(sr.work_phone, wm.phone) as work_phone,
   coalesce(sr.employment_status, 'active'::public.staff_status) as employment_status,
-  coalesce(sr.joined_on, wm.joined_at::date) as joined_on
+  coalesce(sr.joined_on, wm.joined_at::date) as joined_on,
+  wm.id as membership_id
 from public.workspace_members wm
 left join public.staff_records sr
   on sr.workspace_id = wm.workspace_id and sr.user_id = wm.user_id
