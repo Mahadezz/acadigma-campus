@@ -1,6 +1,6 @@
 # Acadigma Campus — Founding School Letter of Intent (Template)
 
-**DRAFT — awaiting owner approval.** 2026-09-28 · Not a binding contract. Plain-English version first, Bengali version below it. All numbers are written in Western digits (0–9) in both versions, per the owner's instruction. Terms cite `docs/product/PRICE-PROPOSAL.md` (**OWNER TO CONFIRM** before first use) and `docs/product/COMPLIANCE-PDPA.md`.
+**PROVISIONAL — D-78, 2026-09-29.** Not a binding contract. Plain-English version first, Bengali version below it. All numbers are written in Western digits (0–9) in both versions, per the owner's instruction. Terms cite `docs/product/PRICE-PROPOSAL.md` (**OWNER TO CONFIRM** before first use) and `docs/product/COMPLIANCE-PDPA.md`.
 
 ---
 
@@ -25,7 +25,7 @@ This Letter of Intent ("LOI") records the shared intention of **Acadigma** and t
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Chosen plan                            | ☐ Starter (৳2,200/month, up to 150 students) &nbsp; ☐ Pro (৳4,900/month, up to 300 students) &nbsp; ☐ Enterprise (quoted separately) |
 | Price above the included student count | Starter: +৳9/student/month · Pro: +৳11/student/month                                                                                 |
-| Onboarding fee                         | ৳10,000, one-time, due at go-live, never waived                                                                                      |
+| Onboarding fee                         | ৳15,000, one-time, due at go-live, never waived                                                                                      |
 
 **3. Founding-school pilot**
 
@@ -37,7 +37,7 @@ This Letter of Intent ("LOI") records the shared intention of **Acadigma** and t
 
 **4. Refundable deposit**
 
-A refundable deposit of **৳5,000** is payable on signing this LOI. **OWNER TO CONFIRM this amount before use.**
+A refundable deposit of **৳5,000** is payable on signing this LOI.
 
 - The deposit is credited in full against the school's first pilot invoice.
 - If Acadigma fails to deliver the agreed pilot setup (workspace creation, student import, report-card format, teacher training) within **2 weeks** of the signed go-live date below, the full deposit is refunded within 7 business days, no questions asked.
@@ -85,7 +85,7 @@ This LOI expresses intent, not a binding commitment, except where Section 4 stat
 | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | নির্বাচিত প্ল্যান                                | ☐ Starter (৳2,200/মাস, ১৫০ জন শিক্ষার্থী পর্যন্ত) &nbsp; ☐ Pro (৳4,900/মাস, ৩০০ জন শিক্ষার্থী পর্যন্ত) &nbsp; ☐ Enterprise (আলাদাভাবে কোট করা হবে) |
 | অন্তর্ভুক্ত সংখ্যার বেশি প্রতি শিক্ষার্থীর মূল্য | Starter: +৳9/শিক্ষার্থী/মাস · Pro: +৳11/শিক্ষার্থী/মাস                                                                                             |
-| অনবোর্ডিং ফি                                     | ৳10,000, একবার, go-live-এর সময় পরিশোধযোগ্য, কখনো মওকুফ হয় না                                                                                     |
+| অনবোর্ডিং ফি                                     | ৳15,000, একবার, go-live-এর সময় পরিশোধযোগ্য, কখনো মওকুফ হয় না                                                                                     |
 
 **৩. Founding School পাইলট**
 
@@ -97,7 +97,7 @@ This LOI expresses intent, not a binding commitment, except where Section 4 stat
 
 **৪. ফেরতযোগ্য জামানত**
 
-এই LOI স্বাক্ষরের সময় **৳5,000** ফেরতযোগ্য জামানত পরিশোধযোগ্য। **এই পরিমাণ ব্যবহারের আগে মালিকের নিশ্চিতকরণ প্রয়োজন।**
+এই LOI স্বাক্ষরের সময় **৳5,000** ফেরতযোগ্য জামানত পরিশোধযোগ্য।
 
 - জামানতটি স্কুলের প্রথম পাইলট ইনভয়েসের বিপরীতে সম্পূর্ণ জমা (credit) হবে।
 - নিচে উল্লেখিত স্বাক্ষরিত go-live তারিখের **২ সপ্তাহের** মধ্যে Acadigma সম্মত পাইলট সেটআপ (workspace তৈরি, শিক্ষার্থী তালিকা আমদানি, প্রগতিপত্রের ফরম্যাট, শিক্ষক প্রশিক্ষণ) সরবরাহ করতে ব্যর্থ হলে, সম্পূর্ণ জামানত ৭ কার্যদিবসের মধ্যে কোনো প্রশ্ন ছাড়াই ফেরত দেওয়া হবে।

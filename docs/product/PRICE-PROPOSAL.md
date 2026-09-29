@@ -1,6 +1,6 @@
 # Acadigma Campus — Price Proposal
 
-**DRAFT — awaiting owner approval.** 2026-09-28 · For Mahadi's sign-off before any price is quoted to a school. Numbers are the canonical grid from `research/MARKET-STRATEGY.md` §c (D-41: the _only_ price list — do not quote any other number). Feature status is read from `docs/plan/BUILD-LOG.md` and `docs/plan/ROADMAP.md` as of today, not from the feature specs' aspirational scope.
+**PROVISIONAL — D-78, 2026-09-29.** The owner set the onboarding fee (৳15,000) and delegated every other number to the lead for now ("U can set random pricing for now but onboaring fee is 15000"). Quote these until the owner changes them. Numbers are the canonical grid from `research/MARKET-STRATEGY.md` §c (D-41: the _only_ price list — do not quote any other number). Feature status is read from `docs/plan/BUILD-LOG.md` and `docs/plan/ROADMAP.md` as of today, not from the feature specs' aspirational scope.
 
 ---
 
@@ -32,22 +32,22 @@ Be honest with a prospect about what they get **today** (2026-09-28) versus what
 
 ## 3. Free plan and pilot
 
-The self-serve **Free school plan is killed** (`OWNER-QUESTIONS.md` OQ-22 — default assumed, **pending your final sign-off**). It burned an estimated ৳870/school/month against a ~5% free-to-paid rate. A free **personal teacher workspace** (zero AI) remains as the product's network seed.
+The self-serve **Free school plan is killed** (`OWNER-QUESTIONS.md` OQ-22 — decided by the lead under the owner's 2026-09-29 delegation, D-78). It burned an estimated ৳870/school/month against a ~5% free-to-paid rate. A free **personal teacher workspace** (zero AI) remains as the product's network seed.
 
 For a founder-sold school, the paid pilot replaces the old free trial: **8–10 weeks at ৳2,000/month**, spanning one full terminal exam, written success criteria agreed before day 1, auto-converting to the school's chosen plan at the January enrollment boundary unless the school opts out.
 
-## 4. Founding-school offer — OWNER TO CONFIRM
+## 4. Founding-school offer (D-78)
 
 **Recommendation (one option, for your approval):**
 
 - **Who:** the first 10 signed schools.
 - **Price:** the paid pilot (§3) at ৳2,000/month, then the standard list price (Starter ৳2,200 or Pro ৳4,900) on conversion — **no percentage discount off list**, because the corrected gross margin (67.8% at Pro/300, per `research/MARKET-STRATEGY.md` §c) does not survive a further recurring discount on top of AI and infra cost (`research/debate/04-cfo.md` §1.2, §1.10 both reject discounting the recurring line).
 - **Price lock:** 24 months from the conversion date, written into the contract, with a 5% annual escalator after that — the same term every annual contract gets, not an extra founding perk.
-- **Onboarding fee:** the full ৳10,000, never waived — the pilot already _is_ the founding discount; waiving onboarding on top of it prices delivery below cost.
+- **Onboarding fee:** the full ৳15,000 (owner, 2026-09-29, D-78), never waived — the pilot already _is_ the founding discount; waiving onboarding on top of it prices delivery below cost.
 - **Recognition:** named as a founding school on the public site and in case studies, with the school's written permission.
-- **Refundable deposit: ৳5,000 at LOI signing — OWNER TO CONFIRM the amount.** No deposit figure exists in any research document; this is a new proposal. It is collected at signing, credited in full against the first pilot invoice, and refunded in full if Acadigma fails to deliver the agreed pilot setup within 2 weeks of the signed go-live date. Its purpose is a mutual no-show deterrent, not revenue — kept small relative to the ৳10,000 onboarding fee so it is not read as a second onboarding charge.
+- **Refundable deposit: ৳5,000 at LOI signing (D-78).** No deposit figure exists in any research document; this is a new proposal. It is collected at signing, credited in full against the first pilot invoice, and refunded in full if Acadigma fails to deliver the agreed pilot setup within 2 weeks of the signed go-live date. Its purpose is a mutual no-show deterrent, not revenue — kept small relative to the ৳15,000 onboarding fee so it is not read as a second onboarding charge.
 
-**Also OWNER TO CONFIRM:** whether "founding school" status should carry any further perk (e.g. a permanent feature, priority support) beyond price-lock and public naming — the research is silent on this beyond GTM's "named on the site."
+**Decided (D-78):** "founding school" status carries no perk beyond price-lock and public naming for now (no permanent feature, no priority-support tier) — the research is silent on this beyond GTM's "named on the site."
 
 ## 5. Payment terms
 
