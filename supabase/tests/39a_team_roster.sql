@@ -15,7 +15,7 @@
 --      cannot; a read-only school refuses approval but allows rejection.
 -- =====================================================================
 begin;
-select plan(30);
+select plan(33);
 
 create schema if not exists tests;
 
@@ -278,6 +278,31 @@ select is(
      from public.list_workspace_members('39a00000-0000-4000-b000-000000000001', 'removed') r),
   array['Pending Rupa:true', 'Removed Rahim:false'],
   'the removed tab tells a rejected request (never joined) from a removed member');
+
+-- A removed admin and a pending member hold no power: both are refused
+-- only because app.has_role() counts active memberships. Pinned here.
+select tests.logout();
+update public.workspace_members set status = 'removed'
+ where id = '39a00000-0000-4000-e000-000000000002';
+select tests.login('39a00000-0000-4000-a000-000000000002');
+select throws_ok($select tests.names('pending')$, '42501', 'FORBIDDEN',
+  'a removed admin cannot read the roster');
+update public.workspace_members set status = 'active'
+ where id = '39a00000-0000-4000-e000-000000000011';
+select tests.logout();
+select is(tests.status_of('39a00000-0000-4000-e000-000000000011'), 'pending',
+  'a removed admin cannot approve (RLS: zero rows)');
+
+select tests.login('39a00000-0000-4000-a000-000000000011');
+update public.workspace_members set status = 'active'
+ where id = '39a00000-0000-4000-e000-000000000008';
+select tests.logout();
+select is(tests.status_of('39a00000-0000-4000-e000-000000000008'), 'removed',
+  'a pending member cannot approve someone else (RLS: zero rows)');
+
+-- The admin is restored for the checks below.
+update public.workspace_members set status = 'active'
+ where id = '39a00000-0000-4000-e000-000000000002';
 
 -- Read-only: approval is a write and is refused; rejection removes access
 -- and is allowed (D-300).

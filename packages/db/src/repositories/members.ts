@@ -67,8 +67,9 @@ export async function listMembers(
     p_limit: MEMBER_PAGE_SIZE + 1,
   })
   if (error) {
-    if (error.message === "FORBIDDEN") return err(FORBIDDEN)
-    if (error.message === "CURSOR_INVALID") return err(NOT_FOUND)
+    // SQLSTATE, not message text: 42501 FORBIDDEN, 22023 CURSOR_INVALID.
+    if (error.code === "42501") return err(FORBIDDEN)
+    if (error.code === "22023") return err(NOT_FOUND)
     return err(UNAVAILABLE)
   }
   const rows = z.array(rowSchema).safeParse(data)

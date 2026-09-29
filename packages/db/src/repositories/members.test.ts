@@ -114,11 +114,14 @@ describe("listMembers (D-110)", () => {
   })
 
   it.each([
-    ["FORBIDDEN", "forbidden"],
-    ["CURSOR_INVALID", "not_found"],
-    ["boom", "dependency_unavailable"],
-  ])("maps %s to %s", async (message, code) => {
-    const { client } = fakeClient({ data: null, error: { message } })
+    ["42501", "forbidden"],
+    ["22023", "not_found"],
+    ["08006", "dependency_unavailable"],
+  ])("maps SQLSTATE %s to %s", async (sqlstate, code) => {
+    const { client } = fakeClient({
+      data: null,
+      error: { code: sqlstate, message: "ignored" },
+    })
     const r = await listMembers(CTX, client, { status: "active" })
     expect(!r.ok && r.error.code).toBe(code)
   })
