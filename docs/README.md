@@ -24,10 +24,11 @@ Documents marked **binding** are contracts. Deviating from one requires a decisi
 
 ### product/legal/ — draft legal documents (not legal advice)
 
-| File                                                               | One line                                                                                |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| [`DPA-DRAFT.md`](product/legal/DPA-DRAFT.md)                       | Draft Data Processing Agreement — for lawyer review, not legal advice, not for use yet. |
-| [`PRIVACY-POLICY-DRAFT.md`](product/legal/PRIVACY-POLICY-DRAFT.md) | Draft privacy policy — for lawyer review, not legal advice, not for publication.        |
+| File                                                                   | One line                                                                                                                                                    |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`DPA-DRAFT.md`](product/legal/DPA-DRAFT.md)                           | Draft Data Processing Agreement — for lawyer review, not legal advice, not for use yet.                                                                     |
+| [`PRIVACY-POLICY-DRAFT.md`](product/legal/PRIVACY-POLICY-DRAFT.md)     | Draft privacy policy — for lawyer review, not legal advice, not for publication.                                                                            |
+| [`LEGAL-AUDIT-2026-09-29.md`](product/legal/LEGAL-AUDIT-2026-09-29.md) | Read-only legal/compliance audit of the app and website against the owner's legal checklist — prioritised issues, lawyer questions, gaps. Not legal advice. |
 
 ### product/research/ — market and competitive research
 
