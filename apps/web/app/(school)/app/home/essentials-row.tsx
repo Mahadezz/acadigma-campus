@@ -8,7 +8,6 @@ import { signOut } from "@/app/(auth)/actions"
 import { GuardedSignOutButton } from "@/app/(shared)/offline/sign-out-guard"
 import type { Locale } from "@/lib/locale"
 
-import { LanguageSwitchButton } from "./language-switch-button"
 import { SwitchToFullAppButton } from "./switch-to-full-app-button"
 
 /**
@@ -37,18 +36,26 @@ const ROW_BUTTON_CLASSNAME = buttonVariants({
  * Review fix (BLOCKER, PR #72): basic mode replaces the whole shell below
  * `AppShell`'s `TopBar` (`(school)/app/layout.tsx`), so its `UserMenu` —
  * the only place with Sign out and the language switch — disappeared with
- * it. Both are now here instead, icon + label, `min-h-14` like every other
- * item in this row. "Profile" is dropped (was D-405 item 6's placeholder
- * link to `/account/security`, a layout-less dead end with no Home button
- * of its own) rather than given a shell — no real profile screen exists
- * anywhere in this app yet to link to (see D-405's review addendum).
- * "Settings" reuses `/app/settings`, which already routes a teacher/staff
- * to the read-only overview and an owner/admin to the full grouped list —
- * no basic-specific settings screen was in this Part's file list.
+ * it. Sign out is now here instead, icon + label, `min-h-14` like every
+ * other item in this row. "Profile" is dropped (was D-405 item 6's
+ * placeholder link to `/account/security`, a layout-less dead end with no
+ * Home button of its own) rather than given a shell — no real profile
+ * screen exists anywhere in this app yet to link to (see D-405's review
+ * addendum). "Settings" reuses `/app/settings`, which already routes a
+ * teacher/staff to the read-only overview and an owner/admin to the full
+ * grouped list — no basic-specific settings screen was in this Part's file
+ * list.
+ *
+ * D-408: the language switch used to have its own button here — a big,
+ * icon+label "switch to বাংলা/English" control on the home screen, which is
+ * exactly the "market that we're bilingual" the owner asked to stop doing.
+ * It now lives only on `/app/settings/appearance` (reached via Settings,
+ * same as the full-mode shell's UserMenu). `locale`/`languageToggle` stay in
+ * this component's props (unused here) because `home/page.tsx` — owned by
+ * an open PR (#82) this Part does not touch — still passes them.
  */
 export function EssentialsRow({
   t,
-  locale,
   userId,
 }: {
   t: {
@@ -67,7 +74,6 @@ export function EssentialsRow({
         <SettingsIcon className="size-7" aria-hidden="true" />
         {t.settingsLabel}
       </Link>
-      <LanguageSwitchButton locale={locale} labels={t.languageToggle} />
       <SwitchToFullAppButton label={t.switchToFullApp} />
       {/* F-ID-11 §4.7 (D-309): asks first if changes wait on the phone. */}
       <GuardedSignOutButton

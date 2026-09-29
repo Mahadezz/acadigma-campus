@@ -227,6 +227,69 @@ Dark mode is the common case here, not a nicety — a teacher marking attendance
 in a corridor at 7am and an admin working a night shift on fee collection are
 both real. Ship it correct.
 
+**Manual control (D-408).** `/app/settings/appearance` is the one place a
+user picks Light/Dark/System — never the header, never a nav item. It is
+built on `next-themes`'s existing `useTheme()`/`setTheme()`
+(`apps/web/app/providers.tsx`), which already persisted the choice
+per-device (`localStorage`) before this Part gave it a visible control.
+**Correction to the paragraph above:** there is no `user_preferences.theme`
+column today — that line describes a cross-device-synced preference that was
+never built; D-408 did not add one. A synced preference is a real, separate
+follow-up if the owner asks for it; until then "syncs across devices" is
+aspirational, not shipped.
+
+### 1.8 Liquid glass materials (D-408)
+
+Applied to a short, fixed list of chrome surfaces — **never** a card in a
+scrolling list, which is exactly the case `backdrop-filter` is expensive on
+the low-end Android hardware this product targets (CLAUDE.md §12):
+
+- `TopBar`, `BottomNav` (`glass-chrome`) — already sticky/fixed, already had
+  a translucent+blur pairing since D-14; this is the full material in place
+  of that pairing, not a second layer on top of it.
+- `SheetContent`, `DialogContent`, the toast (`sonner`) surface
+  (`glass-panel`) — transient overlays, not scrolling content.
+- The dashboard's "Today" pair of stat cards only (`Card`'s new, opt-in
+  `variant="glass"` — the default `Card` is unchanged). Restrained
+  deliberately: this is the one place D-408 puts glass on a card, per the
+  owner's "premium and restrained, not a gimmick".
+
+Construction, both themes (`packages/ui/tokens/tokens.css`): a translucent
+tint (`--glass-bg` for chrome, `--glass-bg-panel` for panels) over
+`--ambient-surface` (a subtle radial wash behind `AppShell`, so the blur has
+something to show), `backdrop-filter: blur() saturate()`, a 1px inset top
+"specular" highlight, and a soft layered shadow (`--glass-shadow-1/2`)
+instead of a hard drop shadow. Two required fallbacks, both dropping to the
+equivalent opaque D-57 surface with no blur: `@supports not
+(backdrop-filter: blur(1px))` and `@media (prefers-reduced-transparency:
+reduce)`. Contrast is verified by hand against the worst realistic backdrop,
+not by `scripts/check-contrast-tokens.mjs` (it does not parse `rgb(… / a)`)
+— the numbers are in DECISION-LOG D-408.
+
+This **supersedes** D-68's "cards and popovers are separated by a hairline
+1px ring, never a drop shadow" rule for the surfaces listed above only.
+Every other surface — lists, forms, non-glass cards, table rows — keeps the
+D-57/D-68 ink/paper chrome and hairline-ring elevation unchanged.
+
+### 1.9 UX checklist (owner standard, D-408)
+
+Run this on every screen before and after building it — it is the standing
+review lens, not a one-time pass:
+
+| Law               | Question                                                                          |
+| ----------------- | --------------------------------------------------------------------------------- |
+| **Fitts**         | Is the primary action large, in the thumb zone, and the easiest thing to hit?     |
+| **Hick**          | Are we showing 3–5 choices at a decision point, one marked recommended?           |
+| **Zeigarnik**     | Does unfinished work stay visible (progress, partial state) instead of vanishing? |
+| **Jakob**         | Does it use the pattern the user already knows (sheet, tabs, radio group)?        |
+| **Goal Gradient** | Can the user see the finish line on any flow longer than two steps?               |
+| **Von Restorff**  | Does exactly one thing stand out per screen — everything else quiet?              |
+| **Miller**        | Is information chunked to roughly 5–7 items, related things grouped?              |
+
+A PR that adds or reshapes a screen names, in its description, which laws
+shaped the layout when the choice was not obvious — the same discipline
+`ux-laws`'s own review format asks for.
+
 ---
 
 ## 2. Tokens

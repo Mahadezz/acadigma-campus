@@ -39,8 +39,10 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <div
+      // D-408: ambient-surface (a subtle radial wash over --background) is
+      // what glass-chrome's TopBar/BottomNav blur, instead of a flat fill.
       className={cn(
-        "bg-background text-foreground min-h-dvh",
+        "ambient-surface text-foreground min-h-dvh",
         // Room for the fixed sidebar on desktop.
         sidebar && "lg:grid lg:grid-cols-[16rem_1fr]",
         className

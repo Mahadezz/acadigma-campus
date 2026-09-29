@@ -35,8 +35,13 @@ export function TopBar({
 }: TopBarProps) {
   return (
     <header
+      // D-408: liquid glass replaces the plain translucent+blur pair this
+      // header already had — glass-chrome supplies its own background,
+      // border colour and blur (with the @supports/prefers-reduced-
+      // transparency fallback to a solid --background in tokens.css), so
+      // the old bg-background/95 + backdrop-blur pairing is redundant here.
       className={cn(
-        "bg-background/95 border-border supports-[backdrop-filter]:bg-background/75 sticky top-0 z-[var(--z-topbar)] border-b backdrop-blur",
+        "glass-chrome sticky top-0 z-[var(--z-topbar)] border-b",
         className
       )}
       style={{ paddingTop: "env(safe-area-inset-top)" }}

@@ -508,6 +508,44 @@
   --shadow-overlay: 0 0 0 1px var(--border-strong);
   --shadow-sheet: 0 -8px 28px -8px rgb(11 11 11 / 0.18);
   --shadow-nav: 0 -1px 0 0 var(--border); /* a rule, not a shadow */
+
+  /* — liquid glass materials (D-408, supersedes D-68's "hairline ring only"
+     elevation rule for the surfaces named below). Applied to a short, fixed
+     list of chrome layers only — TopBar, BottomNav, Sheet/Dialog content,
+     Toast, and the dashboard's stat cards — never a long scrolling list
+     (performance non-negotiable). The opacity floor on each tint is chosen
+     so the worst-case composite (an adversarial, maximally-opposite backdrop
+     behind the blur) still clears 4.5:1 for the theme's own --foreground on
+     --glass-bg and --card-foreground on --glass-bg-panel — see DECISION-LOG
+     D-408 for the worked contrast numbers; scripts/check-contrast-tokens.mjs
+     does not parse rgb()-with-alpha, so this is verified by hand, not by
+     the script, and documented as such (honesty rule, CLAUDE.md). */
+  --glass-bg: rgb(255 255 255 / 0.7); /* chrome: TopBar, BottomNav */
+  --glass-bg-panel: rgb(255 255 255 / 0.8); /* Sheet, Dialog, Toast, Card */
+  --glass-border: rgb(11 11 11 / 0.08);
+  --glass-highlight: rgb(255 255 255 / 0.9); /* inner top specular edge */
+  --glass-shadow-1: 0 1px 1px rgb(11 11 11 / 0.04);
+  --glass-shadow-2: 0 16px 40px -16px rgb(11 11 11 / 0.18);
+  --glass-blur: 20px;
+  --glass-saturate: 180%;
+  /* Ambient wash behind glass chrome — subtle, brand-indigo/amber tinted
+     radial washes over --background, so the blur has something to show
+     without ever becoming a hero-blob gradient (DESIGN-SYSTEM §2.7 "motion
+     must be motivated" sibling rule: colour must be motivated too — this is
+     the one place a wash is allowed, because it exists only to be blurred,
+     never seen sharp). */
+  --ambient-gradient:
+    radial-gradient(
+      120% 60% at 12% -10%,
+      oklch(0.86 0.05 269 / 0.32),
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 50% at 100% 0%,
+      oklch(0.86 0.06 74 / 0.24),
+      transparent 50%
+    ),
+    var(--background);
 }
 
 /* ---------------------------------------------------------------------------
@@ -633,6 +671,31 @@
   --shadow-overlay: 0 0 0 1px var(--border-strong);
   --shadow-sheet: 0 -8px 28px -8px rgb(0 0 0 / 0.55);
   --shadow-nav: 0 -1px 0 0 var(--border);
+
+  /* — liquid glass materials, dark (D-408). Tint is near-black, not white —
+     alpha floors chosen the same way as the light theme's (see that block's
+     comment): worst-case composite still clears 4.5:1 for --foreground /
+     --card-foreground. */
+  --glass-bg: rgb(20 20 22 / 0.68);
+  --glass-bg-panel: rgb(22 22 24 / 0.78);
+  --glass-border: rgb(255 255 255 / 0.09);
+  --glass-highlight: rgb(255 255 255 / 0.07);
+  --glass-shadow-1: 0 1px 1px rgb(0 0 0 / 0.5);
+  --glass-shadow-2: 0 20px 48px -18px rgb(0 0 0 / 0.65);
+  --glass-blur: 22px;
+  --glass-saturate: 160%;
+  --ambient-gradient:
+    radial-gradient(
+      120% 60% at 12% -10%,
+      oklch(0.32 0.06 269 / 0.4),
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 50% at 100% 0%,
+      oklch(0.32 0.07 74 / 0.3),
+      transparent 50%
+    ),
+    var(--background);
 }
 
 /* ---------------------------------------------------------------------------
@@ -875,6 +938,43 @@
   color: var(--muted-foreground);
 }
 
+/* D-408 liquid glass. Two materials: `glass-chrome` (TopBar, BottomNav — a
+   little more opaque, since it sits over scrolling content) and
+   `glass-panel` (Sheet/Dialog content, Toast, opt-in Card — transient
+   surfaces, not scrolling lists). Both get the same construction: a
+   translucent tint, backdrop blur+saturate, a 1px inner top "specular"
+   highlight, and a soft layered shadow instead of a hard drop shadow. The
+   `@supports`/`prefers-reduced-transparency` fallbacks right below make both
+   degrade to the equivalent opaque D-57 surface — never a transparent
+   surface with no blur, which would be unreadable. */
+@utility glass-chrome {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  box-shadow:
+    var(--glass-shadow-1),
+    var(--glass-shadow-2),
+    inset 0 1px 0 0 var(--glass-highlight);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+}
+@utility glass-panel {
+  background: var(--glass-bg-panel);
+  border-color: var(--glass-border);
+  box-shadow:
+    var(--glass-shadow-1),
+    var(--glass-shadow-2),
+    inset 0 1px 0 0 var(--glass-highlight);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+}
+/* The ambient wash (see --ambient-gradient above) behind the AppShell frame,
+   so glass-chrome has something to blur other than a flat fill. */
+@utility ambient-surface {
+  background: var(--ambient-gradient);
+}
+
 /* ---------------------------------------------------------------------------
    12. Reduced motion — flips the global multiplier, so every tokenised
    transition collapses to 0 with no component changes. Opacity cross-fades are
@@ -892,5 +992,60 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   13. Liquid glass fallbacks (D-408) — unlayered, so they beat the
+   `@utility`-generated rules above regardless of source order (same pattern
+   as the reduced-motion block and the :lang(bn) override earlier in this
+   file: unlayered CSS always wins over anything inside a Tailwind layer).
+   Both degrade `glass-chrome`/`glass-panel` to the equivalent opaque D-57
+   surface (--background / --card) with no blur — never a see-through panel
+   nobody can read.
+   --------------------------------------------------------------------------- */
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-chrome {
+    background: var(--background);
+  }
+  .glass-panel {
+    background: var(--card);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-chrome {
+    background: var(--background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .glass-panel {
+    background: var(--card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* sonner's own classes, not a data-slot this package controls directly —
+   styled here rather than via `cn()` inside ui/sonner.tsx. `!important` on
+   the two glass-only properties matches sonner's own stylesheet specificity
+   (it sets background/border inline via the --normal-bg/--normal-border CSS
+   vars already wired in ui/sonner.tsx; blur/saturate need to win outright). */
+[data-sonner-toast] {
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate)) !important;
+}
+@supports not (backdrop-filter: blur(1px)) {
+  [data-sonner-toast] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  [data-sonner-toast] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }

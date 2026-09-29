@@ -78,8 +78,10 @@ export function ChoiceCard({
   )
 
   const shared = cn(
-    "flex min-h-[120px] w-full items-center gap-4 rounded-lg bg-card p-4 text-left shadow-flat transition-colors",
-    disabled ? "cursor-not-allowed opacity-60" : "hover:bg-accent/5",
+    "flex min-h-[120px] w-full items-center gap-4 rounded-lg bg-card p-4 text-left shadow-flat transition-[background-color,transform] duration-150",
+    disabled
+      ? "cursor-not-allowed opacity-60"
+      : "hover:bg-accent/5 active:scale-[0.99]", // app-polish: tap feedback
     "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
     className
   )

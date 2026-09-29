@@ -26,9 +26,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
+          // D-408: glass tint; the blur/saturate themselves are applied to
+          // [data-sonner-toast] in tokens.css, since sonner renders its own
+          // element outside this component's className reach.
+          "--normal-bg": "var(--glass-bg-panel)",
           "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
+          "--normal-border": "var(--glass-border)",
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }

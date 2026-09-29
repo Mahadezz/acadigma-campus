@@ -2,12 +2,25 @@ import * as React from "react"
 
 import { cn } from "../../lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+/**
+ * `variant="glass"` (D-408) is opt-in, never the default: liquid glass is
+ * scoped to a named, fixed set of surfaces (DESIGN-SYSTEM v2 §2b) — the
+ * dashboard's stat cards today — not every Card in the product, since blur
+ * on a long list of cards is exactly the performance case the non-negotiable
+ * rules out. A plain Card is unchanged.
+ */
+function Card({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"div"> & { variant?: "default" | "glass" }) {
   return (
     <div
       data-slot="card"
+      data-variant={variant}
       className={cn(
-        "flex flex-col gap-6 rounded-lg bg-card py-6 text-card-foreground shadow-flat",
+        "flex flex-col gap-6 rounded-lg py-6 text-card-foreground",
+        variant === "glass" ? "glass-panel" : "bg-card shadow-flat",
         className
       )}
       {...props}

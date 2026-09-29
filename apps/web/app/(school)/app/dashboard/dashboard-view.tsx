@@ -136,8 +136,11 @@ function SlotCard(props: {
   emptyDescription: string
   children?: React.ReactNode
 }) {
+  // D-408: the "Today" pair is the one surface named in the owner's glass
+  // brief ("cards on the dashboard") — restrained to these two, not every
+  // card on the page.
   return (
-    <Card className="gap-0 py-0">
+    <Card variant="glass" className="gap-0 py-0">
       <CardHeader className="pt-5">
         <h3 className={TITLE}>{props.title}</h3>
       </CardHeader>

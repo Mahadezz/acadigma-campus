@@ -101,8 +101,9 @@ export function BottomNav({
   return (
     <nav
       aria-label={label}
+      // D-408: glass-chrome (see top-bar.tsx for the same swap and why).
       className={cn(
-        "bg-background/95 border-border supports-[backdrop-filter]:bg-background/85 fixed inset-x-0 bottom-0 z-[var(--z-bottomnav)] border-t backdrop-blur lg:hidden",
+        "glass-chrome fixed inset-x-0 bottom-0 z-[var(--z-bottomnav)] border-t lg:hidden",
         className
       )}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
@@ -159,7 +160,8 @@ export function BottomNavItem({
           // Full 56px column height is the target, not just the icon (§3.1).
           "flex h-14 w-full flex-col items-center justify-center gap-0.5 px-1 py-2 text-[0.6875rem]",
           "focus-visible:ring-ring outline-none focus-visible:ring-2 focus-visible:ring-inset",
-          "[transition-duration:var(--duration-fast)] [transition-property:color] [transition-timing-function:var(--ease-standard)]",
+          // app-polish: tap feedback (<150ms scale) on every pressable.
+          "transition-[color,transform] duration-150 ease-out active:scale-95",
           active
             ? "text-primary font-semibold"
             : "text-muted-foreground hover:text-foreground font-medium",
@@ -423,7 +425,8 @@ export function BottomNavFromConfig({
                 className: cn(
                   "flex h-14 w-full flex-col items-center justify-center gap-0.5 px-1 py-2 text-[0.6875rem]",
                   "focus-visible:ring-ring outline-none focus-visible:ring-2 focus-visible:ring-inset",
-                  "[transition-duration:var(--duration-fast)] [transition-property:color]",
+                  // app-polish: tap feedback (<150ms scale) on every pressable.
+                  "transition-[color,transform] duration-150 ease-out active:scale-95",
                   active
                     ? "text-primary font-semibold"
                     : "text-muted-foreground hover:text-foreground font-medium"
