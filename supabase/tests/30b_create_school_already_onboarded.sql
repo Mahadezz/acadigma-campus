@@ -6,19 +6,18 @@
 --
 -- Owner report 2026-09-29: no in-app link reached "Create a school" for a
 -- signed-in user (workspace-switcher.tsx, apps/web/app/(personal)/personal
--- /page.tsx — both fixed in this PR). Before shipping new entry points into
+-- /page.tsx — both fixed in this PR). Before shipping a new entry point into
 -- an already-existing RPC, prove the RPC itself was already safe for the
--- population that will now actually reach it:
---   1. a caller who exited onboarding via the tutoring link (§4.2's "quiet
---      third affordance" — completed_at set, no school) creates a school
---      cleanly, and still has exactly one personal workspace;
---   2. a caller who already owns a school (the common "create a second
---      school" case) creates another one with a different idempotency key
---      — two schools, still exactly one personal workspace, no cross-talk
---      between the two onboarding_progress writes.
+-- population that now actually reaches it: a caller who exited onboarding
+-- via the tutoring link (§4.2's "quiet third affordance" — completed_at
+-- set, no school) creates a school cleanly, and still has exactly one
+-- personal workspace. (Ponytail review: an "owner of one school creates a
+-- second" scenario was cut here — that caller's switcher chip already had
+-- more than one workspace and was already tappable before this PR, so it
+-- proves nothing this diff changed.)
 -- =====================================================================
 begin;
-select plan(11);
+select plan(6);
 
 create schema if not exists tests;
 
@@ -120,40 +119,6 @@ select is(
   (select count(*)::int from public.workspace_members
     where user_id = 'f1050402-0000-0000-0000-000000000001' and status = 'active'),
   2, 'the caller has exactly two active memberships: their personal workspace and the new school');
-
--- ---------------------------------------------------------------------
--- 2. Already owns a school; creates a second one (distinct idempotency key).
--- ---------------------------------------------------------------------
-select tests.mkuser('f1050402-0000-0000-0000-000000000002', 'p4b.principal@test.local', 'Principal');
-
-select tests.login('f1050402-0000-0000-0000-000000000002');
-create temp table first_school as
-  select public.create_school_workspace(
-    tests.school_input('b0000000-0000-4000-8000-000000000002',
-      jsonb_build_object('name', 'First School'))) as r;
-create temp table second_school as
-  select public.create_school_workspace(
-    tests.school_input('b0000000-0000-4000-8000-000000000003',
-      jsonb_build_object('name', 'Second School Same Owner'))) as r;
-select tests.logout();
-
-select is((select r ->> 'error' from first_school), null, 'first school creates cleanly');
-select is((select r ->> 'error' from second_school), null, 'a second school, different idempotency key, also creates cleanly');
-select isnt(
-  (select r ->> 'workspace_id' from first_school),
-  (select r ->> 'workspace_id' from second_school),
-  'the two calls produced two DIFFERENT workspaces, not a replay of the first');
-
-select is(
-  (select count(*)::int from public.workspaces
-    where created_by = 'f1050402-0000-0000-0000-000000000002' and type = 'personal'),
-  1, 'an owner of two schools still has exactly one personal workspace');
-
-select is(
-  (select count(*)::int from public.workspace_members
-    where user_id = 'f1050402-0000-0000-0000-000000000002'
-      and role = 'owner' and status = 'active'),
-  3, 'owner of personal + two schools: three active owner memberships, none duplicated');
 
 select * from finish();
 rollback;

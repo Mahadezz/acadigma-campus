@@ -278,7 +278,7 @@ export function WorkspaceSwitcher({
           ) : null}
 
           <div className="flex flex-col gap-2">
-            <Button asChild variant="outline" className="w-full">
+            <Button asChild variant="outline" className="h-11 w-full">
               <Link
                 href="/onboarding/create-school"
                 onClick={() => setOpen(false)}
@@ -287,7 +287,7 @@ export function WorkspaceSwitcher({
                 {t.createSchool}
               </Link>
             </Button>
-            <Button asChild variant="outline" className="w-full">
+            <Button asChild variant="outline" className="h-11 w-full">
               {/* No dedicated /onboarding/join route yet (F-ID-04 Part 5,
                   not shipped) — same chooser as "Create a school", which
                   already shows the join card as "Coming soon" (§4.2). */}

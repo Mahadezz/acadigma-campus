@@ -34,6 +34,8 @@
 
 **Risk areas:** (a) the switcher's single-workspace shortcut is read by every shell — narrowed the condition rather than removing it, to avoid changing behaviour for school-only staff; (b) reusing a shared, budget-constrained live-Supabase fixture account for e2e without corrupting sibling specs' assumptions.
 
+**Review run this session** (CLAUDE.md's always-on engineering discipline): `typescript-reviewer`, `react-reviewer`, and `ponytail-review` (background agents) against the full diff. Findings and fixes: `react-reviewer` HIGH — the two new switcher buttons defaulted to `h-9` (36px), below the 44px rule — fixed to `h-11`; `ponytail-review` — the pgTAP file's second scenario tested a population the diff doesn't affect — cut, `plan(11)` → `plan(6)`. Both addressed in this branch before the report below. `typescript-reviewer`'s result had not returned when this report was finalized; see the PR thread for it.
+
 ---
 
 ## 2. Environment
@@ -82,12 +84,13 @@ Not measured in isolation for this change — a UI-only diff to two already-cove
 
 No migration in this change. New coverage added for the existing `public.create_school_workspace` function, called by an already-onboarded caller — split into a new file (`30b_...sql`) rather than appended to `30_create_school_workspace.sql`, which is mid-edit in open PR #90.
 
-| Assertion group                                                                                                                                                                      | File                                                     | Result              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ------------------- |
-| A caller who "completed" onboarding via the tutoring exit creates a school cleanly, still has exactly one personal workspace, `onboarding_progress` overwritten to `create_school`   | `supabase/tests/30b_create_school_already_onboarded.sql` | not run — see below |
-| A caller who already owns one school creates a second (different idempotency key): two distinct schools, still one personal workspace, three active owner memberships, no cross-talk | same file                                                | not run — see below |
+| Assertion group                                                                                                                                                                    | File                                                      | Result               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | -------------------- |
+| A caller who "completed" onboarding via the tutoring exit creates a school cleanly, still has exactly one personal workspace, `onboarding_progress` overwritten to `create_school` | `supabase/tests/30b_create_school_already_onboarded.sql` | not run — see below |
 
-**Not run to completion.** `pnpm db:test` was attempted against the shared cloud dev branch. It failed with `permission denied for schema tests` — reproduced **identically on the pre-existing, unmodified `30_create_school_workspace.sql`** and on several other unrelated, untouched test files in the same run, which confirms this is a pre-existing environment/concurrency issue on the shared dev branch (many other worktree sessions were active at the same time), not something this change caused. The new file (`30b_...sql`) is written, `plan(11)` matches its 11 assertions, and it follows the exact helper/fixture pattern (`tests.mkuser`/`tests.login`/`tests.logout`/`tests.school_input`) `30_create_school_workspace.sql` already uses successfully in CI — but it has not been executed end to end by me. **This needs a real `pnpm db:test` run against an uncontended branch before merge.**
+Originally also had a second scenario ("owner of one school creates a second"); cut after `ponytail-review` (background reviewer) correctly pointed out that population's switcher chip already had more than one workspace and was already tappable before this PR — that scenario proved nothing this diff changed. `plan(6)` now matches the six remaining assertions exactly.
+
+**Not run to completion.** `pnpm db:test` was attempted against the shared cloud dev branch. It failed with `permission denied for schema tests` — reproduced **identically on the pre-existing, unmodified `30_create_school_workspace.sql`** and on several other unrelated, untouched test files in the same run, which confirms this is a pre-existing environment/concurrency issue on the shared dev branch (many other worktree sessions were active at the same time), not something this change caused. The new file (`30b_...sql`) is written and follows the exact helper/fixture pattern (`tests.mkuser`/`tests.login`/`tests.logout`/`tests.school_input`) `30_create_school_workspace.sql` already uses successfully in CI — but it has not been executed end to end by me. **This needs a real `pnpm db:test` run against an uncontended branch before merge.**
 
 ---
 
@@ -109,7 +112,7 @@ Not run live (same gate as above). Both new CTAs reuse existing, already axe-cle
 
 | Check                                        | 360 × 800                                                                                                                                      | 1280 × 800 |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| Touch targets ≥ 44 px                        | code review: `h-11` primary, `min-h-11` secondary link, matching this repo's existing convention (`invite-accept.tsx`, `onboarding-shell.tsx`) | same       |
+| Touch targets ≥ 44 px                        | `h-11` on every new button (personal home's primary + both switcher outline buttons; the switcher pair was `react-reviewer`-flagged at the default 36px `h-9` and fixed), `min-h-11` on the one text-style secondary link | same       |
 | Visible focus ring                           | inherited from `Button`/`Link` primitives, unchanged                                                                                           | same       |
 | Primary action completable by keyboard alone | plain `<a>` via `next/link`, unchanged pattern                                                                                                 | same       |
 | No horizontal scroll                         | single-column `flex flex-col` action group                                                                                                     | n/a        |
