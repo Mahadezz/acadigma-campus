@@ -60,9 +60,15 @@ export function MembershipView({
   candidatesFailed: boolean
 }) {
   const school = (text: string) => text.replaceAll("{school}", schoolName)
+  // Held here, not in TransferSection: a transfer that makes the caller an
+  // admin removes that section on the refresh, and the confirmation with it.
+  const [done, setDone] = useState<string | null>(null)
 
   return (
     <div className="space-y-4">
+      <div aria-live="polite">
+        {done ? <InlineAlert tone="success">{done}</InlineAlert> : null}
+      </div>
       <p className="text-sm">
         {school(t.yourRole).replace("{role}", roles[role].toLowerCase())}
       </p>
@@ -73,6 +79,7 @@ export function MembershipView({
           schoolName={schoolName}
           candidates={candidates ?? []}
           failed={candidatesFailed}
+          onDone={setDone}
         />
       ) : null}
       <LeaveSection t={t} schoolName={schoolName} />
@@ -150,12 +157,14 @@ function TransferSection({
   schoolName,
   candidates,
   failed,
+  onDone,
 }: {
   t: T
   capabilities: Messages["team"]["manage"]["capabilities"]
   schoolName: string
   candidates: OwnershipCandidate[]
   failed: boolean
+  onDone: (text: string) => void
 }) {
   const router = useRouter()
   const [memberId, setMemberId] = useState("")
@@ -180,12 +189,13 @@ function TransferSection({
       })
       setPassword("")
       if (result.ok) {
-        setNotice({
-          tone: "success",
-          text: t.transfer.done
+        onDone(
+          t.transfer.done
             .replace("{name}", target.fullName)
-            .replaceAll("{school}", schoolName),
-        })
+            .replaceAll("{school}", schoolName)
+        )
+        setMemberId("")
+        setConfirmName("")
         router.refresh()
       } else {
         setNotice({ tone: "error", text: errorText(t, result.error) })

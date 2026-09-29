@@ -492,6 +492,16 @@ export async function transferOwnership(
         )
       )
     }
+    // 28000: no password sign-in on this session in the last 5 minutes.
+    if (error.code === "28000") {
+      return err(
+        marked(
+          "unauthenticated",
+          "Enter your password again to transfer ownership.",
+          MEMBER_ERROR.REAUTH_FAILED
+        )
+      )
+    }
     if (error.code === "42501") return err(FORBIDDEN)
     return err(UNAVAILABLE)
   }

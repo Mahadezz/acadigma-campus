@@ -204,6 +204,15 @@ describe("transferOwnership", () => {
         })
       )
     ).toEqual(["TARGET_NOT_ELIGIBLE"])
+    f = fakeClient([], { data: null, error: { code: "28000" } })
+    expect(
+      marker(
+        await transferOwnership(ctxAs("owner"), f.client, {
+          memberId: MEMBER,
+          keepOwner: false,
+        })
+      )
+    ).toEqual(["REAUTH_FAILED"])
     f = fakeClient([], { data: null, error: { code: "42501" } })
     const r = await transferOwnership(ctxAs("owner"), f.client, {
       memberId: MEMBER,
