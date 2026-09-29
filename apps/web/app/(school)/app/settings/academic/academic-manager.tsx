@@ -146,6 +146,7 @@ export function AcademicManager({
             years={years}
             pending={pending}
             startTransition={startTransition}
+            refresh={() => router.refresh()}
             setNotice={setNotice}
             t={t}
           />
@@ -164,6 +165,7 @@ export function AcademicManager({
               terms={terms}
               pending={pending}
               startTransition={startTransition}
+              refresh={() => router.refresh()}
               setNotice={setNotice}
               t={t}
             />
@@ -186,6 +188,7 @@ export function AcademicManager({
               initialWeights={weights}
               pending={pending}
               startTransition={startTransition}
+              refresh={() => router.refresh()}
               setNotice={setNotice}
               t={t}
             />
@@ -199,6 +202,7 @@ export function AcademicManager({
             academicSettings={academicSettings}
             pending={pending}
             startTransition={startTransition}
+            refresh={() => router.refresh()}
             setNotice={setNotice}
             t={t}
           />
@@ -244,12 +248,14 @@ function YearsPanel({
   years,
   pending,
   startTransition,
+  refresh,
   setNotice,
   t,
 }: {
   years: AcademicYearSummary[]
   pending: boolean
   startTransition: (fn: () => Promise<void> | void) => void
+  refresh: () => void
   setNotice: (n: Notice) => void
   t: T
 }) {
@@ -270,6 +276,7 @@ function YearsPanel({
         setAdding(false)
         setForm({ name: "", startsOn: "", endsOn: "" })
         setNotice({ tone: "success", text: t.saved })
+        refresh()
         return
       }
       const issue = result.error.fieldErrors?.endsOn?.[0]
@@ -289,6 +296,7 @@ function YearsPanel({
           ? { tone: "success", text: t.saved }
           : { tone: "error", text: codeMessage(result.error.code, t) }
       )
+      if (result.ok) refresh()
     })
   }
 
@@ -445,6 +453,7 @@ function TermsPanel({
   terms,
   pending,
   startTransition,
+  refresh,
   setNotice,
   t,
 }: {
@@ -452,6 +461,7 @@ function TermsPanel({
   terms: Term[]
   pending: boolean
   startTransition: (fn: () => Promise<void> | void) => void
+  refresh: () => void
   setNotice: (n: Notice) => void
   t: T
 }) {
@@ -473,6 +483,7 @@ function TermsPanel({
         setAdding(false)
         setForm({ name: "", startsOn: "", endsOn: "" })
         setNotice({ tone: "success", text: t.saved })
+        refresh()
         return
       }
       const issue =
@@ -494,6 +505,7 @@ function TermsPanel({
           ? { tone: "success", text: t.removed }
           : { tone: "error", text: codeMessage(result.error.code, t) }
       )
+      if (result.ok) refresh()
     })
   }
 
@@ -642,6 +654,7 @@ function WeightingPanel({
   initialWeights,
   pending,
   startTransition,
+  refresh,
   setNotice,
   t,
 }: {
@@ -650,6 +663,7 @@ function WeightingPanel({
   initialWeights: Record<string, number>
   pending: boolean
   startTransition: (fn: () => Promise<void> | void) => void
+  refresh: () => void
   setNotice: (n: Notice) => void
   t: T
 }) {
@@ -677,6 +691,7 @@ function WeightingPanel({
           ? { tone: "success", text: t.saved }
           : { tone: "error", text: codeMessage(result.error.code, t) }
       )
+      if (result.ok) refresh()
     })
   }
 
@@ -729,12 +744,14 @@ function RulesPanel({
   academicSettings,
   pending,
   startTransition,
+  refresh,
   setNotice,
   t,
 }: {
   academicSettings: AcademicSettings
   pending: boolean
   startTransition: (fn: () => Promise<void> | void) => void
+  refresh: () => void
   setNotice: (n: Notice) => void
   t: T
 }) {
@@ -755,6 +772,7 @@ function RulesPanel({
           ? { tone: "success", text: t.saved }
           : { tone: "error", text: codeMessage(result.error.code, t) }
       )
+      if (result.ok) refresh()
     })
   }
 
