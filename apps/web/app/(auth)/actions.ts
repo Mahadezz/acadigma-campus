@@ -129,6 +129,13 @@ export async function registerWithPassword(
 
   if (error) {
     await throttleRecordFailure(supabase, "register", ipKey)
+    // GoTrue can also refuse a taken address outright (422
+    // `user_already_exists` — seen on the e2e-live stack, GoTrue v2.196, D-76)
+    // rather than returning the identity-less user handled below. Same
+    // answer either way (§4.1): this email already has an account.
+    if (error.code === "user_already_exists" || error.code === "email_exists") {
+      return err(apiError("conflict", t.auth.register.errorEmailTaken))
+    }
     const log = await requestLogger({ route: "auth.register" })
     log.warn(
       { status: error.status, code: error.code },

@@ -42,7 +42,7 @@ test("owner admits a student, finds them and opens the profile", async ({
   await page.getByLabel("First name (English)").fill("Rahim")
   await page.getByLabel("Last name (English)").fill(last)
   await page.getByLabel(/Full name in Bangla/).fill("রহিম উদ্দিন")
-  await page.getByLabel("Male").check()
+  await page.getByLabel("Male", { exact: true }).check()
   await page.getByLabel("Date of birth").fill("2014-03-09")
   await page.getByLabel("Class and section").selectOption({ index: 1 })
   await page.getByLabel("Guardian's name").fill("Karim Uddin")

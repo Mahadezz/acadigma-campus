@@ -60,9 +60,31 @@ test("owner sees the whole directory, searches Farhana, and opens her sheet", as
 test("a parent is redirected away from the staff directory", async ({
   page,
 }) => {
-  await signIn(page, "parent@acadigma.test")
+  // The seeded parent lands on their Personal workspace (seed.sql §5), not
+  // /app; switching to the school puts the `parent` membership in play, as
+  // shell-gate.spec.ts does.
+  await page.goto("/login")
+  await page.getByLabel("Email").fill("parent@acadigma.test")
+  await page.getByLabel("Password").fill("password123")
+  await page.getByRole("button", { name: "Sign in" }).click()
+  await expect(page).toHaveURL("/personal")
+  await page.getByRole("button", { name: /switch workspace/i }).click()
+  await page
+    .getByRole("dialog", { name: "Switch workspace" })
+    .getByRole("button", { name: "Acadigma Model School" })
+    .click()
+  await expect(page).toHaveURL("/family")
+
   await page.goto("/app/staff")
   // A parent's canonical shell is /family (F-ID-03 §4.4); requireShell("school")
   // redirects them there before staff.view is ever checked.
   await expect(page).toHaveURL(/\/family/)
+
+  // Leave the seeded parent on Personal for later journeys (D-76).
+  await page.getByRole("button", { name: /switch workspace/i }).click()
+  await page
+    .getByRole("dialog", { name: "Switch workspace" })
+    .getByRole("button", { name: /Personal/ })
+    .click()
+  await expect(page).toHaveURL("/personal")
 })

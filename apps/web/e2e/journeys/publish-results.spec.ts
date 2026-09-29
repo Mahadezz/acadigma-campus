@@ -57,6 +57,11 @@ test("owner publishes results withholding one student, then unpublishes", async 
     .getByRole("link", { name: /^Enter marks — / })
     .first()
     .click()
+  // Count and type into the marks page's boxes, not the exam page's: typed
+  // before the navigation landed, the digits went into the paper's date
+  // fields and saved an entry window in year 1 (e2e-live, D-76).
+  await expect(page).toHaveURL(/\/app\/marks\/[0-9a-f-]{36}$/)
+  await page.waitForLoadState("networkidle") // typed marks need a hydrated page
   const inputs = page.getByRole("textbox")
   const count = await inputs.count()
   await inputs.first().focus()

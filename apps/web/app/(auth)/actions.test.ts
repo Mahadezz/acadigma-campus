@@ -56,6 +56,7 @@ const mockRpc = vi.fn()
 const mockSignInWithPassword = vi.fn()
 const mockMaybeSingleProfile = vi.fn()
 const mockGetUser = vi.fn()
+const mockSignUp = vi.fn()
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
@@ -65,6 +66,7 @@ vi.mock("@/lib/supabase/server", () => ({
       signOut: mockSignOut,
       signInWithPassword: mockSignInWithPassword,
       getUser: mockGetUser,
+      signUp: mockSignUp,
     },
     rpc: mockRpc,
     from: (table: string) => {
@@ -126,7 +128,8 @@ vi.mock("@acadigma/domain/auth", async (importOriginal) => {
   }
 })
 
-const { resetPassword, signInWithPassword, signOut } = await import("./actions")
+const { registerWithPassword, resetPassword, signInWithPassword, signOut } =
+  await import("./actions")
 
 const FAKE_USER = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -478,5 +481,49 @@ describe("signOut (review fix: shared-device display-preference leak)", () => {
       "NEXT_REDIRECT"
     )
     expect(mockCallOrder).toContain("redirect:/login")
+  })
+})
+
+describe("registerWithPassword (D-76: a taken email refused outright by GoTrue)", () => {
+  const input = {
+    fullName: "Duplicate Owner",
+    email: "owner@acadigma.test",
+    password: "Correct-Horse-Battery-99!",
+    termsAccepted: true,
+  }
+
+  it.each(["user_already_exists", "email_exists"])(
+    "maps GoTrue's 422 %s to the duplicate-account message, not a generic failure",
+    async (code) => {
+      mockSignUp.mockResolvedValue({
+        data: { user: null },
+        error: { status: 422, code },
+      })
+
+      const result = await registerWithPassword(input)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.code).toBe("conflict")
+        expect(result.error.message).toMatch(/already has an account/)
+      }
+      expect(mockThrottleRecordFailure).toHaveBeenCalledWith(
+        expect.anything(),
+        "register",
+        expect.any(String)
+      )
+    }
+  )
+
+  it("still answers a genuine GoTrue failure with the generic retry message", async () => {
+    mockSignUp.mockResolvedValue({
+      data: { user: null },
+      error: { status: 503, code: "unexpected_failure" },
+    })
+
+    const result = await registerWithPassword(input)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("dependency_unavailable")
   })
 })

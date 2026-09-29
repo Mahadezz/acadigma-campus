@@ -57,6 +57,10 @@ test("owner locks marks, computes results and reads the ranked class", async ({
     .getByRole("link", { name: /^Enter marks — / })
     .first()
     .click()
+  // Same race publish-results.spec.ts hit (D-76): wait for the marks page
+  // before counting and typing into its boxes.
+  await expect(page).toHaveURL(/\/app\/marks\/[0-9a-f-]{36}$/)
+  await page.waitForLoadState("networkidle") // typed marks need a hydrated page
   const inputs = page.getByRole("textbox")
   const count = await inputs.count()
   expect(count).toBeGreaterThan(1)
