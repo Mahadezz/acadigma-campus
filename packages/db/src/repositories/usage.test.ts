@@ -191,6 +191,20 @@ describe("requireWritable — the PLAN_READ_ONLY guard (D-29)", () => {
     })
   })
 
+  it("refuses a write when the school is archived (D-211)", async () => {
+    const client = fakeClient({
+      workspaces: queryResult({
+        data: { access_mode: "normal", access_mode_reason: null, status: "archived" },
+        error: null,
+      }),
+    })
+    const result = await requireWritable(CTX, client)
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "PLAN_READ_ONLY", reason: "This school is archived." },
+    })
+  })
+
   it("fails closed (refuses) when the workspace row cannot be read", async () => {
     const client = fakeClient({
       workspaces: queryResult({ data: null, error: { message: "timeout" } }),
