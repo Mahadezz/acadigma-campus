@@ -186,7 +186,7 @@ select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000001');
 select throws_ok(
   $$select * from public.list_workspace_members('39a00000-0000-4000-b000-000000000001',
-      'active', null, tests.owner_b_member())$,
+      'active', null, tests.owner_b_member())$$,
   '22023', 'CURSOR_INVALID',
   'a cursor from another school is refused');
 
