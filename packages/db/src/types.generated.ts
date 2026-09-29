@@ -388,11 +388,9 @@ export type Database = {
           channel_id: string
           created_at: string
           id: string
-          last_read_at: string | null
           left_at: string | null
           member_id: string
           muted_until: string | null
-          role: Database["public"]["Enums"]["channel_member_role"]
           updated_at: string
           workspace_id: string
         }
@@ -400,11 +398,9 @@ export type Database = {
           channel_id: string
           created_at?: string
           id?: string
-          last_read_at?: string | null
           left_at?: string | null
           member_id: string
           muted_until?: string | null
-          role?: Database["public"]["Enums"]["channel_member_role"]
           updated_at?: string
           workspace_id: string
         }
@@ -412,11 +408,9 @@ export type Database = {
           channel_id?: string
           created_at?: string
           id?: string
-          last_read_at?: string | null
           left_at?: string | null
           member_id?: string
           muted_until?: string | null
-          role?: Database["public"]["Enums"]["channel_member_role"]
           updated_at?: string
           workspace_id?: string
         }
@@ -448,7 +442,6 @@ export type Database = {
         Row: {
           archived_at: string | null
           created_at: string
-          created_by: string | null
           id: string
           key: string
           kind: Database["public"]["Enums"]["channel_kind"]
@@ -460,7 +453,6 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           created_at?: string
-          created_by?: string | null
           id?: string
           key: string
           kind: Database["public"]["Enums"]["channel_kind"]
@@ -472,7 +464,6 @@ export type Database = {
         Update: {
           archived_at?: string | null
           created_at?: string
-          created_by?: string | null
           id?: string
           key?: string
           kind?: Database["public"]["Enums"]["channel_kind"]
@@ -482,13 +473,6 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "channels_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "channels_section_fkey"
             columns: ["section_id", "workspace_id"]
@@ -4352,7 +4336,6 @@ export type Database = {
       audit_severity: "info" | "notable" | "critical"
       billing_interval: "monthly" | "yearly"
       channel_kind: "general" | "staff" | "section" | "custom" | "dm"
-      channel_member_role: "member" | "moderator"
       device_platform: "web" | "android" | "windows" | "ios"
       email_status:
         | "queued"
@@ -4600,7 +4583,6 @@ export const Constants = {
       audit_severity: ["info", "notable", "critical"],
       billing_interval: ["monthly", "yearly"],
       channel_kind: ["general", "staff", "section", "custom", "dm"],
-      channel_member_role: ["member", "moderator"],
       device_platform: ["web", "android", "windows", "ios"],
       email_status: [
         "queued",
