@@ -24,7 +24,6 @@ create table if not exists public.terms (
   name             text not null check (length(btrim(name)) between 1 and 60),
   starts_on        date not null,
   ends_on          date not null,
-  sort_order       smallint not null default 0,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
   created_by       uuid references public.profiles (id) on delete set null,
@@ -43,8 +42,9 @@ create unique index if not exists terms_year_name_key
   on public.terms (academic_year_id, lower(name));
 -- justification: natural key — no two "1st Term" rows in one year.
 create index if not exists terms_workspace_year_idx
-  on public.terms (workspace_id, academic_year_id, sort_order);
--- justification: tenant key + "terms of a year" listing, in order.
+  on public.terms (workspace_id, academic_year_id, starts_on);
+-- justification: tenant key + "terms of a year" listing, in date order
+-- (the order the UI and the repository both use — DATA-MODEL.md §2.2).
 create index if not exists terms_created_by_idx
   on public.terms (created_by) where created_by is not null;
 -- justification: FK column (profiles on delete set null).
@@ -134,6 +134,12 @@ begin
     raise exception 'only an owner or admin can change the current academic year'
       using errcode = '42501';
   end if;
+
+  -- Serialize concurrent swaps for the same workspace (review of PR #110):
+  -- two ordinary (non-deferred) unique-index checks are safe within one call,
+  -- but two concurrent calls targeting different years could otherwise both
+  -- pass their own uniqueness check before either commits.
+  perform pg_advisory_xact_lock(hashtext(p_workspace_id::text));
 
   if not exists (
     select 1 from public.academic_years

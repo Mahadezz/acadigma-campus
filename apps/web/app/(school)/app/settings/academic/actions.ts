@@ -37,6 +37,7 @@ import {
   setCurrentAcademicYear as setCurrentAcademicYearRepo,
   updateExamWeights as updateExamWeightsRepo,
 } from "@acadigma/db/repositories/academic-years"
+import { listExams as listExamsRepo } from "@acadigma/db/repositories/exams"
 import { can } from "@acadigma/domain"
 import { checkExamWeights } from "@acadigma/domain/academic"
 
@@ -155,6 +156,25 @@ export async function updateExamWeights(
   const gate = await gateWrite()
   if (!gate.ok) return gate
   const { ctx, supabase } = gate.data
+
+  // Security review of PR #110 (LOW): a weight key is only shape-checked as a
+  // uuid by the Zod schema — confirm it actually names an exam of this year,
+  // in this workspace, before it is stored.
+  const exams = await listExamsRepo(ctx, supabase, parsed.data.academicYearId)
+  if (!exams.ok) return exams
+  const examIds = new Set(exams.data.map((e) => e.id))
+  const unknown = Object.keys(parsed.data.weights).filter(
+    (id) => !examIds.has(id)
+  )
+  if (unknown.length > 0) {
+    return err(
+      apiError(
+        "validation_failed",
+        "One of those exams does not belong to this academic year.",
+        { fieldErrors: { weights: ["UNKNOWN_EXAM"] } }
+      )
+    )
+  }
 
   const result = await updateExamWeightsRepo(
     ctx,

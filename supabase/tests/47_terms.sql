@@ -6,7 +6,7 @@
 -- sections/subjects), read-only mode, created_by immutability, audit.
 -- =====================================================================
 begin;
-select plan(22);
+select plan(23);
 
 create schema if not exists tests;
 
@@ -103,14 +103,14 @@ select tests.logout();
 -- =====================================================================
 select tests.login('d2100000-0000-0000-0000-000000000001');
 select lives_ok(
-  $$insert into public.terms (workspace_id, academic_year_id, name, starts_on, ends_on, sort_order, created_by)
+  $$insert into public.terms (workspace_id, academic_year_id, name, starts_on, ends_on, created_by)
     values ((select id from ids where label = 'a'), (select id from ids where label = 'a_year'),
-            '1st Term', '2026-01-01', '2026-04-30', 1, 'd2100000-0000-0000-0000-000000000001')$$,
+            '1st Term', '2026-01-01', '2026-04-30', 'd2100000-0000-0000-0000-000000000001')$$,
   'the owner creates the 1st Term');
 select lives_ok(
-  $$insert into public.terms (workspace_id, academic_year_id, name, starts_on, ends_on, sort_order, created_by)
+  $$insert into public.terms (workspace_id, academic_year_id, name, starts_on, ends_on, created_by)
     values ((select id from ids where label = 'a'), (select id from ids where label = 'a_year'),
-            '2nd Term', '2026-05-01', '2026-08-31', 2, 'd2100000-0000-0000-0000-000000000001')$$,
+            '2nd Term', '2026-05-01', '2026-08-31', 'd2100000-0000-0000-0000-000000000001')$$,
   'the owner creates the 2nd Term');
 select throws_ok(
   $$insert into public.terms (workspace_id, academic_year_id, name, starts_on, ends_on, created_by)
@@ -225,6 +225,11 @@ select throws_ok(
     values ((select id from ids where label = 'a'), (select id from ids where label = 'a_year'),
             'Read Only Term', '2026-09-01', '2026-10-01', 'd2100000-0000-0000-0000-000000000001')$$,
   '42501', 'PLAN_READ_ONLY', 'a read-only school cannot add a term');
+select throws_ok(
+  $$select public.set_current_academic_year(
+      (select id from ids where label = 'a'), (select id from ids where label = 'a_year'))$$,
+  '42501', 'PLAN_READ_ONLY',
+  'a read-only school cannot change its current academic year (the RPC''s own UPDATEs still hit app.tg_require_writable)');
 select tests.logout();
 
 select ok(not has_table_privilege('anon', 'public.terms', 'select'),

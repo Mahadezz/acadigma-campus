@@ -1077,6 +1077,7 @@
       "noTerms": "No terms yet.",
       "addTerm": "Add term",
       "addTermTitle": "Add a term",
+      "addTermDescription": "Dates must fall inside the academic year and not overlap another term.",
       "deleteTermTitle": "Delete this term?",
       "deleteTermDescription": "This removes {name}. Nothing else refers to it yet.",
       "noExams": "No exams in this year yet — create one under Academics first.",

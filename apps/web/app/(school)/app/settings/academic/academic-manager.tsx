@@ -121,7 +121,6 @@ export function AcademicManager({
   t: T
 }) {
   const router = useRouter()
-  const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState<Notice>(null)
 
   function selectYear(id: string) {
@@ -144,8 +143,6 @@ export function AcademicManager({
         <TabsContent value="years" className="space-y-4">
           <YearsPanel
             years={years}
-            pending={pending}
-            startTransition={startTransition}
             refresh={() => router.refresh()}
             setNotice={setNotice}
             t={t}
@@ -163,8 +160,6 @@ export function AcademicManager({
             <TermsPanel
               academicYearId={selectedYearId}
               terms={terms}
-              pending={pending}
-              startTransition={startTransition}
               refresh={() => router.refresh()}
               setNotice={setNotice}
               t={t}
@@ -183,11 +178,10 @@ export function AcademicManager({
           />
           {selectedYearId ? (
             <WeightingPanel
+              key={selectedYearId}
               academicYearId={selectedYearId}
               exams={exams}
               initialWeights={weights}
-              pending={pending}
-              startTransition={startTransition}
               refresh={() => router.refresh()}
               setNotice={setNotice}
               t={t}
@@ -200,8 +194,6 @@ export function AcademicManager({
         <TabsContent value="rules" className="space-y-4">
           <RulesPanel
             academicSettings={academicSettings}
-            pending={pending}
-            startTransition={startTransition}
             refresh={() => router.refresh()}
             setNotice={setNotice}
             t={t}
@@ -246,19 +238,16 @@ function YearPicker({
 
 function YearsPanel({
   years,
-  pending,
-  startTransition,
   refresh,
   setNotice,
   t,
 }: {
   years: AcademicYearSummary[]
-  pending: boolean
-  startTransition: (fn: () => Promise<void> | void) => void
   refresh: () => void
   setNotice: (n: Notice) => void
   t: T
 }) {
+  const [pending, startTransition] = useTransition()
   const [adding, setAdding] = useState(false)
   const [switching, setSwitching] = useState<AcademicYearSummary | null>(null)
   const [form, setForm] = useState({ name: "", startsOn: "", endsOn: "" })
@@ -279,7 +268,9 @@ function YearsPanel({
         refresh()
         return
       }
-      const issue = result.error.fieldErrors?.endsOn?.[0]
+      const issue =
+        result.error.fieldErrors?.endsOn?.[0] ??
+        result.error.fieldErrors?.name?.[0]
       if (issue) setFieldError(fieldMessage(issue, t))
       else setNotice({ tone: "error", text: codeMessage(result.error.code, t) })
     })
@@ -451,20 +442,17 @@ function YearsPanel({
 function TermsPanel({
   academicYearId,
   terms,
-  pending,
-  startTransition,
   refresh,
   setNotice,
   t,
 }: {
   academicYearId: string
   terms: Term[]
-  pending: boolean
-  startTransition: (fn: () => Promise<void> | void) => void
   refresh: () => void
   setNotice: (n: Notice) => void
   t: T
 }) {
+  const [pending, startTransition] = useTransition()
   const [adding, setAdding] = useState(false)
   const [removing, setRemoving] = useState<Term | null>(null)
   const [form, setForm] = useState({ name: "", startsOn: "", endsOn: "" })
@@ -552,6 +540,7 @@ function TermsPanel({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t.addTermTitle}</DialogTitle>
+            <DialogDescription>{t.addTermDescription}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {fieldError ? (
@@ -652,8 +641,6 @@ function WeightingPanel({
   academicYearId,
   exams,
   initialWeights,
-  pending,
-  startTransition,
   refresh,
   setNotice,
   t,
@@ -661,12 +648,11 @@ function WeightingPanel({
   academicYearId: string
   exams: ExamSummary[]
   initialWeights: Record<string, number>
-  pending: boolean
-  startTransition: (fn: () => Promise<void> | void) => void
   refresh: () => void
   setNotice: (n: Notice) => void
   t: T
 }) {
+  const [pending, startTransition] = useTransition()
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
     for (const exam of exams) {
@@ -742,19 +728,16 @@ const RANK_BY_OPTIONS = ["gpa_then_total", "total_marks"] as const
 
 function RulesPanel({
   academicSettings,
-  pending,
-  startTransition,
   refresh,
   setNotice,
   t,
 }: {
   academicSettings: AcademicSettings
-  pending: boolean
-  startTransition: (fn: () => Promise<void> | void) => void
   refresh: () => void
   setNotice: (n: Notice) => void
   t: T
 }) {
+  const [pending, startTransition] = useTransition()
   const [form, setForm] = useState(academicSettings)
 
   function submit() {
