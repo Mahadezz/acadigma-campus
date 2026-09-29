@@ -73,7 +73,7 @@ export function SidebarFromConfig({
 
       {filtered.more.map((group) => (
         <div key={group.id} className="mt-3 flex flex-col gap-0.5">
-          <h3 className="text-muted-foreground px-3 py-1.5 text-xs font-semibold tracking-wide uppercase">
+          <h3 className="text-muted-foreground px-3 py-1.5 text-xs font-medium">
             {locale === "bn" ? group.labelBn : group.labelEn}
           </h3>
           <SidebarItemList
@@ -114,10 +114,11 @@ function SidebarItemList({
               label,
               active,
               className: cn(
-                "focus-visible:ring-ring flex min-h-11 items-center gap-2.5 rounded-md px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2",
+                // D-408: translucent tints, so the glass rail stays glass.
+                "focus-visible:ring-ring flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2",
                 active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                  ? "bg-foreground/[0.08] text-foreground"
+                  : "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
               ),
               children: (
                 <>

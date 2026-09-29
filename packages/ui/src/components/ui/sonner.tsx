@@ -29,10 +29,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           // D-408: glass tint; the blur/saturate themselves are applied to
           // [data-sonner-toast] in tokens.css, since sonner renders its own
           // element outside this component's className reach.
-          "--normal-bg": "var(--glass-bg-panel)",
+          "--normal-bg": "var(--glass-bg-overlay)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--glass-border)",
-          "--border-radius": "var(--radius)",
+          "--border-radius": "var(--radius-glass)",
         } as React.CSSProperties
       }
       {...props}

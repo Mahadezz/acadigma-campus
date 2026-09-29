@@ -509,43 +509,62 @@
   --shadow-sheet: 0 -8px 28px -8px rgb(11 11 11 / 0.18);
   --shadow-nav: 0 -1px 0 0 var(--border); /* a rule, not a shadow */
 
-  /* — liquid glass materials (D-408, supersedes D-68's "hairline ring only"
-     elevation rule for the surfaces named below). Applied to a short, fixed
-     list of chrome layers only — TopBar, BottomNav, Sheet/Dialog content,
-     Toast, and the dashboard's stat cards — never a long scrolling list
-     (performance non-negotiable). The opacity floor on each tint is chosen
-     so the worst-case composite (an adversarial, maximally-opposite backdrop
-     behind the blur) still clears 4.5:1 for the theme's own --foreground on
-     --glass-bg and --card-foreground on --glass-bg-panel — see DECISION-LOG
-     D-408 for the worked contrast numbers; scripts/check-contrast-tokens.mjs
-     does not parse rgb()-with-alpha, so this is verified by hand, not by
-     the script, and documented as such (honesty rule, CLAUDE.md). */
-  --glass-bg: rgb(255 255 255 / 0.7); /* chrome: TopBar, BottomNav */
-  --glass-bg-panel: rgb(255 255 255 / 0.8); /* Sheet, Dialog, Toast, Card */
-  --glass-border: rgb(11 11 11 / 0.08);
-  --glass-highlight: rgb(255 255 255 / 0.9); /* inner top specular edge */
-  --glass-shadow-1: 0 1px 1px rgb(11 11 11 / 0.04);
-  --glass-shadow-2: 0 16px 40px -16px rgb(11 11 11 / 0.18);
-  --glass-blur: 20px;
+  /* — liquid glass materials (D-408). Glass is the resting material of the
+     signed-in app: TopBar, BottomNav, sidebar (chrome), cards (panel) and
+     sheets/dialogs/toasts (overlay, which sit over a scrim and so carry
+     more tint). Never a long scrolling list (performance non-negotiable).
+     Each tint's alpha is the floor that keeps --foreground and
+     --muted-foreground at >= 4.5:1 over the worst stop of the ambient mesh
+     below — measured by scripts/check-glass-contrast.mjs, not guessed. */
+  --radius-glass: 1.125rem; /* 18px — glass cards, sheets, dialogs */
+  /* The two themes' ambient bases, for the theme picker's previews —
+     deliberately not redefined in .dark: a preview shows the OTHER theme. */
+  --swatch-light: #edf1ef;
+  --swatch-dark: #070a0b;
+  --glass-bg: rgb(255 255 255 / 0.72); /* chrome — content scrolls under it */
+  --glass-bg-panel: rgb(255 255 255 / 0.42); /* resting cards */
+  --glass-bg-overlay: rgb(255 255 255 / 0.82); /* sheets, dialogs, toasts */
+  --glass-border: rgb(255 255 255 / 0.7);
+  --glass-highlight: rgb(255 255 255 / 0.95); /* inner top specular edge */
+  --glass-shadow-1:
+    0 0 0 1px rgb(20 48 40 / 0.07), 0 1px 2px rgb(20 48 40 / 0.06);
+  --glass-shadow-2: 0 18px 40px -20px rgb(20 48 40 / 0.28);
+  --glass-blur: 24px;
   --glass-saturate: 180%;
-  /* Ambient wash behind glass chrome — subtle, brand-indigo/amber tinted
-     radial washes over --background, so the blur has something to show
-     without ever becoming a hero-blob gradient (DESIGN-SYSTEM §2.7 "motion
-     must be motivated" sibling rule: colour must be motivated too — this is
-     the one place a wash is allowed, because it exists only to be blurred,
-     never seen sharp). */
+  /* Secondary text on glass and on the mesh is one step stronger than on
+     paper (the "vibrancy" rule): it is what lets the tint stay this light.
+     Set as --muted-foreground by ambient-surface and the glass utilities;
+     it only ever moves toward --foreground, so an opaque surface inside
+     the shell only gains contrast. */
+  --glass-muted-foreground: #4a4a4a;
+  /* The ambient mesh the glass sits on: fixed behind content, low contrast,
+     in the product's own hues — the green of the flag and the register
+     ledger, a clear-sky blue and a marigold warmth — over a cool off-white
+     (deliberately not cream). The same hues, deepened, in the dark theme. */
+  --ambient-base: #edf1ef;
   --ambient-gradient:
     radial-gradient(
-      120% 60% at 12% -10%,
-      oklch(0.86 0.05 269 / 0.32),
-      transparent 55%
+      65% 50% at 0% 0%,
+      oklch(0.84 0.12 160 / 0.95),
+      transparent 72%
     ),
     radial-gradient(
-      90% 50% at 100% 0%,
-      oklch(0.86 0.06 74 / 0.24),
-      transparent 50%
+      60% 45% at 100% 18%,
+      oklch(0.85 0.09 235 / 0.9),
+      transparent 72%
     ),
-    var(--background);
+    radial-gradient(
+      75% 50% at 20% 100%,
+      oklch(0.91 0.1 85 / 0.9),
+      transparent 72%
+    ),
+    radial-gradient(
+      50% 40% at 100% 85%,
+      oklch(0.86 0.08 190 / 0.8),
+      transparent 72%
+    ),
+    var(--ambient-base);
+  --ambient-grain-opacity: 0.05;
 }
 
 /* ---------------------------------------------------------------------------
@@ -672,30 +691,42 @@
   --shadow-sheet: 0 -8px 28px -8px rgb(0 0 0 / 0.55);
   --shadow-nav: 0 -1px 0 0 var(--border);
 
-  /* — liquid glass materials, dark (D-408). Tint is near-black, not white —
-     alpha floors chosen the same way as the light theme's (see that block's
-     comment): worst-case composite still clears 4.5:1 for --foreground /
-     --card-foreground. */
-  --glass-bg: rgb(20 20 22 / 0.68);
-  --glass-bg-panel: rgb(22 22 24 / 0.78);
-  --glass-border: rgb(255 255 255 / 0.09);
-  --glass-highlight: rgb(255 255 255 / 0.07);
-  --glass-shadow-1: 0 1px 1px rgb(0 0 0 / 0.5);
-  --glass-shadow-2: 0 20px 48px -18px rgb(0 0 0 / 0.65);
-  --glass-blur: 22px;
-  --glass-saturate: 160%;
+  /* — liquid glass materials, dark (D-408). Same construction as light;
+     the tint is a cool near-black and the mesh the same hues, deepened. */
+  --glass-bg: rgb(12 15 17 / 0.72);
+  --glass-bg-panel: rgb(20 24 27 / 0.45);
+  --glass-bg-overlay: rgb(18 21 24 / 0.86);
+  --glass-border: rgb(255 255 255 / 0.1);
+  --glass-highlight: rgb(255 255 255 / 0.12);
+  --glass-shadow-1: 0 0 0 1px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.4);
+  --glass-shadow-2: 0 24px 48px -22px rgb(0 0 0 / 0.75);
+  --glass-blur: 24px;
+  --glass-saturate: 150%;
+  --glass-muted-foreground: #b4b4b4;
+  --ambient-base: #070a0b;
   --ambient-gradient:
     radial-gradient(
-      120% 60% at 12% -10%,
-      oklch(0.32 0.06 269 / 0.4),
-      transparent 55%
+      70% 50% at 5% 18%,
+      oklch(0.4 0.1 160 / 0.7),
+      transparent 72%
     ),
     radial-gradient(
-      90% 50% at 100% 0%,
-      oklch(0.32 0.07 74 / 0.3),
-      transparent 50%
+      65% 45% at 95% 42%,
+      oklch(0.38 0.1 245 / 0.65),
+      transparent 72%
     ),
-    var(--background);
+    radial-gradient(
+      75% 50% at 20% 100%,
+      oklch(0.36 0.08 55 / 0.5),
+      transparent 72%
+    ),
+    radial-gradient(
+      50% 40% at 100% 85%,
+      oklch(0.38 0.07 195 / 0.5),
+      transparent 72%
+    ),
+    var(--ambient-base);
+  --ambient-grain-opacity: 0.07;
 }
 
 /* ---------------------------------------------------------------------------
@@ -938,16 +969,14 @@
   color: var(--muted-foreground);
 }
 
-/* D-408 liquid glass. Two materials: `glass-chrome` (TopBar, BottomNav — a
-   little more opaque, since it sits over scrolling content) and
-   `glass-panel` (Sheet/Dialog content, Toast, opt-in Card — transient
-   surfaces, not scrolling lists). Both get the same construction: a
-   translucent tint, backdrop blur+saturate, a 1px inner top "specular"
-   highlight, and a soft layered shadow instead of a hard drop shadow. The
-   `@supports`/`prefers-reduced-transparency` fallbacks right below make both
-   degrade to the equivalent opaque D-57 surface — never a transparent
-   surface with no blur, which would be unreadable. */
+/* D-408 liquid glass. Three tints, one construction: a translucent fill,
+   backdrop blur + saturation, a 1px inner top highlight and a soft layered
+   shadow. `glass-chrome` — TopBar, BottomNav, sidebar; `glass-panel` —
+   resting cards; `glass-overlay` — sheets, dialogs (they sit over a scrim,
+   so they carry more tint). The fallbacks in section 13 degrade all three to
+   the opaque D-57 surface — never a see-through panel with no blur. */
 @utility glass-chrome {
+  --muted-foreground: var(--glass-muted-foreground);
   background: var(--glass-bg);
   border-color: var(--glass-border);
   box-shadow:
@@ -959,6 +988,7 @@
     saturate(var(--glass-saturate));
 }
 @utility glass-panel {
+  --muted-foreground: var(--glass-muted-foreground);
   background: var(--glass-bg-panel);
   border-color: var(--glass-border);
   box-shadow:
@@ -969,10 +999,40 @@
   -webkit-backdrop-filter: blur(var(--glass-blur))
     saturate(var(--glass-saturate));
 }
-/* The ambient wash (see --ambient-gradient above) behind the AppShell frame,
-   so glass-chrome has something to blur other than a flat fill. */
+@utility glass-overlay {
+  --muted-foreground: var(--glass-muted-foreground);
+  background: var(--glass-bg-overlay);
+  border-color: var(--glass-border);
+  box-shadow:
+    var(--glass-shadow-1),
+    var(--glass-shadow-2),
+    inset 0 1px 0 0 var(--glass-highlight);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+}
+/* The ambient mesh (--ambient-gradient) plus a faint grain, painted on
+   fixed pseudo-elements behind the AppShell so it never scrolls and never
+   repaints with content — the blur always has something to show. */
 @utility ambient-surface {
-  background: var(--ambient-gradient);
+  isolation: isolate;
+  --muted-foreground: var(--glass-muted-foreground);
+  &::before,
+  &::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  &::before {
+    background: var(--ambient-gradient);
+  }
+  &::after {
+    opacity: var(--ambient-grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1000,52 +1060,53 @@
    `@utility`-generated rules above regardless of source order (same pattern
    as the reduced-motion block and the :lang(bn) override earlier in this
    file: unlayered CSS always wins over anything inside a Tailwind layer).
-   Both degrade `glass-chrome`/`glass-panel` to the equivalent opaque D-57
-   surface (--background / --card) with no blur — never a see-through panel
+   All three glass tints degrade to the equivalent opaque D-57 surface
+   (--background / --card / --popover) with no blur — never a see-through panel
    nobody can read.
    --------------------------------------------------------------------------- */
 
-@supports not (backdrop-filter: blur(1px)) {
+/* Safari before 18 only knows the -webkit- form, so both are tested. */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
   .glass-chrome {
     background: var(--background);
   }
   .glass-panel {
     background: var(--card);
+  }
+  .glass-overlay,
+  [data-sonner-toast] {
+    background: var(--popover) !important;
   }
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  .glass-chrome,
+  .glass-panel,
+  .glass-overlay,
+  [data-sonner-toast] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
   .glass-chrome {
     background: var(--background);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
   .glass-panel {
     background: var(--card);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+  }
+  .glass-overlay,
+  [data-sonner-toast] {
+    background: var(--popover) !important;
   }
 }
 
-/* sonner's own classes, not a data-slot this package controls directly —
-   styled here rather than via `cn()` inside ui/sonner.tsx. `!important` on
-   the two glass-only properties matches sonner's own stylesheet specificity
-   (it sets background/border inline via the --normal-bg/--normal-border CSS
-   vars already wired in ui/sonner.tsx; blur/saturate need to win outright). */
+/* sonner renders its own element outside ui/sonner.tsx's className reach, so
+   the blur is applied to its data attribute here; the tint comes from the
+   --normal-bg var wired in ui/sonner.tsx. !important matches sonner's own
+   stylesheet specificity. Unsupported/reduced-transparency: see above. */
 [data-sonner-toast] {
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
   -webkit-backdrop-filter: blur(var(--glass-blur))
     saturate(var(--glass-saturate)) !important;
-}
-@supports not (backdrop-filter: blur(1px)) {
-  [data-sonner-toast] {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-}
-@media (prefers-reduced-transparency: reduce) {
-  [data-sonner-toast] {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
 }

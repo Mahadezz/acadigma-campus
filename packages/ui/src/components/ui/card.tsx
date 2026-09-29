@@ -3,11 +3,10 @@ import * as React from "react"
 import { cn } from "../../lib/utils"
 
 /**
- * `variant="glass"` (D-408) is opt-in, never the default: liquid glass is
- * scoped to a named, fixed set of surfaces (DESIGN-SYSTEM v2 §2b) — the
- * dashboard's stat cards today — not every Card in the product, since blur
- * on a long list of cards is exactly the performance case the non-negotiable
- * rules out. A plain Card is unchanged.
+ * `variant="glass"` (D-408) is opt-in, never the default: glass is for a
+ * screen's handful of resting cards (the dashboard's), never a card per row
+ * of a long list — blur on a scrolling list is the performance case the
+ * non-negotiable rules out. A plain Card is unchanged.
  */
 function Card({
   className,
@@ -19,8 +18,10 @@ function Card({
       data-slot="card"
       data-variant={variant}
       className={cn(
-        "flex flex-col gap-6 rounded-lg py-6 text-card-foreground",
-        variant === "glass" ? "glass-panel" : "bg-card shadow-flat",
+        "flex flex-col gap-6 py-6 text-card-foreground",
+        variant === "glass"
+          ? "glass-panel rounded-[var(--radius-glass)] border"
+          : "rounded-lg bg-card shadow-flat",
         className
       )}
       {...props}

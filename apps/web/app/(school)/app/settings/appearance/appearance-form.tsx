@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 
 import { useTheme } from "next-themes"
 
+import { Card } from "@acadigma/ui/components/card"
 import { Label } from "@acadigma/ui/components/label"
 import { RadioGroup, RadioGroupItem } from "@acadigma/ui/components/radio-group"
 
@@ -17,7 +18,8 @@ import { isLocale, setLocaleCookie, type Locale } from "@/lib/locale"
  * a header control and not a big "we're bilingual too" button on the home
  * screen (removed from `(school)/app/home/essentials-row.tsx` and
  * `(shared)/workspace/user-menu.tsx` in this same Part). Both rows are the
- * same shape: a 3-choice `RadioGroup`, each option a full 44px row.
+ * a `RadioGroup` on a glass card: theme as three tiles, each with a small
+ * preview of that theme's surface (D-408); language as full 44px rows.
  *
  * Theme: `next-themes`'s own `useTheme()` — already wired app-wide
  * (`apps/web/app/providers.tsx`: `attribute="class"`, `defaultTheme="system"`,
@@ -66,31 +68,36 @@ export function AppearanceForm({ locale }: { locale: Locale }) {
               : "Follows your device by default, or pick one."}
           </p>
         </div>
-        <RadioGroup
-          value={theme ?? "system"}
-          onValueChange={setTheme}
-          className="gap-0 divide-y rounded-lg border"
-        >
-          {(
-            [
-              { value: "light", en: "Light", bnLabel: "লাইট" },
-              { value: "dark", en: "Dark", bnLabel: "ডার্ক" },
-              { value: "system", en: "System", bnLabel: "সিস্টেম" },
-            ] as const
-          ).map((option) => (
-            <Label
-              key={option.value}
-              htmlFor={`theme-${option.value}`}
-              className="flex min-h-11 cursor-pointer items-center gap-3 px-4 py-3 text-sm font-normal"
-            >
-              <RadioGroupItem
-                id={`theme-${option.value}`}
-                value={option.value}
-              />
-              {bn ? option.bnLabel : option.en}
-            </Label>
-          ))}
-        </RadioGroup>
+        <Card variant="glass" className="p-3">
+          <RadioGroup
+            value={theme ?? "system"}
+            onValueChange={setTheme}
+            className="grid grid-cols-3 gap-2"
+          >
+            {(
+              [
+                { value: "light", en: "Light", bnLabel: "লাইট" },
+                { value: "dark", en: "Dark", bnLabel: "ডার্ক" },
+                { value: "system", en: "System", bnLabel: "সিস্টেম" },
+              ] as const
+            ).map((option) => (
+              <Label
+                key={option.value}
+                htmlFor={`theme-${option.value}`}
+                className="has-[[data-state=checked]]:ring-foreground hover:bg-foreground/[0.04] flex cursor-pointer flex-col items-stretch gap-2.5 rounded-xl p-2 text-sm font-normal ring-1 ring-transparent transition-[box-shadow,background-color] has-[[data-state=checked]]:ring-2"
+              >
+                <ThemeSwatch theme={option.value} />
+                <span className="flex min-h-6 items-center gap-2 px-1">
+                  <RadioGroupItem
+                    id={`theme-${option.value}`}
+                    value={option.value}
+                  />
+                  {bn ? option.bnLabel : option.en}
+                </span>
+              </Label>
+            ))}
+          </RadioGroup>
+        </Card>
       </section>
 
       <section aria-labelledby="appearance-language" className="space-y-3">
@@ -99,31 +106,71 @@ export function AppearanceForm({ locale }: { locale: Locale }) {
             {bn ? "ভাষা" : "Language"}
           </h3>
         </div>
-        <RadioGroup
-          value={locale}
-          onValueChange={handleLocaleChange}
-          className="gap-0 divide-y rounded-lg border"
-        >
-          {(
-            [
-              { value: "en" as const, label: "English" },
-              { value: "bn" as const, label: "বাংলা" },
-            ] as const
-          ).map((option) => (
-            <Label
-              key={option.value}
-              htmlFor={`locale-${option.value}`}
-              className="flex min-h-11 cursor-pointer items-center gap-3 px-4 py-3 text-sm font-normal"
-            >
-              <RadioGroupItem
-                id={`locale-${option.value}`}
-                value={option.value}
-              />
-              {option.label}
-            </Label>
-          ))}
-        </RadioGroup>
+        <Card variant="glass" className="py-1">
+          <RadioGroup
+            value={locale}
+            onValueChange={handleLocaleChange}
+            className="divide-foreground/[0.08] gap-0 divide-y"
+          >
+            {(
+              [
+                { value: "en" as const, label: "English" },
+                { value: "bn" as const, label: "বাংলা" },
+              ] as const
+            ).map((option) => (
+              <Label
+                key={option.value}
+                htmlFor={`locale-${option.value}`}
+                className="flex min-h-12 cursor-pointer items-center gap-3 px-5 py-3 text-[0.9375rem] font-normal"
+              >
+                <RadioGroupItem
+                  id={`locale-${option.value}`}
+                  value={option.value}
+                />
+                {option.label}
+              </Label>
+            ))}
+          </RadioGroup>
+        </Card>
       </section>
     </div>
+  )
+}
+
+/** A thumbnail of a theme: its ambient base, a glass card and an ink bar.
+ * "system" shows both halves. Decorative — the label names the choice. */
+function ThemeSwatch({ theme }: { theme: "light" | "dark" | "system" }) {
+  const half = (mode: "light" | "dark") => (
+    <span
+      className={
+        mode === "light"
+          ? "flex flex-1 flex-col justify-end gap-1 bg-[var(--swatch-light)] p-2"
+          : "flex flex-1 flex-col justify-end gap-1 bg-[var(--swatch-dark)] p-2"
+      }
+    >
+      <span
+        className={
+          mode === "light"
+            ? "h-2 w-3/4 rounded-full bg-black/80"
+            : "h-2 w-3/4 rounded-full bg-white/85"
+        }
+      />
+      <span
+        className={
+          mode === "light"
+            ? "h-5 rounded-md border border-white/80 bg-white/70"
+            : "h-5 rounded-md border border-white/10 bg-white/10"
+        }
+      />
+    </span>
+  )
+  return (
+    <span
+      aria-hidden="true"
+      className="border-foreground/10 flex h-20 overflow-hidden rounded-lg border"
+    >
+      {theme === "dark" ? half("dark") : half("light")}
+      {theme === "system" ? half("dark") : null}
+    </span>
   )
 }
