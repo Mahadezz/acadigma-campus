@@ -48,12 +48,21 @@ select
   coalesce(sr.joined_on, wm.joined_at::date) as joined_on,
   wm.id as membership_id
 from public.workspace_members wm
+join public.workspaces w on w.id = wm.workspace_id
 left join public.staff_records sr
   on sr.workspace_id = wm.workspace_id and sr.user_id = wm.user_id
 left join public.profiles p on p.id = wm.user_id
 left join public.custom_labels cl_sr on cl_sr.id = sr.designation_label_id
 left join public.custom_labels cl_wm on cl_wm.id = wm.label_id
 where wm.status = 'active'
+  -- School workspaces only (D-209 review fix): every person has an
+  -- automatic personal workspace where they are 'owner' (PRODUCT-DECISIONS
+  -- §1.2) — without this, everyone's own personal workspace membership row
+  -- also matched app.has_role() for themselves and leaked into their own
+  -- "staff directory" (caught by pgTAP: a parent read 1 row instead of 0,
+  -- their own personal-workspace row, and a teacher read 6 instead of 5,
+  -- the same extra row).
+  and w.type = 'school'
   and wm.role in ('owner', 'admin', 'teacher', 'staff')
   and app.has_role(wm.workspace_id, array['owner', 'admin', 'teacher', 'staff']);
 
