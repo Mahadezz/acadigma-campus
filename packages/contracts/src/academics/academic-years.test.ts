@@ -73,9 +73,7 @@ describe("createTermInputSchema", () => {
 
 describe("deleteTermInputSchema", () => {
   it("requires a uuid", () => {
-    expect(deleteTermInputSchema.safeParse({ termId: "x" }).success).toBe(
-      false
-    )
+    expect(deleteTermInputSchema.safeParse({ termId: "x" }).success).toBe(false)
   })
 })
 

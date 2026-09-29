@@ -16,7 +16,9 @@ describe("checkTermRange", () => {
   })
 
   it("accepts two adjacent, non-overlapping terms", () => {
-    const existing = [{ id: "t1", starts_on: "2026-01-01", ends_on: "2026-04-30" }]
+    const existing = [
+      { id: "t1", starts_on: "2026-01-01", ends_on: "2026-04-30" },
+    ]
     expect(
       checkTermRange(
         YEAR,
@@ -57,7 +59,9 @@ describe("checkTermRange", () => {
   })
 
   it("rejects a term overlapping an existing one", () => {
-    const existing = [{ id: "t1", starts_on: "2026-01-01", ends_on: "2026-04-30" }]
+    const existing = [
+      { id: "t1", starts_on: "2026-01-01", ends_on: "2026-04-30" },
+    ]
     expect(
       checkTermRange(
         YEAR,
@@ -68,7 +72,9 @@ describe("checkTermRange", () => {
   })
 
   it("rejects a term wholly inside an existing one", () => {
-    const existing = [{ id: "t1", starts_on: "2026-01-01", ends_on: "2026-12-31" }]
+    const existing = [
+      { id: "t1", starts_on: "2026-01-01", ends_on: "2026-12-31" },
+    ]
     expect(
       checkTermRange(
         YEAR,
@@ -79,7 +85,9 @@ describe("checkTermRange", () => {
   })
 
   it("excludes the term's own id from the overlap check (editing in place)", () => {
-    const existing = [{ id: "t1", starts_on: "2026-01-01", ends_on: "2026-04-30" }]
+    const existing = [
+      { id: "t1", starts_on: "2026-01-01", ends_on: "2026-04-30" },
+    ]
     expect(
       checkTermRange(
         YEAR,

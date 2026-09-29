@@ -7,12 +7,12 @@ import { useRouter } from "next/navigation"
 import { PlusIcon } from "lucide-react"
 
 import type {
-  AcademicSettings,
   AcademicYearSummary,
   ExamSummary,
   Term,
 } from "@acadigma/contracts"
 import { checkExamWeights, examWeightSum } from "@acadigma/domain/academic"
+import type { AcademicSettings } from "@acadigma/domain/settings"
 import { Button } from "@acadigma/ui/components/button"
 import {
   Dialog,
@@ -475,7 +475,9 @@ function TermsPanel({
         setNotice({ tone: "success", text: t.saved })
         return
       }
-      const issue = result.error.fieldErrors?.endsOn?.[0] ?? result.error.fieldErrors?.name?.[0]
+      const issue =
+        result.error.fieldErrors?.endsOn?.[0] ??
+        result.error.fieldErrors?.name?.[0]
       if (issue) setFieldError(fieldMessage(issue, t))
       else setNotice({ tone: "error", text: codeMessage(result.error.code, t) })
     })
@@ -497,7 +499,11 @@ function TermsPanel({
 
   return (
     <div className="space-y-4">
-      <Button type="button" onClick={() => setAdding(true)} className="min-h-11">
+      <Button
+        type="button"
+        onClick={() => setAdding(true)}
+        className="min-h-11"
+      >
         <PlusIcon aria-hidden />
         {t.addTerm}
       </Button>

@@ -19,7 +19,10 @@ import {
   type Result,
   type Term,
 } from "@acadigma/contracts"
-import { checkTermRange, validateAcademicYearRange } from "@acadigma/domain/academic"
+import {
+  checkTermRange,
+  validateAcademicYearRange,
+} from "@acadigma/domain/academic"
 
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
@@ -193,7 +196,9 @@ export async function createTerm(
           ? "This term overlaps another term in the same year."
           : "The end date must be on or after the start date."
     return err(
-      apiError("validation_failed", message, { fieldErrors: { endsOn: [issue] } })
+      apiError("validation_failed", message, {
+        fieldErrors: { endsOn: [issue] },
+      })
     )
   }
 

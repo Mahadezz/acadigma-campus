@@ -15,7 +15,8 @@ import { compareDates, type IsoDate } from "../time"
  * reads term_id yet (D-303: exams do not).
  */
 
-export type TermRangeIssue = "TERM_OUTSIDE_YEAR" | "TERM_OVERLAP" | "TERM_ENDS_BEFORE_STARTS"
+export type TermRangeIssue =
+  "TERM_OUTSIDE_YEAR" | "TERM_OVERLAP" | "TERM_ENDS_BEFORE_STARTS"
 
 /**
  * Validates one term (new or edited) against its academic year's range and
@@ -64,5 +65,7 @@ export function checkExamWeights(
   if (Object.keys(weights).length === 0) return null
   // Float tolerance: weights travel as percentages a form can enter in
   // fractions (e.g. 33.33 x 3).
-  return Math.abs(examWeightSum(weights) - 100) < 0.01 ? null : "WEIGHTS_NOT_100"
+  return Math.abs(examWeightSum(weights) - 100) < 0.01
+    ? null
+    : "WEIGHTS_NOT_100"
 }

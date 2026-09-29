@@ -56,6 +56,11 @@ export default async function SettingsPage() {
       summary: s.rows.grading.description,
     },
     {
+      href: "/app/settings/academic",
+      ...s.rows.academic,
+      summary: s.rows.academic.description,
+    },
+    {
       href: "/app/settings/overview",
       ...s.rows.overview,
       summary: s.rows.overview.description,

@@ -91,7 +91,9 @@ export default async function AcademicSettingsPage({
         weights={weights.ok ? weights.data : {}}
         exams={exams.ok ? exams.data : []}
         academicSettings={
-          settings.ok ? settings.data.academicSettings : DEFAULT_ACADEMIC_SETTINGS
+          settings.ok
+            ? settings.data.academicSettings
+            : DEFAULT_ACADEMIC_SETTINGS
         }
         t={a}
       />

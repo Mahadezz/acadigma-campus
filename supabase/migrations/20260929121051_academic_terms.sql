@@ -57,22 +57,31 @@ select app.attach_require_writable('public.terms');
 create trigger created_by_immutable before update on public.terms
   for each row execute function app.tg_created_by_immutable();
 
-insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
-values
-  ('terms.insert', 'info',
-    '{actor} created a term record',
-    '{actor} একটি term রেকর্ড তৈরি করেছেন', true),
-  ('terms.update', 'notable',
-    '{actor} updated a term record ({fields})',
-    '{actor} একটি term রেকর্ড হালনাগাদ করেছেন ({fields})', true),
-  ('terms.delete', 'critical',
-    '{actor} deleted a term record',
-    '{actor} একটি term রেকর্ড মুছে ফেলেছেন', true)
-on conflict (action) do update
-  set severity    = excluded.severity,
-      sentence_en = excluded.sentence_en,
-      sentence_bn = excluded.sentence_bn,
-      is_generic  = excluded.is_generic;
+do $$
+declare
+  v_table  text;
+  v_tables text[] := array['terms'];
+begin
+  foreach v_table in array v_tables loop
+    insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
+    values
+      (v_table || '.insert', 'info',
+        '{actor} created a ' || replace(v_table, '_', ' ') || ' record',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড তৈরি করেছেন', true),
+      (v_table || '.update', 'notable',
+        '{actor} updated a ' || replace(v_table, '_', ' ') || ' record ({fields})',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড হালনাগাদ করেছেন ({fields})', true),
+      (v_table || '.delete', 'critical',
+        '{actor} deleted a ' || replace(v_table, '_', ' ') || ' record',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড মুছে ফেলেছেন', true)
+    on conflict (action) do update
+      set severity    = excluded.severity,
+          sentence_en = excluded.sentence_en,
+          sentence_bn = excluded.sentence_bn,
+          is_generic  = excluded.is_generic;
+  end loop;
+end
+$$;
 
 alter table public.terms enable row level security;
 
