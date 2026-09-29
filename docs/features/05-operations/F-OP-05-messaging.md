@@ -3,7 +3,7 @@
 |                  |                                                                                                                                                                                      |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Area             | ops                                                                                                                                                                                  |
-| Status           | planned                                                                                                                                                                              |
+| Status           | in-progress — Part 1 built (D-311)                                                                                                                                                   |
 | Owner branch     | `feat/ops-messaging`                                                                                                                                                                 |
 | Depends on       | F-ID-01/02 (profiles, memberships), F-AC-0x (sections, section_subjects, enrollments, guardians + `guardian_users`), F-OP-06 (offboarding revokes), files/storage, Supabase Realtime |
 | Plan             | `docs/plan/ROADMAP.md` chunk TBD                                                                                                                                                     |
@@ -49,6 +49,8 @@ A school runs on messages: the head of section needs the maths teachers in one p
 ## 3. Data
 
 > **Proposed; `docs/architecture/DATA-MODEL.md` wins.** Every table carries `workspace_id` — the single fix for §7.4's cross-tenant leak.
+>
+> **As built in Part 1 (D-311), superseding this section where they differ:** membership of `general`/`staff`/`section` channels is **derived on read** by `app.channel_ids_for()` from `workspace_members`, `sections.class_teacher_id` and `section_subjects.teacher_id` — there are no recompute triggers (§3.1, §5.1, W1); DMs are `channels` rows with `kind = 'dm'` and key `dm:<member a>:<member b>` (sorted), not `conversations`/`conversation_participants` (§3.3); `channel_members.member_id` references `workspace_members.id`; channel kinds are `general | staff | section | custom | dm` (DATA-MODEL's names) and `visibility`/`allowed_roles`/`topic` are not columns; `messages` carries Part 1's columns only and later Parts add theirs. See DATA-MODEL §6.0.
 
 ### 3.1 `channels`
 
@@ -304,7 +306,7 @@ Realtime is a **read path only**: the browser never writes through the anon key.
 
 ## 8. Parts (build chunks)
 
-**Part 1 — Schema, RLS, auto-channel triggers** · `channels`, `channel_members`, `conversations`, `conversation_participants`, `messages` (+ attachments, reactions, edits), all with `workspace_id` and RLS; the membership-recompute triggers; `app.is_channel_member` / `app.is_conversation_participant` / `app.can_open_message_file`; the post-permission trigger.
+**Part 1 — Schema, RLS, auto-channel triggers** · _Built (D-311): derived membership instead of recompute triggers; attachments, reactions and edits tables move to Parts 4 and 2; client writes other than posting move to the Part that ships them._ · `channels`, `channel_members`, `conversations`, `conversation_participants`, `messages` (+ attachments, reactions, edits), all with `workspace_id` and RLS; the membership-recompute triggers; `app.is_channel_member` / `app.is_conversation_participant` / `app.can_open_message_file`; the post-permission trigger.
 _Demo:_ pgTAP proves a member of School A sees zero School B messages, a parent sees zero channel rows, a non-member cannot insert into a channel, and adding a teacher to a `section_subjects` row puts them in `#class-…` in the same transaction.
 
 **Part 2 — Channel list + conversation + send (no realtime yet)** · `/app/messages` at both viewports, conversation view with the sticky composer, optimistic send with `client_nonce`, cursor pagination upward, edit/delete with tombstones, system-event rendering.
@@ -368,3 +370,4 @@ _Demo:_ an admin removes an offensive message; the author is notified with the r
 4. **Message search** is not in these parts. _Default assumed:_ v1 ships a simple `ilike` search scoped to the open channel; full-text search across the workspace is a follow-up part once volumes justify a `tsvector` column.
 5. **Retention.** _Default assumed:_ messages are kept indefinitely; attachments follow storage quota pressure. A school-configurable retention window is FUTURE.
 6. **The "Student Portal Feed"** (§3 row 74) is **not rebuilt** — students are not users in Campus v1 (PRODUCT-DECISIONS §1.22), and its visibility toggle was a hardcoded literal. Its intent (controlling what is shared) is served by announcements and by parent-visible flags on the underlying records.
+7. **Part 1 deviations (D-311).** Recompute triggers replaced by derived membership; DMs are `channels` of kind `dm`; `message_edits`, `message_attachments`, `message_reactions`, `app.can_open_message_file`, `app.is_conversation_participant` and system-event messages are not built in Part 1 — each arrives with the Part that uses it (edits in Part 2, attachments and reactions in Part 4).
