@@ -40,8 +40,8 @@ admin() {
     -H "apikey: $SUPABASE_SERVICE_KEY" "${bearer[@]}" \
     -H 'Content-Type: application/json' "${data[@]}")
   if [ "${status:0:1}" != 2 ]; then
+    echo "HTTP $status $(jq -c '{code: (.error_code // .code), msg: (.msg // .message // .error)}' "$out" 2>/dev/null)"
     rm -f "$out"
-    echo "HTTP $status"
     return 1
   fi
   cat "$out"
@@ -67,7 +67,7 @@ ensure_user() {
   # Already there (email_exists): find it. No email filter in the admin API,
   # so page through; the project has few users.
   while [ -z "${id:-}" ]; do
-    users=$(admin GET "/admin/users?page=$page&per_page=500") || { echo "::error::listing users failed" >&2; exit 1; }
+    users=$(admin GET "/admin/users?page=$page&per_page=100") || { echo "::error::listing users failed: $users" >&2; exit 1; }
     [ "$(jq '.users | length' <<<"$users")" -gt 0 ] || { echo "::error::$email exists but was not found" >&2; exit 1; }
     id=$(jq -r --arg e "$email" 'first(.users[] | select(.email == $e) | .id) // empty' <<<"$users")
     marked=$(jq -r --arg e "$email" 'first(.users[] | select(.email == $e) | .app_metadata.acadigma_demo) // false' <<<"$users")
