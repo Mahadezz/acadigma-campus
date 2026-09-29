@@ -68,7 +68,7 @@ const fill = (template: string, values: Record<string, string | number>) =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""))
 
 /** Card titles are real headings (h3 under the page's h2). */
-const TITLE = "text-[0.9375rem] leading-tight font-medium"
+const TITLE = "text-base leading-tight font-medium"
 
 export function DashboardView(props: DashboardViewProps) {
   const { t, isManager } = props
@@ -77,7 +77,7 @@ export function DashboardView(props: DashboardViewProps) {
       href={props.attendanceHref}
       className={cn(
         buttonVariants({ size: "lg" }),
-        "h-12 rounded-2xl px-5 text-[0.9375rem] shadow-[0_12px_28px_-12px_rgb(0_0_0/0.45)]"
+        "h-12 rounded-2xl px-5 text-base shadow-[0_12px_28px_-12px_rgb(0_0_0/0.45)]"
       )}
     >
       <ClipboardCheckIcon className="size-5" aria-hidden="true" />
@@ -89,7 +89,7 @@ export function DashboardView(props: DashboardViewProps) {
     <div className="space-y-5 lg:space-y-6">
       <header className="flex items-end justify-between gap-4 pt-1">
         <div className="min-w-0">
-          <h2 className="text-[1.75rem] leading-[1.15] font-semibold tracking-[-0.02em] lg:text-[2rem]">
+          <h2 className="text-2xl leading-tight font-semibold tracking-tight lg:text-3xl">
             {props.schoolName}
           </h2>
           <div className="text-muted-foreground mt-1.5 text-sm leading-snug">
@@ -232,7 +232,7 @@ function AttendanceCard({
           <span className="sr-only">{attendance.rate}</span>
           <span
             aria-hidden="true"
-            className="text-[3.5rem] font-semibold tracking-[-0.04em] tabular-nums"
+            className="text-4xl font-semibold tracking-tight tabular-nums"
           >
             {attendance.percent}
           </span>
@@ -263,9 +263,7 @@ function SlotCard(props: {
     <Card variant="glass" className="gap-4 py-5">
       <CardTop icon={props.icon} tone={props.tone} title={props.title} />
       <div className="space-y-1 px-5">
-        <p className="text-lg leading-snug font-semibold tracking-[-0.01em]">
-          {props.emptyTitle}
-        </p>
+        <p className="text-lg leading-snug font-semibold">{props.emptyTitle}</p>
         <p className="text-muted-foreground text-sm">
           {props.emptyDescription}
         </p>
@@ -379,7 +377,7 @@ function PlanCard({
         }
       />
       <div className="space-y-0.5 px-5">
-        <p className="text-[1.75rem] leading-tight font-semibold tracking-[-0.02em] capitalize">
+        <p className="text-2xl leading-tight font-semibold tracking-tight capitalize">
           {plan.label}
         </p>
         {plan.trial ? (

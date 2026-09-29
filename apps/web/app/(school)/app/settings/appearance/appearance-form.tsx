@@ -132,7 +132,7 @@ export function AppearanceForm({ locale }: { locale: Locale }) {
               <Label
                 key={option.value}
                 htmlFor={`locale-${option.value}`}
-                className="flex min-h-12 cursor-pointer items-center gap-3 px-5 py-3 text-[0.9375rem] font-normal"
+                className="flex min-h-12 cursor-pointer items-center gap-3 px-5 py-3 text-base font-normal"
               >
                 <RadioGroupItem
                   id={`locale-${option.value}`}

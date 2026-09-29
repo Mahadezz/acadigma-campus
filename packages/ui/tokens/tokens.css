@@ -212,7 +212,8 @@
   --text-lg: 1.125rem; /* 18px — card titles, sheet titles                  */
   --text-xl: 1.375rem; /* 22px — page titles on phone                       */
   --text-2xl: 1.75rem; /* 28px — stat tile values, page titles ≥lg          */
-  --text-3xl: 2.25rem; /* 36px — the single hero number on a dashboard      */
+  --text-3xl: 2.25rem; /* 36px — page title ≥lg on the dashboard            */
+  --text-4xl: 3.5rem; /* 56px — the one hero number on a glass card (D-408) */
 
   --leading-tight: 1.2; /* Latin display only                                */
   --leading-snug: 1.35; /* Latin UI                                          */
@@ -1081,7 +1082,20 @@
   }
 }
 
-@media (prefers-reduced-transparency: reduce) {
+/* Also under "increase contrast": solid surfaces with a defined edge. */
+@media (prefers-contrast: more) {
+  .glass-chrome,
+  .glass-panel,
+  .glass-overlay {
+    border-color: color-mix(
+      in srgb,
+      var(--foreground) 40%,
+      transparent
+    ) !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .glass-chrome,
   .glass-panel,
   .glass-overlay,

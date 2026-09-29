@@ -120,7 +120,7 @@ export function BottomNav({
 function bottomNavItemClass(active: boolean) {
   return cn(
     // Full 56px tile height is the target, not just the icon (§3.1).
-    "flex h-14 w-full flex-col items-center justify-center gap-0.5 rounded-[1.125rem] px-1 py-2 text-[0.6875rem]",
+    "flex h-14 w-full flex-col items-center justify-center gap-0.5 rounded-[var(--radius-glass)] px-1 py-2 text-[0.6875rem]",
     "focus-visible:ring-ring outline-none focus-visible:ring-2 focus-visible:ring-inset",
     // app-polish: tap feedback (<150ms scale) on every pressable.
     "transition-[color,background-color,transform] duration-150 ease-out active:scale-95",

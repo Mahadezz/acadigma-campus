@@ -17,6 +17,90 @@ prototype did, and why most of it is not being kept).
 
 ---
 
+## 0. Reference (v2, D-408): read this before building a screen
+
+The one-page contract. Start from the closest approved screen in
+[`design-reference/`](design-reference/) and these values. Do not start from
+a blank page or from a component library's defaults. Values live in
+`packages/ui/tokens/tokens.css`; this table is their meaning.
+
+### 0.1 Approved screens
+
+| Screen                            | Light                                           | Dark                                           |
+| --------------------------------- | ----------------------------------------------- | ---------------------------------------------- |
+| Dashboard, phone 360×800          | `design-reference/dashboard-light-phone.jpg`    | `design-reference/dashboard-dark-phone.jpg`    |
+| Dashboard, desktop 1280×800       | `design-reference/dashboard-light-desktop.jpg`  | `design-reference/dashboard-dark-desktop.jpg`  |
+| Sub-page with shell back, phone   | `design-reference/appearance-light-phone.jpg`   | `design-reference/appearance-dark-phone.jpg`   |
+| Sub-page with shell back, desktop | `design-reference/appearance-light-desktop.jpg` | `design-reference/appearance-dark-desktop.jpg` |
+| Bottom sheet (More), phone        | `design-reference/sheet-light-phone.jpg`        | `design-reference/sheet-dark-phone.jpg`        |
+
+### 0.2 Colour
+
+| Token                                                             | Light                                      | Dark                                | For                                                                   |
+| ----------------------------------------------------------------- | ------------------------------------------ | ----------------------------------- | --------------------------------------------------------------------- |
+| `--ambient-base` + `--ambient-gradient`                           | `#edf1ef` + green/sky/marigold/teal washes | `#070a0b` + the same hues, deepened | The page. Only `AppShell` paints it. Never cream.                     |
+| `--foreground`                                                    | `#0b0b0b`                                  | `#f4f4f2`                           | Primary text, big numbers.                                            |
+| `--glass-muted-foreground` (as `--muted-foreground` in the shell) | `#4a4a4a`                                  | `#b4b4b4`                           | Secondary text on glass or on the mesh.                               |
+| `--muted-foreground` (outside the shell)                          | `#636363`                                  | `#8e8e8e`                           | Secondary text on paper (auth, onboarding, print).                    |
+| `--glass-bg` / `-panel` / `-overlay`                              | white 72 / 42 / 82 %                       | near-black 72 / 62 / 86 %           | Chrome / resting cards / sheets and dialogs.                          |
+| `--primary` / `--primary-foreground`                              | `#0b0b0b` / `#f4f4f2`                      | `#f4f4f2` / `#0b0b0b`               | The one primary action per screen (a solid ink button).               |
+| `--success` · `--info` · `--warning` · `--danger`                 | green · blue · amber · red                 | lighter versions of each            | Meaning only: status, icon chips (`/15` tint + `-ink` glyph), charts. |
+| `--card` / `--popover` / `--background`                           | `#fbfbfa` / `#fbfbfa` / `#f4f4f2`          | `#121212` / `#121212` / `#0b0b0b`   | Opaque surfaces: glass fallbacks, lists, forms, print.                |
+
+Nothing else carries a hue. No gradient except the ambient mesh.
+
+### 0.3 Type (Inter + Hind Siliguri; 1.125 minor third)
+
+| Token           | Size    | For                                                       |
+| --------------- | ------- | --------------------------------------------------------- |
+| `text-4xl`      | 56px    | The one hero number on a glass card (attendance).         |
+| `text-3xl`      | 36px    | Dashboard page title from `lg`.                           |
+| `text-2xl`      | 28px    | Page title on phone; a card's secondary big value (plan). |
+| `text-lg`       | 18px    | An empty card's headline; sheet titles.                   |
+| `text-base`     | 16px    | Body, card titles, list rows, buttons.                    |
+| `text-sm`       | 13px    | Captions, counts, descriptions.                           |
+| `text-xs`/`2xs` | 12/11px | Timestamps; tab-bar labels.                               |
+
+Weights 400/500/600 only. `tracking-tight` on Latin headings, never on
+Bengali. Numbers are `tabular-nums`. Sentence case everywhere, with no
+uppercase labels and no monospace in UI chrome.
+
+### 0.4 Space and size
+
+A 4px grid: `--space-1…20` = 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80. The
+page gutter is 16px on phone and 24–32px from `sm`. Cards are padded 20px
+with 16–20px gaps. Every target is ≥ 44px; tab-bar tiles are 56px.
+
+### 0.5 Glass recipe
+
+A fill from `--glass-bg*`, `backdrop-filter: blur(24px) saturate(180% | 150%)`,
+a 1px `--glass-border`, an inner 1px top highlight, `--glass-shadow-1` plus
+`--glass-shadow-2`, and radius `--radius-glass` (18px). Use `glass-chrome`,
+`glass-panel` or `glass-overlay`; never hand-roll the recipe. Only chrome, a
+screen's few resting cards and overlays are glass, never one card per list
+row. After touching any glass or mesh token, run
+`node scripts/check-glass-contrast.mjs`. Full rules: §1.8.
+
+### 0.6 Five things this product must never do
+
+1. **A cream or beige page, or a flat grey one.** The page is the ambient mesh.
+2. **Monospace, uppercase or tracked-out eyebrow labels**, or numbered
+   "01 / 02" section markers on content that is not a sequence.
+3. **Pill buttons everywhere, or more than one filled button on a screen.**
+   There is one ink primary; everything else is ghost, outline or a link.
+   Buttons are rounded rectangles (6–16px), not pills.
+4. **A spinner where the content's shape is known.** Use a `Skeleton` in
+   the final layout.
+5. **An untranslated string.** Every piece of copy exists in English and
+   Bengali, from `messages/*.json` or, temporarily, an inline
+   `locale === "bn"` pair.
+
+Also never: purple-to-blue "AI" gradients, italic accent words in
+headlines, a page-level back link (the shell owns back, §3.1), blur on a
+scrolling list, or text below 4.5:1.
+
+---
+
 ## 1. Design direction
 
 ### 1.1 The read
