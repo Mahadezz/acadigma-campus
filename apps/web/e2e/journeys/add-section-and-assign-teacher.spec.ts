@@ -67,6 +67,12 @@ test("owner adds Class 6 – section with a class teacher, then archives it", as
   await page.getByRole("tab", { name: "Subjects" }).click()
   await page.getByRole("button", { name: "Use the NCTB starter list" }).click()
   await expect(page.getByText("Bangla 1st Paper")).toBeVisible()
+  // Let the action finish before axe or the next step: scanned mid-way, the
+  // button was coming back from its disabled (half-opacity) state
+  // (e2e-live, D-76).
+  await expect(
+    page.getByRole("button", { name: "Use the NCTB starter list" })
+  ).toBeEnabled()
   await expectNoA11yViolations(page, testInfo)
 })
 
@@ -84,6 +90,12 @@ test("owner gives a section its subjects, each with a teacher", async ({
   await page.getByRole("tab", { name: "Subjects" }).click()
   await page.getByRole("button", { name: "Use the NCTB starter list" }).click()
   await expect(page.getByText("Bangla 1st Paper")).toBeVisible()
+  // Let the action finish before axe or the next step: scanned mid-way, the
+  // button was coming back from its disabled (half-opacity) state
+  // (e2e-live, D-76).
+  await expect(
+    page.getByRole("button", { name: "Use the NCTB starter list" })
+  ).toBeEnabled()
   await page.getByRole("tab", { name: "Classes & sections" }).click()
 
   await page.getByRole("button", { name: "Add a section to Class 6" }).click()

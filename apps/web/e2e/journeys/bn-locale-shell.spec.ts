@@ -53,6 +53,9 @@ test.afterEach(async ({ page }, testInfo) => {
   // it cut off mid-way and the seeded owner stuck in বাংলা/basic mode for the
   // rest of the e2e-live shard (D-76).
   testInfo.setTimeout(testInfo.timeout + 30_000)
+  // Re-render from the server first: a test cut off mid-switch can leave
+  // the stored locale বাংলা behind an English page (D-76).
+  if (//app/.test(page.url())) await page.goto("/app/dashboard")
   const bnMenuButton = page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" })
   if (!(await bnMenuButton.isVisible().catch(() => false))) return
   await bnMenuButton.click()
@@ -63,6 +66,9 @@ test.afterEach(async ({ page }, testInfo) => {
 test("switching to বাংলা from the school shell's user menu translates dashboard, nav and settings", async ({
   page,
 }, testInfo) => {
+  // A locale write + refresh and two axe scans of বাংলা pages: past the
+  // 30 s default on the e2e-live runner (D-76).
+  test.setTimeout(90_000)
   await signIn(page, "owner@acadigma.test")
   await switchToBengali(page)
 
@@ -103,6 +109,9 @@ test("switching to বাংলা from the school shell's user menu translates 
 test("switching back to English is reachable from the same menu", async ({
   page,
 }) => {
+  // A locale write + refresh and two axe scans of বাংলা pages: past the
+  // 30 s default on the e2e-live runner (D-76).
+  test.setTimeout(90_000)
   await signIn(page, "owner@acadigma.test")
   await switchToBengali(page)
 
