@@ -4,7 +4,7 @@ The owner's open requests and the build's open work, in priority order. **Read t
 
 Legend: 🔴 blocked · 🟡 in progress · ⚪ not started · 👤 needs the owner.
 
-Last updated: 2026-09-29 ~21:30 Dhaka.
+Last updated: 2026-09-29 ~23:10 Dhaka.
 
 ---
 
@@ -44,7 +44,7 @@ Last updated: 2026-09-29 ~21:30 Dhaka.
 
 **Left (measured on main 2026-09-29):** loading skeletons on every data route (only 1 of 42 has `loading.tsx`); optimistic updates for small actions (0 today; never for payments/publishing); pull-to-refresh on phone data screens (not built); tap feedback on the rest of the pressables (button has no press state on main).
 
-## 4. Create / join a school from a personal account · 🟡 · branch `fix/identity-create-school-entry`
+## 4. Create / join a school from a personal account · 🟡 · PR #115 (draft)
 
 **Owner:** "why cant personal accounts create school workspace?" **Cause:** the create-school wizard works for an onboarded user, but nothing links to it from the app. **Fix in progress:** "Create a school" + "Join a school with a code" in the workspace switcher and as a card on the personal home; server-side limit respected; test that an already-onboarded user can do it safely; Playwright journey.
 
@@ -72,9 +72,8 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 
 ## 10. Small PRs waiting on CI
 
-- **#114** owner's permission change (routine git/gh/pnpm commands no longer prompt; every deny rule kept) → merge so builder worktrees pick it up.
 - **#113** docs-sync exempts the version-only release PR (stops the manual "docs: none" patch after every merge).
-- **#108** release PR (changelogs) → merge when green.
+- **#116** new release PR → after #113 merges, close/reopen so CI runs, merge.
 
 ## 11. Security loop — build → attack → fix → repeat · 🟡
 

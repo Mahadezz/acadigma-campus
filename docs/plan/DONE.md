@@ -10,6 +10,8 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 | PR | What it does, in plain English | Proof |
 | --- | --- | --- |
+| #114 | Owner's permission change: routine commit/push/PR/test commands no longer ask for approval; every safety block kept | owner edited, lead validated JSON + deny list; 989fd02 |
+| #108 | Release PR (changelogs) | 85f2d0c |
 | #111 | Demo seed: a demo email someone else registered is deleted and recreated clean (no stranger's name, login or MFA) | security re-review MERGE; merged 47e6d97 |
 | #105 | Owners/admins change a staff member's role (with a preview of what they'll gain or lose), assign custom labels, edit staff fields (employee code, department, phone) | 3 security reviews (label cross-school gap closed with composite FKs + a cleanup before the constraint switches on); migrations 20260929065654, 20260929121412 live; f47e151 |
 | #107 | One-click demo school seed (40 students, attendance, exam, results, teacher/owner/parent logins) + 5-minute investor script (D-80) | 2 security reviews (demo-account takeover closed); 7d5528b |
