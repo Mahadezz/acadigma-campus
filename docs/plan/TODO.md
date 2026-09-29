@@ -86,6 +86,14 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 - Prompt-audit findings for CLAUDE.md / playbook / BUILDER-BRIEF (13 findings, delivered in chat 2026-09-29): apply the project hunks (#1–5, #10–13) in a docs PR; **#8 and #9 need the owner** (#8 lanes start independent work while a PR waits; #9 CLAUDE.md still says merges need the owner's approval, but the owner now lets the lead merge).
 - BUILDER-BRIEF: tell builders to load `ux-laws` + `app-polish` for UI work (the playbook already says so).
 
+## 14. Owner-shared guides → follow-ups (2026-09-30)
+
+- **Legal/compliance audit** 🟡 — running (read-only, Opus): owner's "app legal checklist" adapted to Bangladesh PDPA 2026, children's data, SMS consent, privacy policy vs real SDKs, subscription cancellation, account deletion. Deliverable: `docs/product/legal/LEGAL-AUDIT-2026-09-29.md` PR + questions for a Bangladeshi lawyer.
+- **Performance audit** ⚪ — from the "App Performance Prompt Pack": (1) response compression — Vercel/Next already brotli/gzip; just verify; (2) **batch database writes** — audit repositories for per-row loops / N+1 queries; (3) circuit breakers + timeouts — only when SMS/email/payment providers land (not needed yet); (4) optimistic UI — already in §3 polish; (5) cache rendered content — marketing pages only. Run the `Performance Benchmarker` agent on a slow-phone profile after #109.
+- **Domain + email setup** ⚪👤 (before any real email/SMS goes to schools): app on `app.`/`campus.` subdomain of acadigma.com (check what Vercel serves today); transactional email from `notifications.` and any marketing from `updates.` subdomains (Resend), each with SPF + DKIM + DMARC (don't overwrite an existing DMARC); Google Search Console + sitemap for acadigma.com (public pages only, never app pages). DNS changes need the owner's registrar login.
+- **Design method** — reference-first + self-check added to #109 (DESIGN-SYSTEM.md "Reference" section, approved screenshot set, finish-gate + persona reviews). Skill `taste-skill` (design-taste-frontend) installed for marketing/landing pages.
+- **Jev (TypeSafe)** — maybe later for flagging unsafe parent–teacher messages; US-hosted, English-first → PDPA review first. Not now.
+
 ## 13. Owner-only items (record; don't nag)
 
 - 👤 `DEMO_ACCOUNT_PASSWORD` secret (see §1) — the only thing blocking the demo.
