@@ -70,7 +70,6 @@ export type Database = {
         Row: {
           attempts: number
           cancelled_at: string | null
-          cancelled_by: string | null
           completed_at: string | null
           id: string
           last_error: string | null
@@ -82,7 +81,6 @@ export type Database = {
         Insert: {
           attempts?: number
           cancelled_at?: string | null
-          cancelled_by?: string | null
           completed_at?: string | null
           id?: string
           last_error?: string | null
@@ -94,7 +92,6 @@ export type Database = {
         Update: {
           attempts?: number
           cancelled_at?: string | null
-          cancelled_by?: string | null
           completed_at?: string | null
           id?: string
           last_error?: string | null
@@ -104,13 +101,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "account_deletion_requests_cancelled_by_fkey"
-            columns: ["cancelled_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "account_deletion_requests_user_id_fkey"
             columns: ["user_id"]
