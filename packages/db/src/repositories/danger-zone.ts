@@ -218,6 +218,13 @@ export async function exportWorkspaceData(
   return ok(out)
 }
 
+const PURGE_CODES = new Set([
+  "NOT_DUE",
+  "FILES_PRESENT",
+  "ACTIVE_SUBSCRIPTION",
+  "UNPAID_BALANCE",
+])
+
 /**
  * The daily purge (service role only — `withServiceRole` in the cron route).
  * Deletes each school whose grace has ended, one transaction per school, so
@@ -241,7 +248,12 @@ export async function purgeDueWorkspaces(
     .array(z.object({ id: z.string() }))
     .parse(data ?? [])) {
     const res = await client.rpc("purge_due_workspace", { p_workspace_id: id })
-    if (res.error) failed.push({ id, code: res.error.message })
+    // Named codes only — a raw Postgres message may carry key values.
+    if (res.error)
+      failed.push({
+        id,
+        code: PURGE_CODES.has(res.error.message) ? res.error.message : "UNKNOWN",
+      })
     else purged.push(id)
   }
   return ok({ purged, failed })

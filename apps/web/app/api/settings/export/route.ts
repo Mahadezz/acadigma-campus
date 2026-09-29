@@ -19,9 +19,16 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-export async function GET(): Promise<Response> {
-  const ctx = await requireWorkspace()
+export async function GET(request: Request): Promise<Response> {
   const noStore = { "cache-control": "no-store" }
+  // A cross-site page must not start a download (and spend the 3-a-day
+  // quota) with the owner's cookies: the page's own fetch is same-origin.
+  const site = request.headers.get("sec-fetch-site")
+  if (site && site !== "same-origin") {
+    const error = apiError("forbidden", "Start the export from the Danger zone page.")
+    return NextResponse.json(error, { status: 403, headers: noStore })
+  }
+  const ctx = await requireWorkspace()
   if (!can(ctx.role, "settings.manage")) {
     const error = apiError(
       "forbidden",

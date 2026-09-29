@@ -51,7 +51,7 @@
 --      built-in default would have made it anon-executable.
 -- =====================================================================
 begin;
-select plan(10);
+select plan(12);
 
 -- ---------------------------------------------------------------------
 -- A1. anon — allowed ONLY for the pre-session throttle/auth surface, plus
@@ -187,6 +187,15 @@ select ok(
   not has_function_privilege('authenticated',
     'public.log_auth_event_service(text, uuid, jsonb, inet, text)', 'execute'),
   'authenticated may not execute log_auth_event_service');
+
+-- D-211: the school purge is the daily cron's alone.
+select ok(
+  has_function_privilege('service_role', 'public.purge_due_workspace(uuid)', 'execute'),
+  'service_role may execute purge_due_workspace');
+select ok(
+  not has_function_privilege('anon', 'public.purge_due_workspace(uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.purge_due_workspace(uuid)', 'execute'),
+  'neither anon nor authenticated may execute purge_due_workspace');
 
 -- ---------------------------------------------------------------------
 -- C. The default itself, for functions created after this migration:

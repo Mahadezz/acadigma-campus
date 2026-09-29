@@ -17,7 +17,7 @@
 --   * the export reads only through the caller's RLS, owner only, 3 a day.
 -- =====================================================================
 begin;
-select plan(52);
+select plan(55);
 
 create schema if not exists tests;
 
@@ -298,6 +298,10 @@ select tests.logout();
 -- 5. Export: the caller's own RLS, owner only, three a day
 -- =====================================================================
 select tests.login('f2110000-0000-0000-0000-000000000001');
+select throws_ok($$select public.export_workspace_table((select id from ids where label = 'a'), 'students')$$,
+  '42501', 'EXPORT_NOT_STARTED', 'no table is readable through the export before an audited export is opened');
+select lives_ok($$select public.log_workspace_export((select id from ids where label = 'a'))$$,
+  'the owner opens an export (audited)');
 select is(
   jsonb_array_length(public.export_workspace_table((select id from ids where label = 'a'), 'students')),
   1, 'the owner exports the school''s students');
@@ -307,7 +311,7 @@ select is(
 select throws_ok($$select public.export_workspace_table((select id from ids where label = 'a'), 'pg_authid')$$,
   '22023', 'VALIDATION', 'only a tenant table can be exported');
 select lives_ok($$select public.log_workspace_export((select id from ids where label = 'a'))
-                    from generate_series(1, 3)$$,
+                    from generate_series(1, 2)$$,
   'three exports in a day are allowed');
 select throws_ok($$select public.log_workspace_export((select id from ids where label = 'a'))$$,
   '54000', 'RATE_LIMITED', 'a fourth export in 24 hours is refused');
@@ -327,6 +331,14 @@ select tests.login('f2110000-0000-0000-0000-000000000001');
 select throws_ok($$select public.cancel_workspace_deletion((select id from ids where label = 'a'))$$,
   '55000', 'DELETION_DUE', 'a deletion whose date has passed can no longer be cancelled');
 select tests.logout();
+
+-- A school that started paying during its grace is not deleted.
+update public.subscriptions set status = 'active'
+ where workspace_id = (select id from ids where label = 'a');
+select throws_ok($$select public.purge_due_workspace((select id from ids where label = 'a'))$$,
+  '55000', 'ACTIVE_SUBSCRIPTION', 'the purge refuses a school with a paid subscription');
+update public.subscriptions set status = 'trialing'
+ where workspace_id = (select id from ids where label = 'a');
 
 create temp table audit_before as
 select count(*)::int as n from public.audit_events where workspace_id = (select id from ids where label = 'a');
