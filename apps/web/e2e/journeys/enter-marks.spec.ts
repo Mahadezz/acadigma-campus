@@ -94,6 +94,12 @@ test("owner enters a whole class's marks in one pass and saves once", async ({
     .first()
     .click()
   await expect(page.getByText("Locked.")).toBeVisible()
+  // The notice lands before the refreshed row: scanned in between, the
+  // status badge was mid colour-transition to "Locked" (1.57:1, e2e-live,
+  // D-76). The row's Unlock button is the refreshed state.
+  await expect(
+    page.getByRole("button", { name: /^Unlock — / }).first()
+  ).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
   await page
     .getByRole("button", { name: /^Unlock — / })
