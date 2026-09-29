@@ -28,7 +28,6 @@ export default async function SchoolProfilePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <SubPageHeader
-        backLabel={t.settings.back}
         title={t.settings.profile.title}
         description={t.settings.profile.description}
       />

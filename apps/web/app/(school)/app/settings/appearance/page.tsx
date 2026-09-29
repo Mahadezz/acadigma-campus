@@ -28,7 +28,6 @@ export default async function AppearancePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <SubPageHeader
-        backLabel={locale === "bn" ? "সেটিংস" : "Back to Settings"}
         title={locale === "bn" ? "থিম ও ভাষা" : "Theme & language"}
         description={
           locale === "bn"

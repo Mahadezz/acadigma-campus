@@ -23,7 +23,7 @@ export default async function SettingsPage() {
     redirect("/app/settings/overview")
   }
 
-  const { t } = await getMessages()
+  const { t, locale } = await getMessages()
   const s = t.settings
   const profile = await getSchoolProfile(await createClient(), ctx)
   const fields = profile.ok ? profile.data.fields : null
@@ -75,6 +75,22 @@ export default async function SettingsPage() {
       ...s.rows.display,
       summary: s.rows.display.description,
     },
+    // D-408: inline copy until messages/*.json is free of open PR #82.
+    locale === "bn"
+      ? {
+          href: "/app/settings/appearance",
+          title: "থিম ও ভাষা",
+          description: "লাইট, ডার্ক বা ডিভাইস অনুযায়ী; English বা বাংলা",
+          keywords: "থিম ডার্ক লাইট ভাষা theme dark light language",
+          summary: "লাইট, ডার্ক বা ডিভাইস অনুযায়ী; English বা বাংলা",
+        }
+      : {
+          href: "/app/settings/appearance",
+          title: "Theme & language",
+          description: "Light, dark or follow your device; English or বাংলা",
+          keywords: "theme dark light mode appearance language bangla",
+          summary: "Light, dark or follow your device; English or বাংলা",
+        },
   ]
 
   return (

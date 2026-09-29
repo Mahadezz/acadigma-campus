@@ -28,7 +28,6 @@ export default async function BrandingPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <SubPageHeader
-        backLabel={t.settings.back}
         title={t.settings.branding.title}
         description={t.settings.branding.description}
       />

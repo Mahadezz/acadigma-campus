@@ -65,11 +65,7 @@ export default async function SettingsOverviewPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <SubPageHeader
-        backLabel={t.settings.back}
-        title={s.title}
-        description={s.description}
-      />
+      <SubPageHeader title={s.title} description={s.description} />
       {/* F-ID-10 §2/§6 (D-403): text size is every role's own setting, but
           this page's caller (teacher/staff, no workspace.settings.write) is
           redirected away from the grouped Settings list above, which is the

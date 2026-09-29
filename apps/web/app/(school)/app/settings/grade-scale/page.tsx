@@ -28,11 +28,7 @@ export default async function GradingSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <SubPageHeader
-        backLabel={t.settings.back}
-        title={g.title}
-        description={g.description}
-      />
+      <SubPageHeader title={g.title} description={g.description} />
       {!scales.ok ? (
         <InlineAlert tone="error">{scales.error.message}</InlineAlert>
       ) : scale ? (
