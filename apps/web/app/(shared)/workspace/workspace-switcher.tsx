@@ -11,6 +11,7 @@ import {
   ChevronsUpDownIcon,
   HeartHandshakeIcon,
   HomeIcon,
+  KeyRoundIcon,
   Loader2Icon,
   PlusIcon,
   SchoolIcon,
@@ -129,8 +130,15 @@ export function WorkspaceSwitcher({
     })
   }
 
-  if (selectable.length <= 1 && !shellLink) {
-    // §6: "Only one workspace → the chip is not tappable and shows no chevron."
+  // Owner report 2026-09-29: a personal-only account (every account starts
+  // here — F-ID-05 §4.1) had no way to reach "Create a school" / "Join a
+  // school with a code" at all, because §6's "only one workspace → not
+  // tappable" shortcut fired for it too. Keep that shortcut for a lone
+  // SCHOOL membership (nothing useful to switch to or create from there);
+  // a lone PERSONAL workspace still opens the sheet so the pinned actions
+  // stay reachable. Deviation from F-ID-03 §6, recorded in F-ID-05 §11
+  // (F-ID-03's own file is mid-edit in open PR #112).
+  if (selectable.length <= 1 && !shellLink && current?.type !== "personal") {
     return (
       <div className="flex min-w-0 items-center gap-2 px-1">
         <Avatar size="sm">
@@ -269,12 +277,26 @@ export function WorkspaceSwitcher({
             </div>
           ) : null}
 
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/onboarding" onClick={() => setOpen(false)}>
-              <PlusIcon aria-hidden="true" />
-              {t.createOrJoin}
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button asChild variant="outline" className="w-full">
+              <Link
+                href="/onboarding/create-school"
+                onClick={() => setOpen(false)}
+              >
+                <PlusIcon aria-hidden="true" />
+                {t.createSchool}
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              {/* No dedicated /onboarding/join route yet (F-ID-04 Part 5,
+                  not shipped) — same chooser as "Create a school", which
+                  already shows the join card as "Coming soon" (§4.2). */}
+              <Link href="/onboarding" onClick={() => setOpen(false)}>
+                <KeyRoundIcon aria-hidden="true" />
+                {t.joinWithCode}
+              </Link>
+            </Button>
+          </div>
         </div>
       </FormSheet>
     </>
