@@ -1,7 +1,7 @@
 -- =====================================================================
 -- F-ID-03 Part 7 review follow-ups (D-112) · ownership has one door
 -- ---------------------------------------------------------------------
--- 20260929144211 made the transfer re-authenticate in the server action
+-- 20260929172553 made the transfer re-authenticate in the server action
 -- only. Independent security review of #112:
 --
 --   1. HIGH — an owner's session alone could still mint an owner with a

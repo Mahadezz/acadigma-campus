@@ -1,5 +1,28 @@
 # @acadigma/web
 
+## 0.14.0
+
+### Minor Changes
+
+- f47e151: F-ID-03 Part 6 — role changes, staff fields and custom labels. Owners and
+  admins can change a member's role (with a plain-language consequences step),
+  edit their staff details (employee code, department, work phone — the code is
+  generated when left blank), manage the school's custom labels
+  (`/app/settings/labels`) and assign a label to a member. Labels change the
+  title shown next to a name, never what the person can do.
+
+### Patch Changes
+
+- Updated dependencies [47e6d97]
+- Updated dependencies [7d5528b]
+- Updated dependencies [f47e151]
+- Updated dependencies [225cdb9]
+  - @acadigma/db@0.13.0
+  - @acadigma/contracts@0.13.0
+  - @acadigma/domain@0.10.4
+  - @acadigma/pdf@0.5.5
+  - @acadigma/ui@0.5.6
+
 ## 0.13.0
 
 ### Minor Changes

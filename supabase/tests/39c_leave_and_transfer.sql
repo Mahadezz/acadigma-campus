@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-ID-03 Part 7 — remove, leave, transfer ownership
---   (20260929144211_member_leave_transfer.sql, D-112)
+--   (20260929172553_member_leave_transfer.sql, D-112)
 --
 --   A. Removal is a plain UPDATE by an owner/admin; an admin cannot remove
 --      an owner; a teacher or another school's owner removes nothing.

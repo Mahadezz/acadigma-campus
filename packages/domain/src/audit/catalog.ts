@@ -646,6 +646,8 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "section_subjects",
   // F-AC-06 Part 7 (D-306) — 20260926023537_publish_results.sql.
   "guardian_users",
+  // F-OP-07 Part 2 (D-210) — 20260929160707_academic_terms.sql.
+  "terms",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -727,6 +729,7 @@ export const GENERIC_TABLE_NOUNS: Readonly<
     en: "a class's subject and teacher",
     bn: "একটি শাখার বিষয় ও শিক্ষক",
   },
+  terms: { en: "a term", bn: "একটি টার্ম" },
 }
 
 /**
