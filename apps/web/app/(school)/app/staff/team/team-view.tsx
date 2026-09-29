@@ -9,6 +9,7 @@ import { SearchIcon } from "lucide-react"
 
 import type {
   ApiError,
+  CustomLabel,
   ListMembersInput,
   MemberRow,
   MemberStatusValue,
@@ -29,6 +30,7 @@ import type { Messages } from "@/lib/i18n"
 import type { Locale } from "@/lib/locale"
 
 import { approveMember, rejectMember } from "./actions"
+import { MemberSheet } from "./member-sheet"
 
 type T = Messages["team"]
 
@@ -118,15 +120,18 @@ export function TeamView({
   input,
   members,
   nextCursor,
+  labels,
 }: {
   t: T
   locale: Locale
   input: ListMembersInput
   members: MemberRow[]
   nextCursor: string | null
+  labels: CustomLabel[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [managing, setManaging] = useState<MemberRow | null>(null)
   const [notice, setNotice] = useState<{
     tone: "success" | "error"
     text: string
@@ -199,6 +204,24 @@ export function TeamView({
       hideOnCard: true,
       cell: (m) => (
         <Actions t={t} member={m} disabled={pending} onDecide={decide} />
+      ),
+    })
+  }
+  if (status === "active") {
+    columns.push({
+      key: "manage",
+      header: <span className="sr-only">{t.columns.manage}</span>,
+      hideOnCard: true,
+      cell: (m) => (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11"
+          aria-label={t.manage.openLabel.replace("{name}", m.fullName)}
+          onClick={() => setManaging(m)}
+        >
+          {t.manage.open}
+        </Button>
       ),
     })
   }
@@ -279,6 +302,17 @@ export function TeamView({
             {status === "pending" ? (
               <Actions t={t} member={m} disabled={pending} onDecide={decide} />
             ) : null}
+            {status === "active" ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11"
+                aria-label={t.manage.openLabel.replace("{name}", m.fullName)}
+                onClick={() => setManaging(m)}
+              >
+                {t.manage.open}
+              </Button>
+            ) : null}
           </span>
         )}
         empty={
@@ -311,6 +345,16 @@ export function TeamView({
             </Button>
           ) : null}
         </nav>
+      ) : null}
+
+      {managing ? (
+        <MemberSheet
+          key={managing.id}
+          t={t}
+          member={managing}
+          labels={labels}
+          onClose={() => setManaging(null)}
+        />
       ) : null}
     </div>
   )

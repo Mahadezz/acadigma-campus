@@ -1,7 +1,7 @@
 import { forbidden } from "next/navigation"
 
 import { listMembersInputSchema } from "@acadigma/contracts"
-import { listMembers } from "@acadigma/db"
+import { listCustomLabels, listMembers } from "@acadigma/db"
 import { can } from "@acadigma/domain"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
@@ -40,7 +40,11 @@ export default async function TeamPage({
   const input = parsed.success ? parsed.data : { status: "active" as const }
 
   const { t, locale } = await getMessages()
-  const page = await listMembers(ctx, await createClient(), input)
+  const supabase = await createClient()
+  const [page, labels] = await Promise.all([
+    listMembers(ctx, supabase, input),
+    listCustomLabels(ctx, supabase),
+  ])
 
   if (!page.ok && page.error.code !== "not_found") {
     return (
@@ -57,6 +61,7 @@ export default async function TeamPage({
       input={input}
       members={page.ok ? page.data.items : []}
       nextCursor={page.ok ? page.data.nextCursor : null}
+      labels={labels.ok ? labels.data : []}
     />
   )
 }
