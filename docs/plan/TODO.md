@@ -44,7 +44,7 @@ Last updated: 2026-09-29 ~23:10 Dhaka.
 
 **Left (measured on main 2026-09-29):** loading skeletons on every data route (only 1 of 42 has `loading.tsx`); optimistic updates for small actions (0 today; never for payments/publishing); pull-to-refresh on phone data screens (not built); tap feedback on the rest of the pressables (button has no press state on main).
 
-## 4. Create / join a school from a personal account · 🟡 · PR #115 (draft)
+## 4. Create / join a school from a personal account · 🟡 · PR #115 (ready; CI re-running after lead fixed docs-sync + prettier)
 
 **Owner:** "why cant personal accounts create school workspace?" **Cause:** the create-school wizard works for an onboarded user, but nothing links to it from the app. **Fix in progress:** "Create a school" + "Join a school with a code" in the workspace switcher and as a card on the personal home; server-side limit respected; test that an already-onboarded user can do it safely; Playwright journey.
 
@@ -66,7 +66,6 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 
 ## 9. Lane Parts in progress
 
-- **#110 (ops)** F-OP-07 Part 2 — academic years, terms, exam weighting, pass/GPA/promotion rules (D-210). READY, CI green, builder's full review set done; lead's independent Opus security review running → merge + verify live migration.
 - **#112 (identity)** F-ID-03 Part 7 — remove a member, leave a school, transfer ownership. Draft.
 - Each needs: green CI → lead reviews (security Opus for anything touching roles/RLS, DB review for migrations, React/TS) → one fix batch → re-verify → merge → verify live migration + smoke.
 
@@ -80,6 +79,7 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 **Owner:** "start … attack the app get the report and fix … loops … until it is fixed". Scope (owner): code + local server + preview deploys, **never production**.
 - Round 1 (#104) and Round 2 (#106): 0 critical/high/medium; 1 low (CSP ships Report-Only while SECURITY.md §5.2 reads as enforcing). Both are draft report PRs (docs-sync fails on them — fix after #113 or add a README row).
 - Round 3 (live two-school attack) needs #90's seeded accounts; the sandbox can't read `.env.local`.
+- From #110 review (LOW): advisory lock in set_current_academic_year should use the two-key form (hashtext('set_current_academic_year'), hashtext(ws)); add pgTAP 'School A owner + School B year id → P0002'; when results/GPA start reading exam_weights, re-validate them server-side at compute time (keys must be real exams in that workspace/year, sum = 100).
 - Backlog: enforce CSP or correct §5.2; `isoDateSchema` real calendar check (2026-13-45 passes Zod today); `10_tenancy_cascade` throws_ok for the data_requests freeze trigger.
 
 ## 12. Docs owed

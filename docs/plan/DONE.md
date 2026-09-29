@@ -10,6 +10,7 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 | PR | What it does, in plain English | Proof |
 | --- | --- | --- |
+| #110 | Settings → Academic: school years (one current), terms, exam weighting, pass mark / GPA / rank / promotion rules (D-210) | builder's full review set + lead's independent Opus security review MERGE; migration live (Database run success); 272a0ec |
 | #114 | Owner's permission change: routine commit/push/PR/test commands no longer ask for approval; every safety block kept | owner edited, lead validated JSON + deny list; 989fd02 |
 | #108 | Release PR (changelogs) | 85f2d0c |
 | #111 | Demo seed: a demo email someone else registered is deleted and recreated clean (no stranger's name, login or MFA) | security re-review MERGE; merged 47e6d97 |
