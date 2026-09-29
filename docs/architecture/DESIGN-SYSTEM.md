@@ -240,36 +240,58 @@ aspirational, not shipped.
 
 ### 1.8 Liquid glass materials (D-408)
 
-Applied to a short, fixed list of chrome surfaces — **never** a card in a
-scrolling list, which is exactly the case `backdrop-filter` is expensive on
-the low-end Android hardware this product targets (CLAUDE.md §12):
+Glass is the resting material of the signed-in app, on an **ambient mesh**.
+It is never used for a card per row of a scrolling list: `backdrop-filter`
+on a long list is the case that is expensive on the low-end Android phones
+this product targets (CLAUDE.md §12).
 
-- `TopBar`, `BottomNav` (`glass-chrome`) — already sticky/fixed, already had
-  a translucent+blur pairing since D-14; this is the full material in place
-  of that pairing, not a second layer on top of it.
-- `SheetContent`, `DialogContent`, the toast (`sonner`) surface
-  (`glass-panel`) — transient overlays, not scrolling content.
-- The dashboard's "Today" pair of stat cards only (`Card`'s new, opt-in
-  `variant="glass"` — the default `Card` is unchanged). Restrained
-  deliberately: this is the one place D-408 puts glass on a card, per the
-  owner's "premium and restrained, not a gimmick".
+**The mesh** (`ambient-surface` on `AppShell`): four soft radial washes in
+the product's own hues. They are the green of the flag and the register
+ledger, a clear-sky blue, marigold and teal, over a cool off-white
+(`--ambient-base: #edf1ef`, deliberately not cream). Dark uses the same
+hues, deepened, over `#070a0b`. It is painted on `position: fixed`
+pseudo-elements, so it never scrolls or repaints with content, plus a 5–7 %
+greyscale grain. Without it the blur has nothing to show.
 
-Construction, both themes (`packages/ui/tokens/tokens.css`): a translucent
-tint (`--glass-bg` for chrome, `--glass-bg-panel` for panels) over
-`--ambient-surface` (a subtle radial wash behind `AppShell`, so the blur has
-something to show), `backdrop-filter: blur() saturate()`, a 1px inset top
-"specular" highlight, and a soft layered shadow (`--glass-shadow-1/2`)
-instead of a hard drop shadow. Two required fallbacks, both dropping to the
-equivalent opaque D-57 surface with no blur: `@supports not
-(backdrop-filter: blur(1px))` and `@media (prefers-reduced-transparency:
-reduce)`. Contrast is verified by hand against the worst realistic backdrop,
-not by `scripts/check-contrast-tokens.mjs` (it does not parse `rgb(… / a)`)
-— the numbers are in DECISION-LOG D-408.
+**Three tints, one construction** (`packages/ui/tokens/tokens.css`). Each
+is a translucent fill, `backdrop-filter: blur(24px) saturate(…)`, a 1px
+inner top highlight, a hairline edge and a soft layered shadow.
 
-This **supersedes** D-68's "cards and popovers are separated by a hairline
-1px ring, never a drop shadow" rule for the surfaces listed above only.
-Every other surface — lists, forms, non-glass cards, table rows — keeps the
-D-57/D-68 ink/paper chrome and hairline-ring elevation unchanged.
+| Utility         | Tint                                          | Used by                                                              |
+| --------------- | --------------------------------------------- | -------------------------------------------------------------------- |
+| `glass-chrome`  | `--glass-bg` (72 %; content scrolls under it) | `TopBar`, floating `BottomNav`, desktop sidebar                      |
+| `glass-panel`   | `--glass-bg-panel` (42 % light / 62 % dark)   | `Card variant="glass"`: the dashboard's cards, Settings → Appearance |
+| `glass-overlay` | `--glass-bg-overlay` (82–86 %)                | `SheetContent`, `DialogContent`, toasts: they sit over a scrim       |
+
+Radius on glass is `--radius-glass` (18px). The D-57/D-68 6px radius and
+hairline ring stay on every non-glass surface: lists, forms, table rows and
+default `Card`s.
+
+**Vibrancy.** Secondary text on glass or on the mesh uses
+`--glass-muted-foreground` (`#4a4a4a` light / `#b4b4b4` dark). It is one
+step stronger than paper's `--muted-foreground`. `ambient-surface` and the
+three glass utilities set it as `--muted-foreground`. The value only ever
+moves toward `--foreground`, so an opaque surface inside the shell only
+gains contrast.
+
+**Contrast is measured, not guessed.** `node scripts/check-glass-contrast.mjs`
+parses tokens.css and finds the worst spot. That is every mesh stop at full
+strength over the base, plus the grain's extreme pixel, run through the
+tint's own `saturate()`, with the tint composited in gamma sRGB. It checks
+`--foreground` and the muted ink against that spot, for each of the three
+tints and for the bare mesh, in both themes. All 16 pairs pass ≥ 4.5:1;
+the lowest is dark muted text on the bare mesh at 4.69:1. Run it after
+touching any glass or mesh token. (It is not in CI yet: `ci.yml` belongs
+to open PR #90.)
+
+**Fallbacks** (unlayered, section 13 of tokens.css). Where neither
+`backdrop-filter` nor `-webkit-backdrop-filter` is supported (Safari before
+18 needs the prefix), and under `prefers-reduced-transparency: reduce`,
+every tint drops to its opaque D-57 surface (`--background` / `--card` /
+`--popover`) with no blur. Reduced motion is the global section-12 switch.
+
+This **supersedes** D-68's "hairline ring, never a drop shadow" rule for
+glass surfaces only.
 
 ### 1.9 UX checklist (owner standard, D-408)
 
@@ -596,16 +618,33 @@ xl  1280  tables gain optional columns; detail pages gain a right rail
   action bar (attendance, marks).
 - For a **parent**, the workspace switcher is replaced by the **child
   switcher** when they are linked to more than one student.
+- **Back (D-408).** Every page that is not a top-level nav destination gets
+  one back control at the far left of the TopBar, where every phone app puts
+  it (Jakob). Below `lg` (phone and tablet) it is a 44px chevron, and the
+  workspace switcher steps aside on that page. From `lg` up it is the
+  chevron plus the parent page's name. With in-app history it calls
+  `router.back()`, so the chevron, the browser and the Android back button
+  agree. With none (a deep link, a new tab, a reload) it is a plain link to
+  the logical parent, so it never dead-ends and never leaves the app. The
+  parent comes from the URL: drop segments until what is left is a nav
+  destination, a named non-nav page (`PARENT_PAGES`) or the shell root
+  (`apps/web/lib/back-route.ts`). Pages carry no back links of their own
+  (a few still do, see the D-408 test report).
 
-**BottomNav (56px + safe bottom).**
+**BottomNav (D-408: a floating glass bar, 64px, lifted 8px off the safe area).**
+
+- Inset 12px from the screen edges and 18px of radius, so the mesh shows
+  around it. From `md` (tablet) it is a centred 28rem dock rather than a
+  full-width bar.
 
 - 5 items maximum, always 5 slots wide so the labels never reflow between roles.
 - Icon 22px + label at `--text-2xs`, both visible. Icon-only nav fails for a
   workforce with mixed literacy in English UI terms.
 - Target is the **full 56px column height**, not the icon.
-- Active state: the icon fills, the label goes `--weight-semibold`, and a 2px
-  `--primary` bar sits on the **top** edge of the slot (not the bottom — the
-  bottom edge is under the user's thumb and often under the gesture bar).
+- Active state: a raised tile behind the icon and label (white 80 % light /
+  white 12 % dark) and a `--weight-semibold` label. This replaces the
+  top-edge bar (D-408): the floating bar already sits clear of the gesture
+  area.
 - Slot 5 is always **More**, opening a sheet. A badge on More aggregates the
   badges of everything inside it.
 - The nav hides on scroll-down and returns on scroll-up **only** on pure reading

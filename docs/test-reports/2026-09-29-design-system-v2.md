@@ -1,176 +1,163 @@
-# Test Report — Design System v2: liquid glass, theme control, language to Settings
+# Test Report — Design System v2: liquid glass, theme control, shell back
 
-|         |                                                       |
-| ------- | ----------------------------------------------------- |
-| Feature | Design lane — Design System v2 (D-408)                |
-| Part    | Glass materials + theme control + language relocation |
-| Spec    | `docs/architecture/DESIGN-SYSTEM.md` §1.8/§1.9, D-408 |
-| PR      | #109                                                  |
-| Status  | **PASS WITH KNOWN ISSUES**                            |
-| Date    | 2026-09-29                                            |
-| Run by  | Claude (design lane)                                  |
+|         |                                                                                      |
+| ------- | ------------------------------------------------------------------------------------ |
+| Feature | Design lane: Design System v2 (D-408)                                                |
+| Part    | Glass on an ambient mesh, theme control, language to Settings, shell back affordance |
+| Spec    | `docs/architecture/DESIGN-SYSTEM.md` §1.8, §1.9, §3.1; D-408                         |
+| PR      | #109                                                                                 |
+| Status  | **PASS WITH KNOWN ISSUES** (CI e2e/lighthouse results pending, §5)                   |
+| Date    | 2026-09-29                                                                           |
+| Run by  | Claude (design lane, second pass)                                                    |
 
 ---
 
 ## 1. Scope
 
-**What this Part is.** The owner changed direction mid-Part after seeing the shipped screens read as "cheap and generic": add glass-morphism ("liquid glass") materials, give the user a visible Light/Dark/System theme control (both themes already existed; there was no control), and stop marketing the product's bilingual support in the signed-in shell — move the language switch out of the header/home screen into Settings only. This report covers that pivot, not the original marks-entry/family-results/report-card pass (abandoned mid-way, no code from it is in this PR).
+The owner asked for liquid glass and both themes: _"the UI that you are building looked so cheap and generic use glass morphism liquid glass things that looks great also introduce a white theme as well so dark and white theme both"_. The first pass produced flat opaque cards (its screenshots are replaced below). This second pass redid the visual layer. The owner then added a request for a back control: _"there are no going back options… I want a going back thing… from both pc and phone and tablets… optimize it for phone"_.
 
 **Covered:**
 
-- `--glass-*` tokens and `glass-chrome`/`glass-panel` utilities, applied to `TopBar`, `BottomNav`, `SheetContent`, `DialogContent`, the toast surface, and the dashboard's "Today" card pair (`Card variant="glass"`, opt-in).
-- `/app/settings/appearance`: Light/Dark/System (via the pre-existing `next-themes`) + language (moved from `UserMenu`/`EssentialsRow`).
-- Tap feedback (`Toggle`, `TabsTrigger`, `ChoiceCard`, `BottomNavItem`) and `Skeleton` retinting (app-polish).
-- `DESIGN-SYSTEM.md` §1.8 (glass), §1.9 (UX-laws checklist); `DECISION-LOG.md` D-408.
+- The ambient mesh plus grain behind `AppShell`, and three glass tints (`glass-chrome`, `glass-panel`, `glass-overlay`) with fallbacks.
+- Vibrancy ink (`--glass-muted-foreground`) and the new contrast script.
+- The app shell: glass header, floating glass BottomNav (a centred dock from `md`), glass sidebar, sentence-case group labels.
+- The dashboard: every card glass, icon chips, one big number per card, a progress bar, the date eyebrow removed, one primary action (sticky in the phone thumb zone, header right on desktop), and a tablet two-column side area.
+- Settings → Appearance: theme tiles with previews and a glass language card, `aria-labelledby` on both radio groups, and no "System" flash before mount.
+- Sheets, dialogs and toasts on `glass-overlay` with an 18px radius.
+- The shell back affordance (`back-route.ts`, `shell-back.tsx`, wired through `WorkspaceSwitcher`) in the school, family and personal shells. `SubPageHeader`'s duplicate back link is removed.
 
-**Out of scope for this Part** (named honestly, not hidden):
+**Not covered, on purpose:** the class hub, the attendance card and the school layout (owned by open PR #82); `settings/page.tsx` and `messages/*.json` (owned by #110 and #82); `ci.yml` (owned by #90). Their in-page back links are kept (see §8).
 
-- The class hub (`(school)/app/classes/[sectionId]/class-hub-view.tsx`) — owned by open PR #82, not touched. `Card`'s `glass` variant is ready for that lane to opt into.
-- `/app/settings/page.tsx`'s row list — owned by open PR #105, not touched. The new page is reachable by direct link (`UserMenu` → "Theme & language") and by URL, not yet from the grouped Settings list.
-- New copy on the Appearance page and the `UserMenu` link is inline, not `messages/{en,bn}.json` keys — both files are being edited concurrently by #82 and #105.
-- Per-route `loading.tsx` skeletons and `useOptimistic` writes — explicitly deferred to a later Part per the owner's own instruction.
-- The originally-scoped marks entry / family results / report card screens — superseded by the pivot before any code was written against them.
-
-**Risk areas:** contrast on a translucent surface (no single ratio — verified by hand against the worst realistic backdrop, see D-408); `backdrop-filter` performance on low-end Android (mitigated by scoping glass to a short, fixed list of chrome layers, never a scrolling list); breaking the two other design-lane sessions' open PRs by editing a file they also touch (checked every changed file against `gh pr diff --name-only` for #82/#90/#101/#105/#107 before editing).
+**Risk areas:** contrast on translucent surfaces (measured, §6); `backdrop-filter` cost on low-end Android (glass is used only on the chrome and a screen's handful of cards, never on list rows); back behaviour after a deep link (unit-tested, §3).
 
 ---
 
 ## 2. Environment
 
-|                |                                                                               |
-| -------------- | ----------------------------------------------------------------------------- |
-| Commit         | `a405f49` (plus the follow-up test-fix/docs commits pushed after this report) |
-| Branch         | `feat/design-demo-screens`                                                    |
-| CI run         | pending — draft PR #109, pushed; CI had not reported by the time of writing   |
-| Preview URL    | none (Vercel PR previews are off, D-70) — screenshots below are local         |
-| Supabase       | not touched — no migration in this PR                                         |
-| Migration head | unchanged — this Part added no migration                                      |
-| Node / pnpm    | Node 24 / pnpm 10 (repo-pinned)                                               |
-| Browser        | Chrome (via the Claude-in-Chrome extension), real render, not jsdom           |
-| Feature flags  | none                                                                          |
+|             |                                                                                                                                                                                                          |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commit      | `c05ba2a3` plus this docs commit                                                                                                                                                                         |
+| Branch      | `feat/design-demo-screens` (merged with `origin/main` at `f47e1515`, #105)                                                                                                                               |
+| CI run      | pending at the time of writing; see the PR checks                                                                                                                                                        |
+| Supabase    | not touched; no migration                                                                                                                                                                                |
+| Node / pnpm | Node 24.19 / pnpm 10                                                                                                                                                                                     |
+| Browser     | Installed Google Chrome via Playwright `channel: "chrome"`, headless                                                                                                                                     |
+| Screens     | a temporary fixture route rendering the real `AppShell`/`TopBar`/`SchoolSidebar`/`SchoolBottomNav`/`DashboardView`/`AppearanceForm`/`ShellBack` with invented copy. The route was deleted before commit. |
 
 ---
 
 ## 3. Unit and integration (Vitest)
 
-| Suite                           | Tests | Passed | Failed | Skipped | Duration         |
-| ------------------------------- | ----- | ------ | ------ | ------- | ---------------- |
-| `packages/ui`                   | 116   | 116    | 0      | 0       | 8.8 s            |
-| `apps/web` (full project)       | 455   | 455    | 0      | 0       | 28.7 s           |
-| — of which `user-menu.test.tsx` | 5     | 5      | 0      | 0       | (included above) |
-| **Total**                       | 571   | 571    | 0      | 0       |                  |
+| Suite                          | Files | Tests | Passed | Failed | Duration |
+| ------------------------------ | ----- | ----- | ------ | ------ | -------- |
+| `packages/ui` (`--project ui`) | 14    | 116   | 116    | 0      | 10.0 s   |
+| `apps/web` (`--project web`)   | 61    | 487   | 487    | 0      | 29.6 s   |
 
-Real commands run: `npx vitest run --project ui`, `npx vitest run --project web`. `user-menu.test.tsx` was edited in this PR — its inline `DropdownMenuRadioGroup` language-switch test was replaced with two tests asserting the new "Theme & language" link (href, and its Bengali label); both pass.
+New or changed in this pass:
 
-**Coverage:** not measured in this session (no `--coverage` run) — the change is markup/CSS/one new settings screen, not new domain logic, so this is a real but low-risk gap, named here rather than a fabricated number.
+- `lib/back-route.test.ts`: top-level pages get no back; parents are walked up and named; and for **every role's nav config**, every real `page.tsx` resolves to a parent that is a real page.
+- `(shared)/workspace/shell-back.test.ts`: A→B→A→B through Links counts as four visits, and only `popstate` steps back.
+- `workspace-switcher.test.tsx`: no back on `/app/dashboard`; on `/app/exams/e1/results` there is a "Back to Exam" link to `/app/exams/e1`.
+- `dashboard-view.test.tsx`: zero eyebrows; the attendance progress bar is named "3 of 5 classes marked"; the primary action appears only with `attendanceHref`.
+- `test/page-routes.ts`: the page-route scan moved out of `implemented-routes.test.ts`, which now shares it.
 
-### Notable cases proven
-
-- `UserMenu` no longer exposes an inline language radio group (`queryByRole("menuitemradio", ...)` is null) and instead links to `/app/settings/appearance` with the correct `href`.
-- The same link's accessible name is locale-correct ("Theme & language" / "থিম ও ভাষা").
-- Sign-out and "switch to basic mode" behaviour (pre-existing, unrelated to this Part) is unchanged — still green.
+Also run: `pnpm typecheck` (6/6 tasks), `pnpm lint` (clean), `pnpm format:check` (clean), `node scripts/check-contrast-tokens.mjs` (ALL CHECKS PASS), `node scripts/check-docs-sync.mjs` (pass). Coverage was not measured this session.
 
 ---
 
 ## 4. Database (pgTAP)
 
-**Not applicable.** This Part added no migration and touches no table.
+Not applicable: no migration, no table.
 
 ---
 
-## 5. End to end (Playwright)
+## 5. End to end, accessibility, screenshots
 
-**Not run in this session.** The repo's Playwright suite needs a live Supabase dev-branch session (`E2E_LIVE_SUPABASE` guard) that this session does not have credentials for, and time did not allow standing up the full authenticated journey suite for a design-tokens PR. This is a real gap, not hidden: CI's `e2e` job will run on this PR once marked ready, and its result should be pasted into this report (or a follow-up note) before the PR is approved.
+**Playwright journeys:** not run locally. The journeys need a live Supabase session, and reading `.env.local` is blocked in this environment. CI's `e2e` job runs them on #109. The journeys that click in-page "Back to the exam" links are unaffected, because those links are kept and the shell link's name is "Back to Exam(s)".
 
-### What was verified instead, for real
+**axe (WCAG 2.0/2.1 A+AA, `@axe-core/playwright` 4.13):** 10 runs on the fixture route, covering light/dark × 360×800/1280×800 × dashboard/appearance, plus the open More sheet at 360:
 
-A temporary, local-only, unauthenticated preview route (`apps/web/app/(marketing)/design-preview-d408/`, deleted before this commit — confirmed absent from `git status`) rendered `AppShell` + `TopBar` + `BottomNav` + two `Card variant="glass"` tiles with real fixture copy, in both languages and both themes (forced past the OS preference via `next-themes`' `setTheme()`, since the screenshot machine's own OS is set to dark). Screenshots below are from a real Chromium render (Claude-in-Chrome extension), not jsdom.
+| Result                        | Count                                                                                                                                        |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Violations (any impact)       | **0** in all 10 runs                                                                                                                         |
+| Serious / critical            | **0**                                                                                                                                        |
+| `color-contrast` "incomplete" | 0 on the dashboard and Appearance; 2 (light) and 3 (dark) with the More sheet open (page content behind the scrim, which axe cannot resolve) |
 
-**Known limitation, stated honestly:** the connected browser tool in this session did not reliably honour `resize_window` for the screenshot capture (`Page.captureScreenshot` returned the OS window's actual pixel size, ~1381×713, regardless of the requested 360×800/1280×800). The four screenshots below are therefore a desktop-scale capture of the phone-first layout, not a pixel-exact 360×800 or 1280×800 capture. They still demonstrate every real thing this report needs to prove — glass translucency, blur, the ambient wash, both themes, both languages — and the same layout already passed 360×800/1280×800 Playwright checks before this Part in the shipped `dashboard-view.test.tsx`/e2e journeys (unchanged by this PR's markup, only its `Card` variant). A follow-up session with the live e2e stack should still capture real 360×800/1280×800 device-emulated shots before this PR ships.
+**Screenshots** are exact viewports at DPR 2 in real Chrome, under `docs/test-reports/assets/2026-09-29-design-system-v2/`:
 
-### Accessibility (axe, WCAG 2.1 AA)
+| Screen                                    | Light                                               | Dark                                               |
+| ----------------------------------------- | --------------------------------------------------- | -------------------------------------------------- |
+| Dashboard, 360×800                        | `glass-dashboard-light-phone.jpg`                   | `glass-dashboard-dark-phone.jpg`                   |
+| Dashboard, 820×1180 (tablet)              | `glass-dashboard-light-tablet.jpg`                  | `glass-dashboard-dark-tablet.jpg`                  |
+| Dashboard, 1280×800                       | `glass-dashboard-light-desktop.jpg`                 | `glass-dashboard-dark-desktop.jpg`                 |
+| Dashboard scrolled (header blur), 360     | `glass-scrolled-light-phone.jpg`                    | `glass-scrolled-dark-phone.jpg`                    |
+| More sheet, 360                           | `glass-more-light-phone.jpg`                        | `glass-more-dark-phone.jpg`                        |
+| Toast, 360                                | `glass-toast-light-phone.jpg`                       | `glass-toast-dark-phone.jpg`                       |
+| Appearance + shell back, 360 / 820 / 1280 | `glass-appearance-light-{phone,tablet,desktop}.jpg` | `glass-appearance-dark-{phone,tablet,desktop}.jpg` |
 
-**Not run.** No `axe-core`/Playwright pass in this session — same live-stack/time constraint as §5's journeys. Manual checks below are eyeballed against the screenshots and the token-level contrast math in D-408, not machine-verified.
+<!-- Invented fixture copy only ("Ridgeview High School", names in the activity feed). No real school or person. -->
 
-**Manual checks** (against the screenshots and code):
+**Iteration log.** There were six rounds of screenshots, each read and criticised before the next change:
 
-| Check                                           | Result                                                                                                                                      |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Touch targets ≥ 44 px                           | unchanged — no touch-target size was touched by this Part                                                                                   |
-| Visible focus ring on every interactive element | unchanged — `:focus-visible` is global, untouched                                                                                           |
-| Contrast ≥ 4.5:1 on new (glass) surfaces        | verified **by hand**, not by `scripts/check-contrast-tokens.mjs` (it does not parse `rgb(… / a)`) — worked numbers in DECISION-LOG D-408    |
-| `@supports not (backdrop-filter)` fallback      | code review only — not exercised in a browser without the feature                                                                           |
-| `prefers-reduced-transparency: reduce` fallback | code review only — not exercised (no OS toggle available in this session)                                                                   |
-| `prefers-reduced-motion` on new tap feedback    | relies on the existing global `*, *::before, *::after { transition-duration: 0.01ms !important }` block in tokens.css, unchanged by this PR |
-
-### Screenshots
-
-Desktop-scale capture (see the limitation note above), both languages, both themes — `docs/test-reports/assets/2026-09-29-design-system-v2/`:
-
-| Variant   | File                 |
-| --------- | -------------------- |
-| en, light | `glass-en-light.jpg` |
-| en, dark  | `glass-en-dark.jpg`  |
-| bn, light | `glass-bn-light.jpg` |
-| bn, dark  | `glass-bn-dark.jpg`  |
-
-<!-- Synthetic fixture copy only ("Ridgeview School", "94%"). No real school, student or attendance data. -->
+1. The mesh was too faint and the glass read as opaque.
+2. Lighter tints and vibrancy ink made the glass visible; a bare-mesh contrast failure was found and fixed.
+3. Scrolled content ghosted through the header, so the chrome tint went up to 72 %.
+4. That ghosting turned out to come from Playwright's bundled headless shell, which does not run `backdrop-filter` at DPR 2. The installed Chrome blurs correctly, so all later shots use it.
+5. Back affordance added; the tablet nav and CTA spanned 820 px, so a centred dock was added.
+6. The tablet Plan card stretched to its neighbour's height, so it was top-aligned.
 
 ---
 
-## 6. Performance
+## 6. Performance and contrast
 
-**Not run.** No Lighthouse pass in this session. `backdrop-filter` is the real performance risk this change carries on low-end Android — mitigated by design (glass scoped to a handful of fixed chrome layers, never a scrolling list — see D-408 §1) but not measured with a real Lighthouse/mobile-throttled run. This should be run before the PR is marked ready.
+| Check                                     | Result                                                                                                                                                                                                                                 |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`                              | exit 0                                                                                                                                                                                                                                 |
+| Bundle budget (`check-bundle-budget.mjs`) | **not measured locally.** On this Windows machine Next reported 0 B for every route and the script printed "No routes under /(school)/app to measure". The CI `build` job's budget step is the real measurement.                       |
+| Lighthouse                                | not run locally; CI `lighthouse` job                                                                                                                                                                                                   |
+| `node scripts/check-glass-contrast.mjs`   | **16/16 PASS**. Light: foreground ≥ 11.52:1, muted on bare mesh 5.19, on panel 6.63, on chrome 6.90, on overlay 8.08. Dark: foreground ≥ 8.83:1, muted on bare mesh **4.69** (lowest), on panel 6.20, on chrome 6.74, on overlay 8.29. |
+| Blur scope                                | Chrome (3 fixed layers), the dashboard's ≤ 6 cards, and transient overlays. No list rows.                                                                                                                                              |
 
 ---
 
 ## 7. Security checks
 
-| Check                           | Result                                            |
-| ------------------------------- | ------------------------------------------------- |
-| gitleaks                        | not run in this session                           |
-| Semgrep                         | not run in this session                           |
-| `pnpm audit --audit-level high` | not run in this session                           |
-| Supabase advisors               | not applicable — no migration                     |
-| DAST                            | not applicable — no auth/money/files code touched |
-
-No secret, credential or PII was added by this Part — every string added is UI copy or CSS.
+No auth, data, money or file code changed. The back control only navigates to in-app paths it builds from the current pathname, or to `router.back()`. It never reads a URL parameter as a destination, so it is not an open redirect. gitleaks, Semgrep and `pnpm audit` were not run locally; the CI `security` job runs them.
 
 ---
 
 ## 8. Known issues
 
-| #   | Issue                                                                                                                                                                                                                            | Severity | Ship anyway?                                                                                                                                                  | Tracked        |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 1   | `/app/settings/page.tsx`'s row list does not yet include "Appearance" — reachable by URL and via `UserMenu` only                                                                                                                 | low      | yes — the file is owned by open PR #105; add the row once it merges                                                                                           | this report    |
-| 2   | New copy (Appearance page, `UserMenu`'s "Theme & language" link) is inline, not in `messages/{en,bn}.json`                                                                                                                       | low      | yes — both files are being edited by open PRs #82/#105 simultaneously; fold in once they merge                                                                | this report    |
-| 3   | No Playwright/e2e, axe, or Lighthouse run this session (live-Supabase/time constraints)                                                                                                                                          | medium   | yes, for the draft — **not** for marking ready; CI's own `e2e`/`lighthouse` jobs must be green (or explicitly waived by the owner) before this PR is approved | CI job on #109 |
-| 4   | Screenshots are desktop-scale (~1381×713), not pixel-exact 360×800/1280×800 — see §5                                                                                                                                             | low      | yes for this report; a follow-up session should recapture at exact viewports with the live stack                                                              | this report    |
-| 5   | `home/language-switch-button.tsx` is now unused (its only caller, `EssentialsRow`, was edited to stop rendering it) but not deleted, since `home/page.tsx` (open PR #82) may still reference the sibling file set                | low      | yes — cheap to delete once #82 merges                                                                                                                         | this report    |
-| 6   | Theme preference is per-device only (`next-themes` + `localStorage`) — no `user_preferences.theme` column, so it does not sync across a user's devices, despite `DESIGN-SYSTEM.md` §1.7's older (never-built) claim that it does | low      | yes — flagged and corrected in `DESIGN-SYSTEM.md` §1.7 in this PR; a synced preference is a real follow-up if the owner asks                                  | D-408          |
+| #   | Issue                                                                                                                                                                                                                | Severity | Ship anyway?                                                            |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------- |
+| 1   | In-page back links now duplicate the shell chevron on exam detail, exam results, marks entry, the staff person page and the student profile, and on roll call (owned by #82). e2e journeys click "Back to the exam". | low      | yes. Clean up in a later pass and update the journeys at the same time. |
+| 2   | Tab state is not in the URL for the class hub (owned by #82); browser back does not step through its tabs.                                                                                                           | medium   | yes. #82's lane or a follow-up moves it to `?tab=`.                     |
+| 3   | `ShellBack` is mounted inside `WorkspaceSwitcher`, not composed explicitly in the layouts, because the school layout belongs to #82.                                                                                 | low      | yes. Move it into `TopBar.leading` after #82 merges.                    |
+| 4   | `check-glass-contrast.mjs` is not in CI (`ci.yml` belongs to #90).                                                                                                                                                   | low      | yes. Add one step after #90 merges.                                     |
+| 5   | `/app/settings` has no "Theme & language" row yet (the file belongs to #110). The page is reachable from the avatar menu.                                                                                            | low      | yes                                                                     |
+| 6   | New copy (appearance page, back labels, the "Home" fallback) is inline bilingual, not in `messages/*.json` (owned by #82/#110).                                                                                      | low      | yes. Fold it in after those merge.                                      |
+| 7   | `SubPageHeader.backLabel` is accepted and ignored until #110 merges.                                                                                                                                                 | low      | yes                                                                     |
+| 8   | Theme is stored per device (`next-themes` localStorage), not synced across devices.                                                                                                                                  | low      | yes. Follow up if the owner asks.                                       |
+| 9   | Screens were verified on a fixture route, not with a signed-in live session (no dev credentials in this environment); the bundle budget was not measurable locally.                                                  | medium   | only once CI `e2e`/`lighthouse`/`build` are green                       |
+| 10  | `home/language-switch-button.tsx` is unused (a first-pass leftover; `home/page.tsx` belongs to #82).                                                                                                                 | low      | yes                                                                     |
 
-**Deliberately not tested, and why:**
-
-- pgTAP / RLS — no migration in this PR.
-- Cross-browser (Safari/Firefox `backdrop-filter` support) — Chromium only, this session; Safari has supported `backdrop-filter` since 2015 (`-webkit-` prefixed) and Firefox since v103, both older than this product's stated support window, but not independently verified here.
+Deliberately not tested: Safari and Firefox rendering. Chromium only; the `-webkit-` prefix and the `@supports` fallback were reviewed in code, not run.
 
 ---
 
 ## 9. Sign-off
 
-| Definition of Done                           | Met                                                         |
-| -------------------------------------------- | ----------------------------------------------------------- |
-| Spec written and matches the build           | ☑ (`DESIGN-SYSTEM.md` §1.8/§1.9, updated in this PR)        |
-| Migration + pgTAP isolation and escalation   | n/a — no migration                                          |
-| Unit tests + coverage thresholds             | ☑ tests (571/571) — ☐ coverage not measured                 |
-| UI built and verified at both viewports      | ☐ desktop-scale only, see §5                                |
-| Playwright journey at both viewports         | ☐ not run this session                                      |
-| a11y — zero serious/critical + manual checks | ☐ axe not run; manual checks partial                        |
-| This test report, with real numbers          | ☑                                                           |
-| Docs updated in the same PR                  | ☑ (`DESIGN-SYSTEM.md`, `DECISION-LOG.md`, `docs/README.md`) |
+| Definition of Done                        | Met                                                  |
+| ----------------------------------------- | ---------------------------------------------------- |
+| Spec written and matches the build        | ☑ DESIGN-SYSTEM §1.8/§3.1, D-408 items 1–10          |
+| Migration + pgTAP                         | n/a                                                  |
+| Unit tests                                | ☑ 603/603 (ui 116, web 487); ☐ coverage not measured |
+| UI at 360×800 and 1280×800 (and 820×1180) | ☑ exact-viewport screenshots, both themes            |
+| Playwright journey at both viewports      | ☐ CI `e2e` pending                                   |
+| a11y: zero serious/critical               | ☑ axe, 10 runs, 0 violations                         |
+| This test report, with real numbers       | ☑                                                    |
+| Docs updated in the same PR               | ☑ DESIGN-SYSTEM, DECISION-LOG D-408, changeset       |
 
-**Signed off by:** Claude (design lane)
-**Date:** 2026-09-29
-**Commit:** `a405f49` (+ follow-up commits on `feat/design-demo-screens`)
+**Signed off by:** Claude (design lane) · 2026-09-29
 
-> I ran the unit tests, typecheck, lint, format check and production build myself, and read their real output — those numbers above are real. The e2e/axe/Lighthouse/security-scan rows are honestly marked "not run" because they were not run in this session (live-Supabase and time constraints); the PR should not be marked ready until CI's own required checks for those are green, or the owner explicitly waives them for this draft.
+> Every number above comes from a command I ran and read this session. Anything not run is marked "not run", with the reason.
