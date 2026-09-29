@@ -32,12 +32,15 @@ const PAGE_SIZE = 30
 /** The single-select chip row (spec W1: "All · Teachers · Admin · Staff ·
  * On notice · Pending") maps onto two independent query params: a base
  * role or an employment status, never both at once. */
-type FilterValue = "all" | "teacher" | "admin" | "staff" | "on_notice" | "pending_join"
+type FilterValue =
+  "all" | "teacher" | "admin" | "staff" | "on_notice" | "pending_join"
 const ROLE_FILTERS = new Set(["teacher", "admin", "staff"])
 const STATUS_FILTERS = new Set(["on_notice", "pending_join"])
 
 function roleForFilter(filter: FilterValue) {
-  return ROLE_FILTERS.has(filter) ? (filter as "teacher" | "admin" | "staff") : undefined
+  return ROLE_FILTERS.has(filter)
+    ? (filter as "teacher" | "admin" | "staff")
+    : undefined
 }
 
 function statusForFilter(filter: FilterValue) {
@@ -199,7 +202,9 @@ export function StaffDirectory({
             header: t.columns.role,
             cell: (row) => (
               <span className="flex flex-wrap items-center gap-1">
-                <span>{row.designationLabel ?? t.roles[row.baseRole ?? "staff"]}</span>
+                <span>
+                  {row.designationLabel ?? t.roles[row.baseRole ?? "staff"]}
+                </span>
                 {row.designationLabel ? (
                   <StatusChip tone="neutral">
                     {t.roles[row.baseRole ?? "staff"]}
@@ -286,7 +291,9 @@ function StaffLink({
   return (
     <span className="flex min-h-11 items-center gap-2">
       <Avatar className="size-8">
-        <AvatarFallback>{row.fullName.slice(0, 1).toUpperCase()}</AvatarFallback>
+        <AvatarFallback>
+          {row.fullName.slice(0, 1).toUpperCase()}
+        </AvatarFallback>
       </Avatar>
       <span className="flex flex-col">
         <span className="font-medium">{row.fullName}</span>

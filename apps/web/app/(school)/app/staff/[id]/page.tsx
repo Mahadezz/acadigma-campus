@@ -1,6 +1,5 @@
-import { forbidden, notFound } from "next/navigation"
-
 import Link from "next/link"
+import { forbidden, notFound } from "next/navigation"
 
 import { ArrowLeftIcon, PhoneIcon } from "lucide-react"
 

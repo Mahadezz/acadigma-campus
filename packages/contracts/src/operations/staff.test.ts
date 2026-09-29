@@ -133,9 +133,9 @@ describe("staffDirectoryRowSchema (F-OP-06 Part 2, D-209)", () => {
 
   it("requires membershipId — always present, unlike id", () => {
     const { membershipId: _drop, ...withoutMembershipId } = base
-    expect(
-      staffDirectoryRowSchema.safeParse(withoutMembershipId).success
-    ).toBe(false)
+    expect(staffDirectoryRowSchema.safeParse(withoutMembershipId).success).toBe(
+      false
+    )
   })
 })
 
