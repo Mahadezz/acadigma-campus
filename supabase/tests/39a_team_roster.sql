@@ -68,6 +68,13 @@ returns text language sql security definer as $fn$
   select status::text from public.workspace_members where id = p_member
 $fn$;
 
+-- School B's owner membership id (invisible to school A's owner).
+create or replace function tests.owner_b_member()
+returns uuid language sql security definer as $fn$
+  select id from public.workspace_members
+   where workspace_id = '39a00000-0000-4000-b000-000000000002' and role = 'owner'
+$fn$;
+
 -- ---------------------------------------------------------------------
 -- Fixture (as postgres). School A: owner O, admin AD, teacher T, staff S,
 -- parent PA (active); pending joiners P1 (older) and P2 (newer); R, who
@@ -179,8 +186,7 @@ select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000001');
 select throws_ok(
   $$select * from public.list_workspace_members('39a00000-0000-4000-b000-000000000001',
-      'active', null, (select id from public.workspace_members
-                        where workspace_id = '39a00000-0000-4000-b000-000000000002' limit 1))$$,
+      'active', null, tests.owner_b_member())$,
   '22023', 'CURSOR_INVALID',
   'a cursor from another school is refused');
 

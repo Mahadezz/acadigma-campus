@@ -48,7 +48,7 @@ async function decide(
   if (!writable.ok) return err(planReadOnlyApiError(writable.error))
 
   const result = await write(ctx, supabase, parsed.data.memberId)
-  revalidatePath("/app/staff/team")
+  if (result.ok) revalidatePath("/app/staff/team")
   return result
 }
 
