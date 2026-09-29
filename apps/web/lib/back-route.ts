@@ -40,7 +40,8 @@ function navLinks(config: NavConfig | null): NavLink[] {
   return [...config.bottom, ...config.more.flatMap((g) => g.items)]
 }
 
-function matches(pattern: string, path: string): boolean {
+/** `[x]` in `pattern` matches any one segment of `path`. */
+export function matches(pattern: string, path: string): boolean {
   const a = pattern.split("/")
   const b = path.split("/")
   return (

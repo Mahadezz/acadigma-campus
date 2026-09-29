@@ -28,13 +28,25 @@ import { onlyImplemented } from "@/lib/implemented-routes"
 // Pathnames visited in this tab since the app loaded. Module scope, so it
 // survives shell remounts and resets on a full load — exactly "in-app".
 const visited: string[] = []
-
-function record(pathname: string) {
-  if (visited.at(-1) === pathname) return
-  // Arriving at the entry before the top is a step back, not a new visit.
-  if (visited.at(-2) === pathname) visited.pop()
-  else visited.push(pathname)
+// Set by the browser's own back/forward (and router.back()), so a Link
+// that happens to revisit an earlier page still counts as a new visit.
+let popped = false
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", () => {
+    popped = true
+  })
 }
+
+/** Exported for shell-back.test.ts. */
+export function record(pathname: string) {
+  if (visited.at(-1) !== pathname) {
+    if (popped && visited.at(-2) === pathname) visited.pop()
+    else visited.push(pathname)
+  }
+  popped = false
+}
+
+export const canGoBack = () => visited.length > 1
 
 export function useBackTarget(current: MembershipSummary | undefined) {
   const pathname = usePathname()
@@ -55,7 +67,7 @@ export function ShellBack({
     <Link
       href={target.href}
       onClick={(event) => {
-        if (visited.length > 1 && !event.metaKey && !event.ctrlKey) {
+        if (canGoBack() && !event.metaKey && !event.ctrlKey) {
           event.preventDefault()
           router.back()
         }

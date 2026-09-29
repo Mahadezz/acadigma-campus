@@ -38,9 +38,16 @@ import { isLocale, setLocaleCookie, type Locale } from "@/lib/locale"
  * being edited by open PRs #82 and #105, which this Part does not touch
  * (see the file-level comment in `page.tsx`).
  */
+const noopSubscribe = () => () => {}
+
 export function AppearanceForm({ locale }: { locale: Locale }) {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const mounted = React.useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false
+  )
   const [, startTransition] = React.useTransition()
   const bn = locale === "bn"
 
@@ -70,7 +77,10 @@ export function AppearanceForm({ locale }: { locale: Locale }) {
         </div>
         <Card variant="glass" className="p-3">
           <RadioGroup
-            value={theme ?? "system"}
+            aria-labelledby="appearance-theme"
+            // next-themes knows the stored theme only after mount; show no
+            // selection until then rather than flashing "System".
+            value={mounted ? (theme ?? "system") : ""}
             onValueChange={setTheme}
             className="grid grid-cols-3 gap-2"
           >
@@ -108,6 +118,7 @@ export function AppearanceForm({ locale }: { locale: Locale }) {
         </div>
         <Card variant="glass" className="py-1">
           <RadioGroup
+            aria-labelledby="appearance-language"
             value={locale}
             onValueChange={handleLocaleChange}
             className="divide-foreground/[0.08] gap-0 divide-y"
