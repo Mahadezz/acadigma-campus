@@ -123,7 +123,7 @@ export function DashboardView(props: DashboardViewProps) {
           {isManager ? <Checklist t={t} steps={props.checklist} /> : null}
         </div>
 
-        <div className="space-y-4 lg:space-y-5">
+        <div className="grid content-start items-start gap-4 md:grid-cols-2 lg:grid-cols-1 lg:gap-5">
           {isManager ? <PlanCard t={t} plan={props.plan} /> : null}
           <PeopleCard
             t={t}
@@ -139,7 +139,7 @@ export function DashboardView(props: DashboardViewProps) {
       {primary ? (
         // Phone: the one primary action rides in the thumb zone, just above
         // the floating tab bar (AppShell leaves 6rem for it).
-        <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-10 lg:hidden [&>a]:w-full">
+        <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-10 md:mx-auto md:max-w-[28rem] lg:hidden [&>a]:w-full">
           {primary}
         </div>
       ) : null}

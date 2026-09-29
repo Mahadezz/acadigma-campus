@@ -104,7 +104,7 @@ export function BottomNav({
       // D-408: a floating glass bar, inset from the screen edges and lifted
       // clear of the gesture bar, so the ambient mesh shows around it.
       className={cn(
-        "glass-chrome fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[var(--z-bottomnav)] rounded-[1.375rem] border lg:hidden",
+        "glass-chrome fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[var(--z-bottomnav)] rounded-[1.375rem] border md:inset-x-auto md:left-1/2 md:w-[28rem] md:-translate-x-1/2 lg:hidden",
         className
       )}
     >

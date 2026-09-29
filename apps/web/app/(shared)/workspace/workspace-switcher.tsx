@@ -28,6 +28,7 @@ import type { Messages } from "@/lib/i18n"
 import { purgeDataCaches, runOfflineCheck } from "@/lib/offline/check"
 
 import { switchWorkspace } from "./actions"
+import { ShellBack, useBackTarget } from "./shell-back"
 
 /**
  * F-ID-03 §4.2 / §6 "Workspace switcher (top bar chip, every shell)".
@@ -56,11 +57,33 @@ export type WorkspaceSwitcherProps = {
   shellLink?: { href: string; label: string }
 }
 
+/**
+ * D-408: the leading slot is "back, then workspace". This component is the
+ * one leading element every shell already renders, so the shell back
+ * chevron lives here. On a page with a back target the chip steps aside
+ * below `lg` (a phone header has room for one leading control; the chip
+ * is on every top-level page).
+ */
+export function WorkspaceSwitcher(props: WorkspaceSwitcherProps) {
+  const current = props.workspaces.find(
+    (w) => w.workspaceId === props.currentWorkspaceId && w.status !== "removed"
+  )
+  const back = useBackTarget(current)
+  return (
+    <div className="flex min-w-0 items-center gap-1">
+      {back ? <ShellBack target={back} /> : null}
+      <div className={back ? "hidden min-w-0 lg:flex" : "flex min-w-0"}>
+        <WorkspaceChip {...props} />
+      </div>
+    </div>
+  )
+}
+
 function initialOf(name: string): string {
   return name.trim().charAt(0).toUpperCase() || "?"
 }
 
-export function WorkspaceSwitcher({
+function WorkspaceChip({
   workspaces,
   currentWorkspaceId,
   t,
