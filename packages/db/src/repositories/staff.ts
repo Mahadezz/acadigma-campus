@@ -1,6 +1,8 @@
 /**
  * F-OP-06 Part 1 — read access to `staff_records`, `staff_compensation` and
  * `staff_documents` (`supabase/migrations/20260925000900_staff_schema.sql`).
+ * Part 2 adds `listStaff`, reading `staff_directory`
+ * (`20260929020309_staff_directory_every_member.sql`, D-209).
  *
  * Deliberately read-only: no server action exists yet to call a write here
  * (createStaffRecord/setStaffCompensation/uploadStaffDocument are Parts 3-4),
@@ -15,8 +17,11 @@ import {
   err,
   ok,
   type ApiError,
+  type ListStaffInput,
   type Result,
   type StaffCompensation,
+  type StaffDirectoryPage,
+  type StaffDirectoryRow,
   type StaffDocument,
   type StaffRecord,
 } from "@acadigma/contracts"
@@ -190,4 +195,116 @@ export async function listStaffDocuments(
 
   if (error) return err(UNAVAILABLE)
   return ok((data ?? []).map(toStaffDocument))
+}
+
+// ---------------------------------------------------------------------------
+// listStaff (F-OP-06 Part 2) — the directory: /app/staff.
+// ---------------------------------------------------------------------------
+
+const STAFF_DIRECTORY_COLUMNS =
+  "id, membership_id, workspace_id, user_id, staff_code, full_name, " +
+  "avatar_url, designation_label_id, designation_label, base_role, " +
+  "department, subject_ids, work_email, work_phone, employment_status, " +
+  "joined_on"
+
+/** PostgREST's `or=(...)` grammar treats these as syntax, and `%`/`_` are
+ * LIKE wildcards; a name, staff code or contact detail never needs any of
+ * them (same rule `students.ts`' `searchTerm` applies to the roster). */
+function searchTerm(q: string): string {
+  return q.replace(/[,()*%_\\:"'.]/g, " ").trim()
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toStaffDirectoryRow(row: any): StaffDirectoryRow {
+  return {
+    id: row.id,
+    membershipId: row.membership_id,
+    workspaceId: row.workspace_id,
+    userId: row.user_id,
+    staffCode: row.staff_code,
+    fullName: row.full_name,
+    avatarUrl: row.avatar_url,
+    designationLabelId: row.designation_label_id,
+    designationLabel: row.designation_label,
+    baseRole: row.base_role,
+    department: row.department,
+    subjectIds: row.subject_ids ?? [],
+    workEmail: row.work_email,
+    workPhone: row.work_phone,
+    employmentStatus: row.employment_status,
+    joinedOn: row.joined_on,
+  }
+}
+
+/** Splits a `limit + 1`-row fetch into `(page, nextCursor)` keyset-pagination
+ * style — same shape as `audit.ts`'s `paginate`, not shared across packages
+ * for one four-line helper. */
+function paginate(
+  rows: readonly StaffDirectoryRow[],
+  limit: number
+): { items: StaffDirectoryRow[]; nextCursor: string | null } {
+  if (rows.length <= limit) return { items: [...rows], nextCursor: null }
+  const items = rows.slice(0, limit)
+  return { items, nextCursor: items[items.length - 1]?.membershipId ?? null }
+}
+
+/**
+ * The directory: every active non-parent member (`staff_directory`, D-209),
+ * server-filtered and cursor-paginated (CLAUDE.md rule 7 — never a client
+ * filters a table). RLS narrows this to zero rows for a parent or anyone
+ * outside the workspace; a non-parent member sees every row regardless of
+ * whether the person they're looking at has a `staff_records` row yet.
+ */
+export async function listStaff(
+  supabase: AcadigmaSupabaseClient,
+  ctx: WorkspaceContext,
+  input: ListStaffInput
+): Promise<Result<StaffDirectoryPage, ApiError>> {
+  let query = supabase
+    .from("staff_directory")
+    .select(STAFF_DIRECTORY_COLUMNS)
+    .eq("workspace_id", ctx.workspaceId)
+
+  if (input.role) query = query.eq("base_role", input.role)
+  if (input.status) query = query.eq("employment_status", input.status)
+
+  const term = input.q ? searchTerm(input.q) : ""
+  if (term) {
+    query = query.or(
+      `full_name.ilike.*${term}*,staff_code.ilike.*${term}*,` +
+        `work_email.ilike.*${term}*,work_phone.ilike.*${term}*`
+    )
+  }
+  if (input.cursor) query = query.gt("membership_id", input.cursor)
+
+  const { data, error } = await query
+    .order("membership_id", { ascending: true })
+    .limit(input.limit + 1)
+
+  if (error) return err(UNAVAILABLE)
+
+  const rows = (data ?? []).map(toStaffDirectoryRow)
+  return ok(paginate(rows, input.limit))
+}
+
+/** One directory row by membership id — the person sheet (`/app/staff/[id]`).
+ * RLS narrows `staff_directory` the same way as `listStaff`; a parent or an
+ * outsider gets zero rows back, surfaced here as `not_found` rather than a
+ * distinct "forbidden", exactly like every other by-id lookup in this
+ * package (see `getStaffRecordById`). */
+export async function getStaffDirectoryRow(
+  supabase: AcadigmaSupabaseClient,
+  ctx: WorkspaceContext,
+  membershipId: string
+): Promise<Result<StaffDirectoryRow, ApiError>> {
+  const { data, error } = await supabase
+    .from("staff_directory")
+    .select(STAFF_DIRECTORY_COLUMNS)
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("membership_id", membershipId)
+    .maybeSingle()
+
+  if (error) return err(UNAVAILABLE)
+  if (!data) return err(NOT_FOUND)
+  return ok(toStaffDirectoryRow(data))
 }

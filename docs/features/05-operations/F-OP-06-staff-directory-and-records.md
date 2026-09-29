@@ -1,13 +1,13 @@
 # F-OP-06 — Staff Directory and Records
 
-|                  |                                                                                                                                                                                                                                                |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Area             | ops                                                                                                                                                                                                                                            |
-| Status           | in-progress — Part 1 (schema, RLS, the compensation split) built on `feat/F-OP-06-p1-staff-schema`, ahead of its M1 1.7 merge slot per ROADMAP order (see §11 for deviations); Parts 2-5 remain                                                |
-| Owner branch     | `feat/ops-staff`                                                                                                                                                                                                                               |
-| Depends on       | F-ID-01/02 (profiles, memberships, invitations, custom labels), F-OP-01 (hire creates records), F-OP-02 (reads hourly rate), F-OP-05 (channel membership revoke), F-TI-0x (resource orphaning), F-AC-0x (section/section_subject reassignment) |
-| Plan             | `docs/plan/ROADMAP.md` M1 1.7                                                                                                                                                                                                                  |
-| Base44 reference | `docs/reference/base44-inventory/05-operations.md` §2.2 (`HiredStaff`), §3 rows 24–25, §4.1, §7.5, §8 Q6, Q18; PRODUCT-DECISIONS §1.4, §1.14, §3.7, §6.3                                                                                       |
+|                  |                                                                                                                                                                                                                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Area             | ops                                                                                                                                                                                                                                                                    |
+| Status           | in-progress — Part 1 (schema, RLS, the compensation split, `feat/F-OP-06-p1-staff-schema`) and Part 2 (directory + person sheet, `feat/operations-staff-directory`) built, ahead of the M1 1.7 merge slot per ROADMAP order (see §11 for deviations); Parts 3-5 remain |
+| Owner branch     | `feat/ops-staff`                                                                                                                                                                                                                                                       |
+| Depends on       | F-ID-01/02 (profiles, memberships, invitations, custom labels), F-OP-01 (hire creates records), F-OP-02 (reads hourly rate), F-OP-05 (channel membership revoke), F-TI-0x (resource orphaning), F-AC-0x (section/section_subject reassignment)                         |
+| Plan             | `docs/plan/ROADMAP.md` M1 1.7                                                                                                                                                                                                                                          |
+| Base44 reference | `docs/reference/base44-inventory/05-operations.md` §2.2 (`HiredStaff`), §3 rows 24–25, §4.1, §7.5, §8 Q6, Q18; PRODUCT-DECISIONS §1.4, §1.14, §3.7, §6.3                                                                                                               |
 
 ---
 
@@ -355,7 +355,9 @@ _Demo:_ offboard a teacher who has 4 section-subjects, 12 resources and 2 queued
 - **a11y**: the stepper communicates step state to screen readers (`aria-current`, completed/blocked announced); masked fields have an accessible description; the directory list rows are links with meaningful names.
 - **Performance budgets**: directory list p95 ≤ 500 ms at 500 members (server-filtered, cursor-paginated); `app.staff_hourly_rate` ≤ 5 ms (indexed, `STABLE`, callable in a loop by the cover engine); the revoke transaction ≤ 1.5 s for a member with 50 resources and 20 assignments.
 
-## 11. Part 1 status and deviations
+## 11. Part status and deviations
+
+### Part 1 — schema, RLS, the compensation split
 
 Shipped on `feat/F-OP-06-p1-staff-schema`: `staff_records`, `staff_compensation` (exclusion constraint + `app.tg_close_prior_compensation_period()`), `staff_documents`, the `staff_directory` view, `app.staff_hourly_rate`, `app.can_open_staff_document`, the membership↔record status trigger (`app.tg_link_staff_record_on_membership_active()`), and default `custom_labels` seeding for new school workspaces (extends `app.tg_workspace_bootstrap()`). Contracts (`packages/contracts/src/operations/staff.ts`), a read-only repository (`packages/db/src/repositories/staff.ts`) and pgTAP (`supabase/tests/20_staff_schema.sql`) landed with it; no server actions or UI (`/app/staff`, the person sheet, the record editor, compensation UI, offboarding) — those are Parts 2-5. DECISION-LOG D-63 records the schema and RLS-pattern calls made while building this Part, several worth restating here:
 
@@ -367,6 +369,16 @@ Shipped on `feat/F-OP-06-p1-staff-schema`: `staff_records`, `staff_compensation`
 - **`staff_compensation` and `staff_documents` gained a COMPOSITE `(workspace_id, staff_record_id)` foreign key** against `staff_records (workspace_id, id)`, replacing a plain single-column FK on `staff_record_id` (D-63 item 10, blocking lead review): without it, an owner/admin of workspace B could insert a row claiming `workspace_id = B` while `staff_record_id` actually referenced a record in workspace A — RLS on each table only ever checked its own `workspace_id` column, never that it agreed with the referenced record's real one.
 - **`app.tg_staff_records_self_update_guard()` was rewritten from a deny-list to an allow-list** (D-63 item 11): the first draft enumerated admin-only columns and let anything else through, failing OPEN for any column the function did not yet know about.
 - **`staff_documents_insert`'s self-insert branch was missing `verified_by`/`verified_at`/`uploaded_by` checks** (D-63 item 12, security review): a self-inserting teacher could otherwise fake admin verification on their own document, or attribute the upload to someone else.
+
+### Part 2 — directory + person sheet
+
+Shipped on `feat/operations-staff-directory`: `/app/staff` (search, six-way filter chip row, cursor-paginated `DataList`, own-record "You" badge) and the read-only person sheet `/app/staff/[id]`. `listStaff`/`getStaffDirectoryRow` (`packages/db/src/repositories/staff.ts`), `listStaffInputSchema`/`staffDirectoryPageSchema` (`packages/contracts`), the `staff.view` permission. DECISION-LOG D-209 records the calls made building this Part:
+
+- **AC1 ("every active member") did not hold under Part 1's view.** `staff_directory` selected FROM `staff_records`, and no `staff_records` row is ever created for a school's owner (`app.tg_workspace_bootstrap()` only inserts their `workspace_members` row) — a brand-new school's directory was empty, not "the owner alone" as the Part's own demo names. Fixed by widening the view to start FROM `workspace_members` (D-209): every active non-parent member is a row now, whether or not they have a `staff_records` row yet.
+- **`id` is now nullable; `membership_id` (always present) is the directory's routing key** — `/app/staff/[id]` takes a `membership_id`, and a person with no staff record still has a working person-sheet URL.
+- **Designation label / department / work phone fall back to `workspace_members.label_id`/`department`/`phone`** (F-ID-03's pre-existing columns) only when no `staff_records` row exists; the still-open §3.1 duplication this spec's Part 1 section already flags is read through, not resolved, by this fallback (DATA-MODEL.md §6.1 restates this).
+- **Quick actions are Call (`tel:`) only** — §4 W1's Message and View timetable are not built (no messaging or timetable UI exists on `main` yet); shown per D-400's own precedent (hide an unbuilt destination, never link to a 404). The **invite entry point named in §8's Part 2 scope line is deferred entirely** — no invitation server action or UI exists anywhere in the codebase yet, for any feature, so there is nothing yet to be an entry point to; W2's "Manually" backfill path (creating a `staff_records` row for an existing member) is Part 3/editor territory, not this Part's.
+- **`dashboard.ts`'s "staff records" count** moved from `staff_directory` to `staff_records` directly, so it keeps meaning "records that exist" rather than silently becoming "active members" under the wider view.
 
 ### Open questions
 

@@ -177,8 +177,12 @@ than Hind Siliguri at the same size.
   (600/700) is for emphasis inside body text, not for headings.
 - **Eyebrow (D-68):** a small label above a section title, `className="eyebrow"`
   — JetBrains Mono 12px, uppercase, `0.08em` tracking, `--muted-foreground`.
-  One per section at most, never a sentence. Prefer digits or copy that needs
-  no translation (the wizard shows its step as `01 / 05`).
+  Never a sentence. Prefer digits or copy that needs no translation (the
+  wizard shows its step as `01 / 05`). **The §8.1 ceiling governs: one per
+  screen at most, and usually none** (D-407) — a card whose own title already
+  names the section (e.g. a "Members" card) gets no eyebrow above it; the
+  eyebrow is for page-level context (a date, a step count), not a label
+  repeated over every card.
 - Bengali has no italic and no small caps. Emphasis is weight only.
 - A mixed-script line uses `--font-bn` for the Bengali run with Inter still in
   the stack after it, so Latin words and digits inside a Bengali sentence keep

@@ -157,6 +157,13 @@ export const ACTIONS = [
   // F-AC-02 §2 (D-103): date of birth and guardians. Teachers may attempt it;
   // RLS narrows it to the class teacher of the student's section.
   "students.read_sensitive",
+  // F-OP-06 §2 Part 2 (D-209): the staff directory (name, label, subjects,
+  // work email/phone) — owner/admin/teacher/staff, never a parent. Distinct
+  // from `members.read` (the tenancy Team & Access screen, F-ID-03 §2):
+  // this key gates `/app/staff` specifically, matching the spec's own
+  // permission-key table so a reviewer can read one row of §2 and one line
+  // here and know they agree.
+  "staff.view",
 ] as const
 
 export type Action = (typeof ACTIONS)[number]
@@ -227,6 +234,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "academics.section.write",
     "academics.subject.write",
     "students.read_sensitive",
+    "staff.view",
   ],
   // Runs the school day to day. Money and owner-only settings (modules, danger
   // zone) stay with the owner; the F-OP-07 policy blobs do not (RLS §3.1).
@@ -289,6 +297,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "academics.section.write",
     "academics.subject.write",
     "students.read_sensitive",
+    "staff.view",
   ],
   teacher: [
     "attendance.read",
@@ -325,6 +334,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "results.read",
     "students.read_sensitive",
     "students.guardian.invite",
+    "staff.view",
   ],
   // Office staff: sees the school, changes almost nothing.
   staff: [
@@ -349,6 +359,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     // spec's "—". No 'sample' render: that is the pipeline's own proof.
     "report.view",
     "report.render.report_card",
+    "staff.view",
   ],
   // Read-only parent portal (DECISION-LOG D-10), narrowed to their children by RLS.
   parent: [
