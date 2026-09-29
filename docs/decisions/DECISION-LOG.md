@@ -1471,6 +1471,19 @@ Also proven with no fix needed: #76 LOW, a parent gets `{"section": null}` from 
 
 **Consequences:** the upload feature must write `files` rows server-side (service role or a definer function) for anything outside `<ws>/<uid>/`, and must set `purge_after` and the virus-scan status itself. Soft delete of a file is a server action: the SELECT policy's `deleted_at is null` already made a client PATCH of `deleted_at` fail with an RLS error, before this change. A future profile or staff screen that edits `employee_code` or `label_id` goes through an owner/admin. Capability management UI is owner-only. Safe to apply live: policy, grant and function changes only, no rewrite or index; the tables are near-empty.
 
+## D-78 — Onboarding fee ৳15,000; the rest of the price list is the lead's provisional call · ACCEPTED · 2026-09-29
+
+**Context:** #96 drafted a price proposal and founding-school LOI from the D-41 grid and left four points for the owner: the refundable deposit (৳5,000), founding-school perks, killing the self-serve Free school plan (OQ-22), and final sign-off on the numbers.
+
+**Decision:** the owner, 2026-09-29: _"U can set random pricing for now but onboaring fee is 15000"_. So:
+
+- **Onboarding fee ৳15,000**, one-time, never waived (was ৳10,000 in D-41's grid, `research/MARKET-STRATEGY.md` §c). This amends D-41's list; D-41 still holds as "one price list".
+- Everything else is the lead's provisional call, quoted until the owner changes it: Starter ৳2,200 / Pro ৳4,900 / Enterprise from ৳18,000; paid pilot ৳2,000/month for 8–10 weeks; **refundable deposit ৳5,000** at LOI signing; founding-school status gives price-lock and public naming only; **the self-serve Free school plan is killed** (OQ-22 closed that way; the free personal teacher workspace stays).
+
+**Why:** the owner decides the one number he cares about now and delegated the rest (standing full authorization, 2026-09-26). The onboarding fee costs ৳6,000–16,000 to deliver (MARKET-STRATEGY §c), so ৳15,000 covers the top of that range instead of losing money on a hard school.
+
+**Consequences:** `PRICE-PROPOSAL.md` and `LOI-TEMPLATE.md` are marked provisional, not draft. The deposit stays a third of the onboarding fee, so it still reads as a deterrent, not a second charge. When the owner sets any other number, it gets a new entry that supersedes this one for that number.
+
 ## D-110 — Team & Access Part 5: the roster is an owner/admin screen read through one definer function; approve and reject are plain status updates · ACCEPTED · 2026-09-29
 
 **Context:** F-ID-03 Part 5 — `/app/staff/team`, `listMembers` with server-side search and cursor paging, the Active · Pending · Removed tabs, `approveMember` / `rejectMember`. Three things in the spec did not fit what is on `main`: (a) `profiles_select` shows a person only to colleagues who share an **active** membership, so the owner cannot read the name of the pending joiner they must approve (nor of a removed member); (b) §3 names `approved_by` and `removed_reason` columns that were never created; (c) §2 lets teachers and staff read the roster as directory cards, which is what F-OP-06 Part 2's `/app/staff` directory (operations lane) is for.
