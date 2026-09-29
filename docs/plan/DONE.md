@@ -1,0 +1,39 @@
+# DONE — Acadigma Campus (living list)
+
+Everything finished, newest first, with the proof. Pair with `TODO.md`. When an item in TODO finishes, move it here with its PR, merge commit and how it was verified.
+
+---
+
+## 2026-09-29
+
+### Merged to main (each: reviews passed, CI green; migrations verified live with the Database run + smoke)
+
+| PR | What it does, in plain English | Proof |
+| --- | --- | --- |
+| #111 | Demo seed: a demo email someone else registered is deleted and recreated clean (no stranger's name, login or MFA) | security re-review MERGE; merged 47e6d97 |
+| #105 | Owners/admins change a staff member's role (with a preview of what they'll gain or lose), assign custom labels, edit staff fields (employee code, department, phone) | 3 security reviews (label cross-school gap closed with composite FKs + a cleanup before the constraint switches on); migrations 20260929065654, 20260929121412 live; f47e151 |
+| #107 | One-click demo school seed (40 students, attendance, exam, results, teacher/owner/parent logins) + 5-minute investor script (D-80) | 2 security reviews (demo-account takeover closed); 7d5528b |
+| #101 | Staff messaging foundation: general, staff and per-class channels, messages, strict access rules (D-311) | independent Opus security review (no cross-school/role leak); migration 20260929041934 live; 225cdb9 |
+| #100 | Staff directory at /app/staff and a person page (D-209) | security + DB reviews; migration 20260929020309 live; cd1c1a4 |
+| #102 | Dashboard design pass: error screen now in the user's language; visual noise cut (D-407) | TS/React/ponytail reviews; bdba515 |
+| #99 | Team & Access: owners/admins approve or turn down people waiting to join (D-110) | security + DB reviews; migration 20260929015813 live; 68244d6 |
+| #96 | Price list: onboarding fee ৳15,000 (owner), rest provisional; LOI template (D-78) | docs; 749e23c |
+| #93 | Offline attendance part 2: conflict sheet, late sync within 7 days, session-expiry handling (D-310) | security + DB reviews; merged by the owner; migration 20260928165204 live; 9cb0085 |
+| #98, #103 | Release PRs (package changelogs) | f218509, 2af2cf0 |
+
+### Owner requests completed (not code)
+
+- Waitlist Supabase project `acadigma-suite` restored (was paused).
+- Stray `20260917020000_marketing_waitlist.sql` moved from the Campus repo to the acadigma-website repo (ec4f8ba) — it belonged to the website.
+- Branch protection: ruleset `protect-main` active on main (no delete, no force-push, PR required, 11 required checks) — owner created it, lead verified.
+- Docker disk image moved to `F:\Docker` — owner did it, lead verified (old copy still on C:).
+- Permission prompts: cause found (the settings "ask" list); owner edited `.claude/settings.json`; lead verified it's valid JSON with all deny rules kept; committed in #114.
+- Standing skills written: `~/.claude/skills/ux-laws` (7 UX laws), `~/.claude/skills/app-polish` (5 tells + pull-to-refresh). Playbook tells every UI builder to load them.
+- Owner's guides saved to memory: liquid-glass/light-dark/don't-market-Bengali, UX laws, app polish, MCPs (Supabase connector is on the wrong account), "start simple" system design.
+- Prompt audit (Opus 5.5) of CLAUDE.md, the playbook and the builder brief: report + proposed diff delivered; not applied (see TODO §12).
+- Security loop rounds 1 and 2: no critical/high/medium findings (reports in #104, #106).
+- 4-lane autonomy set up; builders may spawn their own reviewers; save sweep every 30 min and handover every 2 h running.
+
+## Before 2026-09-29 (summary — details in BUILD-LOG.md and git log)
+
+Foundation (M0) complete: sign-up/sign-in with throttling, create-a-school wizard, personal workspace, workspace switcher, audit log, plans/limits and trial → read-only. Academics: classes, sections, subjects and teachers; students, guardians, bulk import; daily roll call and today view; exams, marks entry with lock/unlock; GPA/rank in SQL; Bengali report-card PDFs (single + bulk); publish results and parent view; guardian linking; attendance register + mark sheet PDFs. Basic mode parts 1–2 (text size, simple home, help). Offline parts 1 and 2a (app shell, read cache, outbox with attendance). Settings foundation + school profile + branding. Staff schema and compensation split. Security audits 1 and 2 (definer functions, RLS, grants, row caps).
