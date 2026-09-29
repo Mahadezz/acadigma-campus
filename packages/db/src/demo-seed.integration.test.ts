@@ -161,7 +161,7 @@ describe.skipIf(!RUN)("demo school seed (D-80, local Supabase)", () => {
          values ('school', '${DEMO_NAME}', 'demo-impostor-${randomUUID().slice(0, 8)}',
                  '5eed0000-0000-4000-a000-000000000001', '5eed0000-0000-4000-a000-000000000001')`)
 
-    expect(() => seed()).toThrow()
+    expect(() => seed()).toThrow(/refusing: 2 workspaces are named/)
     expect(fingerprint(others)).toBe(othersBefore)
   }, 120_000)
 })

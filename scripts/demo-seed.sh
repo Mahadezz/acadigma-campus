@@ -6,8 +6,8 @@
 #   1. Ensures the three fictional demo accounts exist, through the Auth
 #      admin API (GoTrue hashes the password; it never appears in SQL).
 #   2. Runs supabase/seed/demo-school.sql, demo-class-6-ka.sql (D-103) and
-#      demo-school-history.sql as ONE query, so every step goes through the
-#      same database functions the app calls.
+#      demo-school-history.sql as ONE statement in one transaction; every
+#      step goes through the same database functions the app calls.
 #
 # Env:
 #   SUPABASE_URL          API URL (https://<ref>.supabase.co or the local one)
@@ -51,8 +51,19 @@ ensure_user parent.demo@example.com "Abdul Uddin"
 
 sql="$(mktemp)"
 trap 'rm -f "$sql"' EXIT
-cat "$root/supabase/seed/demo-school.sql" \
-  "$root/supabase/seed/demo-class-6-ka.sql" \
-  "$root/supabase/seed/demo-school-history.sql" >"$sql"
+# `supabase db query` sends one prepared statement, so the three files (one
+# DO block each) run as one outer DO block: one statement, one transaction —
+# a failure anywhere leaves nothing behind.
+{
+  echo 'do $demo_seed$ begin'
+  for f in demo-school.sql demo-class-6-ka.sql demo-school-history.sql; do
+    if grep -q '\$demo_file\$' "$root/supabase/seed/$f"; then
+      echo "$f contains the wrapper's quote tag" >&2
+      exit 2
+    fi
+    printf 'execute $demo_file$\n%s\n$demo_file$;\n' "$(cat "$root/supabase/seed/$f")"
+  done
+  echo 'end $demo_seed$;'
+} >"$sql"
 
 (cd "$root" && supabase db query "$DB_TARGET" -f "$sql")
