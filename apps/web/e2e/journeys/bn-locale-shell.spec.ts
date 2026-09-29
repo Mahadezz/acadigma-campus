@@ -55,7 +55,7 @@ test.afterEach(async ({ page }, testInfo) => {
   testInfo.setTimeout(testInfo.timeout + 30_000)
   // Re-render from the server first: a test cut off mid-switch can leave
   // the stored locale বাংলা behind an English page (D-76).
-  if (//app/.test(page.url())) await page.goto("/app/dashboard")
+  if (/\/app/.test(page.url())) await page.goto("/app/dashboard")
   const bnMenuButton = page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" })
   if (!(await bnMenuButton.isVisible().catch(() => false))) return
   await bnMenuButton.click()
