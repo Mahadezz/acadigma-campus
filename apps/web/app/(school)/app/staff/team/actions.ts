@@ -12,10 +12,9 @@ import { revalidatePath } from "next/cache"
 import {
   apiError,
   apiErrorFromZod,
-  approveMemberInputSchema,
   err,
+  memberDecisionInputSchema,
   planReadOnlyApiError,
-  rejectMemberInputSchema,
   type ApiError,
   type MemberDecision,
   type Result,
@@ -36,11 +35,10 @@ const FORBIDDEN = apiError(
 )
 
 async function decide(
-  schema: typeof approveMemberInputSchema,
   input: unknown,
   write: typeof approveMemberRow
 ): Promise<Result<MemberDecision, ApiError>> {
-  const parsed = schema.safeParse(input)
+  const parsed = memberDecisionInputSchema.safeParse(input)
   if (!parsed.success) return err(apiErrorFromZod(parsed.error))
 
   const ctx = await requireWorkspace()
@@ -57,11 +55,11 @@ async function decide(
 export async function approveMember(
   input: unknown
 ): Promise<Result<MemberDecision, ApiError>> {
-  return decide(approveMemberInputSchema, input, approveMemberRow)
+  return decide(input, approveMemberRow)
 }
 
 export async function rejectMember(
   input: unknown
 ): Promise<Result<MemberDecision, ApiError>> {
-  return decide(rejectMemberInputSchema, input, rejectMemberRow)
+  return decide(input, rejectMemberRow)
 }

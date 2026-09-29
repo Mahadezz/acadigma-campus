@@ -56,14 +56,10 @@ function fakeClient(rpcReply: Reply, fromReplies: Reply[] = []) {
 function row(i: number) {
   return {
     id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
-    user_id: `10000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
     full_name: `Member ${i}`,
     email: `m${i}@test.local`,
-    avatar_url: null,
     role: "teacher",
     status: "pending",
-    label_id: null,
-    department: null,
     via_invitation: false,
     created_at: "2026-09-29T00:00:00Z",
     joined_at: null,
@@ -89,12 +85,10 @@ describe("listMembers (D-110)", () => {
       items: [
         {
           id: row(1).id,
-          userId: row(1).user_id,
           fullName: "Member 1",
           email: "m1@test.local",
           role: "teacher",
           status: "pending",
-          department: null,
           viaInvitation: false,
           requestedAt: "2026-09-29T00:00:00Z",
           joinedAt: null,

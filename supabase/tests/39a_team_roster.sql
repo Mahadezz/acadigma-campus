@@ -117,6 +117,7 @@ update public.workspace_members set status = 'removed'
 -- ---------------------------------------------------------------------
 -- A. The read, as the owner and the admin.
 -- ---------------------------------------------------------------------
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000001');
 
 select is(tests.names('pending'),
@@ -137,6 +138,7 @@ select is(
 select is(tests.names('removed'), array['Removed Rahim'],
   'owner: the removed tab');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000002');
 
 select is(tests.names('active'),
@@ -173,6 +175,7 @@ select throws_ok(
   '42501', 'FORBIDDEN',
   'isolation: another school''s owner is refused');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000001');
 select throws_ok(
   $$select * from public.list_workspace_members('39a00000-0000-4000-b000-000000000001',
@@ -184,22 +187,27 @@ select throws_ok(
 -- ---------------------------------------------------------------------
 -- B. Escalation on the read.
 -- ---------------------------------------------------------------------
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000003');
 select throws_ok($$select tests.names('pending')$$, '42501', 'FORBIDDEN',
   'a teacher cannot read the roster');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000004');
 select throws_ok($$select tests.names('active')$$, '42501', 'FORBIDDEN',
   'staff cannot read the roster');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000005');
 select throws_ok($$select tests.names('active')$$, '42501', 'FORBIDDEN',
   'a parent cannot read the roster');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000006');
 select throws_ok($$select tests.names('pending')$$, '42501', 'FORBIDDEN',
   'a pending joiner cannot read the roster');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000010');
 select throws_ok($$select tests.names('active')$$, '42501', 'FORBIDDEN',
   'a stranger cannot read the roster');
@@ -213,9 +221,11 @@ select ok(
 -- ---------------------------------------------------------------------
 -- C. Approve / reject.
 -- ---------------------------------------------------------------------
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000003');
 update public.workspace_members set status = 'active'
  where id = '39a00000-0000-4000-e000-000000000007';
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000009');
 update public.workspace_members set status = 'active'
  where id = '39a00000-0000-4000-e000-000000000007';
@@ -223,6 +233,7 @@ select tests.logout();
 select is(tests.status_of('39a00000-0000-4000-e000-000000000007'), 'pending',
   'a teacher and another school''s owner cannot approve (RLS: zero rows)');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000007');
 select throws_ok(
   $$update public.workspace_members set status = 'active'
@@ -230,6 +241,7 @@ select throws_ok(
   '42501', 'members cannot change their own role or status',
   'a joiner cannot approve themselves');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000002');
 update public.workspace_members set status = 'active'
  where id = '39a00000-0000-4000-e000-000000000006' and status = 'pending';
@@ -239,6 +251,7 @@ select ok(
      from public.workspace_members where id = '39a00000-0000-4000-e000-000000000006'),
   'admin approves: active, joined_at stamped');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000002');
 select is(tests.names('active', 'pritom'), array['Pending Pritom'],
   'the approved member is on the active tab');
@@ -252,6 +265,7 @@ select ok(
      from public.workspace_members where id = '39a00000-0000-4000-e000-000000000007'),
   'admin rejects: removed, removed_by = the admin, joined_at still null');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000001');
 select is(
   (select array_agg(r.full_name || ':' || (r.joined_at is null)::text order by r.full_name)
@@ -264,6 +278,7 @@ select is(
 select tests.logout();
 select app.set_access_mode('39a00000-0000-4000-b000-000000000001', 'read_only',
                            'Your Pro trial has ended.');
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000001');
 select throws_ok(
   $$update public.workspace_members set status = 'active'
@@ -280,6 +295,7 @@ select tests.logout();
 select is(tests.status_of('39a00000-0000-4000-e000-000000000011'), 'removed',
   'read_only: rejecting is allowed');
 
+select tests.logout();
 select tests.login('39a00000-0000-4000-a000-000000000002');
 select throws_ok(
   $$update public.workspace_members set status = 'removed'

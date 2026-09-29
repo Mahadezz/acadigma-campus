@@ -23,14 +23,10 @@ create or replace function public.list_workspace_members(
   p_limit        integer default 25)
 returns table (
   id             uuid,
-  user_id        uuid,
   full_name      text,
   email          text,
-  avatar_url     text,
   role           public.member_role,
   status         public.member_status,
-  label_id       uuid,
-  department     text,
   via_invitation boolean,
   created_at     timestamptz,
   joined_at      timestamptz,
@@ -59,8 +55,8 @@ begin
 
   -- Parents are not staff: their access is managed per child (D-108).
   return query
-  select m.id, m.user_id, p.full_name, p.email, p.avatar_url, m.role,
-         m.status, m.label_id, m.department, m.invitation_id is not null,
+  select m.id, p.full_name, p.email, m.role, m.status,
+         m.invitation_id is not null,
          m.created_at, m.joined_at, m.removed_at
     from public.workspace_members m
     join public.profiles p on p.id = m.user_id
@@ -69,7 +65,7 @@ begin
      and m.role <> 'parent'
      and (v_q is null
           or position(v_q in lower(p.full_name)) > 0
-          or position(v_q in coalesce(p.email, '')) > 0)
+          or position(v_q in lower(coalesce(p.email, ''))) > 0)
      and (p_after is null or (m.created_at, m.id) < (v_after_created, p_after))
    order by m.created_at desc, m.id desc
    limit least(greatest(coalesce(p_limit, 25), 1), 51);

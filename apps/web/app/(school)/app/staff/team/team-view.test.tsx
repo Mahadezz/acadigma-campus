@@ -24,12 +24,10 @@ const t = en.team
 function member(over: Partial<MemberRow> = {}): MemberRow {
   return {
     id: "00000000-0000-4000-8000-000000000001",
-    userId: "10000000-0000-4000-8000-000000000001",
     fullName: "Anika Rahman",
     email: "anika@test.local",
     role: "teacher",
     status: "pending",
-    department: null,
     viaInvitation: false,
     requestedAt: "2026-09-28T04:00:00Z",
     joinedAt: null,

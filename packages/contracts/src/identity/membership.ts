@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { uuidSchema } from "../common"
 
-import { memberRoleSchema, memberStatusSchema } from "./workspace"
+import { type memberRoleSchema, memberStatusSchema } from "./workspace"
 
 /**
  * F-ID-03 §7, Part 5 (D-110): the Team & Access roster read and the two
@@ -25,29 +25,23 @@ export const listMembersInputSchema = z.object({
 })
 export type ListMembersInput = z.infer<typeof listMembersInputSchema>
 
-export const memberRowSchema = z.object({
-  id: uuidSchema,
-  userId: uuidSchema,
-  fullName: z.string(),
-  email: z.string().nullable(),
-  role: memberRoleSchema,
-  status: memberStatusSchema,
-  department: z.string().nullable(),
+export type MemberRow = {
+  id: string
+  fullName: string
+  email: string | null
+  role: z.infer<typeof memberRoleSchema>
+  status: z.infer<typeof memberStatusSchema>
   /** Asked through an invitation; otherwise with the school's join code. */
-  viaInvitation: z.boolean(),
-  requestedAt: z.string(),
-  joinedAt: z.string().nullable(),
-  removedAt: z.string().nullable(),
-})
-export type MemberRow = z.infer<typeof memberRowSchema>
+  viaInvitation: boolean
+  requestedAt: string
+  joinedAt: string | null
+  removedAt: string | null
+}
 
 export type MemberPage = { items: MemberRow[]; nextCursor: string | null }
 
-export const approveMemberInputSchema = z.object({ memberId: uuidSchema })
-export type ApproveMemberInput = z.infer<typeof approveMemberInputSchema>
-
-export const rejectMemberInputSchema = z.object({ memberId: uuidSchema })
-export type RejectMemberInput = z.infer<typeof rejectMemberInputSchema>
+/** `approveMember` / `rejectMember` input. */
+export const memberDecisionInputSchema = z.object({ memberId: uuidSchema })
 
 /** What an approve/reject returns: the row's new lifecycle state. */
 export type MemberDecision = {

@@ -4081,18 +4081,14 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: {
-          avatar_url: string
           created_at: string
-          department: string
           email: string
           full_name: string
           id: string
           joined_at: string
-          label_id: string
           removed_at: string
           role: Database["public"]["Enums"]["member_role"]
           status: Database["public"]["Enums"]["member_status"]
-          user_id: string
           via_invitation: boolean
         }[]
       }

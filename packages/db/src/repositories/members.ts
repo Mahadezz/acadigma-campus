@@ -43,12 +43,10 @@ const NOT_PENDING: ApiError = {
 
 const rowSchema = z.object({
   id: z.string(),
-  user_id: z.string(),
   full_name: z.string(),
   email: z.string().nullable(),
   role: memberRoleSchema,
   status: memberStatusSchema,
-  department: z.string().nullable(),
   via_invitation: z.boolean(),
   created_at: z.string(),
   joined_at: z.string().nullable(),
@@ -79,12 +77,10 @@ export async function listMembers(
   return ok({
     items: page.map((r) => ({
       id: r.id,
-      userId: r.user_id,
       fullName: r.full_name,
       email: r.email,
       role: r.role,
       status: r.status,
-      department: r.department,
       viaInvitation: r.via_invitation,
       requestedAt: r.created_at,
       joinedAt: r.joined_at,

@@ -195,7 +195,7 @@ export function TeamView({
   if (status === "pending") {
     columns.push({
       key: "actions",
-      header: <span className="sr-only">{t.approve}</span>,
+      header: <span className="sr-only">{t.columns.actions}</span>,
       hideOnCard: true,
       cell: (m) => (
         <Actions t={t} member={m} disabled={pending} onDecide={decide} />
@@ -260,9 +260,12 @@ export function TeamView({
         </Button>
       </form>
 
-      {notice ? (
-        <InlineAlert tone={notice.tone}>{notice.text}</InlineAlert>
-      ) : null}
+      {/* Mounted before any notice, so screen readers announce the change. */}
+      <div aria-live="polite">
+        {notice ? (
+          <InlineAlert tone={notice.tone}>{notice.text}</InlineAlert>
+        ) : null}
+      </div>
 
       <DataList
         items={members}
