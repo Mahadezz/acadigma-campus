@@ -194,9 +194,9 @@ select tests.logout();
 select tests.login('59000000-0000-4000-a000-000000000008');
 select is(tests.my_keys(), '{}'::text[], 'a pending member is in no channel');
 select throws_ok(
-  $insert into public.messages (workspace_id, channel_id, sender_id, body, client_nonce)
+  $$insert into public.messages (workspace_id, channel_id, sender_id, body, client_nonce)
     values ('59000000-0000-4000-b000-000000000001', tests.ch('general'),
-            '59000000-0000-4000-a000-000000000008', 'am I in?', gen_random_uuid())$,
+            '59000000-0000-4000-a000-000000000008', 'am I in?', gen_random_uuid())$$,
   '42501', 'NOT_A_MEMBER', 'a pending member cannot post');
 select tests.logout();
 
@@ -289,9 +289,9 @@ values ('59000000-0000-4000-d000-000000000009', '59000000-0000-4000-b000-0000000
         '59000000-0000-4000-a000-000000000004', 'staff', 'active', now());
 select tests.login('59000000-0000-4000-a000-000000000004');
 select throws_ok(
-  $insert into public.messages (workspace_id, channel_id, sender_id, body, client_nonce)
+  $$insert into public.messages (workspace_id, channel_id, sender_id, body, client_nonce)
     values ('59000000-0000-4000-b000-000000000002', tests.ch('general'),
-            '59000000-0000-4000-a000-000000000004', 'which school?', gen_random_uuid())$,
+            '59000000-0000-4000-a000-000000000004', 'which school?', gen_random_uuid())$$,
   '23503', 'insert or update on table "messages" violates foreign key constraint "messages_channel_fkey"',
   'a member of two schools cannot file a School A message under School B');
 select tests.logout();
