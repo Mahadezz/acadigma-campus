@@ -1,5 +1,70 @@
 # @acadigma/db
 
+## 0.14.0
+
+### Minor Changes
+
+- a328806: F-ID-03 Part 7 — remove a member, leave a school, transfer ownership. Owners
+  and admins can remove a member from Team & access (access ends on their next
+  request; works even on a read-only plan). Every member can leave a school from
+  "Your membership" (`/app/settings/membership`), except its only owner, who
+  first hands ownership to an admin or teacher: a one-step transfer confirmed
+  with their password and the school's name, optionally staying an owner too.
+
+### Patch Changes
+
+- 272a0ec: F-OP-07 Part 2 (D-210): Settings → Academic — academic years (create, set current with a confirmation naming what changes), terms within a year (add/delete, validated against the year's range and other terms), exam weighting (a live sum, blocked unless it adds to 100 or is empty), and the pass-mark/GPA-rule/rank/grade-scale-code form. New `terms` table (`47_terms.sql`, class T2 RLS) and `public.set_current_academic_year` RPC for the atomic `is_current` swap. New: `checkTermRange`/`checkExamWeights` (`@acadigma/domain/academic`), `listAcademicYears`/`createAcademicYear`/`setCurrentAcademicYear`/`listTerms`/`createTerm`/`deleteTerm`/`getExamWeights`/`updateExamWeights` (`@acadigma/db/repositories/academic-years`), their Zod contracts (`@acadigma/contracts`).
+- Updated dependencies [a328806]
+- Updated dependencies [272a0ec]
+  - @acadigma/contracts@0.14.0
+  - @acadigma/domain@0.10.5
+
+## 0.13.0
+
+### Minor Changes
+
+- f47e151: F-ID-03 Part 6 — role changes, staff fields and custom labels. Owners and
+  admins can change a member's role (with a plain-language consequences step),
+  edit their staff details (employee code, department, work phone — the code is
+  generated when left blank), manage the school's custom labels
+  (`/app/settings/labels`) and assign a label to a member. Labels change the
+  title shown next to a name, never what the person can do.
+- 225cdb9: F-OP-05 Part 1 (D-311): messaging schema — `channels`, `channel_members` and `messages` with RLS by derived channel membership (`app.my_channel_ids()`), automatic general/staff/section channels, and the post-permission trigger (`NOT_A_MEMBER`, `ARCHIVED_CHANNEL`, `MUTED`). Generated types regenerated.
+
+### Patch Changes
+
+- 47e6d97: D-80 follow-up: the demo seed replaces (deletes and recreates) a demo account someone else registered, instead of resetting it; integration test updated. No runtime change.
+- 7d5528b: D-80: integration test for the production demo-school seed (`scripts/demo-seed.sh`, `supabase/seed/demo-school*.sql`, manual `Demo seed` workflow). No runtime change.
+- Updated dependencies [f47e151]
+  - @acadigma/contracts@0.13.0
+  - @acadigma/domain@0.10.4
+
+## 0.12.0
+
+### Minor Changes
+
+- 68244d6: F-ID-03 Part 5 (D-110): Team & Access at `/app/staff/team` — the staff roster by status (active, waiting, removed) with server-side search and keyset paging, and approve / turn down for join requests, for owners and admins. New `public.list_workspace_members` function (migration `20260929015813_team_roster.sql`).
+- cd1c1a4: F-OP-06 Part 2 (D-209): the staff directory, `/app/staff` — server-side search, a six-way filter chip row (All/Teachers/Admin/Staff/On notice/Pending), cursor pagination, an own-record "You" badge — and the read-only person sheet `/app/staff/[id]`. `staff_directory` now shows every active non-parent member, not only those with a `staff_records` row (a brand-new school's owner now appears from day one); a member with no record falls back to `workspace_members`' pre-existing label/department/phone. New: `staff.view` permission, `listStaff`/`getStaffDirectoryRow` (`@acadigma/db`), `listStaffInputSchema`/`staffDirectoryPageSchema` (`@acadigma/contracts`, `staffDirectoryRowSchema.id` is now nullable, `membershipId` added and always present).
+
+### Patch Changes
+
+- Updated dependencies [68244d6]
+- Updated dependencies [cd1c1a4]
+  - @acadigma/contracts@0.12.0
+  - @acadigma/domain@0.10.3
+
+## 0.11.0
+
+### Minor Changes
+
+- 9cb0085: F-ID-11 Part 2b (D-310): when a colleague saved a class after a teacher took the roll offline, "Compare and choose" shows who saved when and only the students that differ, theirs or mine for each — Keep theirs, Use mine or Save my choices; nothing is overwritten until she chooses, and the audit keeps both. A roll call taken offline inside its correction window that reaches the server up to 7 days later is saved and marked "Sent late from offline" (only when no register exists yet for that day). An expired session pauses the waiting list with "Sign in again to send…" instead of retrying; the sign-in screen counts what waits on the phone. Another teacher's unsent changes on a shared phone are never sent, shown (beyond a count) or deleted by whoever signs in; that person is told once and can sign out to hand the phone back; they are kept up to 14 days. A deleted or banned account's waiting changes are removed. Sign-out now always deletes the signed-in user's own queue, never a stale one. Waiting changes also send after any successful request. Contracts: `saveAttendanceInputSchema` takes an optional `capturedAt`; `AttendanceDaySection.session.syncedLate`. DB: `attendance_sessions.captured_at`, `queued_offline`, `synced_late`.
+
+### Patch Changes
+
+- Updated dependencies [9cb0085]
+  - @acadigma/contracts@0.11.0
+  - @acadigma/domain@0.10.2
+
 ## 0.10.2
 
 ### Patch Changes

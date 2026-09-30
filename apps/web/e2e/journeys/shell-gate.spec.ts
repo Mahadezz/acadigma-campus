@@ -57,6 +57,16 @@ test("a parent member never reaches /app — the gate sends them to /family inst
   await expect(page).toHaveURL("/family")
 
   await expectNoA11yViolations(page, testInfo)
+
+  // Back to the seeded Personal workspace: the switch persists
+  // `last_active_workspace_id`, and a later journey (or this test's own
+  // retry) signs in as this parent expecting /personal (D-76).
+  await page.getByRole("button", { name: /switch workspace/i }).click()
+  await page
+    .getByRole("dialog", { name: "Switch workspace" })
+    .getByRole("button", { name: /Personal/ })
+    .click()
+  await expect(page).toHaveURL("/personal")
 })
 
 test("a personal-workspace context never reaches /app — the gate sends it to /personal instead", async ({
@@ -78,4 +88,16 @@ test("a personal-workspace context never reaches /app — the gate sends it to /
 
   await page.goto("/app/dashboard")
   await expect(page).toHaveURL("/personal")
+
+  // Switch back, as switch-workspace.spec.ts does: the switch persists
+  // `profiles.last_active_workspace_id`, and every later journey in an
+  // e2e-live shard signs in as this same seeded owner expecting to land on
+  // /app (D-76 — left on Personal, signin-signout and switch-workspace
+  // landed on /personal for the rest of the shard).
+  await page.getByRole("button", { name: /switch workspace/i }).click()
+  await page
+    .getByRole("dialog", { name: "Switch workspace" })
+    .getByRole("button", { name: "Acadigma Model School" })
+    .click()
+  await expect(page).toHaveURL(/\/app(\/.*)?$/)
 })

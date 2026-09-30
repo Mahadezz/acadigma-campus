@@ -57,7 +57,13 @@ test("owner locks marks, computes results and reads the ranked class", async ({
     .getByRole("link", { name: /^Enter marks — / })
     .first()
     .click()
+  // Same race publish-results.spec.ts hit (D-76): wait for the marks page
+  // before counting and typing into its boxes.
+  await expect(page).toHaveURL(/\/app\/marks\/[0-9a-f-]{36}$/)
+  // Wait on the marks boxes themselves, not a load event ("networkidle"
+  // never came on the e2e-live runner, D-76).
   const inputs = page.getByRole("textbox")
+  await expect(inputs.first()).toBeEditable()
   const count = await inputs.count()
   expect(count).toBeGreaterThan(1)
   await inputs.first().focus()
@@ -75,6 +81,11 @@ test("owner locks marks, computes results and reads the ranked class", async ({
   await expect(
     page.getByText(new RegExp(`Results computed: ${count} students`))
   ).toBeVisible()
+  // The notice lands before the buttons leave their pending (disabled,
+  // half-opacity) state; axe mid-way read them at 3.58:1 (e2e-live, D-76).
+  await expect(
+    page.getByRole("button", { name: "Compute results" })
+  ).toBeEnabled()
   await expectNoA11yViolations(page, testInfo)
 
   await page.getByRole("link", { name: "View results" }).click()

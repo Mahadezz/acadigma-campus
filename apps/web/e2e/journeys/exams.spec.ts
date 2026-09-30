@@ -52,6 +52,8 @@ test("owner creates and schedules an exam", async ({ page }, testInfo) => {
 test("a teacher reads exams but cannot create one", async ({ page }) => {
   await signIn(page, "teacher@acadigma.test")
   await page.goto("/app/exams")
-  await expect(page.getByRole("heading", { name: /Exams/ })).toBeVisible()
+  // The page heading is "Exams · <year>"; the desktop sidebar also has an
+  // "Exams" group heading (e2e-live, D-76).
+  await expect(page.getByRole("heading", { name: /^Exams ·/ })).toBeVisible()
   await expect(page.getByRole("button", { name: "New exam" })).toHaveCount(0)
 })

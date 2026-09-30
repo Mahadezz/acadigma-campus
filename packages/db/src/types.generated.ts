@@ -66,6 +66,50 @@ export type Database = {
           },
         ]
       }
+      account_deletion_requests: {
+        Row: {
+          attempts: number
+          cancelled_at: string | null
+          completed_at: string | null
+          id: string
+          last_error: string | null
+          requested_at: string
+          scheduled_purge_at: string
+          status: Database["public"]["Enums"]["account_deletion_status"]
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          cancelled_at?: string | null
+          completed_at?: string | null
+          id?: string
+          last_error?: string | null
+          requested_at?: string
+          scheduled_purge_at: string
+          status?: Database["public"]["Enums"]["account_deletion_status"]
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          cancelled_at?: string | null
+          completed_at?: string | null
+          id?: string
+          last_error?: string | null
+          requested_at?: string
+          scheduled_purge_at?: string
+          status?: Database["public"]["Enums"]["account_deletion_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_deletion_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_records: {
         Row: {
           created_at: string
@@ -236,6 +280,13 @@ export type Database = {
             foreignKeyName: "attendance_sessions_bulk_marked_by_fkey"
             columns: ["bulk_marked_by", "workspace_id"]
             isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_sessions_bulk_marked_by_fkey"
+            columns: ["bulk_marked_by", "workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspace_members"
             referencedColumns: ["id", "workspace_id"]
           },
@@ -252,6 +303,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sections"
             referencedColumns: ["id", "academic_year_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "attendance_sessions_taken_by_fkey"
+            columns: ["taken_by", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
           },
           {
             foreignKeyName: "attendance_sessions_taken_by_fkey"
@@ -382,6 +440,119 @@ export type Database = {
           window_started_at?: string
         }
         Relationships: []
+      }
+      channel_members: {
+        Row: {
+          channel_id: string
+          created_at: string
+          id: string
+          left_at: string | null
+          member_id: string
+          muted_until: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          id?: string
+          left_at?: string | null
+          member_id: string
+          muted_until?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          id?: string
+          left_at?: string | null
+          member_id?: string
+          muted_until?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_members_channel_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "channel_members_member_fkey"
+            columns: ["member_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "channel_members_member_fkey"
+            columns: ["member_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_members"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "channel_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      channels: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          key: string
+          kind: Database["public"]["Enums"]["channel_kind"]
+          name: string | null
+          section_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          key: string
+          kind: Database["public"]["Enums"]["channel_kind"]
+          name?: string | null
+          section_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          key?: string
+          kind?: Database["public"]["Enums"]["channel_kind"]
+          name?: string | null
+          section_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channels_section_fkey"
+            columns: ["section_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "channels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consent_records: {
         Row: {
@@ -896,6 +1067,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "subjects"
             referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "exam_subjects_teacher_fkey"
+            columns: ["teacher_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
           },
           {
             foreignKeyName: "exam_subjects_teacher_fkey"
@@ -1615,6 +1793,58 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          body: string
+          channel_id: string
+          client_nonce: string
+          created_at: string
+          id: string
+          sender_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          body: string
+          channel_id: string
+          client_nonce: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          body?: string
+          channel_id?: string
+          client_nonce?: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_channel_fkey"
+            columns: ["channel_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_url: string
@@ -1956,6 +2186,7 @@ export type Database = {
           bio: string | null
           created_at: string
           date_of_birth: string | null
+          deleted_at: string | null
           display_name: string | null
           email: string | null
           full_name: string
@@ -1974,6 +2205,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           display_name?: string | null
           email?: string | null
           full_name?: string
@@ -1992,6 +2224,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           display_name?: string | null
           email?: string | null
           full_name?: string
@@ -2562,6 +2795,13 @@ export type Database = {
             foreignKeyName: "section_subjects_teacher_fkey"
             columns: ["teacher_id", "workspace_id"]
             isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "section_subjects_teacher_fkey"
+            columns: ["teacher_id", "workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspace_members"
             referencedColumns: ["id", "workspace_id"]
           },
@@ -2624,6 +2864,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "academic_years"
             referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "sections_class_teacher_fkey"
+            columns: ["class_teacher_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id", "workspace_id"]
           },
           {
             foreignKeyName: "sections_class_teacher_fkey"
@@ -2707,13 +2954,6 @@ export type Database = {
             foreignKeyName: "staff_compensation_staff_record_fk"
             columns: ["workspace_id", "staff_record_id"]
             isOneToOne: false
-            referencedRelation: "staff_directory"
-            referencedColumns: ["workspace_id", "id"]
-          },
-          {
-            foreignKeyName: "staff_compensation_staff_record_fk"
-            columns: ["workspace_id", "staff_record_id"]
-            isOneToOne: false
             referencedRelation: "staff_records"
             referencedColumns: ["workspace_id", "id"]
           },
@@ -2779,13 +3019,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "files"
             referencedColumns: ["id", "workspace_id"]
-          },
-          {
-            foreignKeyName: "staff_documents_staff_record_fk"
-            columns: ["workspace_id", "staff_record_id"]
-            isOneToOne: false
-            referencedRelation: "staff_directory"
-            referencedColumns: ["workspace_id", "id"]
           },
           {
             foreignKeyName: "staff_documents_staff_record_fk"
@@ -2920,11 +3153,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "staff_records_designation_label_id_fkey"
-            columns: ["designation_label_id"]
+            foreignKeyName: "staff_records_designation_label_same_workspace_fkey"
+            columns: ["workspace_id", "designation_label_id"]
             isOneToOne: false
             referencedRelation: "custom_labels"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "staff_records_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["membership_id"]
           },
           {
             foreignKeyName: "staff_records_membership_id_fkey"
@@ -3363,6 +3603,64 @@ export type Database = {
           },
         ]
       }
+      terms: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          created_by: string | null
+          ends_on: string
+          id: string
+          name: string
+          starts_on: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          created_by?: string | null
+          ends_on: string
+          id?: string
+          name: string
+          starts_on: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string
+          id?: string
+          name?: string
+          starts_on?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terms_academic_year_fkey"
+            columns: ["academic_year_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id", "workspace_id"]
+          },
+          {
+            foreignKeyName: "terms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "terms_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_counters: {
         Row: {
           key: string
@@ -3604,11 +3902,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "workspace_invitations_label_id_fkey"
-            columns: ["label_id"]
+            foreignKeyName: "workspace_invitations_label_same_workspace_fkey"
+            columns: ["workspace_id", "label_id"]
             isOneToOne: false
             referencedRelation: "custom_labels"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
           },
           {
             foreignKeyName: "workspace_invitations_revoked_by_fkey"
@@ -3664,6 +3962,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_member_capabilities_member_fkey"
+            columns: ["workspace_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["workspace_id", "user_id"]
           },
           {
             foreignKeyName: "workspace_member_capabilities_member_fkey"
@@ -3765,11 +4070,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "workspace_members_label_id_fkey"
-            columns: ["label_id"]
+            foreignKeyName: "workspace_members_label_same_workspace_fkey"
+            columns: ["workspace_id", "label_id"]
             isOneToOne: false
             referencedRelation: "custom_labels"
-            referencedColumns: ["id"]
+            referencedColumns: ["workspace_id", "id"]
           },
           {
             foreignKeyName: "workspace_members_removed_by_fkey"
@@ -3799,8 +4104,10 @@ export type Database = {
           access_mode: Database["public"]["Enums"]["access_mode"]
           access_mode_reason: string | null
           access_mode_set_at: string | null
+          archived_at: string | null
           created_at: string
           created_by: string | null
+          deletion_scheduled_at: string | null
           hidden_modules: string[]
           id: string
           invite_code: string | null
@@ -3820,8 +4127,10 @@ export type Database = {
           access_mode?: Database["public"]["Enums"]["access_mode"]
           access_mode_reason?: string | null
           access_mode_set_at?: string | null
+          archived_at?: string | null
           created_at?: string
           created_by?: string | null
+          deletion_scheduled_at?: string | null
           hidden_modules?: string[]
           id?: string
           invite_code?: string | null
@@ -3841,8 +4150,10 @@ export type Database = {
           access_mode?: Database["public"]["Enums"]["access_mode"]
           access_mode_reason?: string | null
           access_mode_set_at?: string | null
+          archived_at?: string | null
           created_at?: string
           created_by?: string | null
+          deletion_scheduled_at?: string | null
           hidden_modules?: string[]
           id?: string
           invite_code?: string | null
@@ -3952,6 +4263,7 @@ export type Database = {
           full_name: string | null
           id: string | null
           joined_on: string | null
+          membership_id: string | null
           staff_code: string | null
           subject_ids: string[] | null
           user_id: string | null
@@ -3961,21 +4273,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "staff_records_designation_label_id_fkey"
-            columns: ["designation_label_id"]
-            isOneToOne: false
-            referencedRelation: "custom_labels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_records_user_id_fkey"
+            foreignKeyName: "workspace_members_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "staff_records_workspace_id_fkey"
+            foreignKeyName: "workspace_members_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -4014,9 +4319,20 @@ export type Database = {
     }
     Functions: {
       accept_guardian_invitation: { Args: { p_token: string }; Returns: Json }
+      account_deletion_blockers: {
+        Args: never
+        Returns: {
+          name: string
+          workspace_id: string
+        }[]
+      }
       admit_student: {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
+      }
+      archive_workspace: {
+        Args: { p_confirm_name: string; p_workspace_id: string }
+        Returns: string
       }
       attendance_day: {
         Args: { p_date?: string; p_workspace_id: string }
@@ -4030,6 +4346,11 @@ export type Database = {
         Args: { p_section_id: string; p_workspace_id: string }
         Returns: boolean
       }
+      cancel_account_deletion: { Args: never; Returns: boolean }
+      cancel_workspace_deletion: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       compute_results: {
         Args: { p_exam_id: string; p_workspace_id: string }
@@ -4042,6 +4363,10 @@ export type Database = {
         Returns: Json
       }
       expire_pro_trials: { Args: never; Returns: number }
+      export_workspace_table: {
+        Args: { p_table: string; p_workspace_id: string }
+        Returns: Json
+      }
       family_results: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -4072,6 +4397,26 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      list_workspace_members: {
+        Args: {
+          p_after?: string
+          p_limit?: number
+          p_q?: string
+          p_status: Database["public"]["Enums"]["member_status"]
+          p_workspace_id: string
+        }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          joined_at: string
+          removed_at: string
+          role: Database["public"]["Enums"]["member_role"]
+          status: Database["public"]["Enums"]["member_status"]
+          via_invitation: boolean
+        }[]
+      }
       lock_exam_subject: {
         Args: { p_exam_subject_id: string; p_workspace_id: string }
         Returns: undefined
@@ -4094,11 +4439,20 @@ export type Database = {
         Args: { p_attempted_workspace_id: string }
         Returns: undefined
       }
+      log_workspace_export: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
       pre_request: { Args: never; Returns: undefined }
       publish_results: {
         Args: { p_exam_id: string; p_withhold?: Json; p_workspace_id: string }
         Returns: Json
       }
+      purge_due_workspace: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
+      request_account_deletion: { Args: never; Returns: string }
       revoke_guardian_link: {
         Args: { p_link_id: string; p_workspace_id: string }
         Returns: undefined
@@ -4120,7 +4474,15 @@ export type Database = {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
       }
+      schedule_workspace_deletion: {
+        Args: { p_confirm_name: string; p_workspace_id: string }
+        Returns: string
+      }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
+      set_current_academic_year: {
+        Args: { p_academic_year_id: string; p_workspace_id: string }
+        Returns: string
+      }
       set_section_subjects: {
         Args: { p_section_id: string; p_subjects: Json; p_workspace_id: string }
         Returns: number
@@ -4160,6 +4522,18 @@ export type Database = {
           retry_after_seconds: number
         }[]
       }
+      transfer_ownership: {
+        Args: {
+          p_keep_owner?: boolean
+          p_member_id: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
+      unarchive_workspace: {
+        Args: { p_confirm_name: string; p_workspace_id: string }
+        Returns: undefined
+      }
       unlock_exam_subject: {
         Args: {
           p_exam_subject_id: string
@@ -4168,15 +4542,33 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_member_staff_fields: {
+        Args: {
+          p_department?: string
+          p_employee_code?: string
+          p_member_id: string
+          p_phone?: string
+          p_workspace_id: string
+        }
+        Returns: {
+          department: string
+          employee_code: string
+          id: string
+          phone: string
+        }[]
+      }
+      workspace_export_tables: { Args: never; Returns: string[] }
     }
     Enums: {
       access_mode: "normal" | "read_only"
+      account_deletion_status: "pending" | "cancelled" | "completed"
       ai_billing_model: "shared_pool" | "individual_allocation"
       attendance_session_status: "draft" | "submitted" | "locked"
       attendance_status: "present" | "absent" | "late" | "excused" | "half_day"
       audit_actor_kind: "user" | "platform_staff" | "system" | "webhook"
       audit_severity: "info" | "notable" | "critical"
       billing_interval: "monthly" | "yearly"
+      channel_kind: "general" | "staff" | "section" | "custom" | "dm"
       device_platform: "web" | "android" | "windows" | "ios"
       email_status:
         | "queued"
@@ -4417,12 +4809,14 @@ export const Constants = {
   public: {
     Enums: {
       access_mode: ["normal", "read_only"],
+      account_deletion_status: ["pending", "cancelled", "completed"],
       ai_billing_model: ["shared_pool", "individual_allocation"],
       attendance_session_status: ["draft", "submitted", "locked"],
       attendance_status: ["present", "absent", "late", "excused", "half_day"],
       audit_actor_kind: ["user", "platform_staff", "system", "webhook"],
       audit_severity: ["info", "notable", "critical"],
       billing_interval: ["monthly", "yearly"],
+      channel_kind: ["general", "staff", "section", "custom", "dm"],
       device_platform: ["web", "android", "windows", "ios"],
       email_status: [
         "queued",

@@ -67,8 +67,12 @@ export async function getDashboardSummary(
         .eq("id", ctx.workspaceId)
         .maybeSingle(),
       getSchoolSettings(client, ctx),
+      // staff_records, not staff_directory: this counts actual staff
+      // records (F-OP-06 Part 2 widened staff_directory to every active
+      // member, including those with no record — a different, larger
+      // number that would no longer match "{count} staff records").
       client
-        .from("staff_directory")
+        .from("staff_records")
         .select("id", { count: "exact", head: true })
         .eq("workspace_id", ctx.workspaceId)
         .in("employment_status", ["active", "on_notice"]),

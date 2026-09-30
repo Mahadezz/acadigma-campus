@@ -398,9 +398,13 @@ select tests.logout();
 -- =====================================================================
 select tests.login('aaaaaaaa-0000-0000-0000-000000000004');
 
+-- Part 2 (D-209) widened the view to every active non-parent member, not
+-- just staff_records rows: School A has 3 staff_records (teacher, teacher2,
+-- staff3) plus the bootstrap-created owner and the manually-inserted admin,
+-- neither of which has a staff_records row — 5 in total.
 select is(
   (select count(*)::int from public.staff_directory),
-  3, 'a teacher reads every School A row through staff_directory');
+  5, 'a teacher reads every active non-parent School A member through staff_directory');
 
 select ok(
   not exists (

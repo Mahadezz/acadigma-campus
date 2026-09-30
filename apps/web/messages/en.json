@@ -154,6 +154,40 @@
       "submittingButton": "Changing password…",
       "successMessage": "Your password was changed."
     },
+    "deleteAccount": {
+      "title": "Delete account",
+      "description": "Your account is deleted {days} days after you ask. Until then you can keep it with one tap.",
+      "openButton": "Delete account",
+      "blockedTitle": "Hand over your schools first",
+      "blockedBody": "You are the only owner of the schools below. Make someone else an owner (or delete the school) before deleting your account.",
+      "transferButton": "Transfer ownership",
+      "step": "Step {n} of 2",
+      "sheetTitle": "Delete your account?",
+      "removedTitle": "Removed after {days} days",
+      "removedItems": [
+        "Your sign-in, and the name, email and phone number on your account",
+        "Your personal workspace and everything in it",
+        "Your settings, devices and notifications"
+      ],
+      "keptTitle": "Kept by your schools",
+      "keptItems": [
+        "Students, marks, attendance and other records you created stay with the school, shown as “Deleted user”",
+        "What a school holds about you itself (a staff record, contact details it entered) stays with that school — ask the school to remove it",
+        "The security log (audit records, which include your name) is kept as evidence and cannot be erased"
+      ],
+      "graceNote": "You can sign in and keep your account any time in the next {days} days.",
+      "continueButton": "Continue",
+      "backButton": "Back",
+      "cancelButton": "Cancel",
+      "confirmLabel": "Type DELETE to confirm",
+      "passwordLabel": "Your password",
+      "submitButton": "Delete my account",
+      "submittingButton": "Deleting…",
+      "banner": "Your account will be deleted on {date}.",
+      "keepButton": "Keep my account",
+      "keepingButton": "Keeping…",
+      "scheduledNotice": "Your account will be deleted on {date}. Sign in before then if you want to keep it."
+    },
     "passwordStrength": {
       "0": "Too weak",
       "1": "Weak",
@@ -309,7 +343,8 @@
       "yourWorkspaces": "Your workspaces",
       "pendingApproval": "Pending approval",
       "pendingDescription": "Your request to join is waiting for an owner or admin to approve it.",
-      "createOrJoin": "Create or join a workspace",
+      "createSchool": "Create a school",
+      "joinWithCode": "Join a school with a code",
       "switchError": "Could not switch workspaces. Check your connection.",
       "myChildren": "My children",
       "schoolApp": "School app",
@@ -393,10 +428,7 @@
     "switchWorkspace": "Switch workspace"
   },
   "dashboard": {
-    "eyebrowToday": "Today",
-    "eyebrowSetup": "Setup",
-    "eyebrowPeople": "People",
-    "eyebrowActivity": "Activity",
+    "sectionToday": "Today",
     "plan": {
       "title": "Plan",
       "trialDaysLeft": "{days} days left in your trial",
@@ -929,10 +961,25 @@
         "description": "Grade bands, letters and grade points",
         "keywords": "grade scale gpa letter band point pass fail a+ bangladesh"
       },
+      "academic": {
+        "title": "Academic",
+        "description": "Academic years, terms, exam weighting and pass-mark rules",
+        "keywords": "academic year term terms current weighting weight exam pass mark gpa rank"
+      },
       "display": {
         "title": "Display",
         "description": "Text size and basic mode",
         "keywords": "text size font large extra basic mode accessibility"
+      },
+      "account": {
+        "title": "Your account",
+        "description": "Password, security and account deletion",
+        "keywords": "account password security delete deletion close remove profile"
+      },
+      "labels": {
+        "title": "Custom labels",
+        "description": "Titles like Principal or Coordinator",
+        "keywords": "label title principal coordinator vice head badge"
       }
     },
     "notSet": "Not set",
@@ -1047,6 +1094,192 @@
       "overlap": "Two bands both cover {at} %.",
       "readOnly": "Only an owner or admin can change grading.",
       "pointsDecrease": "Grade points cannot go down as the bands go up (at {at} %)."
+    },
+    "academic": {
+      "title": "Academic",
+      "description": "Academic years, terms, exam weighting and the pass-mark rules.",
+      "tabs": {
+        "years": "Years",
+        "terms": "Terms",
+        "weighting": "Weighting",
+        "rules": "Rules"
+      },
+      "current": "Current",
+      "noYear": "No academic year yet.",
+      "yearPickerLabel": "Academic year",
+      "addYear": "Add year",
+      "addYearTitle": "Add an academic year",
+      "addYearDescription": "1-730 days, end date after the start date.",
+      "setCurrent": "Set current",
+      "setCurrentTitle": "Set the current academic year",
+      "setCurrentDescription": "Enrolments, timetable and reports will default to {name}. This is logged.",
+      "confirmSetCurrent": "Set as current",
+      "noTerms": "No terms yet.",
+      "addTerm": "Add term",
+      "addTermTitle": "Add a term",
+      "addTermDescription": "Dates must fall inside the academic year and not overlap another term.",
+      "deleteTermTitle": "Delete this term?",
+      "deleteTermDescription": "This removes {name}. Nothing else refers to it yet.",
+      "noExams": "No exams in this year yet — create one under Academics first.",
+      "weightingHelp": "Rows of exam → weight %. Leave every weight blank to turn weighting off; otherwise they must add up to 100.",
+      "weightLabel": "Weight %",
+      "weightSum": "Total: {sum} %",
+      "rulesHelp": "These apply to every exam created from now on; existing exams keep the rule they were created under.",
+      "gradeScaleCodeHelp": "The grade scale used for new exams. Default: BD_GPA5.",
+      "fields": {
+        "name": "Name",
+        "startsOn": "Starts",
+        "endsOn": "Ends",
+        "passMark": "Pass mark %",
+        "failZeroGpa": "A failed subject makes the GPA zero",
+        "rankBy": "Rank by",
+        "gradeScaleCode": "Grade scale code"
+      },
+      "rankByOptions": {
+        "gpa_then_total": "GPA, then total marks",
+        "total_marks": "Total marks"
+      },
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "confirmDelete": "Delete",
+      "removed": "Removed.",
+      "error": "Something went wrong. Try again.",
+      "errors": {
+        "forbidden": "Only an owner or admin can change academic settings.",
+        "readOnly": "This school's plan is read-only.",
+        "conflict": "That name is already used.",
+        "notFound": "That no longer exists.",
+        "badRange": "The end date must be after the start date.",
+        "termOutsideYear": "A term must fall inside its academic year.",
+        "termOverlap": "This term overlaps another term in the same year.",
+        "yearNameTaken": "This school already has a year with that name.",
+        "termNameTaken": "This year already has a term with that name.",
+        "weightsNot100": "The weights must add up to 100, or be left empty."
+      }
+    },
+    "membership": {
+      "title": "Your membership",
+      "link": "Your membership: leave or hand over this school",
+      "description": "Leave this school, or hand its ownership to someone else.",
+      "yourRole": "You are {role} at {school}.",
+      "leave": {
+        "title": "Leave this school",
+        "lead": "You will lose access to {school} straight away. Your name stays on the records you made.",
+        "start": "Leave {school}…",
+        "confirm": "Yes, leave {school}",
+        "cancel": "Stay"
+      },
+      "transfer": {
+        "title": "Transfer ownership",
+        "lead": "An owner can hand over the school, manage billing and change anything in it. Any owner can transfer it back.",
+        "noCandidates": "There is no active admin or teacher to hand the school to yet. Add one from Team & access first.",
+        "to": "New owner",
+        "choose": "Choose a person",
+        "keepOwner": "Keep me as an owner too",
+        "targetOwner": "{name} will become an owner.",
+        "becomeAdmin": "You will become an admin.",
+        "stayOwner": "You will stay an owner.",
+        "lose": "You will no longer be able to:",
+        "password": "Your password",
+        "passwordHelp": "We ask again because only an owner can undo this.",
+        "confirmName": "Type the school's name to confirm: {school}",
+        "submit": "Transfer ownership",
+        "done": "{name} is now an owner of {school}."
+      },
+      "errors": {
+        "generic": "Something went wrong. Please try again.",
+        "forbidden": "You cannot do this in this school.",
+        "lastOwner": "A school must always have an owner. Hand ownership to an admin or teacher first.",
+        "notEligible": "That person can no longer receive ownership. Choose someone else.",
+        "password": "That password is not correct.",
+        "name": "The name you typed does not match the school's name.",
+        "readOnly": "This school is read-only. Upgrade the plan to transfer ownership."
+      }
+    }
+  },
+  "dangerZone": {
+    "title": "Danger zone",
+    "rowTitle": "Danger zone",
+    "rowDescription": "Export, archive or delete this school",
+    "lead": "Actions that affect the whole school. Only the owner can use them, and each one asks you to type the school's name.",
+    "ownerOnly": "Only the school's owner can export, archive or delete this school.",
+    "transfer": {
+      "title": "Transfer ownership",
+      "body": "Hand the school to an admin or teacher. You stay on as an admin.",
+      "action": "Go to Team & membership"
+    },
+    "export": {
+      "title": "Export all data",
+      "body": "Download every record of this school as spreadsheets (CSV) in one zip file. Free on every plan, up to three times a day. files.csv lists uploaded files; their contents are not in the zip.",
+      "action": "Download export",
+      "working": "Preparing your export…",
+      "done": "Your export has downloaded."
+    },
+    "archive": {
+      "title": "Archive this school",
+      "body": "Everyone keeps read-only access and nothing is deleted. You can restore it for 12 months.",
+      "action": "Archive school…",
+      "confirmTitle": "Archive {school}?",
+      "consequences": [
+        "Nobody can add or change anything — attendance, marks, students, settings.",
+        "Everyone can still sign in, read and export.",
+        "Only you, the owner, can open it from the school switcher.",
+        "You can restore it any time in the next 12 months."
+      ],
+      "confirm": "Archive school",
+      "done": "The school is archived."
+    },
+    "unarchive": {
+      "title": "Restore this school",
+      "body": "Archived on {date}. Restore it to make changes again.",
+      "action": "Restore school…",
+      "confirmTitle": "Restore {school}?",
+      "consequences": ["Everyone can add and change records again."],
+      "confirm": "Restore school",
+      "done": "The school is restored."
+    },
+    "delete": {
+      "title": "Delete this school",
+      "body": "Permanently deletes the school after 30 days. You can cancel until then.",
+      "action": "Delete school…",
+      "confirmTitle": "Delete {school}?",
+      "consequences": [
+        "Every student, guardian, class, mark, attendance record, setting and membership of this school is permanently deleted.",
+        "Nothing is deleted for 30 days; you can cancel any time before then.",
+        "People keep their Acadigma accounts; they only lose this school.",
+        "Download an export first if you want a copy."
+      ],
+      "confirm": "Schedule deletion"
+    },
+    "scheduled": {
+      "title": "Deletion scheduled",
+      "body": "This school will be deleted on {date}.",
+      "banner": "{school} will be deleted on {date}. The owner can cancel this in Settings → Danger zone.",
+      "cancel": "Cancel deletion",
+      "cancelled": "Deletion cancelled. The school stays."
+    },
+    "confirm": {
+      "label": "Type {name} to confirm",
+      "back": "Back",
+      "working": "Working…"
+    },
+    "errors": {
+      "NAME_MISMATCH": "The name does not match. Type it exactly as shown.",
+      "ACTIVE_SUBSCRIPTION": "This school has an active paid subscription. Cancel it first.",
+      "UNPAID_BALANCE": "This school has an unpaid balance. Settle it first.",
+      "ALREADY_ARCHIVED": "This school is already archived.",
+      "NOT_ARCHIVED": "This school is not archived.",
+      "ARCHIVE_EXPIRED": "This school was archived more than 12 months ago. Contact support to restore it.",
+      "ALREADY_SCHEDULED": "This school is already scheduled for deletion.",
+      "NOT_SCHEDULED": "This school is not scheduled for deletion.",
+      "DELETION_DUE": "The deletion date has passed; it can no longer be cancelled.",
+      "RATE_LIMITED": "You can download a full export three times a day. Try again tomorrow.",
+      "forbidden": "Only the school's owner can do this.",
+      "generic": "Something went wrong. Please try again."
     }
   },
   "reports": {
@@ -1471,6 +1704,63 @@
       "whatsappText": "Your child's school invites you to see {student}'s results on Acadigma Campus. Open this link: {url}"
     }
   },
+  "staff": {
+    "title": "Staff",
+    "searchLabel": "Search by name, code, email or phone",
+    "searchPlaceholder": "Name, TCH-…, email or phone",
+    "search": "Search",
+    "filters": {
+      "all": "All",
+      "teacher": "Teachers",
+      "admin": "Admin",
+      "staff": "Staff",
+      "on_notice": "On notice",
+      "pending_join": "Pending"
+    },
+    "caption": "Staff directory",
+    "columns": {
+      "name": "Name",
+      "role": "Role",
+      "department": "Department",
+      "subjects": "Subjects",
+      "contact": "Contact",
+      "status": "Status"
+    },
+    "you": "You",
+    "noSubjects": "—",
+    "noContact": "No contact on file",
+    "empty": "No staff yet",
+    "emptyDescription": "Invite your teachers to get started.",
+    "noMatches": "No one matches your search.",
+    "clearFilters": "Clear filters",
+    "loadMore": "Load more",
+    "retry": "Retry",
+    "errorGeneric": "The staff directory could not load. Try again.",
+    "status": {
+      "pending_join": "Pending",
+      "active": "Active",
+      "on_notice": "On notice",
+      "left": "Left"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "teacher": "Teacher",
+      "staff": "Staff"
+    },
+    "profile": {
+      "backToDirectory": "Back to staff",
+      "department": "Department",
+      "subjects": "Subjects",
+      "workEmail": "Work email",
+      "workPhone": "Work phone",
+      "call": "Call",
+      "joined": "Joined",
+      "staffCode": "Staff ID",
+      "notFound": "This person could not be found.",
+      "noRecordYet": "No staff record yet. Employment details, documents and pay will show here once one is created."
+    }
+  },
   "marks": {
     "title": "Enter marks",
     "back": "Back to the exam",
@@ -1738,5 +2028,153 @@
     "saveChoices": "Save my choices",
     "conflictLoadFailed": "Could not load their roll call. Connect to the internet and try again.",
     "conflictLoading": "Loading their roll call…"
+  },
+  "team": {
+    "title": "Team & access",
+    "lead": "Everyone who can open this school, and the people asking to join. Approve someone and they can use the school on their next tap.",
+    "tabsLabel": "Show members by status",
+    "tabs": {
+      "active": "Active",
+      "pending": "Waiting",
+      "removed": "Removed"
+    },
+    "searchLabel": "Search by name or email",
+    "searchPlaceholder": "Name or email",
+    "search": "Search",
+    "caption": "Team members",
+    "columns": {
+      "name": "Name",
+      "role": "Role",
+      "how": "Asked with",
+      "date": "Date",
+      "status": "Status",
+      "actions": "Decision",
+      "manage": "Manage"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "teacher": "Teacher",
+      "staff": "Staff",
+      "parent": "Parent"
+    },
+    "via": {
+      "invitation": "An invitation",
+      "code": "The school's join code"
+    },
+    "asked": "Asked {date}",
+    "joined": "Joined {date}",
+    "left": "Removed {date}",
+    "rejectedChip": "Request turned down",
+    "removedChip": "Removed",
+    "activeChip": "Active",
+    "approve": "Approve",
+    "reject": "Turn down",
+    "approveLabel": "Approve {name}",
+    "rejectLabel": "Turn down {name}",
+    "approved": "{name} can now use the school as a {role}.",
+    "rejected": "{name}'s request was turned down.",
+    "empty": {
+      "active": "Just you so far — invite your teachers",
+      "pending": "No one is waiting",
+      "removed": "No one has been removed"
+    },
+    "emptyPendingDescription": "When a teacher asks to join with your school's code, they appear here for you to approve.",
+    "noMatches": "No one matches that search.",
+    "next": "Next page",
+    "first": "Back to the first page",
+    "pageNav": "More members",
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "forbidden": "Only an owner or an admin can do this.",
+      "readOnly": "This school is read-only. Ask the owner to upgrade.",
+      "NOT_PENDING": "Someone already decided this request. The list has been refreshed.",
+      "notFound": "That person is no longer on this list."
+    },
+    "manage": {
+      "open": "Manage",
+      "openLabel": "Manage {name}",
+      "changeRole": "Role",
+      "applyRole": "Apply role change",
+      "roleChanged": "{name} is now a {role}.",
+      "assignLabel": "Label",
+      "noLabel": "No label",
+      "labelHelp": "A label changes the title shown next to a name. It does not change what they can do.",
+      "saveLabel": "Save label",
+      "labelSaved": "Label updated.",
+      "staffDetails": "Staff details",
+      "employeeCode": "Employee code",
+      "employeeCodePlaceholder": "Leave blank to generate",
+      "employeeCodeHelp": "Left blank, a code is created automatically on the first save.",
+      "department": "Department",
+      "workPhone": "Work phone",
+      "saveStaff": "Save staff details",
+      "staffSaved": "Staff details saved.",
+      "ownerNote": "This member is an owner. Ownership changes happen under Your membership.",
+      "capabilities": {
+        "manageTeam": "Manage the team and roles",
+        "manageBilling": "See and manage billing",
+        "manageSettings": "Change school settings",
+        "editMarks": "Enter and edit marks",
+        "takeAttendance": "Take attendance",
+        "viewReports": "Open reports"
+      },
+      "errors": {
+        "lastOwner": "A school must always have at least one owner. Transfer ownership first.",
+        "ownerTarget": "Only an owner can change another owner.",
+        "selfEdit": "You cannot change your own role.",
+        "codeTaken": "Another member already has that employee code."
+      },
+      "ownershipLink": "Open Your membership",
+      "removeTitle": "Remove from the school",
+      "removeStart": "Remove {name}…",
+      "removeLead": "{name} will lose access straight away.",
+      "removeConsequences": [
+        "Their next tap in this school fails — they cannot open any class, student or record.",
+        "Their name stays on the attendance, marks and other records they made."
+      ],
+      "removeConfirm": "Yes, remove {name}",
+      "removeCancel": "Keep {name}",
+      "removed": "{name} was removed from the school."
+    }
+  },
+  "labels": {
+    "title": "Custom labels",
+    "lead": "Titles like Principal or Coordinator, shown next to a name.",
+    "notPermissions": "A label changes the title shown next to a name. It does not change what they can do — that is the role.",
+    "add": "New label",
+    "addTitle": "New label",
+    "editTitle": "Edit label",
+    "editLabel": "Edit {name}",
+    "deleteLabelAria": "Delete {name}",
+    "delete": "Delete",
+    "deleteTitle": "Delete this label?",
+    "deleteConfirm": "\"{name}\" will be removed from anyone who has it. Their role and access do not change.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Vice-Principal",
+    "baseRole": "Base role",
+    "baseRoleHelp": "The permissions the person keeps. The label only changes their title.",
+    "roles": {
+      "admin": "Admin",
+      "teacher": "Teacher",
+      "staff": "Staff"
+    },
+    "color": "Colour",
+    "save": "Save",
+    "cancel": "Cancel",
+    "overRole": "Over {role}",
+    "empty": "No labels yet",
+    "emptyDescription": "Titles like Principal or Coordinator live here.",
+    "created": "\"{name}\" created.",
+    "updated": "\"{name}\" updated.",
+    "deleted": "\"{name}\" deleted.",
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "forbidden": "Only an owner or an admin can do this.",
+      "readOnly": "This school is read-only. Ask the owner to upgrade.",
+      "nameTaken": "A label with that name already exists.",
+      "notFound": "That label was no longer there.",
+      "validation": "Please check the details you entered."
+    }
   }
 }

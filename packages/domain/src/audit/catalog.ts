@@ -134,6 +134,42 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     sentenceBn: "{actor} {workspace} আর্কাইভ করেছেন",
     isGeneric: false,
   },
+  // F-OP-07 Part 6 (D-211): the danger zone.
+  {
+    action: "workspace.unarchived",
+    severity: "notable",
+    sentenceEn: "{actor} restored {workspace} from the archive",
+    sentenceBn: "{actor} {workspace} আর্কাইভ থেকে ফিরিয়ে এনেছেন",
+    isGeneric: false,
+  },
+  {
+    action: "workspace.deletion_scheduled",
+    severity: "critical",
+    sentenceEn: "{actor} scheduled {workspace} for deletion",
+    sentenceBn: "{actor} {workspace} মুছে ফেলার সময় নির্ধারণ করেছেন",
+    isGeneric: false,
+  },
+  {
+    action: "workspace.deletion_cancelled",
+    severity: "notable",
+    sentenceEn: "{actor} cancelled the deletion of {workspace}",
+    sentenceBn: "{actor} {workspace} মুছে ফেলা বাতিল করেছেন",
+    isGeneric: false,
+  },
+  {
+    action: "workspace.deleted",
+    severity: "critical",
+    sentenceEn: "A school was deleted after its 30-day grace period",
+    sentenceBn: "৩০ দিনের সময় শেষে একটি স্কুল মুছে ফেলা হয়েছে",
+    isGeneric: false,
+  },
+  {
+    action: "workspace.exported",
+    severity: "notable",
+    sentenceEn: "{actor} downloaded a full export of {workspace}",
+    sentenceBn: "{actor} {workspace}-এর সম্পূর্ণ ডেটা ডাউনলোড করেছেন",
+    isGeneric: false,
+  },
   // Written by app.set_access_mode() (F-CM-06 plans/limits engine), one per access_mode value.
   {
     action: "workspace.access_mode_read_only",
@@ -646,6 +682,8 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "section_subjects",
   // F-AC-06 Part 7 (D-306) — 20260926023537_publish_results.sql.
   "guardian_users",
+  // F-OP-07 Part 2 (D-210) — 20260929160707_academic_terms.sql.
+  "terms",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -727,6 +765,7 @@ export const GENERIC_TABLE_NOUNS: Readonly<
     en: "a class's subject and teacher",
     bn: "একটি শাখার বিষয় ও শিক্ষক",
   },
+  terms: { en: "a term", bn: "একটি টার্ম" },
 }
 
 /**

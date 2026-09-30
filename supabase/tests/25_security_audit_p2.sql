@@ -473,6 +473,7 @@ select is(
     'is_school_day',                -- checks can_read_school_calendar
     'join_workspace_by_code',       -- the caller's own code
     'member_role',                  -- caller-scoped
+    'my_channel_ids',               -- policy helper, caller-scoped (D-311)
     'pre_request',                  -- PostgREST pre-request hook
     'rotate_invite_code',           -- checks has_role itself
     'school_day_count',             -- via school_days' check
@@ -486,7 +487,6 @@ select is(
     'tg_audit',                     -- trigger only (A2, D-75)
     'tg_workspace_billing_bootstrap', -- trigger only (A2, D-75)
     'tg_workspace_bootstrap',       -- trigger only (A2, D-75)
-    'transfer_ownership',           -- checks member_role itself
     'within_limit',                 -- checks membership itself
     'workspace_plan'                -- checks membership itself
   ]::text[],

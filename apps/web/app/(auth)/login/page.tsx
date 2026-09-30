@@ -1,9 +1,12 @@
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { AuthCard } from "@acadigma/ui/primitives/auth-card"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import { WaitingOnDevice } from "@/app/(shared)/offline/waiting-on-device"
+import { DELETION_NOTICE_COOKIE } from "@/lib/account-deletion"
+import { formatDhakaDate } from "@/lib/format"
 import { getMessages } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/server"
 
@@ -23,6 +26,8 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; error?: string }>
 }) {
   const { next, error } = await searchParams
+  // D-113: set (httpOnly) by requestAccountDeletion as it ended every session.
+  const deletion = (await cookies()).get(DELETION_NOTICE_COOKIE)?.value
 
   // Already signed in? Skip the form. getUser() re-validates with the auth server,
   // unlike getSession(), which only reads the cookie.
@@ -51,6 +56,16 @@ export default async function LoginPage({
         <div className="mb-4">
           <InlineAlert tone="error">
             {t.auth.login.linkExpiredBanner}
+          </InlineAlert>
+        </div>
+      ) : null}
+      {deletion && !Number.isNaN(Date.parse(deletion)) ? (
+        <div className="mb-4">
+          <InlineAlert tone="info">
+            {t.auth.deleteAccount.scheduledNotice.replace(
+              "{date}",
+              formatDhakaDate(deletion, locale)
+            )}
           </InlineAlert>
         </div>
       ) : null}
