@@ -48,6 +48,7 @@ test("owner finds a setting, edits the school profile and sees the save bar only
   await expect(page).toHaveURL(/\/app\/settings\/school$/)
   await expectNoHorizontalScroll(page)
   await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
+  await expect(page.getByLabel("Legal name")).toHaveCount(1)
 
   const name = `Lakeview School ${testInfo.project.name} ${Date.now()}`
   await page.getByLabel("Legal name").fill(name)
@@ -96,6 +97,10 @@ test("a teacher lands on the read-only overview and cannot open the profile form
   await expect(page.getByText("Pass mark")).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 
-  const response = await page.goto("/app/settings/school")
-  expect(response?.status()).toBe(403)
+  // D-409: a loading.tsx above the page streams a 200 before forbidden() runs, so
+  // the contract is the 403 *page* (no data), not the status line.
+  await page.goto("/app/settings/school")
+  await expect(page.getByText("You do not have access")).toBeVisible()
+  // The protected screen itself must be absent, not merely covered.
+  await expect(page.getByLabel("Legal name")).toHaveCount(0)
 })

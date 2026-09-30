@@ -1354,6 +1354,8 @@
   },
   "shell": {
     "signedInAs": "{role} হিসেবে সাইন ইন করা আছে",
+    "refresh": "রিফ্রেশ করুন",
+    "refreshing": "রিফ্রেশ হচ্ছে…",
     "roles": {
       "owner": "মালিক",
       "admin": "অ্যাডমিন",

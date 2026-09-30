@@ -55,6 +55,10 @@ test("owner adds an academic year and a term, with the out-of-range error surfac
 
 test("a teacher cannot open academic settings", async ({ page }) => {
   await signIn(page, "teacher@acadigma.test")
-  const response = await page.goto("/app/settings/academic")
-  expect(response?.status()).toBe(403)
+  // D-409: a loading.tsx above the page streams a 200 before forbidden() runs, so
+  // the contract is the 403 *page* (no data), not the status line.
+  await page.goto("/app/settings/academic")
+  await expect(page.getByText("You do not have access")).toBeVisible()
+  // The protected screen itself must be absent, not merely covered.
+  await expect(page.getByRole("heading", { name: /academic/i })).toHaveCount(0)
 })

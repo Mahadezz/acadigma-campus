@@ -1354,6 +1354,8 @@
   },
   "shell": {
     "signedInAs": "Signed in as {role}",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
     "roles": {
       "owner": "owner",
       "admin": "admin",

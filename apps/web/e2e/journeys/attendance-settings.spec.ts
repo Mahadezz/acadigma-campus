@@ -122,6 +122,10 @@ test("owner edits the attendance policy and sees the effect line and warning bef
 
 test("a teacher cannot open the attendance policy", async ({ page }) => {
   await signIn(page, "teacher@acadigma.test")
-  const response = await page.goto("/app/settings/attendance")
-  expect(response?.status()).toBe(403)
+  // D-409: a loading.tsx above the page streams a 200 before forbidden() runs, so
+  // the contract is the 403 *page* (no data), not the status line.
+  await page.goto("/app/settings/attendance")
+  await expect(page.getByText("You do not have access")).toBeVisible()
+  // The protected screen itself must be absent, not merely covered.
+  await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
 })

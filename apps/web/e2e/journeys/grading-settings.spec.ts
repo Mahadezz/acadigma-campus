@@ -47,6 +47,11 @@ test("owner seeds the BD scale and previews 72 % → A", async ({
 
 test("a teacher cannot open grading settings", async ({ page }) => {
   await signIn(page, "teacher@acadigma.test")
-  const response = await page.goto("/app/settings/grade-scale")
-  expect(response?.status()).toBe(403)
+  // D-409: a loading.tsx above the page streams a 200 before forbidden() runs, so
+  // the contract is the 403 *page* (no data), not the status line.
+  await page.goto("/app/settings/grade-scale")
+  await expect(page.getByText("You do not have access")).toBeVisible()
+  // The protected screen itself must be absent, not merely covered.
+  // Same locator the owner test above asserts visible.
+  await expect(page.getByLabel("Try a percentage")).toHaveCount(0)
 })

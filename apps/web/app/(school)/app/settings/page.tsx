@@ -122,7 +122,7 @@ export default async function SettingsPage() {
       {can(ctx.role, "settings.manage") ? (
         <Link
           href="/app/settings/danger"
-          className="border-destructive/40 hover:bg-muted/50 flex min-h-14 items-center gap-3 rounded-lg border px-4 py-3"
+          className="motion-press border-destructive/40 hover:bg-muted/50 flex min-h-14 items-center gap-3 rounded-lg border px-4 py-3"
         >
           <span className="min-w-0 flex-1">
             <span className="text-destructive block font-medium">

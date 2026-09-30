@@ -64,7 +64,7 @@ export function SettingsHome({
             <li key={row.href}>
               <Link
                 href={row.href}
-                className="hover:bg-muted/50 flex min-h-14 items-center gap-3 px-4 py-3"
+                className="motion-press hover:bg-muted/50 flex min-h-14 items-center gap-3 px-4 py-3"
               >
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">{row.title}</span>
