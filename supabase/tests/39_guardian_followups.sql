@@ -183,7 +183,7 @@ select tests.invite('t2', 'A1');
 select tests.logout();
 
 select tests.login('39000000-0000-4000-a000-000000000003');
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('t2'))$$,
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('t2'), '2026-09-30-2', 'en')$$,
   'a teacher accepts a link to their own child');
 select is(tests.family(), array['A1'], 'T2 sees only their own child''s result through the family path');
 select results_eq($$select st.student_code from public.results r join public.students st on st.id = r.student_id order by 1$$,
@@ -232,7 +232,7 @@ select tests.login('39000000-0000-4000-a000-000000000001');
 select tests.invite('t2b', 'A1');
 select tests.logout();
 select tests.login('39000000-0000-4000-a000-000000000003');
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('t2b'))$$, 'T2 accepts a new link');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('t2b'), '2026-09-30-2', 'en')$$, 'T2 accepts a new link');
 select is(tests.family(), array['A1'], 'and sees A1 again');
 select tests.logout();
 select tests.login('39000000-0000-4000-a000-000000000001');
@@ -254,7 +254,7 @@ select tests.login('39000000-0000-4000-a000-000000000001');
 select tests.invite('t2c', 'A1');
 select tests.logout();
 select tests.login('39000000-0000-4000-a000-000000000003');
-select throws_ok($$select public.accept_guardian_invitation(tests.tok('t2c'))$$, '22023', 'MEMBERSHIP_CONFLICT',
+select throws_ok($$select public.accept_guardian_invitation(tests.tok('t2c'), '2026-09-30-2', 'en')$$, '22023', 'MEMBERSHIP_CONFLICT',
   'a removed teacher is refused, not reactivated');
 select tests.logout();
 select is((select role::text || '/' || status::text from public.workspace_members
@@ -285,7 +285,7 @@ select tests.logout();
 
 -- P accepts the class teacher's link; the class teacher sees and revokes it.
 select tests.login('39000000-0000-4000-a000-000000000006');
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('ct'))$$, 'P accepts the class teacher''s link');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('ct'), '2026-09-30-2', 'en')$$, 'P accepts the class teacher''s link');
 select is(tests.family(), array['A2'], 'P sees A2 through the family path');
 select tests.logout();
 create temp table lp as select tests.link('39000000-0000-4000-a000-000000000006', 'A2') as id;
@@ -329,11 +329,11 @@ select tests.invite('q-a', 'A2');
 select tests.invite('q-b', 'B1');
 select tests.logout();
 select tests.login('39000000-0000-4000-a000-000000000005');
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('s'))$$, 'staff S accepts a link to A1');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('s'), '2026-09-30-2', 'en')$$, 'staff S accepts a link to A1');
 select tests.logout();
 select tests.login('39000000-0000-4000-a000-000000000007');
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('q-a'))$$, 'Q accepts a link to A2');
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('q-b'))$$, 'and a link to B1');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('q-a'), '2026-09-30-2', 'en')$$, 'Q accepts a link to A2');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('q-b'), '2026-09-30-2', 'en')$$, 'and a link to B1');
 select tests.logout();
 create temp table lx as
   select tests.link('39000000-0000-4000-a000-000000000005', 'A1') as s_a1,
@@ -389,7 +389,7 @@ select is((select role::text || '/' || status::text from public.workspace_member
 -- (it would outlive their class-teacher access and lock the parent out).
 select tests.login('39000000-0000-4000-a000-000000000002');
 select tests.invite('self', 'A1');
-select throws_ok($$select public.accept_guardian_invitation(tests.tok('self'))$$, '42501', 'FORBIDDEN',
+select throws_ok($$select public.accept_guardian_invitation(tests.tok('self'), '2026-09-30-2', 'en')$$, '42501', 'FORBIDDEN',
   'the inviter cannot accept their own guardian link');
 select tests.logout();
 select is((select count(*)::int from public.guardian_users

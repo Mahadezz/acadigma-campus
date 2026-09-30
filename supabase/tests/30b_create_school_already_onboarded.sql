@@ -92,7 +92,7 @@ on conflict (user_id) do update set path = 'undecided', step = 1, draft = '{}'::
 
 create temp table tutor_call as
   select public.create_school_workspace(
-    tests.school_input('b0000000-0000-4000-8000-000000000001')) as r;
+    tests.school_input('b0000000-0000-4000-8000-000000000001'), '2026-09-30-interim') as r;
 select tests.logout();
 
 select is((select r ->> 'error' from tutor_call), null,
