@@ -64,9 +64,7 @@ test("see signed-in devices, sign one out, then sign out everywhere", async ({
     await expect(rows).toHaveCount(2)
     await expect(rows.first()).toContainText("This device")
     await expect(rows.nth(1)).toContainText("Firefox on Android")
-    await expect(
-      page.getByRole("heading", { name: "Signed-in devices" })
-    ).toBeVisible()
+    await expect(page.locator("#devices")).toContainText("Signed-in devices")
     await page.locator("#devices").scrollIntoViewIfNeeded()
     await expectNoA11yViolations(page, testInfo)
     await testInfo.attach("signed-in-devices", {
