@@ -27,6 +27,8 @@ Screenshots (light and dark, phone and desktop): `docs/test-reports/assets/2026-
 
 ## 3. Known issues
 
+- **Direct navigation to a role-refused page returns HTTP 200 with the forbidden page** (loading.tsx streams before `forbidden()`); five journeys changed from asserting 403 to asserting the page. Owner decision needed (D-409 consequences).
+- **Unexplained hang:** with `loading.tsx` on `exams/[id]`, a `router.refresh()` after Lock marks never finished on desktop in e2e-live (3 journeys); removing it fixed publish-results. Class hub, results and marks-entry loading files were removed for the same suspected reason (title race on the class hub). Cause not found.
 - Skeleton is shown immediately; the 150 ms delay in DESIGN-SYSTEM §3.7 is not implemented (D-409).
 - Desktop has no visible refresh control beside "Updated ..."; only the focus-only button.
 - Only one action (text size) is optimistic; the rest are listed as Never or as follow-ups in §3.11.
