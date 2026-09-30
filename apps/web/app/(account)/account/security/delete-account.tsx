@@ -155,7 +155,9 @@ function Ceremony({
         open={open}
         onOpenChange={reset}
         title={t.sheetTitle}
-        description={t.step.replace("{n}", String(step))}
+        description={
+          <span aria-live="polite">{t.step.replace("{n}", String(step))}</span>
+        }
         footer={
           step === 1 ? (
             <>
