@@ -33,10 +33,8 @@ vi.mock("@acadigma/db", () => ({
   requireWritable: (...args: unknown[]) => mockRequireWritable(...args),
   createHoliday: (...args: unknown[]) => mockCreate(...args),
   deleteHoliday: (...args: unknown[]) => mockDelete(...args),
-  upsertWorkingDayOverride: (...args: unknown[]) =>
-    mockUpsertOverride(...args),
-  deleteWorkingDayOverride: (...args: unknown[]) =>
-    mockDeleteOverride(...args),
+  upsertWorkingDayOverride: (...args: unknown[]) => mockUpsertOverride(...args),
+  deleteWorkingDayOverride: (...args: unknown[]) => mockDeleteOverride(...args),
 }))
 
 const {

@@ -39,7 +39,9 @@ import { requireWorkspace } from "@/lib/workspace"
 const PATH = "/app/settings/calendar"
 
 async function gateWrite(
-  permission: "calendar.holiday.write" | "calendar.override.write" = "calendar.holiday.write"
+  permission:
+    | "calendar.holiday.write"
+    | "calendar.override.write" = "calendar.holiday.write"
 ): Promise<
   Result<
     {

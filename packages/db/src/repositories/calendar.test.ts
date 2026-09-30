@@ -40,7 +40,15 @@ function fakeClient(result: {
 }): { client: AcadigmaSupabaseClient; calls: Recorded } {
   const calls: Recorded = []
   const builder: Record<string, unknown> = {}
-  for (const op of ["select", "eq", "gte", "order", "insert", "upsert", "delete"]) {
+  for (const op of [
+    "select",
+    "eq",
+    "gte",
+    "order",
+    "insert",
+    "upsert",
+    "delete",
+  ]) {
     builder[op] = (...args: unknown[]) => {
       calls.push({ op, args })
       return builder
