@@ -66,6 +66,8 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 
 ## 9. Lane Parts in progress
 
+- **identity: consent contract follow-up** (fix/identity-consent-contract) — MUST merge before any real school: revoke the old 1-arg create_school_workspace / accept_guardian_invitation from signed-in callers (today a direct API call skips recording consent); audit trigger on legal_acceptances; pgTAP no direct writes. Then: re-acceptance screen for pre-existing accounts; 👤 4 owner/lawyer questions in OWNER-QUESTIONS (first: accept the DPA before a lawyer reviews it?).
+
 - identity: fresh Opus builder — next queue Part OR the legal-audit consent/ToS/DPA fixes (builder decides + logs).
 - ops: fresh Sonnet builder — next F-OP-07 Part (3 attendance policy / 4 grade scale / 5 calendar / 6 remainder), chosen for pilot + demo value.
 

@@ -6,6 +6,9 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 ## 2026-09-30
 
+- **#121 merged** (0ce4be9, D-114): interim Terms / Privacy / DPA pages at /legal/* (marked "not yet reviewed by a lawyer"); sign-up records Terms+Privacy acceptance (+ 18 or older); school creation requires and records DPA acceptance; parent-link screen shows consent text and records consent. Closes legal-audit HIGH items 4–6. Builder's 4 reviews + lead Opus security MERGE; migrations live, production deployed.
+- #120 release merged.
+
 - **#90 merged** (7709a58): every logged-in Playwright journey now runs in CI against a seeded local Supabase (4 shards, no retries) — green CI now proves the UI works. Also fixed: sign-in throttle off-by-one + counts every non-infrastructure failure (brute-force protection can't silently switch off), register-existing-email message (allowed by F-ID-01 §4.1), 360px top-bar overflow with the offline chip, service worker no longer relays RSC requests; test seed refuses to run where real accounts exist. 2 Opus security rounds + React review; migration live.
 
 - **#119 merged** (9927a0f): delete your own account — type DELETE + password (password sign-in within 5 min enforced in the database), all sessions end, "Keep my account" banner for 30 days, blocked while sole owner of a school (links to transfer), nightly purge anonymises to "Deleted user" and keeps school records. 2 Opus security rounds; migrations live. Owner request 2026-09-29 done (with #117).
