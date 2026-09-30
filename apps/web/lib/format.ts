@@ -20,3 +20,13 @@ export function formatDhakaDate(iso: string, locale: Locale): string {
     timeZone: "Asia/Dhaka",
   }).format(new Date(iso))
 }
+
+/** "September 2026" — a `YYYY-MM` string (F-OP-07 Part 3's attendance-policy
+ * preview month) in the reader's language, never the raw ISO fragment. */
+export function formatMonthYear(isoMonth: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(toIntlLocale(locale), {
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Dhaka",
+  }).format(new Date(`${isoMonth}-01T00:00:00Z`))
+}

@@ -190,6 +190,22 @@
       "keepingButton": "Keeping…",
       "scheduledNotice": "Your account will be deleted on {date}. Sign in before then if you want to keep it."
     },
+    "reaccept": {
+      "metaTitle": "Updated terms",
+      "title": "Please accept our updated terms",
+      "lead": "Before you continue, read and accept the current version of these documents.",
+      "version": "Version {version}",
+      "dpaNote": "As the owner of this school, you accept the Data Processing Agreement on the school's behalf.",
+      "termsRequired": "Accept the Terms of Use and the Privacy Notice to continue.",
+      "dpaRequired": "Accept the agreement to continue.",
+      "continueButton": "Continue",
+      "savingButton": "Saving…",
+      "exitsTitle": "Don't agree?",
+      "exitsBody": "You can stop using Acadigma Campus. Your account and data stay yours.",
+      "deleteAccountLink": "Delete my account",
+      "exportLink": "Download this school's data",
+      "error": "Could not save your acceptance. Please try again."
+    },
     "passwordStrength": {
       "0": "Too weak",
       "1": "Weak",
@@ -966,6 +982,11 @@
         "description": "Grade bands, letters and grade points",
         "keywords": "grade scale gpa letter band point pass fail a+ bangladesh"
       },
+      "attendance": {
+        "title": "Attendance policy",
+        "description": "Late, half-day, and the minimum-attendance warning",
+        "keywords": "attendance late half day minimum present absent eligible exam warning"
+      },
       "academic": {
         "title": "Academic",
         "description": "Academic years, terms, exam weighting and pass-mark rules",
@@ -1076,6 +1097,21 @@
       "minAttendance": "Minimum attendance (warning only)",
       "yes": "Yes",
       "no": "No"
+    },
+    "attendance": {
+      "title": "Attendance policy",
+      "description": "How a Late or Half-day mark is counted, and the exam-eligibility warning line.",
+      "effectTitle": "What this would change",
+      "effectLine": "With these settings, {name}'s attendance in {month} would be {after} % (it is {before} % today).",
+      "noSampleYet": "Not enough attendance data yet to preview — take a few days of roll call first.",
+      "notRewritten": "This never rewrites a stored attendance record — it changes how percentages are computed, everywhere, from your next save onward.",
+      "lateCountsPresent": "Late counts as present",
+      "halfDayCountsPresent": "Half day counts as present",
+      "minAttendancePercent": "Minimum attendance % (warning only)",
+      "minAttendanceHelp": "Below this, the report card and eligibility screens show a warning. It never blocks an exam by itself.",
+      "minAttendanceInvalid": "Enter a number from 0 to 100.",
+      "anonymousStudent": "a student",
+      "belowMinimum": "Below the {min} % minimum — the report card and eligibility screens would show a warning."
     },
     "grading": {
       "title": "Grading",

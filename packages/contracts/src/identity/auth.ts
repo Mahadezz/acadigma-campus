@@ -187,3 +187,21 @@ export const accountDeletionBlockerSchema = z.object({
 export type AccountDeletionBlocker = z.infer<
   typeof accountDeletionBlockerSchema
 >
+
+// ---------------------------------------------------------------------------
+// Re-acceptance of the current legal documents (D-115)
+// ---------------------------------------------------------------------------
+
+/** The versions the screen showed, per document. The server accepts only
+ * when this is exactly what is outstanding at the current versions, so a
+ * deploy between render and submit cannot record words never shown. */
+export const acceptLegalDocumentsInputSchema = z
+  .object({
+    terms: z.string().min(1).max(64).optional(),
+    privacy: z.string().min(1).max(64).optional(),
+    dpa: z.string().min(1).max(64).optional(),
+  })
+  .strict()
+export type AcceptLegalDocumentsInput = z.infer<
+  typeof acceptLegalDocumentsInputSchema
+>

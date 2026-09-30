@@ -4328,6 +4328,10 @@ export type Database = {
             }
             Returns: Json
           }
+      accept_legal_document: {
+        Args: { p_document: string; p_version: string; p_workspace_id?: string }
+        Returns: undefined
+      }
       account_deletion_blockers: {
         Args: never
         Returns: {

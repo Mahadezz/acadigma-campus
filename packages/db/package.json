@@ -14,6 +14,7 @@
     "./repositories/reports": "./src/repositories/reports.ts",
     "./repositories/settings": "./src/repositories/settings.ts",
     "./repositories/account-deletion": "./src/repositories/account-deletion.ts",
+    "./repositories/legal": "./src/repositories/legal.ts",
     "./repositories/staff": "./src/repositories/staff.ts",
     "./repositories/grading": "./src/repositories/grading.ts",
     "./repositories/exams": "./src/repositories/exams.ts",
@@ -23,6 +24,7 @@
     "./repositories/guardian-links": "./src/repositories/guardian-links.ts",
     "./repositories/ui-preferences": "./src/repositories/ui-preferences.ts",
     "./repositories/basic-home": "./src/repositories/basic-home.ts",
+    "./repositories/attendance-policy-preview": "./src/repositories/attendance-policy-preview.ts",
     "./repositories/class-hub": "./src/repositories/class-hub.ts"
   },
   "scripts": {
