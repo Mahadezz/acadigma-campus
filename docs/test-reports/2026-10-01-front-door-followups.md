@@ -36,7 +36,9 @@ Local Lighthouse 12, mobile, simulated throttling, production build, 3 runs each
 | Sentry imported dynamically          | 3045, 3045, 3056 | 2734, 2753, 2755 |
 | plus Toaster loaded after hydration  | 2910, 2901, 2903 | 2607, 2605, 2642 |
 
-FCP stays at about 1370 ms; TBT 0. Toasts are not shown before hydration (none can be triggered then). With a DSN set, Sentry initialises a few hundred ms later than before.
+FCP stays at about 1370 ms; TBT 0. Toasts are not shown before hydration (none can be triggered then). With a DSN set, Sentry initialises a few hundred ms later than before: **errors thrown before the Sentry import resolves (the first few hundred ms of a page) are not captured.**
+
+First CI run of this change (36780798182): Lighthouse best of 3 was `/` 2761 ms and `/login` 3174 ms, but e2e-live shard 1 failed `guardian-invite` (a click on "Remove access" 230 ms after `goto` never opened the dialog). The toast region had been loaded with `next/dynamic({ ssr: false })`, which bails out to client rendering at a Suspense boundary above the page; it is now a plain effect plus `import()` (the pattern the Get-the-app chooser already uses).
 
 ## 3b. CI
 
