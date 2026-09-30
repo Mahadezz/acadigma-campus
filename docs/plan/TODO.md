@@ -4,7 +4,7 @@ The owner's open requests and the build's open work, in priority order. **Read t
 
 Legend: 🔴 blocked · 🟡 in progress · ⚪ not started · 👤 needs the owner.
 
-Last updated: 2026-10-01 ~00:40 Dhaka.
+Last updated: 2026-10-01 Dhaka.
 
 ---
 
@@ -24,13 +24,13 @@ Last updated: 2026-10-01 ~00:40 Dhaka.
 
 **Watch:** the demo school goes read-only 30 days after the first seed run (normal trial) — run the seed within 30 days of each demo. Rotate the password after demo days and re-run the seed. Ideally #109 (new look) and #82 (class hub) land first so investors see the polished version.
 
-## 1b. One front door for the Acadigma apps · 🟡 (owner, 2026-09-30)
+## 1b. One front door for the Acadigma apps — ✅ campus #128 live; website #4 merged, deploy waiting on the Vercel limit
 
-**Owner:** the campus front page "can be drastically improved"; "exact same theme as the main website… read the codes"; "download the app for different devices… android ios mac windows or webapp"; "login register"; link it to the main website; "not gonna be just for campus only… parents students and ledger".
-
-**Plan (lead):** campus.acadigma.com front door + auth pages rebuilt in the acadigma.com theme (ink/paper, Inter, grid marks), data-driven by product key; "Get the app" tabs Web/Android/iPhone/Windows/Mac with honest PWA install steps (store apps "coming later"); product row Campus + Parents live, Students + Ledger coming soon → acadigma.com/<product>; one account across the apps (phone sign-in not built — 👤 SMS provider decision, OQ-10). The current front page claims fees/bKash/messaging that are not built — fixed in the same Part. Website: "Sign in" in nav/footer, "Open the app" / "Get the app" on live product pages.
-
-**Running:** campus #128 draft (Opus, feat/design-front-door, port 3114). Website #4 (feat/app-links) reviewed MERGE — merge after #128 is live. Must not touch the #127 files (Button primitive, loading.tsx, pull-to-refresh).
+**Left:**
+- Redeploy acadigma.com after the Vercel limit resets (merge 4c0d715 was rate-limited; Vercel does not retry by itself).
+- Follow-ups from the reviews (fresh design builder): headline wraps to 4 lines at 360 (lower the clamp minimum); 360 header "Get the app" pill → ink; reserve the tab-row height so the lazy tabs don't jump; Lighthouse LCP on / sits at ~3.5 s — take the median of several runs in CI rather than one; self-host fonts (👤 permission) removes the build flake that hit 4 builds on 2026-09-30/10-01.
+- Website copy (owner not yet answered): Parents page "not available yet" → "Parents app coming soon; invited parents can already see results in Campus".
+- Later: parents./students./ledger. front doors are config (PRODUCTS) once those domains exist.
 
 ## 2. Design System v2 — ✅ merged #109 (see DONE). Follow-ups (ponytail LATER list) are in the #109 test report.
 
