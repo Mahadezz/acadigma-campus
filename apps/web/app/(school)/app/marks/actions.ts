@@ -90,8 +90,6 @@ export async function submitExamSubject(
     parsed.data.examSubjectId,
     parsed.data.confirmIncomplete
   )
-  if (result.ok && result.data.submitted) {
-  }
   return result
 }
 
