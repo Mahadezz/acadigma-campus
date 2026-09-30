@@ -78,7 +78,16 @@ export function GetTheAppLazy({ t }: { t: Copy }) {
           </Button>
         ) : null}
       </div>
-      {Chooser ? <Chooser t={t} /> : <InstallSteps steps={t.steps.web} />}
+      {Chooser ? (
+        <Chooser t={t} />
+      ) : (
+        <div>
+          {/* The tab row's height (52px row + 24px gap) so the steps below do
+              not jump down when the lazy tabs arrive. */}
+          <div aria-hidden="true" className="h-[4.75rem]" />
+          <InstallSteps steps={t.steps.web} />
+        </div>
+      )}
     </div>
   )
 }
