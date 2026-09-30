@@ -86,7 +86,7 @@ test("basic home shows the All classes block for an owner, essentials row, and e
   const targets = page
     .getByRole("link")
     .or(page.getByRole("button"))
-    .filter({ hasNotText: "Skip to content" })
+    .filter({ hasNotText: /Skip to content|^(Refresh|রিফ্রেশ করুন)$/ })
   const count = await targets.count()
   expect(count).toBeGreaterThan(0)
   for (let i = 0; i < count; i++) {

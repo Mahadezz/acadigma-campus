@@ -158,7 +158,7 @@ export default async function StaffProfilePage({
       {row.workPhone ? (
         <a
           href={`tel:${row.workPhone}`}
-          className="border-input inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border bg-transparent px-4 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground sm:w-auto"
+          className="motion-press border-input inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border bg-transparent px-4 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground sm:w-auto"
         >
           <PhoneIcon aria-hidden="true" className="size-4" />
           {t.staff.profile.call}

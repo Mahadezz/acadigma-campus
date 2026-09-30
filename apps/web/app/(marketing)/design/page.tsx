@@ -5,7 +5,10 @@ import * as React from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { toast } from "sonner"
+
 import { Button } from "@acadigma/ui/components/button"
+import { Switch } from "@acadigma/ui/components/switch"
 import { AppShell } from "@acadigma/ui/primitives/app-shell"
 import {
   AttendanceToggle,
@@ -31,12 +34,15 @@ import {
 import { MarkCell } from "@acadigma/ui/primitives/mark-cell"
 import { MoneyText } from "@acadigma/ui/primitives/money-text"
 import { schoolTeacherNav } from "@acadigma/ui/primitives/nav-config"
+import { PageSkeleton } from "@acadigma/ui/primitives/page-skeleton"
 import { PeriodGrid } from "@acadigma/ui/primitives/period-grid"
 import {
   StatusChip,
   type AttendanceStatus,
 } from "@acadigma/ui/primitives/status-chip"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
+
+import { PullToRefresh } from "@/app/(shared)/pull-to-refresh"
 
 /**
  * Visual smoke page for every `packages/ui` primitive (M0 chunk 0.9). Dev-only:
@@ -327,7 +333,67 @@ function DesignSmoke() {
             </form>
           </FormSheet>
         </section>
+
+        <section
+          aria-labelledby="polish-heading"
+          className="flex flex-col gap-3"
+        >
+          <h2 id="polish-heading" className="text-lg font-semibold">
+            App polish
+          </h2>
+          <PullToRefresh label="Refresh" refreshingLabel="Refreshing" />
+          <OptimisticDemo />
+          <Link href="/design/slow" className="text-sm underline">
+            Slow page (skeleton)
+          </Link>
+          <div className="grid gap-4 md:grid-cols-3">
+            {(["list", "detail", "form"] as const).map((v) => (
+              <PageSkeleton key={v} variant={v} />
+            ))}
+          </div>
+        </section>
       </div>
     </AppShell>
+  )
+}
+
+/**
+ * D-409 demo: an optimistic toggle whose save fails on demand, so the journey
+ * can prove the rollback. Same shape as the Settings > Display text size.
+ */
+function OptimisticDemo() {
+  const [saved, setSaved] = React.useState(false)
+  const [shown, setShown] = React.useOptimistic(saved)
+  const [failNext, setFailNext] = React.useState(false)
+  const [, start] = React.useTransition()
+
+  function toggle(next: boolean) {
+    start(async () => {
+      setShown(next)
+      await new Promise((r) => setTimeout(r, 400))
+      if (failNext) toast.error("Could not save. Try again.")
+      else setSaved(next)
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="flex items-center gap-3 text-sm font-medium">
+        <Switch
+          checked={shown}
+          onCheckedChange={toggle}
+          aria-label="Demo setting"
+        />
+        Demo setting (optimistic)
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={failNext}
+          onChange={(e) => setFailNext(e.target.checked)}
+        />
+        Fail the next save
+      </label>
+    </div>
   )
 }

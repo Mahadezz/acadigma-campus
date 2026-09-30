@@ -230,7 +230,7 @@ function WorkspaceChip({
                     disabled={isPending}
                     onClick={() => handleSelect(workspace)}
                     aria-current={isCurrent ? "true" : undefined}
-                    className="hover:bg-accent focus-visible:ring-ring flex min-h-14 w-full items-center gap-3 rounded-md px-3 py-2 text-left disabled:opacity-50 disabled:pointer-events-none focus-visible:ring-2 focus-visible:outline-none"
+                    className="motion-press hover:bg-accent focus-visible:ring-ring flex min-h-14 w-full items-center gap-3 rounded-md px-3 py-2 text-left disabled:opacity-50 disabled:pointer-events-none focus-visible:ring-2 focus-visible:outline-none"
                   >
                     <Avatar>
                       <AvatarFallback>

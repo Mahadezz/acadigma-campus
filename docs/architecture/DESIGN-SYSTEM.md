@@ -1083,6 +1083,62 @@ with one bar of EDGE, and the Android wrapper makes the queue default-on.
 
 ---
 
+### 3.11 App polish — the "feels finished" rules (D-409)
+
+The tell that an app was vibe-coded is not a visual one, it is a timing one: a
+tap that waits on the network, a blank screen between routes, a page you cannot
+pull down to refresh. This section is the acceptance contract for the Polish
+Part; §3.5-§3.7 above hold the geometry.
+
+**Shipped in D-409**
+
+| Rule                      | What ships                                                                                                                                                                                                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skeletons                 | `PageSkeleton` (`packages/ui/src/primitives/page-skeleton.tsx`), three variants: `list`, `detail`, `form`. A `loading.tsx` is three lines that pick one. Covered: every page under `(school)`, `(family)`, `(personal)`, `(platform)`, `(account)`. The dashboard keeps its own (D-400). |
+| Pull to refresh           | `PullToRefresh` (`apps/web/app/(shared)/pull-to-refresh.tsx`), mounted once per shell (school incl. basic mode, family, personal). Coarse pointer only; window scroll at 0; 64px threshold; calls `router.refresh()`.                                                                    |
+| Optimistic updates        | `useOptimistic` plus `toast.error` on failure, only on the actions in the table below.                                                                                                                                                                                                   |
+| Tap feedback              | `Button`: `scale(0.97)` (motion-safe) and a 10% opacity dip on press. `.motion-press` on tappable list rows that had only a hover state.                                                                                                                                                 |
+| Show last state / offline | Already shipped by F-ID-11 (D-308/D-309); untouched.                                                                                                                                                                                                                                     |
+
+**Optimistic updates: what qualifies.** Small, likely to succeed, reversible by
+the same gesture, and visible to nobody else before the server agrees.
+
+| Action                                | Optimistic? | Why                                                                                    |
+| ------------------------------------- | ----------- | -------------------------------------------------------------------------------------- |
+| Text size (Settings > Display)        | **Yes**     | A personal, per-user display preference; one tap flips it back.                        |
+| Roll call marks                       | Already     | Local state plus outbox (D-309); not changed.                                          |
+| Payments, plan changes, entitlements  | **Never**   | Money is server-computed and webhook-confirmed (rule 8).                               |
+| Publishing results, sending messages  | **Never**   | Visible to parents and students the moment it lands; a wrong guess cannot be recalled. |
+| Deleting anything, archiving a school | **Never**   | Irreversible or 30-day-grace flows; a pending state on the control instead.            |
+| Roles, membership, invitations, auth  | **Never**   | Security-relevant; the server answer is the only truth.                                |
+| Basic-mode switch                     | **Never**   | It navigates to a different shell; wait for the server.                                |
+
+On failure the control snaps back to the prior value (React's `useOptimistic`
+reverts when the transition ends without the server value changing) and a
+`toast.error` says what happened. The server response always wins.
+
+**Pull-to-refresh, as built.** A pull counts only when the touch starts with
+`window.scrollY <= 0`, on a coarse pointer, with one finger, not inside a
+horizontally scrolling element or a scrolled inner scroller, not inside
+`[data-no-ptr]`, and not while a dialog or drawer is open. Travel is damped x0.5;
+release at >= 64px refreshes. `overscroll-behavior-y: contain` is set on `<html>`
+while mounted so the browser never runs its own refresh underneath (and an
+installed PWA, which has none, still gets one). Reduced motion: the indicator
+appears but does not spin. Keyboard and screen-reader users get a real
+"Refresh" button that shows on focus, plus a `role="status"` announcement while
+refreshing. **Deviation from §3.6:** desktop has no visible refresh control next
+to "Updated ..." yet (the focus-only button is the only desktop control); §3.6
+promised one, and it stays a follow-up.
+
+**Acceptance criteria**
+
+1. Every `page.tsx` under the five data shells has a `loading.tsx` on its path (own or ancestor), except `/app` (a redirect) and the exams and marks sections (D-409: a boundary there hangs the Lock/Compute refresh). Enforced by `apps/web/lib/loading-coverage.test.ts`.
+2. During a slow navigation the skeleton renders in the page's final geometry and is `aria-busy`; under reduced motion it does not pulse.
+3. A downward drag of >= 128px finger travel (64px damped) from the top of a phone data screen triggers exactly one `router.refresh()`; a shorter drag, a drag while scrolled, on a fine pointer, or with a dialog open triggers none.
+4. The text-size choice shows immediately; a failed save reverts it and raises a toast; a successful save keeps it.
+5. `Button` and `.motion-press` rows show a visible press state; under `prefers-reduced-motion` the scale is removed and a non-motion cue remains.
+6. axe: zero serious/critical on `/design` (which hosts the demos) at 360x800 and 1280x800; first-load JS of `/app/students` stays <= 250 kB gzipped.
+
 ## 4. Component inventory
 
 Registry root: `F:\shadcn-ui\apps\v4\registry\new-york-v4`. Paths below are

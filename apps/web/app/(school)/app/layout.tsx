@@ -16,6 +16,7 @@ import {
   OutboxChip,
   OutboxStaleBanner,
 } from "@/app/(shared)/offline/outbox-chip"
+import { PullToRefresh } from "@/app/(shared)/pull-to-refresh"
 import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
 import { UserMenu } from "@/app/(shared)/workspace/user-menu"
 import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
@@ -133,6 +134,10 @@ export default async function SchoolLayout({
         }
         addPhoneLabel={s.help.addPhoneLink}
       >
+        <PullToRefresh
+          label={t.shell.refresh}
+          refreshingLabel={t.shell.refreshing}
+        />
         {lastUpdated}
         <div className="mb-3 flex justify-end empty:hidden">
           <OutboxChip
@@ -236,6 +241,10 @@ export default async function SchoolLayout({
         />
       }
     >
+      <PullToRefresh
+        label={t.shell.refresh}
+        refreshingLabel={t.shell.refreshing}
+      />
       {lastUpdated}
       {deletionBanner}
       {staleOutbox}

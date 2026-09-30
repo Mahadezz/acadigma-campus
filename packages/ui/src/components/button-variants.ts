@@ -14,12 +14,11 @@ import { cva, type VariantProps } from "class-variance-authority"
  * ".../components/button"` call site.
  */
 export const buttonVariants = cva(
-  // D-57: active:translate-y-px is the ink/paper "press" acadigma-website
-  // uses on its own Button; kept alongside the existing focus/disabled
-  // states rather than replacing DESIGN-SYSTEM §3.5's active:scale, which
-  // stays on the higher-frequency tap targets (AttendanceToggle) that need
-  // the stronger touch feedback.
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none active:not-aria-[haspopup]:translate-y-px focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  // D-409: press = scale(0.97) + opacity dip (DESIGN-SYSTEM §3.5). The scale is
+  // motion-safe; a reduced-motion user still gets the opacity dip. Replaces
+  // D-57's translate-y-px. `aria-[haspopup]` triggers are exempt so an open
+  // menu does not sink while it is being used.
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none motion-safe:active:not-aria-[haspopup]:scale-[0.97] active:not-aria-[haspopup]:opacity-90 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
