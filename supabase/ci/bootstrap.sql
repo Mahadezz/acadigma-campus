@@ -50,6 +50,36 @@ create table if not exists auth.users (
   recovery_token          text
 );
 
+-- GoTrue's session and refresh-token tables, as far as F-ID-01 Part 6
+-- (D-116) reads them: `refreshed_at` really is `timestamp` (no zone), and a
+-- session's refresh tokens go with it. Created before the default-privilege
+-- block below so, as on the live project, no client role gets a grant.
+create table if not exists auth.sessions (
+  id           uuid primary key,
+  user_id      uuid not null references auth.users (id) on delete cascade,
+  created_at   timestamptz,
+  updated_at   timestamptz,
+  factor_id    uuid,
+  aal          text,
+  not_after    timestamptz,
+  refreshed_at timestamp,
+  user_agent   text,
+  ip           inet,
+  tag          text
+);
+
+create table if not exists auth.refresh_tokens (
+  instance_id uuid,
+  id          bigserial primary key,
+  token       varchar(255),
+  user_id     varchar(255),
+  revoked     boolean,
+  created_at  timestamptz,
+  updated_at  timestamptz,
+  parent      varchar(255),
+  session_id  uuid references auth.sessions (id) on delete cascade
+);
+
 -- Mirrors the real GoTrue/PostgREST definitions: read the GUCs PostgREST sets
 -- from the JWT on every request. The pgTAP fixtures' `tests.login()` sets
 -- `request.jwt.claims` the same way, so RLS behaves exactly as it does live.
