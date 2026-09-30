@@ -49,3 +49,14 @@ Write gate `can("calendar.override.write")` then `requireWritable`, then RLS (ow
 ## 8. Sign-off
 
 Awaiting lead review and owner approval.
+
+## 9. Screenshots
+
+Captured by the `school-holidays.spec.ts` journeys in CI `e2e-live` (run 36778264468), phone = 360 x 800, desktop = 1280 x 800.
+
+| Screen                          | 360 x 800                                                                     | 1280 x 800                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Owner: add sheet                | ![](assets/2026-10-01-F-AC-11-overrides/overrides-sheet-phone.png)            | ![](assets/2026-10-01-F-AC-11-overrides/overrides-sheet-desktop.png)            |
+| Owner: list with an override    | ![](assets/2026-10-01-F-AC-11-overrides/overrides-owner-list-phone.png)       | ![](assets/2026-10-01-F-AC-11-overrides/overrides-owner-list-desktop.png)       |
+| Owner: edit sheet (date locked) | ![](assets/2026-10-01-F-AC-11-overrides/overrides-edit-sheet-phone.png)       | ![](assets/2026-10-01-F-AC-11-overrides/overrides-edit-sheet-desktop.png)       |
+| Teacher: read-only              | ![](assets/2026-10-01-F-AC-11-overrides/overrides-teacher-readonly-phone.png) | ![](assets/2026-10-01-F-AC-11-overrides/overrides-teacher-readonly-desktop.png) |
