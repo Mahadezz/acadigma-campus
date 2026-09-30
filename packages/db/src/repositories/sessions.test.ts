@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { listMySessions, noteSignIn, revokeMySession } from "./sessions"
+import {
+  listMySessions,
+  noteSignIn,
+  revokeAllMySessions,
+  revokeMySession,
+} from "./sessions"
 
 import type { AcadigmaSupabaseClient } from "../client"
 
@@ -101,6 +106,22 @@ describe("noteSignIn", () => {
     ).toEqual({ ok: true, data: { notified: true } })
     const failed = await noteSignIn(
       rpcClient({ note_sign_in: { data: null, error: { message: "x" } } })
+    )
+    expect(failed.ok).toBe(false)
+  })
+})
+
+describe("revokeAllMySessions", () => {
+  it("returns how many sessions ended, or a generic error", async () => {
+    expect(
+      await revokeAllMySessions(
+        rpcClient({ revoke_all_my_sessions: { data: 3, error: null } })
+      )
+    ).toEqual({ ok: true, data: { revoked: 3 } })
+    const failed = await revokeAllMySessions(
+      rpcClient({
+        revoke_all_my_sessions: { data: null, error: { message: "x" } },
+      })
     )
     expect(failed.ok).toBe(false)
   })

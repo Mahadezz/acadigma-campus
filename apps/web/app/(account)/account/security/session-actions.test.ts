@@ -20,15 +20,15 @@ const auth = {
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({ auth })),
 }))
-vi.mock("@/lib/audit", () => ({
-  logAuthEvent: vi.fn(async (_: unknown, input: { action: string }) => {
-    calls.push(`audit:${input.action}`)
-  }),
-}))
 
 const mockRevoke = vi.fn(async () => ({ ok: true, data: { revoked: true } }))
+let revokeAllResult: unknown = { ok: true, data: { revoked: 2 } }
 vi.mock("@acadigma/db/repositories/sessions", () => ({
   revokeMySession: mockRevoke,
+  revokeAllMySessions: vi.fn(async () => {
+    calls.push("rpc:revoke_all")
+    return revokeAllResult
+  }),
 }))
 
 const { revokeSession, signOutEverywhere } = await import("./session-actions")
@@ -39,6 +39,7 @@ beforeEach(() => {
   calls.length = 0
   user = { id: "u1" }
   signOutError = null
+  revokeAllResult = { ok: true, data: { revoked: 2 } }
   vi.clearAllMocks()
 })
 
@@ -65,20 +66,24 @@ describe("revokeSession", () => {
 })
 
 describe("signOutEverywhere", () => {
-  it("audits, signs out globally and clears the cookies", async () => {
+  it("revokes every session in the database, then drops this one locally and clears the cookies", async () => {
     expect(await signOutEverywhere()).toEqual({
       ok: true,
       data: { signedOut: true },
     })
-    expect(calls).toEqual(["audit:session.revoked_all", "signOut:global"])
+    expect(calls).toEqual(["rpc:revoke_all", "signOut:local"])
     expect(mockCookieDelete).toHaveBeenCalledTimes(3)
   })
 
-  it("reports a failed sign-out instead of pretending", async () => {
-    signOutError = { message: "down" }
+  it("reports a failed revoke instead of pretending, and keeps the session", async () => {
+    revokeAllResult = {
+      ok: false,
+      error: { code: "dependency_unavailable", message: "down" },
+    }
     const result = await signOutEverywhere()
     expect(result.ok).toBe(false)
     expect(mockCookieDelete).not.toHaveBeenCalled()
+    expect(auth.signOut).not.toHaveBeenCalled()
   })
 
   it("needs a signed-in caller", async () => {

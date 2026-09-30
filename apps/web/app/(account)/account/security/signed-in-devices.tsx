@@ -1,9 +1,20 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 
 import { Loader2Icon, MonitorIcon, SmartphoneIcon } from "lucide-react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@acadigma/ui/components/alert-dialog"
 import { Badge } from "@acadigma/ui/components/badge"
 import { Button } from "@acadigma/ui/components/button"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
@@ -30,7 +41,7 @@ const PHONE = /Android|iOS/
 /**
  * F-ID-01 §4.8 / §6 (D-116): one card per signed-in device, the current one
  * first and badged, a Sign out button on every other one, and Sign out
- * everywhere below. A revoke hides the card at once and puts it back if the
+ * everywhere below, behind a confirmation. A revoke hides the card at once and puts it back if the
  * server says no (§6 "a failed revoke restores the row").
  */
 export function SignedInDevices({
@@ -43,36 +54,55 @@ export function SignedInDevices({
   devices: DeviceRow[]
 }) {
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const [pending, setPending] = useState<ReadonlySet<string>>(new Set())
   const [message, setMessage] = useState<{
     tone: "success" | "error"
     text: string
   } | null>(null)
   const [everywhere, startEverywhere] = useTransition()
+  // After a card goes, focus moves to the next card's button (or the list),
+  // never to <body> (a11y review).
+  const focusId = useRef<string | null>(null)
+  const buttons = useRef(new Map<string, HTMLButtonElement>())
+  const list = useRef<HTMLUListElement>(null)
+
+  const visible = devices.filter((d) => !hidden.has(d.id))
+
+  // Runs after the render that removed the card.
+  useEffect(() => {
+    if (focusId.current === null) return
+    const target = buttons.current.get(focusId.current) ?? list.current
+    focusId.current = null
+    target?.focus()
+  })
+
+  function without(set: ReadonlySet<string>, id: string) {
+    const next = new Set(set)
+    next.delete(id)
+    return next
+  }
 
   async function revoke(id: string) {
-    setBusyId(id)
+    const others = visible.filter((d) => !d.isCurrent).map((d) => d.id)
+    const at = others.indexOf(id)
+    const nextFocus = others[at + 1] ?? others[at - 1] ?? ""
     setMessage(null)
+    setPending((p) => new Set(p).add(id))
     setHidden((h) => new Set(h).add(id))
-    const restore = () =>
-      setHidden((h) => {
-        const next = new Set(h)
-        next.delete(id)
-        return next
-      })
+    focusId.current = nextFocus
     try {
       const r = await revokeSession({ sessionId: id })
       if (r.ok) {
         setMessage({ tone: "success", text: t.revoked })
       } else {
-        restore()
+        setHidden((h) => without(h, id))
         setMessage({ tone: "error", text: r.error.message })
       }
     } catch {
-      restore()
+      setHidden((h) => without(h, id))
       setMessage({ tone: "error", text: t.error })
     } finally {
-      setBusyId(null)
+      setPending((p) => without(p, id))
     }
   }
 
@@ -95,11 +125,14 @@ export function SignedInDevices({
     })
   }
 
-  const visible = devices.filter((d) => !hidden.has(d.id))
-
   return (
     <div className="space-y-4">
-      <ul className="space-y-3" aria-label={t.title}>
+      <ul
+        ref={list}
+        tabIndex={-1}
+        className="space-y-3 outline-none"
+        aria-label={t.title}
+      >
         {visible.map((d) => {
           const Icon = PHONE.test(d.label) ? SmartphoneIcon : MonitorIcon
           return (
@@ -127,16 +160,17 @@ export function SignedInDevices({
               </div>
               {d.isCurrent ? null : (
                 <Button
+                  ref={(el) => {
+                    if (el) buttons.current.set(d.id, el)
+                    else buttons.current.delete(d.id)
+                  }}
                   variant="outline"
                   className="h-11"
-                  disabled={busyId !== null || everywhere}
+                  disabled={pending.has(d.id) || everywhere}
                   aria-label={t.signOutLabel.replace("{device}", d.label)}
                   onClick={() => void revoke(d.id)}
                 >
-                  {busyId === d.id ? (
-                    <Loader2Icon className="animate-spin" aria-hidden />
-                  ) : null}
-                  {busyId === d.id ? t.signingOut : t.signOutButton}
+                  {t.signOutButton}
                 </Button>
               )}
             </li>
@@ -151,17 +185,34 @@ export function SignedInDevices({
       </div>
 
       <div className="space-y-2 border-t pt-4">
-        <Button
-          variant="outline"
-          className="h-11 w-full sm:w-auto"
-          disabled={everywhere || busyId !== null}
-          onClick={signOutAll}
-        >
-          {everywhere ? (
-            <Loader2Icon className="animate-spin" aria-hidden />
-          ) : null}
-          {everywhere ? t.everywhereWorking : t.everywhereButton}
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              className="h-11 w-full sm:w-auto"
+              disabled={everywhere}
+            >
+              {everywhere ? (
+                <Loader2Icon className="animate-spin" aria-hidden />
+              ) : null}
+              {everywhere ? t.everywhereWorking : t.everywhereButton}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t.confirmTitle}</AlertDialogTitle>
+              <AlertDialogDescription>{t.confirmBody}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="h-11">
+                {t.confirmCancel}
+              </AlertDialogCancel>
+              <AlertDialogAction className="h-11" onClick={signOutAll}>
+                {t.confirmAction}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <p className="text-sm text-muted-foreground">{t.everywhereHint}</p>
       </div>
     </div>

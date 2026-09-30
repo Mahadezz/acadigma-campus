@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import en from "@/messages/en.json"
@@ -20,6 +20,7 @@ const { SignedInDevices } = await import("./signed-in-devices")
 const t = en.auth.devices
 const THIS = "0b6f2c1e-3d4a-4b5c-8d9e-0f1a2b3c4d5e"
 const PHONE = "1b6f2c1e-3d4a-4b5c-8d9e-0f1a2b3c4d5e"
+const THIRD = "2b6f2c1e-3d4a-4b5c-8d9e-0f1a2b3c4d5e"
 const devices = [
   {
     id: THIS,
@@ -87,7 +88,43 @@ describe("SignedInDevices", () => {
     expect(screen.getByText("Could not reach")).toBeTruthy()
   })
 
-  it("Sign out everywhere clears this device's offline data after the server succeeds", async () => {
+  it("moves focus to the next device after one is signed out", async () => {
+    mockRevoke.mockResolvedValue({ ok: true, data: { revoked: true } })
+    render(
+      <SignedInDevices
+        t={t}
+        userId="u1"
+        devices={[
+          ...devices,
+          { ...devices[1]!, id: THIRD, label: "Safari on iOS" },
+        ]}
+      />
+    )
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Sign out Chrome on Android" })
+      )
+    })
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Sign out Safari on iOS" })
+    )
+  })
+
+  it("Sign out everywhere asks first; Cancel does nothing", async () => {
+    renderList()
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: t.everywhereButton }))
+    })
+    expect(screen.getByRole("alertdialog")).toBeTruthy()
+    expect(screen.getByText(t.confirmBody)).toBeTruthy()
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: t.confirmCancel }))
+    })
+    expect(screen.queryByRole("alertdialog")).toBeNull()
+    expect(mockEverywhere).not.toHaveBeenCalled()
+  })
+
+  it("Sign out everywhere, confirmed, reports a failure and keeps this device's data", async () => {
     mockEverywhere.mockResolvedValue({
       ok: false,
       error: { code: "dependency_unavailable", message: "Try again." },
@@ -95,6 +132,13 @@ describe("SignedInDevices", () => {
     renderList()
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: t.everywhereButton }))
+    })
+    await act(async () => {
+      fireEvent.click(
+        within(screen.getByRole("alertdialog")).getByRole("button", {
+          name: t.confirmAction,
+        })
+      )
     })
     expect(mockEverywhere).toHaveBeenCalledTimes(1)
     expect(mockPurge).not.toHaveBeenCalled()

@@ -1,11 +1,12 @@
 -- =====================================================================
 -- F-ID-01 Part 6 — sessions and devices (D-116)
 --
---   A "device" is a live Supabase Auth session (auth.sessions). Three
+--   A "device" is a live Supabase Auth session (auth.sessions). Four
 --   functions, each acting on auth.uid() only:
 --     public.my_sessions()            the caller's live sessions
 --     public.revoke_my_session(uuid)  sign out one other session
 --     public.note_sign_in()           raise auth.new_device_signin once
+--     public.revoke_all_my_sessions() sign out everywhere
 --   No new table: Supabase already stores the session, and deleting its
 --   row is Supabase's documented way to sign it out (refresh tokens go
 --   with it; the Auth server then answers session_not_found).
@@ -94,10 +95,58 @@ revoke all on function public.revoke_my_session(uuid) from public, anon;
 grant execute on function public.revoke_my_session(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------
--- 3. New-device notification (F-ID-01 §5 "New-device notification"):
---    this session is new to the person and another one is live. Once per
---    session: a repeat call finds the earlier row and does nothing.
+-- 3. Sign out everywhere: every session of the caller, the current one
+--    included, deleted and audited in one transaction, so the audit row
+--    exists only when the sessions are really gone. Returns how many.
 -- ---------------------------------------------------------------------
+create or replace function public.revoke_all_my_sessions()
+returns integer
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_n   integer;
+begin
+  if v_uid is null then
+    raise exception 'UNAUTHENTICATED' using errcode = '42501';
+  end if;
+
+  delete from auth.sessions s where s.user_id = v_uid;
+  get diagnostics v_n = row_count;
+
+  if v_n > 0 then
+    perform set_config('app.workspace_id', '', true);
+    perform app.log_audit_event('session.revoked_all', null,
+      null, v_uid, null, jsonb_build_object('n', v_n),
+      p_subject_user_id => v_uid);
+  end if;
+  return v_n;
+end;
+$$;
+
+comment on function public.revoke_all_my_sessions() is
+  'F-ID-01 Part 6 (D-116): deletes every session of the caller (this one '
+  'included) and audits session.revoked_all with the count, in one '
+  'transaction.';
+
+revoke all on function public.revoke_all_my_sessions() from public, anon;
+grant execute on function public.revoke_all_my_sessions() to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 4. New-device notification (F-ID-01 §5 "New-device notification"):
+--    this session is new to the person and another one is live. Once per
+--    session, enforced by a unique index, so two concurrent calls cannot
+--    both insert.
+-- ---------------------------------------------------------------------
+create unique index if not exists notifications_new_device_once
+  on public.notifications (recipient_id, (data ->> 'session_id'))
+  where event_type = 'auth.new_device_signin';
+-- justification: "once per session" (D-116 §6) as a constraint, not a
+-- check-then-insert race.
+
 create or replace function public.note_sign_in()
 returns boolean
 language plpgsql
@@ -108,6 +157,7 @@ as $$
 declare
   v_uid     uuid := auth.uid();
   v_session text := auth.jwt() ->> 'session_id';
+  v_id      bigint;
 begin
   if v_uid is null or v_session is null then
     return false;
@@ -121,26 +171,26 @@ begin
     return false;
   end if;
 
-  if exists (
-    select 1 from public.notifications n
-     where n.recipient_id = v_uid
-       and n.event_type = 'auth.new_device_signin'
-       and n.data ->> 'session_id' = v_session) then
-    return false;
-  end if;
+  -- Same row app.notify() writes, with ON CONFLICT for the once-only rule.
+  insert into public.notifications
+    (recipient_id, actor_id, event_type, title, body, action_url, data)
+  values
+    (v_uid, v_uid, 'auth.new_device_signin', 'New sign-in to your account',
+     'If this was not you, sign that device out and change your password.',
+     '/account/security', jsonb_build_object('session_id', v_session))
+  on conflict (recipient_id, (data ->> 'session_id'))
+    where event_type = 'auth.new_device_signin'
+    do nothing
+  returning id into v_id;
 
-  perform app.notify(v_uid, 'auth.new_device_signin',
-    'New sign-in to your account', '/account/security',
-    'If this was not you, sign that device out and change your password.',
-    null, jsonb_build_object('session_id', v_session));
-  return true;
+  return v_id is not null;
 end;
 $$;
 
 comment on function public.note_sign_in() is
   'F-ID-01 Part 6 (D-116): called after a password sign-in; raises '
   'auth.new_device_signin when another session of the caller is live, once '
-  'per session.';
+  'per session (unique index notifications_new_device_once).';
 
 revoke all on function public.note_sign_in() from public, anon;
 grant execute on function public.note_sign_in() to authenticated;

@@ -46,6 +46,16 @@ export async function revokeMySession(
   return ok({ revoked: data === true })
 }
 
+/** Sign out everywhere (D-116 §4): every session, this one included, gone
+ * and audited in one database transaction. Returns how many. */
+export async function revokeAllMySessions(
+  supabase: AcadigmaSupabaseClient
+): Promise<Result<{ revoked: number }, ApiError>> {
+  const { data, error } = await supabase.rpc("revoke_all_my_sessions")
+  if (error) return err(UNAVAILABLE)
+  return ok({ revoked: data ?? 0 })
+}
+
 /** Raises `auth.new_device_signin` when another session is live. */
 export async function noteSignIn(
   supabase: AcadigmaSupabaseClient

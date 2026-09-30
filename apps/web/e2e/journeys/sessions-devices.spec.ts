@@ -13,7 +13,8 @@ import { expectNoA11yViolations } from "../axe"
  *
  * S1 the list shows both and marks this device; S2 signing the other one
  * out removes it and that browser's next page load lands on /login (AC10);
- * S4 Sign out everywhere ends this session too; S5 axe. S3 (isolation) is
+ * S4 Sign out everywhere asks first (Cancel keeps everything), then ends
+ * this session too; S5 axe. S3 (isolation) is
  * pgTAP 39h. Live-only (OQ-27).
  */
 test.skip(!process.env.E2E_LIVE_SUPABASE, "needs a live Supabase (OQ-27)")
@@ -84,8 +85,22 @@ test("see signed-in devices, sign one out, then sign out everywhere", async ({
     await other.goto("/account/security")
     await expect(other).toHaveURL(/\/login/)
 
-    // S4
+    // S4 — asks first; Cancel changes nothing.
     await page.getByRole("button", { name: "Sign out everywhere" }).click()
+    const confirm = page.getByRole("alertdialog")
+    await expect(confirm).toContainText("including this one")
+    await expectNoA11yViolations(page, testInfo)
+    await confirm.getByRole("button", { name: "Cancel" }).click()
+    await expect(confirm).toHaveCount(0)
+    await page.reload()
+    await expect(page).toHaveURL(/\/account\/security$/)
+    await expect(page.getByTestId("device-row")).toHaveCount(1)
+
+    await page.getByRole("button", { name: "Sign out everywhere" }).click()
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Sign out everywhere" })
+      .click()
     await expect(page).toHaveURL(/\/login$/)
     await page.goto("/account/security")
     await expect(page).toHaveURL(/\/login/)

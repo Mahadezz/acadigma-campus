@@ -1,5 +1,6 @@
 ---
 "@acadigma/web": minor
+"@acadigma/ui": minor
 "@acadigma/domain": minor
 "@acadigma/db": minor
 "@acadigma/contracts": minor
@@ -16,3 +17,9 @@ Supabase's `auth.sessions`, read and revoked by `public.my_sessions()`,
 `session.revoked` audited in the same transaction); the server client now
 forwards the browser's `User-Agent` so sessions record the device. No IP is
 read and no location is shown.
+
+Sign out everywhere now asks first (new `AlertDialog` in `packages/ui`,
+copied from the shadcn registry on the D-408 glass surface) and is one
+database transaction (`public.revoke_all_my_sessions()`) that audits only
+what it revoked. The new-device notification is once per session by a unique
+index. Local/CI `jwt_expiry` is 600 s.

@@ -9,11 +9,13 @@
 --   C. Revoke: another person's session and the current one are refused
 --      without an error; one's own other session is deleted with its
 --      refresh tokens and audited; a repeat is a no-op.
+--   E. Sign out everywhere: every session of the caller goes, audited once
+--      with the count; another person's sessions stay; a repeat is 0.
 --   D. Escalation: anon can call none of the functions; authenticated
 --      cannot read or delete auth.sessions directly.
 -- =====================================================================
 begin;
-select plan(19);
+select plan(24);
 
 create schema if not exists tests;
 
@@ -127,6 +129,12 @@ select is(
       and data = jsonb_build_object('session_id', '39800000-0000-4000-c000-0000000000a1')),
   1,
   'B4: exactly one auth.new_device_signin row, carrying only the session id');
+select throws_ok(
+  $insert into public.notifications (recipient_id, event_type, title, action_url, data)
+    values ('39800000-0000-4000-a000-000000000001', 'auth.new_device_signin', 'x',
+            '/account/security', '{"session_id":"39800000-0000-4000-c000-0000000000a1"}')$,
+  '23505', 'duplicate key value violates unique constraint "notifications_new_device_once"',
+  'B5: a second row for the same session is refused by a unique index (no race)');
 
 -- =====================================================================
 -- C. Revoke
@@ -162,12 +170,38 @@ select is(
   'C7: exactly one session.revoked audit row, with no user agent or IP');
 
 -- =====================================================================
+-- E. Sign out everywhere (B has B1 and a second session B2)
+-- =====================================================================
+insert into auth.sessions (id, user_id, created_at, updated_at, user_agent)
+values ('39800000-0000-4000-c000-0000000000b2', '39800000-0000-4000-a000-000000000002',
+        now(), now(), 'Mozilla/5.0 (Windows NT 10.0) Firefox/131.0');
+
+select tests.login_session('39800000-0000-4000-a000-000000000002', '39800000-0000-4000-c000-0000000000b1');
+select is((select public.revoke_all_my_sessions()), 2,
+  'E1: every session of the caller, this one included, is revoked');
+select is((select public.revoke_all_my_sessions()), 0,
+  'E2: a repeat revokes nothing');
+select tests.logout();
+select ok(
+  not exists (select 1 from auth.sessions where user_id = '39800000-0000-4000-a000-000000000002')
+  and exists (select 1 from auth.sessions where id = '39800000-0000-4000-c000-0000000000a1'),
+  'E3: the caller''s sessions are gone; another person''s stay');
+select is(
+  (select count(*)::int from public.audit_events
+    where action = 'session.revoked_all'
+      and subject_user_id = '39800000-0000-4000-a000-000000000002'
+      and after = '{"n": 2}'::jsonb),
+  1,
+  'E4: exactly one session.revoked_all row, with the count, none for the empty repeat');
+
+-- =====================================================================
 -- D. Escalation
 -- =====================================================================
 select ok(
   not has_function_privilege('anon', 'public.my_sessions()', 'execute')
   and not has_function_privilege('anon', 'public.revoke_my_session(uuid)', 'execute')
-  and not has_function_privilege('anon', 'public.note_sign_in()', 'execute'),
+  and not has_function_privilege('anon', 'public.note_sign_in()', 'execute')
+  and not has_function_privilege('anon', 'public.revoke_all_my_sessions()', 'execute'),
   'D1: anon can call none of the functions');
 
 select tests.login_session('39800000-0000-4000-a000-000000000001', '39800000-0000-4000-c000-0000000000a1');

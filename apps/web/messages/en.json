@@ -197,13 +197,16 @@
       "signedIn": "Signed in {date}",
       "lastActive": "Last active {date}",
       "signOutButton": "Sign out",
-      "signingOut": "Signing out…",
       "signOutLabel": "Sign out {device}",
       "revoked": "That device is signed out.",
       "everywhereButton": "Sign out everywhere",
       "everywhereHint": "Signs out every device, including this one.",
       "everywhereWorking": "Signing out…",
-      "error": "Could not reach the server. Try again."
+      "error": "Could not reach the server. Try again.",
+      "confirmTitle": "Sign out everywhere?",
+      "confirmBody": "Every device signed in to your account, including this one, will be signed out. You will need to sign in again.",
+      "confirmCancel": "Cancel",
+      "confirmAction": "Sign out everywhere"
     },
     "reaccept": {
       "metaTitle": "Updated terms",

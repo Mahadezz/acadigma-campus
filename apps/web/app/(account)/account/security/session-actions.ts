@@ -12,9 +12,11 @@ import {
   type ApiError,
   type Result,
 } from "@acadigma/contracts"
-import { revokeMySession } from "@acadigma/db/repositories/sessions"
+import {
+  revokeAllMySessions,
+  revokeMySession,
+} from "@acadigma/db/repositories/sessions"
 
-import { logAuthEvent } from "@/lib/audit"
 import { createClient } from "@/lib/supabase/server"
 import { TEXT_SIZE_COOKIE, UI_MODE_COOKIE } from "@/lib/ui-preferences"
 import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie"
@@ -56,13 +58,10 @@ export async function signOutEverywhere(): Promise<
     return err(apiError("unauthenticated", "Please sign in to continue."))
   }
 
-  // Logged first: after a global sign-out there is no session to log with.
-  await logAuthEvent(supabase, {
-    action: "session.revoked_all",
-    rowId: user.id,
-  })
-  const { error } = await supabase.auth.signOut({ scope: "global" })
-  if (error) {
+  // The database deletes every session and writes session.revoked_all in
+  // one transaction, so the audit row exists only if the sign-out happened.
+  const revoked = await revokeAllMySessions(supabase)
+  if (!revoked.ok) {
     return err(
       apiError(
         "dependency_unavailable",
@@ -70,6 +69,8 @@ export async function signOutEverywhere(): Promise<
       )
     )
   }
+  // This session is already gone server-side; drop it from the cookies.
+  await supabase.auth.signOut({ scope: "local" }).catch(() => undefined)
 
   // Same cookie hygiene as signOut() (§4.10).
   const cookieStore = await cookies()

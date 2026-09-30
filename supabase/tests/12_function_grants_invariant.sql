@@ -148,6 +148,7 @@ with allowed as (
     ('public.my_sessions()'),  -- F-ID-01 Part 6, D-116
     ('public.revoke_my_session(uuid)'),  -- F-ID-01 Part 6, D-116
     ('public.note_sign_in()'),  -- F-ID-01 Part 6, D-116
+    ('public.revoke_all_my_sessions()'),  -- F-ID-01 Part 6, D-116
     ('public.archive_workspace(uuid, text)'),  -- F-OP-07 Part 6, D-211
     ('public.unarchive_workspace(uuid, text)'),  -- F-OP-07 Part 6, D-211
     ('public.schedule_workspace_deletion(uuid, text)'),  -- F-OP-07 Part 6, D-211
