@@ -28,6 +28,7 @@ export function PageSkeleton({
 }) {
   return (
     <div
+      role="status"
       aria-busy="true"
       data-slot="page-skeleton"
       data-variant={variant}
@@ -72,6 +73,13 @@ export function PageSkeleton({
           ))}
         </div>
       ) : null}
+      {/* Both languages render; the page's <html lang> hides one (as ShellBack). */}
+      <span lang="en" className="sr-only [html[lang=bn]_&]:hidden">
+        Loading…
+      </span>
+      <span lang="bn" className="sr-only [html:not([lang=bn])_&]:hidden">
+        লোড হচ্ছে…
+      </span>
     </div>
   )
 }

@@ -59,4 +59,6 @@ test("a teacher cannot open academic settings", async ({ page }) => {
   // the contract is the 403 *page* (no data), not the status line.
   await page.goto("/app/settings/academic")
   await expect(page.getByText("You do not have access")).toBeVisible()
+  // The protected screen itself must be absent, not merely covered.
+  await expect(page.getByRole("heading", { name: /academic/i })).toHaveCount(0)
 })

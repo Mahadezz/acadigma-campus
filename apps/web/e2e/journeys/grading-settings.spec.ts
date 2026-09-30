@@ -51,4 +51,6 @@ test("a teacher cannot open grading settings", async ({ page }) => {
   // the contract is the 403 *page* (no data), not the status line.
   await page.goto("/app/settings/grade-scale")
   await expect(page.getByText("You do not have access")).toBeVisible()
+  // The protected screen itself must be absent, not merely covered.
+  await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
 })

@@ -2,8 +2,6 @@
 
 import { useState, useTransition } from "react"
 
-import { useRouter } from "next/navigation"
-
 import type { ExamDetail, TeacherOption } from "@acadigma/contracts"
 import { marksEntryWindow } from "@acadigma/domain/academic"
 import { Badge } from "@acadigma/ui/components/badge"
@@ -44,7 +42,6 @@ export function MarksProgress({
   today: string
 }) {
   const fmt = examDateFormatter(locale)
-  const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -71,7 +68,6 @@ export function MarksProgress({
       }
       setUnlocking(null)
       setNotice(done)
-      router.refresh()
     })
   }
 

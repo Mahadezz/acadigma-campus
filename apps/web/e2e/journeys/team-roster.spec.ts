@@ -84,4 +84,8 @@ test("a teacher is refused Team & access", async ({ page }) => {
   // the contract is the 403 *page* (no data), not the status line.
   await page.goto("/app/staff/team")
   await expect(page.getByText("You do not have access")).toBeVisible()
+  // The protected screen itself must be absent, not merely covered.
+  await expect(
+    page.getByRole("button", { name: /remove access/i })
+  ).toHaveCount(0)
 })

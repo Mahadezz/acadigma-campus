@@ -100,4 +100,6 @@ test("a teacher lands on the read-only overview and cannot open the profile form
   // the contract is the 403 *page* (no data), not the status line.
   await page.goto("/app/settings/school")
   await expect(page.getByText("You do not have access")).toBeVisible()
+  // The protected screen itself must be absent, not merely covered.
+  await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
 })

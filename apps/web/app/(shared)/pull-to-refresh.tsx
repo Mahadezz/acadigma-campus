@@ -18,7 +18,7 @@ function inNestedScroller(el: EventTarget | null): boolean {
     const x =
       /(auto|scroll)/.test(cs.overflowX) && n.scrollWidth > n.clientWidth
     const y = /(auto|scroll)/.test(cs.overflowY) && n.scrollTop > 0
-    if (x || y || n.dataset.noPtr !== undefined) return true
+    if (x || y) return true
     n = n.parentElement
   }
   return false
@@ -91,8 +91,8 @@ export function PullToRefresh({
     }
     document.addEventListener("touchstart", onStart, { passive: true })
     document.addEventListener("touchmove", onMove, { passive: true })
-    document.addEventListener("touchend", onEnd)
-    document.addEventListener("touchcancel", onEnd)
+    document.addEventListener("touchend", onEnd, { passive: true })
+    document.addEventListener("touchcancel", onEnd, { passive: true })
     return () => {
       root.style.overscrollBehaviorY = prev
       document.removeEventListener("touchstart", onStart)
