@@ -57,11 +57,15 @@ beforeEach(() => {
 })
 
 describe("AttendancePolicyForm (F-OP-07 Part 3 §4 W4)", () => {
-  it("shows the live effect line and updates it when a toggle changes, before any save", () => {
-    render(<AttendancePolicyForm policy={POLICY} sample={SAMPLE} t={t} />)
+  it("shows the live effect line, in the reader's language, and updates it when a toggle changes before any save", () => {
+    render(
+      <AttendancePolicyForm policy={POLICY} sample={SAMPLE} t={t} locale="en" />
+    )
 
+    // The raw "2026-09" never reaches the screen (review of PR #122) — it's formatted.
+    expect(screen.queryByText(/2026-09/)).toBeNull()
     // Saved policy: (18 + 1 + 1) / 22 = 90.91, unchanged either side while nothing is dirty.
-    expect(screen.getByText(/90\.91 %.*90\.91 %/)).toBeTruthy()
+    expect(screen.getByText(/September 2026.*90\.91 %.*90\.91 %/)).toBeTruthy()
 
     fireEvent.click(screen.getByLabelText(t.attendance.halfDayCountsPresent))
 
@@ -72,7 +76,9 @@ describe("AttendancePolicyForm (F-OP-07 Part 3 §4 W4)", () => {
 
   it("saves the edited policy and clears the dirty state", async () => {
     mockUpdateSchoolSettings.mockResolvedValue({ ok: true, data: {} })
-    render(<AttendancePolicyForm policy={POLICY} sample={SAMPLE} t={t} />)
+    render(
+      <AttendancePolicyForm policy={POLICY} sample={SAMPLE} t={t} locale="en" />
+    )
 
     fireEvent.click(screen.getByLabelText(t.attendance.halfDayCountsPresent))
     fireEvent.click(screen.getByRole("button", { name: t.save }))
@@ -91,8 +97,35 @@ describe("AttendancePolicyForm (F-OP-07 Part 3 §4 W4)", () => {
         policy={POLICY}
         sample={{ studentName: null, month: null, statuses: [] }}
         t={t}
+        locale="en"
       />
     )
     expect(screen.getByText(t.attendance.noSampleYet)).toBeTruthy()
+  })
+
+  it("the minimum-attendance field keeps a decimal point as it's typed, character by character (review of PR #122)", () => {
+    render(
+      <AttendancePolicyForm policy={POLICY} sample={SAMPLE} t={t} locale="en" />
+    )
+    const input = screen.getByLabelText(
+      t.attendance.minAttendancePercent
+    ) as HTMLInputElement
+
+    fireEvent.change(input, { target: { value: "72." } })
+    expect(input.value).toBe("72.")
+    fireEvent.change(input, { target: { value: "72.5" } })
+    expect(input.value).toBe("72.5")
+  })
+
+  it("shows the below-minimum warning only once the threshold is not met", () => {
+    render(
+      <AttendancePolicyForm policy={POLICY} sample={SAMPLE} t={t} locale="en" />
+    )
+    // 90.91 % clears the 75 % minimum.
+    expect(screen.queryByText(/Below the 75 % minimum/)).toBeNull()
+
+    const input = screen.getByLabelText(t.attendance.minAttendancePercent)
+    fireEvent.change(input, { target: { value: "95" } })
+    expect(screen.getByText(/Below the 95 % minimum/)).toBeTruthy()
   })
 })

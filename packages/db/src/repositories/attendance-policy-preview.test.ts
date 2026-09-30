@@ -34,10 +34,14 @@ function fakeClient(options: {
         select: () => ({
           eq: () => ({
             order: () => ({
-              limit: () => ({
-                maybeSingle: async () => ({
-                  data: sessionError ? null : session,
-                  error: sessionError ? { message: "connection reset" } : null,
+              order: () => ({
+                limit: () => ({
+                  maybeSingle: async () => ({
+                    data: sessionError ? null : session,
+                    error: sessionError
+                      ? { message: "connection reset" }
+                      : null,
+                  }),
                 }),
               }),
             }),

@@ -27,7 +27,7 @@ export default async function AttendancePolicySettingsPage() {
   const ctx = await requireShell("school")
   if (!can(ctx.role, "policies.manage")) forbidden()
 
-  const { t } = await getMessages()
+  const { t, locale } = await getMessages()
   const a = t.settings.attendance
   const supabase = await createClient()
   const [settings, sample] = await Promise.all([
@@ -53,6 +53,7 @@ export default async function AttendancePolicySettingsPage() {
               : { studentName: null, month: null, statuses: [] }
           }
           t={t.settings}
+          locale={locale}
         />
       )}
     </div>

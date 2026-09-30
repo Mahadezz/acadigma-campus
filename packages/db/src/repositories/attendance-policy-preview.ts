@@ -50,6 +50,7 @@ export async function getAttendancePolicySample(
     .select("section_id, date")
     .eq("workspace_id", ctx.workspaceId)
     .order("date", { ascending: false })
+    .order("section_id", { ascending: true }) // deterministic tie-break — same sample every page load
     .limit(1)
     .maybeSingle()
 

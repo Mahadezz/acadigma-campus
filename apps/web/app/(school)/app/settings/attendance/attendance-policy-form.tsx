@@ -4,7 +4,7 @@ import { useId, useState, useTransition } from "react"
 
 import { useRouter } from "next/navigation"
 
-import type { AttendanceStatus } from "@acadigma/contracts"
+import type { AttendancePolicySample } from "@acadigma/db/repositories/attendance-policy-preview"
 import { previewAttendanceEffect } from "@acadigma/domain/attendance"
 import type { AttendancePolicy } from "@acadigma/domain/settings"
 import { Input } from "@acadigma/ui/components/input"
@@ -16,18 +16,17 @@ import {
 import { Switch } from "@acadigma/ui/components/switch"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { formatMonthYear } from "@/lib/format"
 import type { Messages } from "@/lib/i18n"
+import type { Locale } from "@/lib/locale"
 
 import { updateSchoolSettings } from "../actions"
 import { SaveNotice, type Notice } from "../save-notice"
 import { StickySaveBar } from "../sticky-save-bar"
 
-export type AttendancePolicySample = {
-  studentName: string | null
-  month: string | null
-  statuses: AttendanceStatus[]
-}
-
+/** Fills `{name}` placeholders (mirrors `(school)/app/attendance/format.ts`'s
+ * `fill` and `(school)/app/home/format.ts`'s own copy — no shared cross-route
+ * helper exists in this codebase yet, so this stays local like its siblings). */
 const fill = (template: string, values: Record<string, string>) =>
   template.replace(/\{(\w+)\}/g, (_, k: string) => values[k] ?? "")
 
@@ -45,15 +44,24 @@ export function AttendancePolicyForm({
   policy,
   sample,
   t,
+  locale,
 }: {
   policy: AttendancePolicy
   sample: AttendancePolicySample
   t: Messages["settings"]
+  locale: Locale
 }) {
   const router = useRouter()
   const id = useId()
   const a = t.attendance
   const [form, setForm] = useState(policy)
+  // Raw text, not derived from the rounded `min_attendance_bp` — a controlled
+  // input whose displayed value comes back from a rounded number strips a
+  // decimal point the moment it's typed (review of PR #122; mirrors
+  // grade-scale-editor.tsx's `preview` field, which keeps the same split).
+  const [minInput, setMinInput] = useState(() =>
+    (policy.min_attendance_bp / 100).toString()
+  )
   const [dirty, setDirty] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [pending, startTransition] = useTransition()
@@ -85,6 +93,7 @@ export function AttendancePolicyForm({
 
   function discard() {
     setForm(policy)
+    setMinInput((policy.min_attendance_bp / 100).toString())
     setDirty(false)
     setNotice(null)
   }
@@ -112,14 +121,25 @@ export function AttendancePolicyForm({
         {sample.statuses.length === 0 ? (
           <p className="text-muted-foreground text-sm">{a.noSampleYet}</p>
         ) : (
-          <p className="text-sm" aria-live="polite">
-            {fill(a.effectLine, {
-              name: sample.studentName ?? "",
-              month: sample.month ?? "",
-              before: before.percent.toString(),
-              after: after.percent.toString(),
-            })}
-          </p>
+          <>
+            <p className="text-sm" aria-live="polite">
+              {fill(a.effectLine, {
+                name: sample.studentName ?? "",
+                month: sample.month
+                  ? formatMonthYear(sample.month, locale)
+                  : "",
+                before: before.percent.toString(),
+                after: after.percent.toString(),
+              })}
+            </p>
+            {!after.eligible ? (
+              <p className="text-destructive text-sm" aria-live="polite">
+                {fill(a.belowMinimum, {
+                  min: (form.min_attendance_bp / 100).toString(),
+                })}
+              </p>
+            ) : null}
+          </>
         )}
         <p className="text-muted-foreground text-xs">{a.notRewritten}</p>
       </div>
@@ -162,10 +182,12 @@ export function AttendancePolicyForm({
             id={`${id}-min`}
             inputMode="decimal"
             className="min-h-11 w-24"
-            value={(form.min_attendance_bp / 100).toString()}
+            value={minInput}
             onChange={(e) => {
-              const percent = Number(e.target.value)
-              if (Number.isNaN(percent)) return
+              const raw = e.target.value
+              setMinInput(raw)
+              const percent = Number(raw)
+              if (raw.trim() === "" || Number.isNaN(percent)) return
               patch({
                 min_attendance_bp: Math.max(
                   0,
