@@ -75,3 +75,33 @@ export type Holiday = {
   endsOn: string
   note: string | null
 }
+
+/**
+ * F-AC-11 §4.3: one date forced to a school day (a make-up Friday) or to a
+ * closure (a local strike). A reason is always required (AC13). Saving a date
+ * that already has an override updates it rather than adding a second.
+ */
+export const upsertWorkingDayOverrideInputSchema = z
+  .object({
+    date: calendarDateSchema,
+    isWorking: z.boolean(),
+    reason: z.string().trim().min(1).max(300),
+  })
+  .strict()
+export type UpsertWorkingDayOverrideInput = z.infer<
+  typeof upsertWorkingDayOverrideInputSchema
+>
+
+export const deleteWorkingDayOverrideInputSchema = z
+  .object({ date: calendarDateSchema })
+  .strict()
+export type DeleteWorkingDayOverrideInput = z.infer<
+  typeof deleteWorkingDayOverrideInputSchema
+>
+
+export type WorkingDayOverride = {
+  id: string
+  date: string
+  isWorking: boolean
+  reason: string
+}

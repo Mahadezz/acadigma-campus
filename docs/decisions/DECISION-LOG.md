@@ -1951,3 +1951,13 @@ Two things were already true and are worth stating plainly rather than re-derivi
 **Why:** the owner asked for the website's look, and the website's own tokens already live in Campus, so the job was layout and type, not a new theme. Splitting at the sign-in boundary keeps the marketing surface and the calm working screens each consistent with their own references.
 
 **Consequences:** `F-ID-12` is the spec. The auth forms, actions and validation are unchanged; the `(auth)` layout frame changed, and `AuthCard` (only used by the auth pages) moves to the website's 24px card radius and semibold title. When native wrappers ship (D-13: Capacitor/Tauri), each device tab gets a real store link and loses "Coming later".
+
+## D-213 — F-AC-11 working-day override screen: UI over the existing table, one new permission, no migration · ACCEPTED · 2026-10-01
+
+**Context:** F-AC-11 Part 1 (D-202/D-203) shipped `working_day_overrides`, its RLS (owner/admin write, staff read), the audit trigger and `app.is_school_day`'s precedence (an override beats the weekly pattern and any holiday), all under pgTAP `41_school_calendar.sql`, but no screen: a school could not declare a make-up Friday or a strike day without SQL. The spec (§4.3, §2 `calendar.override.write`, AC13) is unambiguous about who and what.
+
+**Decision:** (1) No migration. (2) New permission `calendar.override.write` = owner, admin, matching the spec's §2 table and the RLS policies. (3) The screen sits under the holidays on `/app/settings/calendar` rather than a new route: same audience, same "days the school is closed or open" mental model, and `/app/calendar` is Part 3's agenda. (4) One row per date: the action upserts on `(workspace_id, date)`, so a second save edits (§4.3 failure rule). (5) The reason is required in the contract (1-300 chars), as the table already enforces. (6) Deferred, each for a missing dependency: short bell schedule, reverse impact preview, `calendar.override.created` notification.
+
+**Why:** the smallest change that makes an already-tested backend usable; no second source of truth for who may override.
+
+**Consequences:** server actions `saveWorkingDayOverride` / `deleteWorkingDayOverride` follow parse, context, `can`, `requireWritable`, repository; audit rows come from the existing trigger. The override list shows overrides from 1 January of the school's current year onward (same window as holidays), and the date input is bounded to that same window (`min` = 1 January of the school's year; the simplest consistent choice, rather than also listing past years). Editing an override fixes its date; to move one, remove it and add a new one, so a save can never silently replace another date's row (lead security review of #131).

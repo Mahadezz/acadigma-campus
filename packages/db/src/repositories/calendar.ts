@@ -9,6 +9,8 @@ import {
   type CreateHolidayInput,
   type Holiday,
   type Result,
+  type UpsertWorkingDayOverrideInput,
+  type WorkingDayOverride,
 } from "@acadigma/contracts"
 
 import type { AcadigmaSupabaseClient } from "../client"
@@ -138,6 +140,96 @@ export async function deleteHoliday(
   if (error) return err(mapWriteError(error))
   if (!data || data.length === 0) {
     return err(apiError("not_found", "That holiday no longer exists."))
+  }
+  return ok({ deleted: true })
+}
+
+/**
+ * F-AC-11 §4.3: `working_day_overrides`. Same gate as holidays (owner/admin
+ * RLS, read-only trigger); audit rows come from the generic trigger.
+ */
+const OVERRIDE_COLUMNS = "id, date, is_working, reason"
+
+const overrideRowSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  is_working: z.boolean(),
+  reason: z.string(),
+})
+
+/** A malformed row is an "unavailable" result, never a throw to the client. */
+function toOverride(row: unknown): WorkingDayOverride | null {
+  const r = overrideRowSchema.safeParse(row)
+  if (!r.success) return null
+  return {
+    id: r.data.id,
+    date: r.data.date,
+    isWorking: r.data.is_working,
+    reason: r.data.reason,
+  }
+}
+
+function toOverrides(rows: unknown[]): WorkingDayOverride[] | null {
+  const out = rows.map(toOverride)
+  return out.every((o) => o !== null) ? out : null
+}
+
+/** Overrides on or after `from`, oldest first. */
+export async function listWorkingDayOverrides(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  from: string
+): Promise<Result<WorkingDayOverride[], ApiError>> {
+  const { data, error } = await client
+    .from("working_day_overrides")
+    .select(OVERRIDE_COLUMNS)
+    .eq("workspace_id", ctx.workspaceId)
+    .gte("date", from)
+    .order("date", { ascending: true })
+    .limit(LIST_LIMIT)
+  if (error) return err(UNAVAILABLE)
+  const overrides = toOverrides(data ?? [])
+  return overrides ? ok(overrides) : err(UNAVAILABLE)
+}
+
+/** One row per (workspace, date): a second save for a date updates it. */
+export async function upsertWorkingDayOverride(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  input: UpsertWorkingDayOverrideInput
+): Promise<Result<WorkingDayOverride, ApiError>> {
+  const { data, error } = await client
+    .from("working_day_overrides")
+    .upsert(
+      {
+        workspace_id: ctx.workspaceId,
+        date: input.date,
+        is_working: input.isWorking,
+        reason: input.reason,
+      },
+      { onConflict: "workspace_id,date" }
+    )
+    .select(OVERRIDE_COLUMNS)
+    .single()
+  if (error) return err(mapWriteError(error))
+  const override = toOverride(data)
+  return override ? ok(override) : err(UNAVAILABLE)
+}
+
+export async function deleteWorkingDayOverride(
+  ctx: WorkspaceContext,
+  client: AcadigmaSupabaseClient,
+  date: string
+): Promise<Result<{ deleted: true }, ApiError>> {
+  const { data, error } = await client
+    .from("working_day_overrides")
+    .delete()
+    .eq("workspace_id", ctx.workspaceId)
+    .eq("date", date)
+    .select("id")
+  if (error) return err(mapWriteError(error))
+  if (!data || data.length === 0) {
+    return err(apiError("not_found", "That override no longer exists."))
   }
   return ok({ deleted: true })
 }

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { createHoliday, deleteHoliday, listHolidays } from "./calendar"
+import {
+  createHoliday,
+  deleteHoliday,
+  deleteWorkingDayOverride,
+  listHolidays,
+  listWorkingDayOverrides,
+  upsertWorkingDayOverride,
+} from "./calendar"
 
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
@@ -33,7 +40,15 @@ function fakeClient(result: {
 }): { client: AcadigmaSupabaseClient; calls: Recorded } {
   const calls: Recorded = []
   const builder: Record<string, unknown> = {}
-  for (const op of ["select", "eq", "gte", "order", "insert", "delete"]) {
+  for (const op of [
+    "select",
+    "eq",
+    "gte",
+    "order",
+    "insert",
+    "upsert",
+    "delete",
+  ]) {
     builder[op] = (...args: unknown[]) => {
       calls.push({ op, args })
       return builder
@@ -166,5 +181,85 @@ describe("deleteHoliday", () => {
     const { client } = fakeClient({ data: [], error: null })
     const result = await deleteHoliday(CTX, client, ROW.id)
     expect(!result.ok && result.error.code).toBe("not_found")
+  })
+})
+
+const OVERRIDE_ROW = {
+  id: "22222222-2222-4222-8222-222222222222",
+  date: "2026-11-06",
+  is_working: true,
+  reason: "Make-up class",
+}
+
+describe("working-day overrides", () => {
+  it("lists from a date, scoped to the workspace, and maps rows", async () => {
+    const { client, calls } = fakeClient({ data: [OVERRIDE_ROW], error: null })
+    const result = await listWorkingDayOverrides(CTX, client, "2026-01-01")
+    expect(result.ok && result.data[0]).toEqual({
+      id: OVERRIDE_ROW.id,
+      date: "2026-11-06",
+      isWorking: true,
+      reason: "Make-up class",
+    })
+    expect(calls).toContainEqual({
+      op: "eq",
+      args: ["workspace_id", CTX.workspaceId],
+    })
+    expect(calls).toContainEqual({ op: "gte", args: ["date", "2026-01-01"] })
+  })
+
+  it("upserts on (workspace, date) into the caller's workspace", async () => {
+    const { client, calls } = fakeClient({ data: OVERRIDE_ROW, error: null })
+    const result = await upsertWorkingDayOverride(CTX, client, {
+      date: "2026-11-06",
+      isWorking: true,
+      reason: "Make-up class",
+    })
+    expect(result.ok).toBe(true)
+    const up = calls.find((c) => c.op === "upsert")
+    expect(up?.args[0]).toMatchObject({
+      workspace_id: CTX.workspaceId,
+      date: "2026-11-06",
+      is_working: true,
+    })
+    expect(up?.args[1]).toEqual({ onConflict: "workspace_id,date" })
+  })
+
+  it("maps the read-only trigger to payment_required", async () => {
+    const { client } = fakeClient({
+      data: null,
+      error: { code: "42501", message: "PLAN_READ_ONLY" },
+    })
+    const result = await upsertWorkingDayOverride(CTX, client, {
+      date: "2026-11-06",
+      isWorking: false,
+      reason: "Strike",
+    })
+    expect(!result.ok && result.error.code).toBe("payment_required")
+  })
+
+  it("returns dependency_unavailable, not a throw, on a malformed row", async () => {
+    const list = fakeClient({ data: [{ id: 1 }], error: null })
+    const listed = await listWorkingDayOverrides(CTX, list.client, "2026-01-01")
+    expect(!listed.ok && listed.error.code).toBe("dependency_unavailable")
+    const save = fakeClient({ data: { id: 1 }, error: null })
+    const saved = await upsertWorkingDayOverride(CTX, save.client, {
+      date: "2026-11-06",
+      isWorking: true,
+      reason: "x",
+    })
+    expect(!saved.ok && saved.error.code).toBe("dependency_unavailable")
+  })
+
+  it("delete reports not_found when no row matched", async () => {
+    const { client } = fakeClient({ data: [], error: null })
+    const result = await deleteWorkingDayOverride(CTX, client, "2026-11-06")
+    expect(!result.ok && result.error.code).toBe("not_found")
+  })
+
+  it("delete succeeds when a row matched", async () => {
+    const { client } = fakeClient({ data: [{ id: "x" }], error: null })
+    const result = await deleteWorkingDayOverride(CTX, client, "2026-11-06")
+    expect(result.ok).toBe(true)
   })
 })
