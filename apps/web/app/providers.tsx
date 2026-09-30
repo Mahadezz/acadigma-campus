@@ -2,15 +2,22 @@
 
 import { useState, type ReactNode } from "react"
 
+import dynamic from "next/dynamic"
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "next-themes"
-
-import { Toaster } from "@acadigma/ui/components/sonner"
 
 import {
   OfflineProvider,
   type OfflineCopy,
 } from "./(shared)/offline/offline-provider"
+
+// Loaded after hydration: ~10 kB (gzip) off the first paint of every page,
+// which Lighthouse's simulated LCP counts. A toast is never needed before then.
+const Toaster = dynamic(
+  () => import("@acadigma/ui/components/sonner").then((m) => m.Toaster),
+  { ssr: false }
+)
 
 /**
  * Server state lives in TanStack Query, keyed by workspace (ARCHITECTURE §6).
