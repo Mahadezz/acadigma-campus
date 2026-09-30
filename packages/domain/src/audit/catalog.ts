@@ -692,6 +692,8 @@ export const GENERIC_AUDIT_TABLES: readonly string[] = [
   "guardian_users",
   // F-OP-07 Part 2 (D-210) — 20260929160707_academic_terms.sql.
   "terms",
+  // F-AC-04 Part 1 (D-214) — 20260930215958_staff_attendance.sql.
+  "staff_attendance",
 ]
 
 const GENERIC_SEVERITY: Record<"insert" | "update" | "delete", AuditSeverity> =
@@ -774,6 +776,10 @@ export const GENERIC_TABLE_NOUNS: Readonly<
     bn: "একটি শাখার বিষয় ও শিক্ষক",
   },
   terms: { en: "a term", bn: "একটি টার্ম" },
+  staff_attendance: {
+    en: "a staff attendance record",
+    bn: "একটি স্টাফ উপস্থিতি রেকর্ড",
+  },
 }
 
 /**

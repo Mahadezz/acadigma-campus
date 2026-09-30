@@ -123,6 +123,9 @@ with allowed as (
     ('public.admit_student(uuid, jsonb)'),  -- F-AC-02 demo cut, D-103
     ('public.save_attendance(uuid, jsonb)'),  -- F-AC-03 demo cut, D-104
     ('public.attendance_day(uuid, date)'),  -- F-AC-03 demo cut, D-104
+    ('public.staff_attendance_today(uuid)'),  -- F-AC-04 Part 1, D-214
+    ('public.staff_check_in(uuid)'),  -- F-AC-04 Part 1, D-214
+    ('public.staff_check_out(uuid)'),  -- F-AC-04 Part 1, D-214
     ('public.save_marks(uuid, jsonb)'),  -- F-AC-06 Part 3, D-304
     ('public.exam_marks_progress(uuid, uuid)'),  -- F-AC-06 Part 3, D-304
     ('public.compute_results(uuid, uuid)'),  -- F-AC-06 Part 5, D-305
