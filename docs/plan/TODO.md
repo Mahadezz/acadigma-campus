@@ -4,7 +4,7 @@ The owner's open requests and the build's open work, in priority order. **Read t
 
 Legend: 🔴 blocked · 🟡 in progress · ⚪ not started · 👤 needs the owner.
 
-Last updated: 2026-09-30 late evening Dhaka.
+Last updated: 2026-09-30 ~20:40 Dhaka.
 
 ---
 
@@ -36,7 +36,7 @@ Last updated: 2026-09-30 late evening Dhaka.
 - CI green (build currently red), react-reviewer + ponytail-review, lead checks screenshots, merge.
 - Follow-ups noted by the builder: add Appearance to the Settings list; move new copy into messages json; replace the ad-hoc back links on exams/marks/roll call/settings pages after #82 merges.
 
-## 3. Polish Part — skeletons, instant taps, pull-to-refresh · 🟡 starting 2026-09-30 (design lane)
+## 3. Polish Part — skeletons, instant taps, pull-to-refresh · 🟡 PR #127 ready → reviews → merge
 
 **Owner:** the "5 tells of a vibe-coded app" video + "what about the phone's pull refresh?". Standing skill: `~/.claude/skills/app-polish/SKILL.md`.
 
