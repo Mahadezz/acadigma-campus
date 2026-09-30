@@ -155,7 +155,7 @@ begin
        where e.section_id = v_section and e.status = 'active' and e.roll_number = 1
        order by g.is_primary desc limit 1));
     perform set_config('request.jwt.claims', c_parent, true);
-    perform public.accept_guardian_invitation(v_res ->> 'token');
+    perform public.accept_guardian_invitation(v_res ->> 'token', '2026-09-30-2', 'en');
     perform set_config('role', session_user, true);
   end if;
 

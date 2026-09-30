@@ -20,17 +20,17 @@ const renderLink: SimpleLinkRenderer = ({ href, className, children }) => (
  * bar) whenever `ui_mode === "basic"` for a non-staff role, for EVERY page
  * under `/app`, not only `/app/home`. Two consequences, both intended:
  *
- * 1. A class block's link to the existing (not basic-sized) roll-call page
- *    (`/app/attendance/[sectionId]`) still opens inside this reduced-chrome
+ * 1. A class block's link (F-ID-10 Part 3: the class hub,
+ *    `/app/classes/[sectionId]`) still opens inside this reduced-chrome
  *    shell, not the full sidebar/bottom-nav one — closer to what a basic-mode
  *    teacher expects than suddenly seeing the full nav (§9 AC17's "deep link
- *    opens inside the basic shell", which Part 2 gets for free this way,
- *    though the Help text for a non-home route falls back to a generic line
- *    until Part 3 adds a per-route catalogue entry for the hub).
- * 2. Only `/app/home` gets the home-specific Help text; everywhere else
- *    shows `defaultLines` — `isHome` is the only routing decision this
- *    wrapper makes, deliberately, so it stays a thin adapter and not a
- *    second router.
+ *    opens inside the basic shell").
+ * 2. `/app/home` and the class hub each get their own Help text; every other
+ *    route still shows `defaultLines` — `isHome`/`isClassHub` are the only
+ *    routing decisions this wrapper makes, deliberately, so it stays a thin
+ *    adapter and not a second router. `/app/classes/all` (the owner/admin
+ *    "All classes" list, Part 2) is a route match away from a hub id but is
+ *    not one, so it is excluded explicitly rather than by a broader regex.
  */
 export function BasicShellWrapper({
   homeHref,
@@ -39,6 +39,7 @@ export function BasicShellWrapper({
   helpLabel,
   helpTitle,
   homeLines,
+  classHubLines,
   defaultLines,
   phone,
   callLabel,
@@ -54,6 +55,7 @@ export function BasicShellWrapper({
   helpLabel: string
   helpTitle: string
   homeLines: string[]
+  classHubLines: string[]
   defaultLines: string[]
   phone: string | null
   callLabel: string
@@ -65,6 +67,8 @@ export function BasicShellWrapper({
 }) {
   const pathname = usePathname()
   const isHome = pathname === homeHref
+  const isClassHub =
+    /^\/app\/classes\/[^/]+$/.test(pathname) && pathname !== "/app/classes/all"
 
   return (
     <BasicShell
@@ -76,7 +80,7 @@ export function BasicShellWrapper({
       renderLink={renderLink}
       help={{
         title: helpTitle,
-        lines: isHome ? homeLines : defaultLines,
+        lines: isHome ? homeLines : isClassHub ? classHubLines : defaultLines,
         phone,
         callLabel,
         noPhoneLine,

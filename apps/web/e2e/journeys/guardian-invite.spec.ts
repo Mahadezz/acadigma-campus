@@ -98,6 +98,22 @@ async function inviteFor(page: Page, code: string) {
       .getByRole("main")
       .getByRole("heading", { level: 1 })
       .textContent()) ?? ""
+  // Retry-safety (known issue #5, docs/test-reports/2026-09-29-e2e-live-ci.md):
+  // the Invite button only shows for a not-yet-linked guardian, so a Playwright
+  // retry of a test whose first attempt already got as far as Accept finds no
+  // button here and times out. The teacher-parent test reuses one fixed
+  // teacher account as the guardian on every attempt, so clear any link left
+  // over from a prior attempt before inviting again.
+  const removeButton = page
+    .getByRole("button", { name: "Remove access" })
+    .first()
+  if (await removeButton.isVisible().catch(() => false)) {
+    await removeButton.click()
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Remove access" })
+      .click()
+  }
   await page
     .getByRole("button", { name: /^Invite .+ to the parent app$/ })
     .click()

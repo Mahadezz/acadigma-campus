@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 
 import dynamic from "next/dynamic"
 import Link from "next/link"
@@ -17,6 +17,7 @@ import type {
 import { Button } from "@acadigma/ui/components/button"
 import { Checkbox } from "@acadigma/ui/components/checkbox"
 import { Label } from "@acadigma/ui/components/label"
+import { cn } from "@acadigma/ui/lib/utils"
 import { AttendanceToggle } from "@acadigma/ui/primitives/attendance-toggle"
 import { BnEnText } from "@acadigma/ui/primitives/bn-en-text"
 import { EmptyState } from "@acadigma/ui/primitives/empty-state"
@@ -37,13 +38,27 @@ import {
 import { saveAttendanceSession } from "../actions"
 import { fill } from "../format"
 
+const ConfirmSheet = dynamic(
+  () =>
+    import("@acadigma/ui/primitives/confirm-sheet").then((m) => m.ConfirmSheet),
+  {
+    ssr: false,
+    // Review fix (lead): `ConfirmSheet` only ever opens after Save is
+    // tapped — it renders nothing at all while `open` is false, so a
+    // visible `loading` fallback showed a stray disabled button on every
+    // Attendance tab load, before Save was ever pressed. `null` matches
+    // what the resolved component itself renders in that state.
+    loading: () => null,
+  }
+)
+
 // Opened only on a conflict (D-310): kept out of the roll call's first load.
 const ConflictSheet = dynamic(() =>
   import("@/app/(shared)/offline/conflict-sheet").then((m) => m.ConflictSheet)
 )
 
 type T = Messages["attendance"]["roll"]
-type Marks = Record<string, AttendanceStatus | null>
+export type Marks = Record<string, AttendanceStatus | null>
 
 /** Every error the save can return, in the reader's language. */
 export function saveErrorText(t: T, error: ApiError): string {
@@ -53,6 +68,38 @@ export function saveErrorText(t: T, error: ApiError): string {
     return t.errors[code as keyof T["errors"]]
   }
   return t.errors.generic
+}
+
+// Review fix (lead, MEDIUM 2 — corrected): `save_attendance` requires a
+// status for EVERY currently enrolled student (§5.3, the `UNMARKED_
+// STUDENTS` check) — a student enrolled after the last save has no entry
+// in `undoMarks` (`lastSavedMarks` never covered them), and simply
+// omitting them from the payload only swaps a validation error for that
+// same server rejection, it does not fix Undo. There is no "previous
+// value" to restore for a student who did not exist in the saved version,
+// so the only sensible undo leaves their mark exactly as it is right now
+// (`marks[studentId]`, read live at Undo time, not a frozen snapshot — she
+// may have marked them between the save and tapping Undo). If they have
+// no current mark either, there is no valid payload to send at all and
+// Undo is not offered (`null`).
+//
+// Exported and pure (takes its inputs, not `RollCall`'s state) so the
+// "no current mark either" branch can be unit-tested directly: the
+// component's own `blocked` gate makes that state unreachable through
+// simulated user interaction (every visible student must already be
+// marked before any save — including the one that first sets
+// `undoMarks` — can succeed), so it can only be proven this way.
+export function undoPayload(
+  students: { studentId: string }[],
+  undoMarks: Marks | null,
+  marks: Marks
+): Marks | null {
+  if (!undoMarks) return null
+  const merged: Marks = {}
+  for (const s of students) {
+    merged[s.studentId] = undoMarks[s.studentId] ?? marks[s.studentId] ?? null
+  }
+  return Object.values(merged).some((status) => status === null) ? null : merged
 }
 
 export function RollCall({
@@ -66,6 +113,8 @@ export function RollCall({
   students,
   sessionUpdatedAt,
   readOnlyReason,
+  basic = false,
+  basicCopy,
   userId,
   workspaceId,
 }: {
@@ -79,6 +128,24 @@ export function RollCall({
   students: RollCallStudent[]
   sessionUpdatedAt: string | null
   readOnlyReason: "cannotMark" | "window" | null
+  /**
+   * F-ID-10 §4.5/§4.6/§5.1/§5.3 (Part 3) — the class hub's Attendance tab
+   * renders this same screen with `basic` on: bigger tap targets, a
+   * `ConfirmSheet` before Save names the counts in plain words, and a
+   * post-save Undo toast (30s, §5.3) that re-saves the values this save is
+   * about to overwrite as one ordinary, audited edit. `undefined`/`false`
+   * (the plain `/app/attendance/[sectionId]` page) keeps today's direct-save
+   * behaviour byte-for-byte unchanged.
+   */
+  basic?: boolean
+  basicCopy?: {
+    /** "Save attendance for {className}? {present} present, {absent} absent." */
+    confirmTemplate: string
+    yesSave: string
+    goBack: string
+    undoToast: string
+    undo: string
+  }
   /** Who is taking the roll, where: an offline save is queued for them. */
   userId: string
   workspaceId: string
@@ -97,6 +164,24 @@ export function RollCall({
   const [key, setKey] = useState(() => crypto.randomUUID())
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  // §5.3: "the previous values" this save is about to overwrite — only set
+  // when a session already existed, so a first save (nothing to go back to)
+  // never offers Undo, only the ConfirmSheet guards it.
+  const [lastSavedMarks, setLastSavedMarks] = useState<Marks | null>(() =>
+    sessionUpdatedAt !== null
+      ? Object.fromEntries(students.map((s) => [s.studentId, s.status]))
+      : null
+  )
+  const [undoMarks, setUndoMarks] = useState<Marks | null>(null)
+  // Review fix (LOW 5): bumped once per terminal save outcome (queued or
+  // sent, success or failure) so the focus effect below fires exactly once
+  // per save attempt — never on mount, never on an unrelated re-render (an
+  // outbox item arriving for a *different* class, the 30s Undo timeout).
+  const [saveTick, setSaveTick] = useState(0)
+  const isFirstRender = useRef(true)
+  const resultRef = useRef<HTMLDivElement>(null)
+  const undoButtonRef = useRef<HTMLButtonElement>(null)
   const [choosing, setChoosing] = useState(false)
   const getOfflineCopy = useOfflineCopy()
   const entityKey = `attendance:${sectionId}:${date}`
@@ -149,6 +234,34 @@ export function RollCall({
     return c
   }, [marks])
 
+  // §5.3: the Undo toast lasts 30s in basic mode, then disappears — the
+  // save it points back to is still safe, it just stops being one tap away.
+  useEffect(() => {
+    if (!undoMarks) return
+    const timer = setTimeout(() => setUndoMarks(null), 30_000)
+    return () => clearTimeout(timer)
+  }, [undoMarks])
+
+  // Review fix (LOW 5): Save is disabled while `pending`, so when
+  // `ConfirmSheet` returns focus to it on close, focus lands on a disabled
+  // element and the browser drops it to `<body>`. Once the save actually
+  // finishes, move it somewhere meaningful instead: the Undo button when
+  // this save offered one, otherwise the result alert. Gated on `saveTick`
+  // (not `undoMarks`/`saved`/`error` directly) so this never fires on mount
+  // or on a re-render this screen's own save didn't cause.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    if (basic && undoPayload(students, undoMarks, marks)) {
+      undoButtonRef.current?.focus()
+    } else {
+      resultRef.current?.focus()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see comment above: keyed on saveTick only
+  }, [saveTick])
+
   function change(next: Marks) {
     setMarks(next)
     setSaved(null)
@@ -173,12 +286,32 @@ export function RollCall({
     setBeforeBulk(null)
   }
 
+  // Review fix (HIGH 1/2): the one place a save — sent or queued — commits
+  // its values to screen and, in basic mode, updates what Undo points back
+  // to. Both `saveMarks`'s online-success branch and `queue`'s own success
+  // below call this, so an offline save is no longer invisible on screen
+  // (marks stayed at the pre-save value before this fix) and Undo, after a
+  // chain of queued saves, always targets the save right before the latest
+  // one — never a stale earlier value.
+  function recordLocalSave(toSave: Marks) {
+    setMarks(toSave)
+    setBeforeBulk(null)
+    setBulkMarked(false)
+    setKey(crypto.randomUUID())
+    // §5.3 (basic mode only): only offer Undo once a prior value exists to
+    // go back to; a first save (lastSavedMarks still null) offers none.
+    if (basic) {
+      setUndoMarks(lastSavedMarks)
+      setLastSavedMarks(toSave)
+    }
+  }
+
   /** What she entered, readable aloud to an admin from the queue sheet. */
-  function detail(): string {
+  function detail(toSave: Marks): string {
     const c = getOfflineCopy()
     const names = (status: AttendanceStatus) =>
       students
-        .filter((s) => marks[s.studentId] === status)
+        .filter((s) => toSave[s.studentId] === status)
         .map((s) =>
           locale === "bn" && s.fullNameBn ? s.fullNameBn : s.fullName
         )
@@ -197,7 +330,7 @@ export function RollCall({
 
   // §4.3: keep the save on the phone; a double tap is one item (same key),
   // the next save takes a new key.
-  async function queue(input: SaveAttendanceInput) {
+  async function queue(input: SaveAttendanceInput, toSave: Marks) {
     const c = getOfflineCopy()
     let result
     try {
@@ -210,37 +343,48 @@ export function RollCall({
         summary: c.attendanceSummary
           .replace("{section}", title)
           .replace("{date}", dateLabel),
-        detail: detail(),
+        detail: detail(toSave),
       })
     } catch {
       // IndexedDB unavailable (private mode, full disk): say so plainly and
       // keep her marks on screen to save again online.
       setError(c.saveOnPhoneFailed)
+      setSaveTick((n) => n + 1)
       return
     }
     if (result === "full") {
       setError(c.queueFull)
+      setSaveTick((n) => n + 1)
       return
     }
-    setBeforeBulk(null)
-    setBulkMarked(false)
-    setKey(crypto.randomUUID())
+    recordLocalSave(toSave)
+    setSaveTick((n) => n + 1)
     if (navigator.onLine) void sendQueued(userId)
   }
 
-  function save() {
+  function saveMarks(toSave: Marks, bulk: boolean) {
     setError(null)
     setSaved(null)
+    setConfirmOpen(false)
     startTransition(async () => {
+      // `toSave` is `marks` (an ordinary save — `blocked` already refuses
+      // one with any unmarked student) or `undoPayload()`'s result (Undo —
+      // guaranteed complete or not called at all, see its own comment
+      // above). Both callers guarantee every enrolled student has a real
+      // status; `flatMap` here is a defensive no-op, not the fix itself —
+      // it narrows the type instead of casting, so a future gap would drop
+      // a record rather than silently lie to the type checker about it.
       const input: SaveAttendanceInput = {
         idempotencyKey: key,
         sectionId,
         date,
-        records: students.map((s) => ({
-          studentId: s.studentId,
-          status: marks[s.studentId] as AttendanceStatus,
-        })),
-        bulkMarked,
+        records: students.flatMap((s) => {
+          const status = toSave[s.studentId]
+          return status === null || status === undefined
+            ? []
+            : [{ studentId: s.studentId, status }]
+        }),
+        bulkMarked: bulk,
         allowNonSchoolDay: !isSchoolDay && anyway,
         expectedUpdatedAt: version,
       }
@@ -249,10 +393,15 @@ export function RollCall({
       // It carries when the roll was taken, on the server's clock (§5.3,
       // D-310): fixed now, so every replay of the item is the same payload.
       if (!navigator.onLine || (await queuedItem(userId, entityKey))) {
-        await queue({
-          ...input,
-          capturedAt: new Date(Date.now() + serverClockOffset()).toISOString(),
-        })
+        await queue(
+          {
+            ...input,
+            capturedAt: new Date(
+              Date.now() + serverClockOffset()
+            ).toISOString(),
+          },
+          toSave
+        )
         return
       }
       let result
@@ -261,50 +410,82 @@ export function RollCall({
       } catch {
         // The request never came back (no signal, or the reply was lost):
         // queued with the same key, a replay returns the stored result.
-        await queue(input)
+        await queue(input, toSave)
         return
       }
       if (!result.ok) {
         setError(saveErrorText(t, result.error))
+        setSaveTick((n) => n + 1)
         return
       }
       setVersion(result.data.updatedAt)
-      setBeforeBulk(null)
-      setBulkMarked(false)
-      setKey(crypto.randomUUID())
       setSaved(
         fill(t.saved, {
           present: result.data.present,
           absent: result.data.absent,
         })
       )
+      recordLocalSave(toSave)
+      setSaveTick((n) => n + 1)
       router.refresh()
     })
   }
 
+  function save() {
+    saveMarks(marks, bulkMarked)
+  }
+
+  function undoSave() {
+    const restore = undoPayload(students, undoMarks, marks)
+    if (!restore) return
+    setUndoMarks(null)
+    saveMarks(restore, false)
+  }
+
   const blocked =
     readOnly || counts.unmarked > 0 || (!isSchoolDay && !anyway) || pending
+  // A complete restore payload, or `null` when one isn't offered at all —
+  // see `undoPayload`'s own comment for why this can differ from `undoMarks`.
+  const undoable = undoPayload(students, undoMarks, marks)
+
+  const bigButton = basic ? "min-h-14 text-base" : "h-11"
+  // See the header's own comment: the class hub already has the page's `<h1>`.
+  const TitleTag = basic ? "p" : "h1"
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <Button asChild variant="ghost" className="h-11 px-2">
-        <Link href="/app/attendance">
-          <ArrowLeftIcon aria-hidden="true" />
-          {t.back}
-        </Link>
-      </Button>
+      {!basic ? (
+        <Button asChild variant="ghost" className="h-11 px-2">
+          <Link href="/app/attendance">
+            <ArrowLeftIcon aria-hidden="true" />
+            {t.back}
+          </Link>
+        </Button>
+      ) : null}
 
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">{dateLabel}</p>
-          <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+          {/* Review fix (lead): in the class hub (`basic`), `class-hub-view.tsx`'s
+           * own header already has the page's one `<h1>` with this same
+           * title — a second `<h1>` here duplicated it. The plain
+           * `/app/attendance/[sectionId]` page (`basic` false) keeps its
+           * own `<h1>`, unchanged. */}
+          <TitleTag
+            className={cn(
+              "font-bold tracking-tight",
+              basic ? "text-2xl" : "text-xl"
+            )}
+          >
+            {title}
+          </TitleTag>
         </div>
         {!readOnly && students.length > 0 ? (
           beforeBulk ? (
             <Button
               type="button"
               variant="outline"
-              className="h-11"
+              className={bigButton}
               onClick={undoBulk}
             >
               <Undo2Icon aria-hidden="true" />
@@ -314,7 +495,7 @@ export function RollCall({
             <Button
               type="button"
               variant="outline"
-              className="h-11"
+              className={bigButton}
               onClick={markAllPresent}
               disabled={counts.unmarked === 0}
             >
@@ -373,7 +554,15 @@ export function RollCall({
                   studentName={name}
                   locale={locale}
                   disabled={readOnly || pending}
-                  className="w-full sm:w-72 sm:shrink-0"
+                  // Review fix (lead): 5 segments at basic size's min-w-16
+                  // need >= 320px; `sm:w-72` (288px) clipped "Half day"
+                  // under the toggle's own `overflow-hidden`. Default size's
+                  // min-w-14 (280px total) still fits `sm:w-72` unchanged.
+                  className={cn(
+                    "w-full sm:shrink-0",
+                    basic ? "sm:w-80" : "sm:w-72"
+                  )}
+                  size={basic ? "basic" : "default"}
                 />
               </li>
             )
@@ -385,39 +574,78 @@ export function RollCall({
         // Sticky above the phone's bottom nav (56px + safe area), in the thumb zone.
         <div className="bg-background sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 border-t py-3 lg:bottom-0">
           <div className="space-y-2">
-            {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
-            {saved ? <InlineAlert tone="success">{saved}</InlineAlert> : null}
-            {waiting && !saved ? (
-              <InlineAlert tone="offline">
-                {getOfflineCopy().savedOnPhone}
-              </InlineAlert>
-            ) : null}
-            {refused && !waiting ? (
-              <InlineAlert tone="error">
-                {refused.status === "conflict" ? (
-                  <>
-                    <span className="block">
-                      {getOfflineCopy().conflictReason}
-                    </span>
+            {/* Review fix (LOW 5): focus target once a save finishes — see
+             * the `saveTick` effect above. Always mounted (this block's own
+             * conditional, `!readOnly && students.length > 0`, is the
+             * outermost one already), so the ref is valid whether or not an
+             * alert is showing yet. */}
+            <div ref={resultRef} tabIndex={-1} className="space-y-2">
+              {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+              {saved ? <InlineAlert tone="success">{saved}</InlineAlert> : null}
+              {waiting && !saved ? (
+                <InlineAlert tone="offline">
+                  {getOfflineCopy().savedOnPhone}
+                </InlineAlert>
+              ) : null}
+              {refused && !waiting ? (
+                <InlineAlert tone="error">
+                  {refused.status === "conflict" ? (
+                    <>
+                      <span className="block">
+                        {getOfflineCopy().conflictReason}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="mt-2 h-11"
+                        onClick={() => setChoosing(true)}
+                      >
+                        {getOfflineCopy().compareAndChoose}
+                      </Button>
+                    </>
+                  ) : (
+                    saveErrorText(t, {
+                      code: (refused.lastError?.code ??
+                        "internal") as ApiError["code"],
+                      message: refused.lastError?.message ?? "",
+                      ...(refused.lastError?.root
+                        ? { fieldErrors: { _root: [refused.lastError.root] } }
+                        : {}),
+                    })
+                  )}
+                </InlineAlert>
+              ) : null}
+            </div>
+            {basic && basicCopy ? (
+              // Review fix (MEDIUM 4): always mounted rather than appearing
+              // together with `undoable` — an `aria-live` region has to
+              // already exist in the DOM before its content changes for most
+              // screen readers to announce it; a region that mounts with its
+              // text already inside is frequently skipped. Only the content
+              // (and visibility) changes now. Gated on `undoable`, not the
+              // raw `undoMarks` state, so a student with no current mark and
+              // no prior one either (MEDIUM 2) never shows an Undo with
+              // nothing valid for it to send.
+              <InlineAlert
+                tone="info"
+                className={undoable ? undefined : "sr-only"}
+              >
+                {undoable ? (
+                  <span className="flex flex-wrap items-center justify-between gap-2">
+                    {basicCopy.undoToast}
                     <Button
+                      ref={undoButtonRef}
                       type="button"
                       variant="outline"
-                      className="mt-2 h-11"
-                      onClick={() => setChoosing(true)}
+                      size="sm"
+                      className="min-h-11"
+                      onClick={undoSave}
+                      disabled={pending}
                     >
-                      {getOfflineCopy().compareAndChoose}
+                      {basicCopy.undo}
                     </Button>
-                  </>
-                ) : (
-                  saveErrorText(t, {
-                    code: (refused.lastError?.code ??
-                      "internal") as ApiError["code"],
-                    message: refused.lastError?.message ?? "",
-                    ...(refused.lastError?.root
-                      ? { fieldErrors: { _root: [refused.lastError.root] } }
-                      : {}),
-                  })
-                )}
+                  </span>
+                ) : null}
               </InlineAlert>
             ) : null}
             {refused?.status === "conflict" && choosing ? (
@@ -433,7 +661,10 @@ export function RollCall({
             ) : null}
             <div className="flex items-center gap-3">
               <p
-                className="min-w-0 flex-1 text-sm tabular-nums"
+                className={cn(
+                  "min-w-0 flex-1 tabular-nums",
+                  basic ? "text-base" : "text-sm"
+                )}
                 aria-live="polite"
               >
                 <span className="font-medium">
@@ -449,8 +680,8 @@ export function RollCall({
               </p>
               <Button
                 type="button"
-                className="h-14 min-w-32 text-base"
-                onClick={save}
+                className={cn("h-14 min-w-32", basic ? "text-lg" : "text-base")}
+                onClick={basic ? () => setConfirmOpen(true) : save}
                 disabled={blocked}
               >
                 {pending ? t.saving : t.save}
@@ -458,6 +689,22 @@ export function RollCall({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {basic && basicCopy ? (
+        <ConfirmSheet
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={fill(basicCopy.confirmTemplate, {
+            className: title,
+            present: counts.present,
+            absent: counts.absent,
+          })}
+          confirmLabel={basicCopy.yesSave}
+          cancelLabel={basicCopy.goBack}
+          onConfirm={save}
+          pending={pending}
+        />
       ) : null}
     </div>
   )

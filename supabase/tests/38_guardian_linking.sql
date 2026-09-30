@@ -198,7 +198,7 @@ select is((select count(*)::int from public.workspace_invitations i
 select set_config('role', 'anon', true);
 select throws_ok($$select public.guardian_invitation_preview('x')$$, '42501', null,
   'anonymous callers cannot preview (no grant)');
-select throws_ok($$select public.accept_guardian_invitation('x')$$, '42501', null,
+select throws_ok($$select public.accept_guardian_invitation('x', '2026-09-30-2', 'en')$$, '42501', null,
   'anonymous callers cannot accept (no grant)');
 select tests.logout();
 
@@ -208,7 +208,7 @@ select is(public.guardian_invitation_preview(tests.tok('p1')) ->> 'student_name'
 select throws_ok($$select public.guardian_invitation_preview('not-a-token')$$, '22023', 'INVITATION_NOT_FOUND',
   'a wrong token is not found');
 select is((select count(*)::int from public.students), 0, 'before accepting, P reads no student');
-select is(public.accept_guardian_invitation(tests.tok('p1')) ->> 'student_id', tests.sid('L1')::text,
+select is(public.accept_guardian_invitation(tests.tok('p1'), '2026-09-30-2', 'en') ->> 'student_id', tests.sid('L1')::text,
   'P accepts the link for L1');
 select tests.logout();
 
@@ -228,14 +228,14 @@ select tests.login('38000000-0000-4000-a000-000000000003');
 select results_eq($$select student_code from public.students order by 1$$, array['L1'],
   'P reads L1 and no other student');
 select is((select count(*)::int from public.results), 1, 'P reads L1''s published result');
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('p1'))$$,
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('p1'), '2026-09-30-2', 'en')$$,
   'a second tap by the same person is not an error');
 select is(public.guardian_invitation_preview(tests.tok('p1')) ->> 'status', 'accepted',
   'the preview of a used link says accepted, without names');
 select tests.logout();
 
 select tests.login('38000000-0000-4000-a000-000000000004');
-select throws_ok($$select public.accept_guardian_invitation(tests.tok('p1'))$$, '22023', 'INVITATION_ACCEPTED',
+select throws_ok($$select public.accept_guardian_invitation(tests.tok('p1'), '2026-09-30-2', 'en')$$, '22023', 'INVITATION_ACCEPTED',
   'a used link cannot be accepted by anyone else');
 select tests.logout();
 
@@ -272,7 +272,7 @@ select tests.logout();
 update public.workspace_invitations set expires_at = now() - interval '1 minute'
  where token_hash = app.hash_token(tests.tok('p2'));
 select tests.login('38000000-0000-4000-a000-000000000003');
-select throws_ok($$select public.accept_guardian_invitation(tests.tok('p2'))$$, '22023', 'INVITATION_EXPIRED',
+select throws_ok($$select public.accept_guardian_invitation(tests.tok('p2'), '2026-09-30-2', 'en')$$, '22023', 'INVITATION_EXPIRED',
   'an expired link is refused');
 select is(public.guardian_invitation_preview(tests.tok('p2')) ->> 'status', 'expired',
   'the preview says expired');
@@ -283,13 +283,13 @@ insert into toks values ('p3-old', tests.tok('p3'));
 select tests.invite('p3', 'L3');
 select tests.logout();
 select tests.login('38000000-0000-4000-a000-000000000003');
-select throws_ok($$select public.accept_guardian_invitation(tests.tok('p3-old'))$$, '22023', 'INVITATION_REVOKED',
+select throws_ok($$select public.accept_guardian_invitation(tests.tok('p3-old'), '2026-09-30-2', 'en')$$, '22023', 'INVITATION_REVOKED',
   'a new link replaces the old one');
 
 -- =====================================================================
 -- D. A second child at the same school
 -- =====================================================================
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('p3'))$$, 'P accepts the new link for L3');
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('p3'), '2026-09-30-2', 'en')$$, 'P accepts the new link for L3');
 select results_eq($$select student_code from public.students order by 1$$, array['L1', 'L3'],
   'P now reads exactly L1 and L3');
 select tests.logout();
@@ -311,7 +311,7 @@ select throws_ok($$select tests.invite('again', 'L1')$$, '22023', 'GUARDIAN_ALRE
 select tests.invite('p4', 'L4');
 select tests.logout();
 select tests.login('38000000-0000-4000-a000-000000000002');
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('p4'))$$,
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('p4'), '2026-09-30-2', 'en')$$,
   'a teacher of the school accepts a link to their own child (D-109)');
 select tests.logout();
 select is((select role::text from public.workspace_members
@@ -398,7 +398,7 @@ select throws_ok($$select app.decline_invitation(tests.tok('p3-again'))$$, '2202
   'nor decline one');
 select tests.logout();
 select tests.login('38000000-0000-4000-a000-000000000003');
-select lives_ok($$select public.accept_guardian_invitation(tests.tok('p3-again'))$$,
+select lives_ok($$select public.accept_guardian_invitation(tests.tok('p3-again'), '2026-09-30-2', 'en')$$,
   'a removed parent accepts a new link');
 select results_eq($$select student_code from public.students order by 1$$, array['L3'],
   'and reads L3 again');
@@ -428,7 +428,7 @@ select tests.invite('p2c', 'L2');
 select tests.logout();
 update public.workspaces set access_mode = 'read_only' where id = '38000000-0000-4000-b000-000000000001';
 select tests.login('38000000-0000-4000-a000-000000000004');
-select throws_ok($$select public.accept_guardian_invitation(tests.tok('p2c'))$$, '42501', 'PLAN_READ_ONLY',
+select throws_ok($$select public.accept_guardian_invitation(tests.tok('p2c'), '2026-09-30-2', 'en')$$, '42501', 'PLAN_READ_ONLY',
   'a read-only school cannot gain a parent');
 select tests.logout();
 select tests.login('38000000-0000-4000-a000-000000000001');

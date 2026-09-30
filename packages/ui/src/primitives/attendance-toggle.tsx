@@ -85,6 +85,12 @@ export type AttendanceToggleProps = {
   locale?: "en" | "bn"
   disabled?: boolean
   className?: string
+  /** F-ID-10 §5.1 (Part 3): `"basic"` bumps each segment to the 56px
+   * basic-mode tap target and its letter to the 18px basic body size. Each
+   * segment is already a visible glyph + `aria-label`, not an icon-only
+   * button, so basic mode's "always icon and label" rule needs only the
+   * size bump, not a layout change. */
+  size?: "default" | "basic"
 }
 
 export function AttendanceToggle({
@@ -94,6 +100,7 @@ export function AttendanceToggle({
   locale = "en",
   disabled = false,
   className,
+  size = "default",
 }: AttendanceToggleProps) {
   const groupRef = React.useRef<HTMLDivElement>(null)
 
@@ -169,8 +176,11 @@ export function AttendanceToggle({
             disabled={disabled}
             onClick={() => onChange(status)}
             className={cn(
-              // §3.5: each segment ≥56px wide × 44px tall.
-              "focus-visible:ring-ring flex min-h-11 min-w-14 flex-1 items-center justify-center text-sm font-semibold outline-none transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset active:scale-[0.97]",
+              // §3.5: each segment ≥56px wide × 44px tall (basic mode: ≥56px tall too, §5.1).
+              "focus-visible:ring-ring flex flex-1 items-center justify-center font-semibold outline-none transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset active:scale-[0.97]",
+              size === "basic"
+                ? "min-h-14 min-w-16 text-lg"
+                : "min-h-11 min-w-14 text-sm",
               "[transition-duration:var(--duration-instant)]",
               selected
                 ? cn(meta.selectedClass, meta.ringClass, "ring-inset")
