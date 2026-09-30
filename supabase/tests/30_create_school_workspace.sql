@@ -92,7 +92,7 @@ grant all on ids to authenticated;
 select tests.login('f1050401-0000-0000-0000-000000000001');
 create temp table first_call as
   select public.create_school_workspace(
-    tests.school_input('a0000000-0000-4000-8000-000000000001')) as r;
+    tests.school_input('a0000000-0000-4000-8000-000000000001'), '2026-09-30-interim') as r;
 select tests.logout();
 insert into ids select 'ideal', (r ->> 'workspace_id')::uuid from first_call;
 
@@ -183,13 +183,13 @@ select tests.logout();
 select tests.login('f1050401-0000-0000-0000-000000000001');
 select is(
   (select public.create_school_workspace(
-     tests.school_input('a0000000-0000-4000-8000-000000000001'))),
+     tests.school_input('a0000000-0000-4000-8000-000000000001'), '2026-09-30-interim')),
   (select r || '{"replayed": true}' from first_call),
   'a replay with the same key and body returns the original workspace');
 
 select throws_ok(
   $$select public.create_school_workspace(
-      tests.school_input('a0000000-0000-4000-8000-000000000001', '{"name": "Different School"}'))$$,
+      tests.school_input('a0000000-0000-4000-8000-000000000001', '{"name": "Different School"}'), '2026-09-30-interim')$$,
   '22023', 'IDEMPOTENCY_KEY_REUSED',
   'the same key with a different body is refused');
 select tests.logout();
@@ -197,7 +197,7 @@ select tests.logout();
 select tests.login('f1050401-0000-0000-0000-000000000002');
 select throws_ok(
   $$select public.create_school_workspace(
-      tests.school_input('a0000000-0000-4000-8000-000000000001'))$$,
+      tests.school_input('a0000000-0000-4000-8000-000000000001'), '2026-09-30-interim')$$,
   '22023', 'IDEMPOTENCY_KEY_REUSED',
   'another user replaying someone else''s key gets nothing back');
 select tests.logout();
@@ -217,61 +217,61 @@ select tests.login('f1050401-0000-0000-0000-000000000002');
 select throws_ok(
   $$select public.create_school_workspace(tests.school_input(
       'b0000000-0000-4000-8000-00000000000a',
-      '{"name": "Copycat", "academic_year": {"name": "2026", "starts_on": "2026-12-31", "ends_on": "2026-01-01"}}'))$$,
+      '{"name": "Copycat", "academic_year": {"name": "2026", "starts_on": "2026-12-31", "ends_on": "2026-01-01"}}'), '2026-09-30-interim')$$,
   '22023', 'INVALID_ACADEMIC_YEAR',
   'a taken EIIN with an invalid year reports the year, not the EIIN (validation first)');
 
 select is(
   (select public.create_school_workspace(
-      tests.school_input('b0000000-0000-4000-8000-000000000001', '{"name": "Copycat"}')) ->> 'error'),
+      tests.school_input('b0000000-0000-4000-8000-000000000001', '{"name": "Copycat"}'), '2026-09-30-interim') ->> 'error'),
   'EIIN_TAKEN',
   'an EIIN already registered to another school returns EIIN_TAKEN (unique index is the only check)');
 
 select throws_ok(
   $$select public.create_school_workspace(
-      tests.school_input('b0000000-0000-4000-8000-000000000002', '{"eiin": null, "timezone": "Mars/Olympus"}'))$$,
+      tests.school_input('b0000000-0000-4000-8000-000000000002', '{"eiin": null, "timezone": "Mars/Olympus"}'), '2026-09-30-interim')$$,
   '22023', 'INVALID_TIMEZONE', 'an unknown timezone raises INVALID_TIMEZONE');
 
 select throws_ok(
   $$select public.create_school_workspace(tests.school_input(
       'b0000000-0000-4000-8000-000000000003',
-      '{"eiin": null, "academic_year": {"name": "2026", "starts_on": "2026-12-31", "ends_on": "2026-01-01"}}'))$$,
+      '{"eiin": null, "academic_year": {"name": "2026", "starts_on": "2026-12-31", "ends_on": "2026-01-01"}}'), '2026-09-30-interim')$$,
   '22023', 'INVALID_ACADEMIC_YEAR', 'an academic year that ends before it starts is refused');
 
 select throws_ok(
   $$select public.create_school_workspace(tests.school_input(
       'b0000000-0000-4000-8000-000000000004',
-      '{"eiin": null, "academic_year": {"name": "2026", "starts_on": "2026-01-01", "ends_on": "2028-06-01"}}'))$$,
+      '{"eiin": null, "academic_year": {"name": "2026", "starts_on": "2026-01-01", "ends_on": "2028-06-01"}}'), '2026-09-30-interim')$$,
   '22023', 'INVALID_ACADEMIC_YEAR', 'an academic year longer than 730 days is refused');
 
 select throws_ok(
   $$select public.create_school_workspace(tests.school_input(
-      'b0000000-0000-4000-8000-000000000005', '{"eiin": null, "grade_levels": []}'))$$,
+      'b0000000-0000-4000-8000-000000000005', '{"eiin": null, "grade_levels": []}'), '2026-09-30-interim')$$,
   '22023', 'VALIDATION', 'at least one grade level is required');
 
 select throws_ok(
   $$select public.create_school_workspace(tests.school_input(
       'b0000000-0000-4000-8000-000000000006',
-      '{"eiin": null, "grade_levels": [{"name": "Class 6", "level_number": 6}, {"name": "class 6", "level_number": 7}]}'))$$,
+      '{"eiin": null, "grade_levels": [{"name": "Class 6", "level_number": 6}, {"name": "class 6", "level_number": 7}]}'), '2026-09-30-interim')$$,
   '22023', 'VALIDATION', 'two grade levels with the same name are refused');
 
 select throws_ok(
   $$select public.create_school_workspace(tests.school_input(
-      'b0000000-0000-4000-8000-000000000007', '{"eiin": null, "working_days": []}'))$$,
+      'b0000000-0000-4000-8000-000000000007', '{"eiin": null, "working_days": []}'), '2026-09-30-interim')$$,
   '22023', 'VALIDATION', 'an empty working week is refused');
 
 select throws_ok(
   $$select public.create_school_workspace(tests.school_input(
-      'b0000000-0000-4000-8000-000000000008', '{"eiin": null, "board": "narnia"}'))$$,
+      'b0000000-0000-4000-8000-000000000008', '{"eiin": null, "board": "narnia"}'), '2026-09-30-interim')$$,
   '22023', 'VALIDATION', 'an unknown board is refused');
 
 select throws_ok(
   $$select public.create_school_workspace(tests.school_input(
-      'b0000000-0000-4000-8000-000000000009', '{"eiin": "12ab56"}'))$$,
+      'b0000000-0000-4000-8000-000000000009', '{"eiin": "12ab56"}'), '2026-09-30-interim')$$,
   '22023', 'VALIDATION', 'a malformed EIIN is refused');
 
 select throws_ok(
-  $$select public.create_school_workspace(tests.school_input('b0000000-0000-4000-8000-000000000001') - 'idempotency_key')$$,
+  $$select public.create_school_workspace(tests.school_input('b0000000-0000-4000-8000-000000000001') - 'idempotency_key', '2026-09-30-interim')$$,
   '22023', 'VALIDATION', 'an idempotency key is required');
 
 select is(
@@ -296,7 +296,7 @@ update public.auth_throttle set attempts = 29
 select tests.login('f1050401-0000-0000-0000-000000000002');
 select is(
   (select public.create_school_workspace(tests.school_input(
-      'b0000000-0000-4000-8000-00000000000b', '{"eiin": null, "name": "Honest School"}')) ->> 'error'),
+      'b0000000-0000-4000-8000-00000000000b', '{"eiin": null, "name": "Honest School"}'), '2026-09-30-interim') ->> 'error'),
   'RATE_LIMITED', 'the 30th attempt in 15 minutes is refused with RATE_LIMITED');
 select tests.logout();
 select ok(
@@ -317,20 +317,21 @@ select tests.logout();
 
 -- RATE_LIMITED: 3 schools per user per day (AC16).
 select tests.login('f1050401-0000-0000-0000-000000000006');
-select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000001', '{"eiin": null}'));
-select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000002', '{"eiin": null}'));
-select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000003', '{"eiin": null}'));
+select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000001', '{"eiin": null}'), '2026-09-30-interim');
+select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000002', '{"eiin": null}'), '2026-09-30-interim');
+select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000003', '{"eiin": null}'), '2026-09-30-interim');
 select is(
-  (select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000004', '{"eiin": null}')) ->> 'error'),
+  (select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000004', '{"eiin": null}'), '2026-09-30-interim') ->> 'error'),
   'RATE_LIMITED', 'a fourth school in one day returns RATE_LIMITED');
 select tests.logout();
 
 select throws_ok(
-  $$select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000005'))$$,
+  $$select public.create_school_workspace(tests.school_input('c0000000-0000-4000-8000-000000000005'), '2026-09-30-interim')$$,
   '42501', 'authentication required', 'a call with no signed-in user is refused');
 
-select ok(has_function_privilege('authenticated', 'public.create_school_workspace(jsonb)', 'execute'),
-  'authenticated may execute create_school_workspace');
+select ok(has_function_privilege('authenticated', 'public.create_school_workspace(jsonb, text)', 'execute')
+  and not has_function_privilege('authenticated', 'public.create_school_workspace(jsonb)', 'execute'),
+  'authenticated may execute create_school_workspace only with a DPA version (D-114 contract)');
 select ok(not has_function_privilege('anon', 'public.create_school_workspace(jsonb)', 'execute'),
   'anon may not execute create_school_workspace');
 
@@ -352,7 +353,7 @@ begin
   begin
     perform tests.login('f1050401-0000-0000-0000-000000000005');
     perform public.create_school_workspace(
-      tests.school_input('d0000000-0000-4000-8000-000000000001', '{"eiin": "555555"}'));
+      tests.school_input('d0000000-0000-4000-8000-000000000001', '{"eiin": "555555"}'), '2026-09-30-interim');
   exception when others then
     perform tests.logout();
     execute format('drop trigger zz_injected on %s', p_table);
@@ -395,8 +396,8 @@ select is(
   0, 'no partial school, profile, membership, subscription, onboarding flag, idempotency record or progress row survived');
 
 select tests.login('f1050401-0000-0000-0000-000000000005');
-select public.create_school_workspace(tests.school_input('d0000000-0000-4000-8000-000000000001', '{"eiin": "555555"}'));
-select public.create_school_workspace(tests.school_input('d0000000-0000-4000-8000-000000000001', '{"eiin": "555555"}'));
+select public.create_school_workspace(tests.school_input('d0000000-0000-4000-8000-000000000001', '{"eiin": "555555"}'), '2026-09-30-interim');
+select public.create_school_workspace(tests.school_input('d0000000-0000-4000-8000-000000000001', '{"eiin": "555555"}'), '2026-09-30-interim');
 select tests.logout();
 select is(
   (select count(*)::int from public.workspaces where created_by = 'f1050401-0000-0000-0000-000000000005' and type = 'school'),
@@ -408,7 +409,7 @@ select is(
 -- Other Owner gets a school of their own; Teacher and Parent join Ideal.
 select tests.login('f1050401-0000-0000-0000-000000000002');
 insert into ids select 'other', (public.create_school_workspace(
-  tests.school_input('e0000000-0000-4000-8000-000000000001', '{"eiin": null, "name": "Other School"}')) ->> 'workspace_id')::uuid;
+  tests.school_input('e0000000-0000-4000-8000-000000000001', '{"eiin": null, "name": "Other School"}'), '2026-09-30-interim') ->> 'workspace_id')::uuid;
 select tests.logout();
 
 insert into public.workspace_members (workspace_id, user_id, role, status)

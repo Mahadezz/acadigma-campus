@@ -97,6 +97,9 @@ async function makeSchool(): Promise<School> {
       ],
       idempotency_key: randomUUID(),
     },
+    // D-114: only the overload that records the owner's DPA acceptance is
+    // client-callable.
+    p_dpa_version: "2026-09-30-interim",
   })
   if (school.error) throw school.error
   const workspaceId = (school.data as { workspace_id: string }).workspace_id

@@ -100,11 +100,11 @@ grant all on ids to authenticated;
 
 select tests.login('f2110000-0000-0000-0000-000000000001');
 insert into ids select 'a', (public.create_school_workspace(
-  tests.school_input('a2110000-0000-4000-8000-000000000001', 'Danger  School A')) ->> 'workspace_id')::uuid;
+  tests.school_input('a2110000-0000-4000-8000-000000000001', 'Danger  School A'), '2026-09-30-interim') ->> 'workspace_id')::uuid;
 select tests.logout();
 select tests.login('f2110000-0000-0000-0000-000000000004');
 insert into ids select 'b', (public.create_school_workspace(
-  tests.school_input('a2110000-0000-4000-8000-000000000002', 'Danger School B')) ->> 'workspace_id')::uuid;
+  tests.school_input('a2110000-0000-4000-8000-000000000002', 'Danger School B'), '2026-09-30-interim') ->> 'workspace_id')::uuid;
 select tests.logout();
 
 insert into public.workspace_members (workspace_id, user_id, role, status) values
