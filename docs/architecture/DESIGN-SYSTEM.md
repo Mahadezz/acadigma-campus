@@ -1083,7 +1083,7 @@ with one bar of EDGE, and the Android wrapper makes the queue default-on.
 
 ---
 
-### 3.8 App polish — the "feels finished" rules (D-409)
+### 3.11 App polish — the "feels finished" rules (D-409)
 
 The tell that an app was vibe-coded is not a visual one, it is a timing one: a
 tap that waits on the network, a blank screen between routes, a page you cannot
