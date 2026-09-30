@@ -6,7 +6,6 @@
  * requireWritable -> domain (status chain) -> repository -> revalidate.
  */
 
-import { revalidatePath } from "next/cache"
 
 import {
   apiError,
@@ -74,7 +73,6 @@ export async function createExam(
     gate.data.supabase,
     parsed.data
   )
-  if (result.ok) revalidatePath(EXAMS_PATH)
   return result
 }
 
@@ -114,7 +112,6 @@ export async function setExamStatus(
   }
 
   const result = await setExamStatusRepo(ctx, supabase, parsed.data)
-  if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`)
   return result
 }
 
@@ -132,7 +129,6 @@ export async function updateExamSubject(
     gate.data.supabase,
     parsed.data
   )
-  if (result.ok) revalidatePath(EXAMS_PATH, "layout")
   return result
 }
 
@@ -159,7 +155,6 @@ export async function computeResults(
   if (!writable.ok) return err(planReadOnlyApiError(writable.error))
 
   const result = await computeResultsRepo(ctx, supabase, parsed.data.examId)
-  if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`, "layout")
   return result
 }
 
@@ -193,6 +188,5 @@ export async function publishResults(
     parsed.data.examId,
     parsed.data.withhold
   )
-  if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`, "layout")
   return result
 }
