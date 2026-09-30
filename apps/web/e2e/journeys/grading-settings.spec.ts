@@ -52,5 +52,6 @@ test("a teacher cannot open grading settings", async ({ page }) => {
   await page.goto("/app/settings/grade-scale")
   await expect(page.getByText("You do not have access")).toBeVisible()
   // The protected screen itself must be absent, not merely covered.
-  await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
+  // Same locator the owner test above asserts visible.
+  await expect(page.getByLabel("Try a percentage")).toHaveCount(0)
 })

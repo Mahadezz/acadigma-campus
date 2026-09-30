@@ -85,7 +85,8 @@ test("a teacher is refused Team & access", async ({ page }) => {
   await page.goto("/app/staff/team")
   await expect(page.getByText("You do not have access")).toBeVisible()
   // The protected screen itself must be absent, not merely covered.
+  // Same heading the owner test above asserts visible.
   await expect(
-    page.getByRole("button", { name: /remove access/i })
+    page.getByRole("heading", { name: "Team & access" })
   ).toHaveCount(0)
 })
