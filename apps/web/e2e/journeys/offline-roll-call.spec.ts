@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto"
 import { expect, test, type Page } from "@playwright/test"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
+import { LEGAL_DOCUMENTS } from "../../lib/legal/documents"
 import { expectNoA11yViolations } from "../axe"
 
 /**
@@ -62,7 +63,14 @@ async function makeSchool(): Promise<School> {
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: "Offline Owner" },
+    // D-115: an account that accepted the current Terms/Privacy at sign-up.
+    user_metadata: {
+      full_name: "Offline Owner",
+      legal: {
+        terms: LEGAL_DOCUMENTS.terms.version,
+        privacy: LEGAL_DOCUMENTS.privacy.version,
+      },
+    },
   })
   if (error || !created.user) throw error
   const userId = created.user.id
@@ -99,7 +107,7 @@ async function makeSchool(): Promise<School> {
     },
     // D-114: only the overload that records the owner's DPA acceptance is
     // client-callable.
-    p_dpa_version: "2026-09-30-interim",
+    p_dpa_version: LEGAL_DOCUMENTS.dpa.version,
   })
   if (school.error) throw school.error
   const workspaceId = (school.data as { workspace_id: string }).workspace_id

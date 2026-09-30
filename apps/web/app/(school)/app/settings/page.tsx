@@ -59,6 +59,11 @@ export default async function SettingsPage() {
       summary: s.rows.grading.description,
     },
     {
+      href: "/app/settings/attendance",
+      ...s.rows.attendance,
+      summary: s.rows.attendance.description,
+    },
+    {
       href: "/app/settings/academic",
       ...s.rows.academic,
       summary: s.rows.academic.description,

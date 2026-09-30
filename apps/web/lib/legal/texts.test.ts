@@ -49,3 +49,18 @@ describe("published legal texts", () => {
     expect(published.get(key)).toBe(sha256(text))
   })
 })
+
+/**
+ * D-115: the gate asks for LEGAL_DOCUMENTS' versions and the database only
+ * records published ones; a version the constant names but no migration
+ * published would keep people on /account/legal with "The documents
+ * changed". The hash test above fails then too; this names the reason.
+ */
+describe("the versions the re-acceptance gate asks for", () => {
+  it.each(Object.entries(LEGAL_DOCUMENTS))(
+    "%s: the current version is published in app.legal_documents",
+    (document, d) => {
+      expect(published.has(`${document}/${d.version}/en`)).toBe(true)
+    }
+  )
+})
