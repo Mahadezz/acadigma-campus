@@ -14,7 +14,8 @@ vi.stubGlobal("matchMedia", () => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 vi.mock("./actions", () => ({ quickAdmitStudent: vi.fn() }))
 
-const { StudentsView, admitErrorText } = await import("./students-view")
+const { StudentsView } = await import("./students-view")
+const { admitErrorText } = await import("./admit-sheet")
 const { classLabel } = await import("./format")
 
 const rahim = {

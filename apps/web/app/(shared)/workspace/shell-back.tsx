@@ -27,9 +27,6 @@ import { canGoBack } from "@/lib/in-app-history"
  * label, screen-reader text) comes from the nav configs, loaded lazily so
  * they stay out of every page's first-load JS (250 kB budget). Until then
  * it reads "Back".
- *
- * Loaded lazily by `WorkspaceSwitcher` (`next/dynamic`, still server
- * rendered): the whole control stays out of every page's first-load JS.
  */
 
 type Named = { href: string; labelEn: string; labelBn: string }

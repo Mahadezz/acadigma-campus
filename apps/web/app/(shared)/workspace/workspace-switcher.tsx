@@ -2,7 +2,6 @@
 
 import * as React from "react"
 
-import dynamic from "next/dynamic"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 
@@ -32,9 +31,7 @@ import { record } from "@/lib/in-app-history"
 import { purgeDataCaches, runOfflineCheck } from "@/lib/offline/check"
 
 import { switchWorkspace } from "./actions"
-
-// D-408: server-rendered, but its code stays out of first-load JS (budget).
-const ShellBack = dynamic(() => import("./shell-back").then((m) => m.ShellBack))
+import { ShellBack } from "./shell-back"
 
 /**
  * F-ID-03 §4.2 / §6 "Workspace switcher (top bar chip, every shell)".
