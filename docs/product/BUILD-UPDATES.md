@@ -20,8 +20,8 @@ A plain-English record of what has been built, when it was finished, and where t
 ## Where we are (1 October 2026)
 
 - **Milestone 0 — secure foundation:** done (24 Sep).
-- **Milestone 1 — people in the school:** mostly done — roles, team roster, joining a school with a code, ownership transfer, account and school deletion. Still to build: email invitations, notifications, sessions and devices.
-- **Milestone 2 — the school day:** partly done — students, attendance (including offline), attendance policy, staff directory, database groundwork for staff messaging (no screen yet). Still to build: timetable, school calendar screens, staff leave.
+- **Milestone 1 — people in the school:** mostly done — roles, team roster, joining a school with a code, ownership transfer, account and school deletion, signed-in devices. Still to build: email invitations, notifications.
+- **Milestone 2 — the school day:** partly done — students, attendance (including offline), attendance policy, school calendar (holidays, make-up days and closures), staff directory, database groundwork for staff messaging (no screen yet). Still to build: timetable, staff check-in and leave.
 - **Milestone 3 — results and paper (the first-launch milestone):** started — exams, marks, results, published results for parents, printable report cards and registers. Still to build: Bengali report cards at full scope, homework, the print queue, a full month of school fees.
 - **Not built yet, on purpose:** online payments, Android/iPhone/Windows/Mac store apps, AI lesson planning, the marketplace. The app already installs from the browser on all of those devices.
 - **Indicative first-launch target:** around April 2027 (may move).
@@ -32,6 +32,9 @@ Every piece below was built, tested at phone and desktop size, security-reviewed
 
 ## 1 October 2026
 
+- **05:11 — See and sign out your devices.** Account → Security lists the devices you're signed in on; sign one out, or sign out everywhere (it asks first). [#132](https://github.com/Mahadezz/acadigma-campus/pull/132)
+- **04:35 — Pages load faster.** Error reporting now loads only when it is switched on, so the first screen appears sooner; small front-page fixes for phones. [#133](https://github.com/Mahadezz/acadigma-campus/pull/133)
+- **03:52 — Make-up days and closures.** Principals and admins can open a normally closed day or close a school day, with a reason; teachers can see the list; attendance percentages follow automatically. [#131](https://github.com/Mahadezz/acadigma-campus/pull/131)
 - **01:06 — New front page for the app.** campus.acadigma.com now looks like acadigma.com, with Sign in and a "Get the app" section showing how to install it from the browser on the web, Android, iPhone, Windows and Mac (store apps are coming later). Sign-in and sign-up pages match the new look. [#128](https://github.com/Mahadezz/acadigma-campus/pull/128)
 - **00:05 — The app feels faster.** Most data pages show a grey outline while they load instead of a blank screen; pull down to refresh on a phone; buttons show a pressed state the instant they are tapped. [#127](https://github.com/Mahadezz/acadigma-campus/pull/127)
 
@@ -88,7 +91,7 @@ Every piece below was built, tested at phone and desktop size, security-reviewed
 - **14:15 — Classes, sections and subjects** _(first version)_. [#47](https://github.com/Mahadezz/acadigma-campus/pull/47)
 - **13:44 — An audit trail in plain sentences** instead of technical codes. [#49](https://github.com/Mahadezz/acadigma-campus/pull/49)
 - **13:21 — School dashboard** built from real data. [#41](https://github.com/Mahadezz/acadigma-campus/pull/41)
-- **13:11 — School-day rules** _(behind the scenes)_: holidays and working days (a Saturday–Thursday week); no calendar screen yet. [#43](https://github.com/Mahadezz/acadigma-campus/pull/43)
+- **13:11 — School calendar:** a screen to set the school's holidays; working days follow a Saturday–Thursday week. [#43](https://github.com/Mahadezz/acadigma-campus/pull/43)
 - **08:27 — Create a school** end to end, with classes. [#37](https://github.com/Mahadezz/acadigma-campus/pull/37)
 - **08:15 — School settings,** profile and branding. [#39](https://github.com/Mahadezz/acadigma-campus/pull/39)
 - **01:35 — Free trial;** a school's data turns read-only (never deleted) when it ends. [#31](https://github.com/Mahadezz/acadigma-campus/pull/31)
