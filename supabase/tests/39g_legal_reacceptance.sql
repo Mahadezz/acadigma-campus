@@ -27,7 +27,9 @@ begin
     '00000000-0000-0000-0000-000000000000', p_id, 'authenticated', 'authenticated',
     lower(p_email), '', now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"full_name":"Re Accept"}'::jsonb, now(), now());
+    -- A distinct name each: the personal workspace slug is the name plus
+    -- the first 8 hex digits of the id, which these ids share.
+    jsonb_build_object('full_name', p_email), now(), now());
   return p_id;
 end;
 $fn$;
