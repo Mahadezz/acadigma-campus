@@ -66,6 +66,50 @@ export type Database = {
           },
         ]
       }
+      account_deletion_requests: {
+        Row: {
+          attempts: number
+          cancelled_at: string | null
+          completed_at: string | null
+          id: string
+          last_error: string | null
+          requested_at: string
+          scheduled_purge_at: string
+          status: Database["public"]["Enums"]["account_deletion_status"]
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          cancelled_at?: string | null
+          completed_at?: string | null
+          id?: string
+          last_error?: string | null
+          requested_at?: string
+          scheduled_purge_at: string
+          status?: Database["public"]["Enums"]["account_deletion_status"]
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          cancelled_at?: string | null
+          completed_at?: string | null
+          id?: string
+          last_error?: string | null
+          requested_at?: string
+          scheduled_purge_at?: string
+          status?: Database["public"]["Enums"]["account_deletion_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_deletion_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_records: {
         Row: {
           created_at: string
@@ -2142,6 +2186,7 @@ export type Database = {
           bio: string | null
           created_at: string
           date_of_birth: string | null
+          deleted_at: string | null
           display_name: string | null
           email: string | null
           full_name: string
@@ -2160,6 +2205,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           display_name?: string | null
           email?: string | null
           full_name?: string
@@ -2178,6 +2224,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           display_name?: string | null
           email?: string | null
           full_name?: string
@@ -4272,6 +4319,13 @@ export type Database = {
     }
     Functions: {
       accept_guardian_invitation: { Args: { p_token: string }; Returns: Json }
+      account_deletion_blockers: {
+        Args: never
+        Returns: {
+          name: string
+          workspace_id: string
+        }[]
+      }
       admit_student: {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
@@ -4292,6 +4346,7 @@ export type Database = {
         Args: { p_section_id: string; p_workspace_id: string }
         Returns: boolean
       }
+      cancel_account_deletion: { Args: never; Returns: boolean }
       cancel_workspace_deletion: {
         Args: { p_workspace_id: string }
         Returns: undefined
@@ -4397,6 +4452,7 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: undefined
       }
+      request_account_deletion: { Args: never; Returns: string }
       revoke_guardian_link: {
         Args: { p_link_id: string; p_workspace_id: string }
         Returns: undefined
@@ -4505,6 +4561,7 @@ export type Database = {
     }
     Enums: {
       access_mode: "normal" | "read_only"
+      account_deletion_status: "pending" | "cancelled" | "completed"
       ai_billing_model: "shared_pool" | "individual_allocation"
       attendance_session_status: "draft" | "submitted" | "locked"
       attendance_status: "present" | "absent" | "late" | "excused" | "half_day"
@@ -4752,6 +4809,7 @@ export const Constants = {
   public: {
     Enums: {
       access_mode: ["normal", "read_only"],
+      account_deletion_status: ["pending", "cancelled", "completed"],
       ai_billing_model: ["shared_pool", "individual_allocation"],
       attendance_session_status: ["draft", "submitted", "locked"],
       attendance_status: ["present", "absent", "late", "excused", "half_day"],
