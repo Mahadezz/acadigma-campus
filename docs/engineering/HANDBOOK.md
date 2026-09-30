@@ -253,23 +253,23 @@ Hard rules:
 
 ### 7.4 Commands
 
-| Command                         | What it does                                                          |
-| ------------------------------- | --------------------------------------------------------------------- |
-| `pnpm dev`                      | Next.js dev server, `apps/web`, port 3000                             |
-| `pnpm build`                    | Production build of every package + the app                           |
-| `pnpm typecheck`                | `tsc --noEmit` across the workspace                                   |
-| `pnpm lint` / `pnpm lint:fix`   | ESLint + Prettier check / fix                                         |
-| `pnpm test`                     | Vitest, all packages, watch off                                       |
-| `pnpm test:watch`               | Vitest watch on the package you are in                                |
-| `pnpm test:cov`                 | Vitest with V8 coverage + JSON report                                 |
-| `pnpm test:contracts`           | Postgres enum ↔ Zod enum parity + generated-types freshness           |
-| `pnpm db:*`                     | see §7.3                                                              |
-| `pnpm e2e`                      | Playwright, both projects (`mobile-360`, `desktop-1280`)              |
-| `pnpm e2e:ui`                   | Playwright UI mode for authoring                                      |
-| `pnpm e2e:report`               | Open the last HTML report                                             |
-| `pnpm changeset`                | Add a changeset for this PR                                           |
-| `pnpm audit --audit-level high` | Dependency audit, the same gate CI runs                               |
-| `pnpm verify`                   | `typecheck && lint && test && test:contracts` — run before every push |
+| Command                         | What it does                                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                      | Next.js dev server, `apps/web`, port 3000                                                                         |
+| `pnpm build`                    | Production build of every package + the app                                                                       |
+| `pnpm typecheck`                | `tsc --noEmit` across the workspace                                                                               |
+| `pnpm lint` / `pnpm lint:fix`   | ESLint + Prettier check / fix                                                                                     |
+| `pnpm test`                     | Vitest, all packages, watch off                                                                                   |
+| `pnpm test:watch`               | Vitest watch on the package you are in                                                                            |
+| `pnpm test:cov`                 | Vitest with V8 coverage + JSON report                                                                             |
+| `pnpm test:contracts`           | the parity/coverage/requireWritable scripts CI's `contracts` job runs                                             |
+| `pnpm db:*`                     | see §7.3                                                                                                          |
+| `pnpm e2e`                      | Playwright, both projects (`mobile-360`, `desktop-1280`)                                                          |
+| `pnpm e2e:ui`                   | Playwright UI mode for authoring                                                                                  |
+| `pnpm e2e:report`               | Open the last HTML report                                                                                         |
+| `pnpm changeset`                | Add a changeset for this PR                                                                                       |
+| `pnpm audit --audit-level high` | Dependency audit, the same gate CI runs                                                                           |
+| `pnpm verify`                   | `format:check`, `typecheck`, `lint`, `test`, `test:contracts` and the env/contrast checks — run before every push |
 
 First Playwright run needs browsers: `pnpm exec playwright install --with-deps chromium`.
 

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
 
 import { expectNoA11yViolations } from "../axe"
+import { isSchoolOffToday } from "../school-day"
 
 // Seeded-account journey (CLAUDE.md "Rules learned in practice"): needs the
 // live Supabase project with migrations + seed applied (OQ-27).
@@ -100,6 +101,7 @@ test("the hub shows only the built tabs — no coming-soon tab (§9 AC6)", async
 test("takes the roll from inside the hub: confirm names the counts, nothing saves until Yes, save (§9 AC7)", async ({
   page,
 }) => {
+  test.skip(isSchoolOffToday(), "Seeded school is off on Fridays")
   await signIn(page, "owner@acadigma.test")
   await turnOnBasicMode(page)
   await openFirstClassHub(page)

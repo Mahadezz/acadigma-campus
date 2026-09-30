@@ -76,11 +76,11 @@ Windows, Node 24, pnpm 10, **no Docker** — local development points at the Sup
 
 ```powershell
 pnpm dev                 # Next.js on :3000
-pnpm verify              # typecheck + lint + test + test:contracts — run before every push
+pnpm verify              # format:check + typecheck + lint + test + test:contracts + env/contrast checks — run before every push
 pnpm typecheck
 pnpm lint  /  pnpm lint:fix
 pnpm test  /  pnpm test:cov
-pnpm test:contracts      # Postgres enum <-> Zod parity + generated-types freshness
+pnpm test:contracts      # permission/notification/audit parity, RLS-table coverage, requireWritable
 pnpm e2e                 # Playwright at 360x800 and 1280x800
 pnpm e2e:ui              # authoring mode
 
