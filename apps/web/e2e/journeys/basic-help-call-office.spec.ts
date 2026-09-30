@@ -23,7 +23,11 @@ async function signIn(page: Page, email: string): Promise<void> {
   await expect(page).toHaveURL(/\/app(\/.*)?$/)
 }
 
-test.afterEach(async ({ page }) => {
+test.afterEach(async ({ page }, testInfo) => {
+  // The reset gets its own budget: sharing the test's 30 s, a slow body left
+  // it cut off mid-way and the seeded owner stuck in বাংলা/basic mode for the
+  // rest of the e2e-live shard (D-76).
+  testInfo.setTimeout(testInfo.timeout + 30_000)
   if (!/\/app/.test(page.url())) return
   await page.goto("/app/settings/display")
   const basicSwitch = page.getByRole("switch", { name: "Basic mode" })
@@ -65,6 +69,9 @@ test("Help shows the same Call school office link from a page other than home (D
   if (!(await basicSwitch.isChecked().catch(() => false))) {
     await basicSwitch.click()
   }
+  // The switch saves, then navigates: leaving before it lands can abandon
+  // the save (e2e-live, D-76) — wait for it, as the test above does.
+  await expect(page).toHaveURL(/\/app\/home$/)
 
   await page.goto("/app/classes/all")
   await page.getByRole("button", { name: "Help" }).click()
@@ -73,7 +80,11 @@ test("Help shows the same Call school office link from a page other than home (D
     sheet.getByRole("link", { name: /Call school office/ })
   ).toHaveAttribute("href", "tel:+8802222000000")
 
-  // The Home button is present on any non-home basic page (§4.10).
+  // The Home button is present on any non-home basic page (§4.10). It sits
+  // in the top bar, behind the modal sheet (aria-hidden while it is open),
+  // so close the sheet first.
+  await page.keyboard.press("Escape")
+  await expect(sheet).toBeHidden()
   await page.getByRole("link", { name: /Home/ }).click()
   await expect(page).toHaveURL(/\/app\/home$/)
 })

@@ -59,12 +59,18 @@ export default defineConfig({
     // `next start` serves the production build — the artefact CI actually ships.
     // Invoked directly rather than through `pnpm start`: the extra process layer
     // leaves the server's stdout attached to a pipe nothing drains, and on Windows
-    // the server blocks on write as soon as it logs anything.
+    // the server blocks on write as soon as it logs anything. That deadlock is a
+    // local-Windows-dev problem only; CI's ubuntu-latest runner has no such pipe
+    // stall, and ignoring stdout there was throwing away the one thing that would
+    // show a live-Supabase failure's real GoTrue error code (pino's `log.warn`
+    // writes to stdout, and a `sign-in rejected` line was never once seen in a CI
+    // log despite `signInWithPassword` definitely hitting that branch — e2e-live
+    // CI run 36457859794 diagnosis).
     command: `pnpm exec next start --port ${PORT} --hostname 127.0.0.1`,
     // Readiness is the health endpoint, not `/` — it answers without rendering the
     // app, so a slow first paint cannot be mistaken for a server that never came up.
     url: `${BASE_URL}/api/health`,
-    stdout: "ignore",
+    stdout: process.env.CI ? "pipe" : "ignore",
     stderr: "pipe",
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,

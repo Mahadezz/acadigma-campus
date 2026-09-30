@@ -19,6 +19,10 @@ test.describe("forgot password request is enumeration-safe", () => {
     await expect(
       page.getByText(/if that address has an account/i)
     ).toBeVisible()
+    // Once on the e2e-live runner axe found no <title> right after the
+    // action (likely the route re-rendering its streamed metadata; D-76).
+    // The title must be there — assert it, then scan.
+    await expect(page).toHaveTitle(/Reset your password/)
 
     await expectNoA11yViolations(page, testInfo)
   })

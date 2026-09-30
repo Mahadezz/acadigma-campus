@@ -3,6 +3,8 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
+import { isAuthRetryableFetchError } from "@supabase/supabase-js"
+
 import {
   apiError,
   err,
@@ -129,6 +131,13 @@ export async function registerWithPassword(
 
   if (error) {
     await throttleRecordFailure(supabase, "register", ipKey)
+    // GoTrue can also refuse a taken address outright (422
+    // `user_already_exists` — seen on the e2e-live stack, GoTrue v2.196, D-76)
+    // rather than returning the identity-less user handled below. Same
+    // answer either way (§4.1): this email already has an account.
+    if (error.code === "user_already_exists" || error.code === "email_exists") {
+      return err(apiError("conflict", t.auth.register.errorEmailTaken))
+    }
     const log = await requestLogger({ route: "auth.register" })
     log.warn(
       { status: error.status, code: error.code },
@@ -272,13 +281,54 @@ export async function signInWithPassword(
   })
 
   if (error) {
-    await Promise.all([
-      throttleRecordFailure(supabase, "loginByEmail", emailKey),
-      throttleRecordFailure(supabase, "loginByIp", ipKey),
-    ])
     const log = await requestLogger({ route: "auth.login" })
-    // One generic message regardless of which half was wrong (§4.2).
-    log.warn({ status: error.status, code: error.code }, "sign-in rejected")
+    // `message` alongside status/code: GoTrue's structured `code` is only present
+    // on a typed AuthApiError (invalid_credentials and friends); a genuine 5xx
+    // crash carries no `code` at all, and `message` is the only clue to what
+    // broke (CI run 36457859794/36510216612 diagnosis — every e2e-live shard's
+    // owner sign-in failed with a bare 500 after the first successful one, and
+    // status+code alone could not say why). GoTrue's own message is a technical
+    // string (e.g. a Postgres/Go error), never account PII, so this does not
+    // relax §13's "no names/emails/health data in logs."
+    log.warn(
+      { status: error.status, code: error.code, message: error.message },
+      "sign-in rejected"
+    )
+
+    // Only a rejection of THIS credential attempt counts against the
+    // brute-force throttle (§9 AC5/AC6) -- a GoTrue hiccup (timeout, 5xx,
+    // unreachable) never evaluated the password at all, and must not spend
+    // the same budget a real attacker would. Found the hard way: under
+    // CI's local-stack load, transient errors on otherwise-correct
+    // sign-ins tripped this bucket for the shared seeded owner account,
+    // then blocked every later journey's legitimate sign-in for the rest
+    // of the run (D-76). `over_request_rate_limit` is GoTrue's own
+    // volumetric signal, not tied to one email, so it only weighs on the
+    // IP bucket. The response is byte-identical across every branch below
+    // (security review of D-76's fix): if the message ever told an
+    // unconfirmed/banned/rate-limited account apart from a wrong password,
+    // that would be a new account-enumeration oracle this function exists
+    // to prevent (§4.2).
+    //
+    // Deny-list, not allow-list (#90 security review): every rejection counts
+    // unless it is provably an infrastructure failure, so a GoTrue version
+    // that answers a wrong password with no code, or a new one, can never
+    // silently switch the brute-force protection off.
+    const infraFailure =
+      isAuthRetryableFetchError(error) ||
+      error.status === 0 ||
+      (error.status ?? 0) >= 500
+    if (error.code === "over_request_rate_limit") {
+      await throttleRecordFailure(supabase, "loginByIp", ipKey)
+    } else if (!infraFailure) {
+      await Promise.all([
+        throttleRecordFailure(supabase, "loginByEmail", emailKey),
+        throttleRecordFailure(supabase, "loginByIp", ipKey),
+      ])
+    }
+
+    // One generic message regardless of which half was wrong, or whether
+    // this was a rejection vs. an infra hiccup.
     return err(
       apiError("unauthenticated", t.auth.login.errorInvalidCredentials)
     )

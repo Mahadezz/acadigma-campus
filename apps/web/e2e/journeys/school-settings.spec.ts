@@ -57,10 +57,11 @@ test("owner finds a setting, edits the school profile and sees the save bar only
   await expect(page.getByText("Saved.")).toBeVisible()
   await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
 
-  // An invalid EIIN is refused inline, not saved.
-  await page.getByLabel("EIIN").fill("12")
-  await page.getByRole("button", { name: "Save" }).click()
-  await expect(page.getByText(/6 digits/).first()).toBeVisible()
+  // D-100 (F-OP-07 §11 item 9): the EIIN is set at school creation and only
+  // support changes it — the profile form shows it read-only, so it cannot be
+  // edited here at all (this used to type an invalid EIIN, written before
+  // D-100; the 6-digit rule is now the wizard's, create-school-wizard.spec).
+  await expect(page.getByLabel("EIIN")).not.toBeEditable()
 })
 
 test("owner previews the branding header live, and an unknown token is flagged", async ({

@@ -149,10 +149,10 @@ select is(
 select is(
   (select attempts from public.auth_throttle where key = 'login-email:abc'),
   1, 'and it counts from 1 in a fresh window');
-select public.throttle_record_failure('loginByEmail', 'login-email:abc') from generate_series(1, 4);
+select public.throttle_record_failure('loginByEmail', 'login-email:abc') from generate_series(1, 3);
 select is(
   (select blocked from public.throttle_record_failure('loginByEmail', 'login-email:abc')),
-  true, 'the sixth failure in the new window blocks again');
+  true, 'the fifth failure in the new window blocks again (D-76: block at the limit)');
 
 select * from finish();
 rollback;

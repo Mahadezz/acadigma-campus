@@ -38,9 +38,12 @@ test.describe("sign-in throttling", () => {
     await page.getByLabel("Password").fill("wrong-password-6")
     await page.getByRole("button", { name: /sign in/i }).click()
 
+    // D-101: the countdown is the banner's ("Try again in 15 min."); the
+    // button keeps its "Sign in" label and is disabled until the wait ends.
     await expect(page.getByText(/too many attempts/i)).toBeVisible()
+    await expect(page.getByText(/try again in \d+ min/i)).toBeVisible()
     await expect(
-      page.getByRole("button", { name: /try again in \d+s/i })
-    ).toBeVisible()
+      page.getByRole("button", { name: "Sign in", exact: true })
+    ).toBeDisabled()
   })
 })

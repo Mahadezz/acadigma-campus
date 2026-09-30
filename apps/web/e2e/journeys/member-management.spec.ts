@@ -42,11 +42,13 @@ test("owner creates and deletes a custom label", async ({ page }, testInfo) => {
   await expectNoA11yViolations(page, testInfo)
   await page.getByRole("button", { name: "Save" }).click()
 
-  await expect(page.getByText(name)).toBeVisible()
+  // exact: the success alert quotes the name too ("… created."), so a
+  // substring match hits two elements (e2e-live, D-76).
+  await expect(page.getByText(name, { exact: true })).toBeVisible()
 
   await page.getByRole("button", { name: `Delete ${name}` }).click()
   await page.getByRole("button", { name: "Delete", exact: true }).click()
-  await expect(page.getByText(name)).toHaveCount(0)
+  await expect(page.getByText(name, { exact: true })).toHaveCount(0)
 })
 
 test("owner opens a member management sheet", async ({ page }, testInfo) => {
