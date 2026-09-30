@@ -287,7 +287,7 @@ update public.sections s
 -- 6. Widen the two IP-keyed throttle buckets for this database only
 --    (D-76). `register`/`loginByIp` in the real
 --    `public.throttle_record_failure` (latest definition:
---    supabase/migrations/20260929213628_throttle_block_at_limit.sql) are
+--    supabase/migrations/20260930034612_throttle_block_at_limit.sql) are
 --    tuned for one real person at one IP -- `loginByIp` alone is 30
 --    attempts per 15 minutes before a full HOUR block. Every Playwright
 --    worker in this suite signs in from the exact same IP (the runner's
@@ -393,7 +393,7 @@ begin
         end
   returning * into v_row;
 
-  if v_row.attempts >= v_max_attempts then  -- block AT the limit (20260929213628, AC6)
+  if v_row.attempts >= v_max_attempts then  -- block AT the limit (20260930034612, AC6)
     update public.auth_throttle
        set blocked_until = greatest(
              coalesce(blocked_until, now()),
