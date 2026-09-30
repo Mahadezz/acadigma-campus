@@ -31,7 +31,6 @@ export default async function MembershipPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <SubPageHeader
-        backLabel={t.settings.back}
         title={t.settings.membership.title}
         description={t.settings.membership.description}
       />

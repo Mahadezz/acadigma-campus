@@ -29,7 +29,6 @@ export default async function DangerZonePage() {
 
   const header = (
     <SubPageHeader
-      backLabel={t.settings.back}
       title={d.title}
       description={d.lead}
     />
