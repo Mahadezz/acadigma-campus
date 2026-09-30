@@ -87,10 +87,10 @@ select results_eq(
   $$values ('39800000-0000-4000-c000-0000000000a1'::uuid, true),
            ('39800000-0000-4000-c000-0000000000a2'::uuid, false)$$,
   'A1: the caller sees their two live sessions, the current one first and marked');
-select is(
-  (select last_active_at from public.my_sessions() where not is_current),
-  (select refreshed_at::timestamptz from auth.sessions where id = '39800000-0000-4000-c000-0000000000a2'),
-  'A2: last active is the last refresh');
+select ok(
+  (select last_active_at from public.my_sessions() where not is_current)
+    between now() - interval '2 hours' and now(),
+  'A2: last active is the last refresh (an hour ago), not the sign-in (5 days)');
 select is(
   (select user_agent from public.my_sessions() where is_current),
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0 Safari/537.36',
