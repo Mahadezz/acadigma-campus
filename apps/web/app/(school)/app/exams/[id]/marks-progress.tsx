@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
-
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 import type { ExamDetail, TeacherOption } from "@acadigma/contracts"
 import { marksEntryWindow } from "@acadigma/domain/academic"
@@ -21,6 +19,7 @@ import {
 import { examDateFormatter } from "../format"
 
 import { ReasonSheet } from "./reason-sheet"
+import { useRefreshingAction } from "./use-refreshing-action"
 
 type T = Messages["exams"]
 
@@ -44,8 +43,7 @@ export function MarksProgress({
   today: string
 }) {
   const fmt = examDateFormatter(locale)
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
+  const { pending, run: runAction } = useRefreshingAction()
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [unlocking, setUnlocking] = useState<string | null>(null)
@@ -63,15 +61,15 @@ export function MarksProgress({
   function run(action: () => ReturnType<typeof lockExamSubject>, done: string) {
     setError(null)
     setNotice(null)
-    startTransition(async () => {
+    void runAction(async () => {
       const result = await action()
       if (!result.ok) {
         setError(result.error.message || t.error)
-        return
+        return false
       }
       setUnlocking(null)
       setNotice(done)
-      router.refresh()
+      return true
     })
   }
 
