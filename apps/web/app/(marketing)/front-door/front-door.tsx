@@ -70,8 +70,10 @@ export function FrontDoor({
         <section>
           <div className="mx-auto grid max-w-7xl items-center gap-16 px-5 pt-12 pb-16 sm:px-8 sm:pt-20 lg:grid-cols-12 lg:pt-10 lg:gap-8 lg:pb-24">
             <div className="lg:col-span-8">
-              {/* acadigma.com's hero eyebrow, with an honest line. */}
-              <p className="eyebrow inline-flex items-center gap-2.5 rounded-full bg-card/70 py-1.5 pr-4 pl-2 tracking-[0.14em] text-muted-foreground shadow-flat backdrop-blur">
+              {/* acadigma.com's hero eyebrow, with an honest line. Inter, not the
+                  website's mono: the mono webfont was the one extra request in
+                  front of first paint and pushed Lighthouse LCP past 3.5 s. */}
+              <p className="inline-flex items-center gap-2.5 rounded-full bg-card/70 py-1.5 pr-4 pl-2 text-xs font-medium tracking-[0.14em] uppercase text-muted-foreground shadow-flat backdrop-blur">
                 <span aria-hidden="true" className="relative flex size-2">
                   <span className="absolute inset-0 animate-ping rounded-full bg-foreground/40 motion-reduce:hidden" />
                   <span className="relative size-2 rounded-full bg-foreground" />

@@ -57,7 +57,9 @@ export function SiteFooter({
         </div>
 
         <nav aria-label={f.products} className="md:col-span-3">
-          <h2 className="eyebrow text-muted-foreground">{f.products}</h2>
+          <h2 className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+            {f.products}
+          </h2>
           <ul className="mt-4">
             {PRODUCTS.map((p) => (
               <li key={p.key}>
@@ -81,7 +83,9 @@ export function SiteFooter({
 
         {columns.map((c) => (
           <nav key={c.label} aria-label={c.label} className="md:col-span-2">
-            <h2 className="eyebrow text-muted-foreground">{c.label}</h2>
+            <h2 className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+              {c.label}
+            </h2>
             <ul className="mt-4">
               {c.links.map((l) => (
                 <li key={l.href}>

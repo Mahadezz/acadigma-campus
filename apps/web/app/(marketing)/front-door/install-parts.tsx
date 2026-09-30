@@ -28,7 +28,7 @@ export function InstallSteps({ steps }: { steps: readonly string[] }) {
         >
           <span
             aria-hidden="true"
-            className="font-mono text-xs text-muted-foreground tabular-nums"
+            className="text-xs font-medium text-muted-foreground tabular-nums"
           >
             0{i + 1}
           </span>

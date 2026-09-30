@@ -412,8 +412,10 @@ follows **acadigma.com**, read from `acadigma-website` (`globals.css`,
 - **Type:** hero `clamp(3rem, 8.4vw, 7.25rem)`, semibold, `-0.055em`,
   leading 0.92 (the website's `hero.tsx`); section titles
   `clamp(2.25rem, 5vw, 4.5rem)`, `-0.045em`, leading 0.98 (`suite.tsx`);
-  sections `py-24 sm:py-32`. The hero eyebrow is the website's mono pill with a
-  pulsing dot (hidden under reduced motion). The website's
+  sections `py-24 sm:py-32`. The hero eyebrow is the website's pill with a pulsing dot (hidden under
+  reduced motion), set in Inter, not mono: the mono webfont is the one extra
+  request before first paint and pushed Lighthouse's LCP for `/` past 3.5 s.
+  No mono anywhere on the front door. The website's
   second headline line is `#a3a3a3` (2.3:1); ours is `--muted-foreground`.
 - **Shape:** interactive elements are full pills (`rounded-full`, 52px in the
   hero, 44px tabs); cards are 24px (`rounded-3xl`), including `AuthCard` from
