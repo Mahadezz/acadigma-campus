@@ -6,7 +6,7 @@
 | Part    | Glass on an ambient mesh, theme control, language to Settings, shell back affordance |
 | Spec    | `docs/architecture/DESIGN-SYSTEM.md` §1.8, §1.9, §3.1; D-408                         |
 | PR      | #109                                                                                 |
-| Status  | **PASS WITH KNOWN ISSUES** (CI e2e/lighthouse results pending, §5)                   |
+| Status  | **PASS WITH KNOWN ISSUES** (CI run 36713791798 green on `ee9ce92f`, §1a)             |
 | Date    | 2026-09-29, third pass 2026-09-30                                                    |
 | Run by  | Claude (design lane, second pass)                                                    |
 
@@ -38,7 +38,9 @@ The owner asked for liquid glass and both themes: _"the UI that you are building
 - The quick-admit sheet moved to `students/admit-sheet.tsx` and loads with `next/dynamic` on first open; `admitErrorText` moved with it. `/app/students` first-load JS is now **206 kB** gzipped.
 - `ShellBack` is imported directly again (not `next/dynamic`); the budget still holds (largest school route 239 kB).
 - Sonner rich-colour toasts use our `*-soft`/`*-ink` pairs: axe measured sonner's own success green at 4.25:1.
-- `origin/main` merged (#119, #120, #90, #121); CI lint (a Prettier miss on `settings/danger/page.tsx`) fixed.
+- `origin/main` merged twice (#119, #120, #90, #121, then #124 and #82); CI lint (a Prettier miss on `settings/danger/page.tsx`) fixed.
+- Three live journeys still clicked the language controls D-408 removed (the avatar-menu radio, the basic-home button): `bn-locale-shell`, `basic-mode-toggle-sync` AC3 and `basic-home-tap-targets` failed in e2e-live on run 36711440085. They now share an `e2e/locale.ts` helper that picks the language on Settings → Theme & language; the tap-target journey asserts the button is gone.
+- **CI run 36713791798 on `ee9ce92f`: every check green**: lint, typecheck, unit, contracts, build (with the bundle budget), security, e2e, e2e-live shards 1–4, lighthouse, changeset, docs-sync. `db`/`db-integration` were skipped (no migration). Vercel's preview deploy failed on Vercel's own rate limit ("retry in 24 hours"); it is not a required check.
 
 ---
 
@@ -58,7 +60,9 @@ The owner asked for liquid glass and both themes: _"the UI that you are building
 
 ## 3. Unit and integration (Vitest)
 
-**Third pass, full `pnpm test` (coverage on):** 192 files passed, 11 skipped; **1912 tests passed**, 36 skipped, 0 failed; 72.1 s. Coverage (all files): statements 85.73 %, branches 76.75 %, functions 85.93 %, lines 88.86 %. One earlier full run in this session had one failure, `settings/history-line.test.ts` hitting the 5 s timeout under load; it passed alone and in the next full run (§8).
+**After the second main merge (`ee9ce92f`), full `pnpm test`:** 195 files passed, 11 skipped; **1936 passed**, 36 skipped, 0 failed; 51.9 s. Coverage: statements 85.27 %, branches 76.03 %, functions 85.66 %, lines 88.50 %.
+
+**Third pass, before that merge, full `pnpm test` (coverage on):** 192 files passed, 11 skipped; **1912 tests passed**, 36 skipped, 0 failed; 72.1 s. Coverage (all files): statements 85.73 %, branches 76.75 %, functions 85.93 %, lines 88.86 %. One earlier full run in this session had one failure, `settings/history-line.test.ts` hitting the 5 s timeout under load; it passed alone and in the next full run (§8).
 
 Second pass:
 
