@@ -6,6 +6,12 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 ## 2026-09-30
 
+- **#109 merged** (e860b50, D-408): Design System v2 — liquid glass on an ambient backdrop, Light/Dark/System in Settings → Appearance, language picker moved into Settings, shell back button on every sub-page (history, else logical parent), glass blur fixed on Chrome/Android (minifier kept only the -webkit- line), toasts meet contrast, admit sheet lazy-loaded (students page 206 kB). Lead screenshot check + React (FIX FIRST → MERGE) + ponytail batch; new design-system-v2 journey at 360/1280 with axe.
+- **#125 merged** (0ab12c2, D-115): existing users re-accept current Terms/Privacy, owners the DPA; deletion + export stay reachable. Security + DB MERGE, React FIX FIRST → MERGE. Migration 20260930113432 live. Demo accounts see the screen once after each seed (DEMO-SCRIPT prep).
+- **#122 merged** (56a702b, D-212): attendance policy settings with a live effect preview. React FIX FIRST ×2 → MERGE; journey marks a real register.
+- **#126 merged** (0427a1f): real `pnpm verify` / `pnpm test:contracts`; attendance journeys skip on the seeded school's Friday off-day.
+- **Production deployed e860b50** after the Vercel limit reset — #82, #122, #125, #126, #109 all live.
+
 - **#124 merged** (b362638, D-114 contract): signed-in users can no longer call the 1-arg create_school_workspace / accept_guardian_invitation (a direct API call skipped recording consent); audit row on every legal acceptance. Security (Opus) + DB reviews MERGE; migration 20260930052627 live, DB smoke + Vercel ok. **Blocker for real schools cleared.**
 - **#82 merged** (581c2b2): class hub (basic mode) for older teachers. Live-e2e failures were test leakage (a journey left the shared teacher in basic mode), fixed with cleanup in finally — 173 passed / 0 failed; e2e-runner review MERGE. **Not live yet:** the Vercel account hit its 100 deploys/day limit — redeploy main after the reset.
 - **acadigma-website #3 merged** (5c03a6e): design-audit fixes + honest copy (no unbuilt features in present tense, sample figures labelled, no student role, no "2027" date, no language marketing), 360px overflow fixes. React review FIX FIRST → re-verify MERGE.

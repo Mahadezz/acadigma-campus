@@ -4,7 +4,7 @@ The owner's open requests and the build's open work, in priority order. **Read t
 
 Legend: 🔴 blocked · 🟡 in progress · ⚪ not started · 👤 needs the owner.
 
-Last updated: 2026-09-30 ~18:40 Dhaka.
+Last updated: 2026-09-30 late evening Dhaka.
 
 ---
 
@@ -24,7 +24,7 @@ Last updated: 2026-09-30 ~18:40 Dhaka.
 
 **Watch:** the demo school goes read-only 30 days after the first seed run (normal trial) — run the seed within 30 days of each demo. Rotate the password after demo days and re-run the seed. Ideally #109 (new look) and #82 (class hub) land first so investors see the polished version.
 
-## 2. Design System v2 — liquid glass, light/dark/system, back button · 🟡 · PR #109 (design lane)
+## 2. Design System v2 — ✅ merged #109 (see DONE). Follow-ups (ponytail LATER list) are in the #109 test report.
 
 **Owner's words:** "the UI … looked so cheap and generic use glass morphism liquid glass … a white theme as well so dark and white theme both"; "don't market that it's also in bangla … language selector tucked away in the settings panel"; "no going back options … I want a going back thing … pc and phone and tablets … optimize it for phone".
 
@@ -36,7 +36,7 @@ Last updated: 2026-09-30 ~18:40 Dhaka.
 - CI green (build currently red), react-reviewer + ponytail-review, lead checks screenshots, merge.
 - Follow-ups noted by the builder: add Appearance to the Settings list; move new copy into messages json; replace the ad-hoc back links on exams/marks/roll call/settings pages after #82 merges.
 
-## 3. Polish Part — skeletons, instant taps, pull-to-refresh · ⚪ (after #109)
+## 3. Polish Part — skeletons, instant taps, pull-to-refresh · 🟡 starting 2026-09-30 (design lane)
 
 **Owner:** the "5 tells of a vibe-coded app" video + "what about the phone's pull refresh?". Standing skill: `~/.claude/skills/app-polish/SKILL.md`.
 
