@@ -71,7 +71,11 @@ const SECTION_COLUMNS =
   "section_subjects(subject_id, teacher_id), " +
   "class_teacher:workspace_members!sections_class_teacher_fkey(profiles!workspace_members_user_id_fkey(full_name))"
 
-async function currentYear(
+/** The current academic year's id/name alone — the query `getClassesOverview`
+ * itself needs before it can go on to grades and sections; a caller that
+ * only wants "which year is current" (e.g. the class hub's roster fetch)
+ * uses this directly instead of paying for the other two queries. */
+export async function currentYear(
   supabase: AcadigmaSupabaseClient,
   ctx: WorkspaceContext
 ): Promise<Result<{ id: string; name: string } | null, ApiError>> {

@@ -10,11 +10,10 @@ import { EmptyState } from "@acadigma/ui/primitives/empty-state"
 export type AllClassesRow = { sectionId: string; name: string }
 
 /**
- * F-ID-10 §4.4 footnote ¹ — client-side filter over the school's sections
- * (a school's whole class list is small; no server round trip per
- * keystroke). Each row goes straight to the existing roll call for that
- * section, the same interim destination the home blocks use (D-405) — the
- * class hub (Part 3) replaces both.
+ * F-ID-10 §4.4 footnote ¹/§9 AC16 — client-side filter over the school's
+ * sections (a school's whole class list is small; no server round trip per
+ * keystroke). Each row opens that section's class hub (Part 3), same as
+ * the home's own `ClassBlock`s.
  */
 export function AllClassesView({
   rows,
@@ -57,7 +56,7 @@ export function AllClassesView({
           {filtered.map((row) => (
             <li key={row.sectionId}>
               <Link
-                href={`/app/attendance/${row.sectionId}`}
+                href={`/app/classes/${row.sectionId}`}
                 className="border-border bg-card text-card-foreground focus-visible:ring-ring flex min-h-14 w-full items-center rounded-lg border p-4 text-lg font-medium transition-colors focus-visible:ring-2 focus-visible:outline-hidden active:opacity-90"
               >
                 {row.name}

@@ -79,6 +79,10 @@ test("owner enters a whole class's marks in one pass and saves once", async ({
   await expect(page.getByText("Saved.")).toBeVisible()
   // Spec §1 / AC11: a whole class in under two minutes, one bulk save.
   expect(Date.now() - started).toBeLessThan(120_000)
+  // "Saved." lands before the pending state clears: scanned in between, the
+  // Save/Absent/Exempt buttons were still half-faded (2.74:1 and 3.58:1,
+  // e2e-live run 36674948158). Enabled Save is the settled state.
+  await expect(page.getByRole("button", { name: "Save" })).toBeEnabled()
   await expectNoA11yViolations(page, testInfo)
 
   // D-307: the paper's marks are complete, so Submit needs no confirmation;

@@ -130,7 +130,7 @@ export default async function BasicHomePage() {
           {data.classes.map((cls) => (
             <ClassBlock
               key={cls.sectionId}
-              href={`/app/attendance/${cls.sectionId}`}
+              href={`/app/classes/${cls.sectionId}`}
               title={classBlockTitle(locale, cls, s.classTeacher)}
               studentCountLabel={pluralize(
                 cls.studentCount,

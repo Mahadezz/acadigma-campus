@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import bn from "@/messages/bn.json"
 import en from "@/messages/en.json"
 
+import type { Marks } from "./roll-call"
+
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 const mockSave = vi.fn()
 vi.mock("../actions", () => ({
@@ -31,7 +33,7 @@ vi.mock("@/app/(shared)/offline/conflict-sheet", () => ({
     open ? <div role="dialog">conflict sheet</div> : null,
 }))
 
-const { RollCall, saveErrorText } = await import("./roll-call")
+const { RollCall, saveErrorText, undoPayload } = await import("./roll-call")
 
 const students = [1, 2, 3].map((n) => ({
   studentId: `00000000-0000-4000-8000-00000000000${n}`,
@@ -163,6 +165,273 @@ describe("RollCall", () => {
   })
 })
 
+describe("RollCall — basic mode (F-ID-10 Part 3)", () => {
+  const basicCopy = en.basicMode.classHub.attendance
+
+  it("confirms the plain sentence with counts before saving, and saves nothing until Yes, save", async () => {
+    render(<RollCall {...BASE} basic basicCopy={basicCopy} />)
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    const absent = screen
+      .getByRole("radiogroup", { name: "Student 2" })
+      .querySelector('[aria-label="Absent"]') as HTMLButtonElement
+    fireEvent.click(absent)
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    expect(mockSave).not.toHaveBeenCalled()
+    // ConfirmSheet's sr-only description names the two buttons (review fix:
+    // it used to repeat this same sentence, so a screen reader said it
+    // twice), so exactly one visible match is expected here, not a bug.
+    // It's a `next/dynamic({ ssr: false })` import (D-406 addendum — off
+    // the route's initial JS, same reason Marks/Students/Print already
+    // are), so it mounts one tick after Save.
+    expect(
+      await screen.findAllByText(
+        "Save attendance for Class 6 – ক? 2 present, 1 absent."
+      )
+    ).toHaveLength(1)
+    fireEvent.click(screen.getByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+  })
+
+  // LOW 4 review fix (spec §10 coverage gap): the confirm sentence unit
+  // coverage above was English-only — this proves `fill()` substitutes the
+  // Bangla template's counts the same way, not just that a Bangla string
+  // constant exists.
+  it("confirms the plain sentence in Bangla with counts before saving", async () => {
+    render(
+      <RollCall
+        {...BASE}
+        t={bn.attendance.roll}
+        locale="bn"
+        basic
+        basicCopy={bn.basicMode.classHub.attendance}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "সবাই উপস্থিত" }))
+    fireEvent.click(screen.getByRole("button", { name: "সংরক্ষণ" }))
+    expect(
+      await screen.findAllByText(
+        "Class 6 – ক-এর হাজিরা সংরক্ষণ করবেন? 3 জন উপস্থিত, 0 জন অনুপস্থিত।"
+      )
+    ).toHaveLength(1)
+  })
+
+  it("Go back closes the sheet without saving", async () => {
+    render(<RollCall {...BASE} basic basicCopy={basicCopy} />)
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Go back" }))
+    expect(mockSave).not.toHaveBeenCalled()
+  })
+
+  it("offers Undo after editing an already-saved session, and Undo re-saves the previous values as one edit", async () => {
+    // MEDIUM 2 review fix: an already-saved session (`sessionUpdatedAt` set)
+    // can never have an unmarked student for real — the server rejects an
+    // incomplete save (§5.3, "nothing is presumed present") — so the
+    // fixture now carries real prior statuses instead of `status: null`,
+    // proving Undo's re-save against a payload the server would accept.
+    const savedStudents = students.map((s, i) => ({
+      ...s,
+      status: (["present", "absent", "present"] as const)[i]!,
+    }))
+    render(
+      <RollCall
+        {...BASE}
+        students={savedStudents}
+        sessionUpdatedAt="t0"
+        basic
+        basicCopy={basicCopy}
+      />
+    )
+    // Edit: Student 2 (absent) -> present.
+    const present2 = screen
+      .getByRole("radiogroup", { name: "Student 2" })
+      .querySelector('[aria-label="Present"]') as HTMLButtonElement
+    fireEvent.click(present2)
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+    await screen.findByText(basicCopy.undoToast)
+    // The Undo button is disabled while a save transition is in flight; wait
+    // for the first save's `pending` flag to actually clear before clicking,
+    // rather than racing it (flaky under a slower/instrumented test run).
+    const undoButton = screen.getByRole("button", {
+      name: basicCopy.undo,
+    }) as HTMLButtonElement
+    await vi.waitFor(() => expect(undoButton.disabled).toBe(false))
+
+    fireEvent.click(undoButton)
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
+    // The undo re-save carries the ORIGINAL (real, previously-saved)
+    // statuses, not the edit this save just wrote — restoring what was on
+    // the server before.
+    expect(mockSave.mock.calls[1]?.[0]).toMatchObject({
+      records: savedStudents.map((s) => ({
+        studentId: s.studentId,
+        status: s.status,
+      })),
+    })
+  })
+
+  it("Undo keeps a student's CURRENT mark when they joined after the last save (MEDIUM 2, corrected)", async () => {
+    // `save_attendance` requires a status for EVERY currently enrolled
+    // student (§5.3, `UNMARKED_STUDENTS`) — a student enrolled after the
+    // last save has no entry in that save's records, so `lastSavedMarks`
+    // seeds `null` for them. Undo cannot omit them (the server would still
+    // reject the save, just with a different error) and cannot invent a
+    // status they never had; the only sensible restore is their CURRENT
+    // mark, which the "mark them so Save is enabled" step below sets.
+    const mixedStudents = students.map((s, i) => ({
+      ...s,
+      status: (["present", "absent", null] as const)[i]!,
+    }))
+    render(
+      <RollCall
+        {...BASE}
+        students={mixedStudents}
+        sessionUpdatedAt="t0"
+        basic
+        basicCopy={basicCopy}
+      />
+    )
+    // Student 3 is new and unmarked — mark them present so Save is enabled
+    // (the `blocked` gate already refuses a save with any unmarked
+    // student, before Undo is ever offered).
+    const present3 = screen
+      .getByRole("radiogroup", { name: "Student 3" })
+      .querySelector('[aria-label="Present"]') as HTMLButtonElement
+    fireEvent.click(present3)
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+    await screen.findByText(basicCopy.undoToast)
+    const undoButton = screen.getByRole("button", {
+      name: basicCopy.undo,
+    }) as HTMLButtonElement
+    await vi.waitFor(() => expect(undoButton.disabled).toBe(false))
+
+    fireEvent.click(undoButton)
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2))
+    // Every enrolled student is present, with a real status: students 1-2
+    // restore their real prior statuses; student 3 keeps the mark she just
+    // gave them (present) since there was never a saved value to go back to.
+    expect(mockSave.mock.calls[1]?.[0]).toMatchObject({
+      records: [
+        { studentId: mixedStudents[0]!.studentId, status: "present" },
+        { studentId: mixedStudents[1]!.studentId, status: "absent" },
+        { studentId: mixedStudents[2]!.studentId, status: "present" },
+      ],
+    })
+  })
+
+  it("never offers Undo on a first save (nothing to go back to)", async () => {
+    render(<RollCall {...BASE} basic basicCopy={basicCopy} />)
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText(basicCopy.undoToast)).toBeNull()
+  })
+
+  // Review fix (HIGH 1/2, MEDIUM 3): an offline save used to leave the
+  // screen showing the pre-save values (HIGH 2) and never updated what Undo
+  // points back to (HIGH 1) — tapping Undo after a queued save re-queued the
+  // wrong, stale statuses. `recordLocalSave` now runs on both the online and
+  // the queued success path.
+  it("an offline save after an online one updates the screen and Undo's target (not the stale original)", async () => {
+    render(
+      <RollCall {...BASE} sessionUpdatedAt="t0" basic basicCopy={basicCopy} />
+    )
+    // Save A online: everyone present.
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+    await screen.findByText(basicCopy.undoToast)
+    let undoButton = screen.getByRole("button", {
+      name: basicCopy.undo,
+    }) as HTMLButtonElement
+    await vi.waitFor(() => expect(undoButton.disabled).toBe(false))
+
+    // Go offline, edit to B (student 2 -> absent), save — queued, not sent.
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    const absent = screen
+      .getByRole("radiogroup", { name: "Student 2" })
+      .querySelector('[aria-label="Absent"]') as HTMLButtonElement
+    fireEvent.click(absent)
+    fireEvent.click(await screen.findByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockQueueSave).toHaveBeenCalledTimes(1))
+    // `recordLocalSave` (inside `queue()`) runs after the queue promise
+    // resolves, one tick after `mockQueueSave`'s call is recorded — wait for
+    // the Save button's own re-render (pending clears) before reading state.
+    await screen.findByRole("button", { name: "Save" })
+    // HIGH 2: the rows show B (just queued), not the stale A.
+    expect(screen.getByText("P 2 · A 1 · L 0")).toBeTruthy()
+
+    // HIGH 1: Undo now must target A (the state right before B), not the
+    // very first (pre-A) statuses.
+    undoButton = screen.getByRole("button", {
+      name: basicCopy.undo,
+    }) as HTMLButtonElement
+    await vi.waitFor(() => expect(undoButton.disabled).toBe(false))
+    fireEvent.click(undoButton)
+    await vi.waitFor(() => expect(mockQueueSave).toHaveBeenCalledTimes(2))
+    expect(mockQueueSave.mock.calls[1]?.[0].payload.records).toEqual(
+      students.map((s) => ({ studentId: s.studentId, status: "present" }))
+    )
+    expect(await screen.findByText("P 3 · A 0 · L 0")).toBeTruthy()
+  })
+
+  it("a second offline save moves the Undo target to the save right before it, not the first one", async () => {
+    render(
+      <RollCall {...BASE} sessionUpdatedAt="t0" basic basicCopy={basicCopy} />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Mark all present" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1))
+    // Wait for the first save's `pending` to actually clear (its own
+    // re-render swaps "Saving..." back to "Save") before the next action,
+    // rather than racing it under system load (flaky otherwise).
+    await screen.findByRole("button", { name: "Save" })
+
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+
+    // First offline save (B): student 1 -> absent.
+    const absent1 = screen
+      .getByRole("radiogroup", { name: "Student 1" })
+      .querySelector('[aria-label="Absent"]') as HTMLButtonElement
+    fireEvent.click(absent1)
+    fireEvent.click(await screen.findByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockQueueSave).toHaveBeenCalledTimes(1))
+    await screen.findByRole("button", { name: "Save" })
+
+    // Second offline save (C): student 3 -> absent too.
+    const absent3 = screen
+      .getByRole("radiogroup", { name: "Student 3" })
+      .querySelector('[aria-label="Absent"]') as HTMLButtonElement
+    fireEvent.click(absent3)
+    fireEvent.click(await screen.findByRole("button", { name: "Save" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Yes, save" }))
+    await vi.waitFor(() => expect(mockQueueSave).toHaveBeenCalledTimes(2))
+
+    // Undo must restore B (student 1 absent, the rest present) — the state
+    // right before C — not the first save (everyone present).
+    const undoButton = screen.getByRole("button", {
+      name: basicCopy.undo,
+    }) as HTMLButtonElement
+    await vi.waitFor(() => expect(undoButton.disabled).toBe(false))
+    fireEvent.click(undoButton)
+    await vi.waitFor(() => expect(mockQueueSave).toHaveBeenCalledTimes(3))
+    expect(mockQueueSave.mock.calls[2]?.[0].payload.records).toEqual([
+      { studentId: students[0]!.studentId, status: "absent" },
+      { studentId: students[1]!.studentId, status: "present" },
+      { studentId: students[2]!.studentId, status: "present" },
+    ])
+  })
+})
+
 describe("saveErrorText", () => {
   it("maps codes and read-only mode to copy", () => {
     const t = en.attendance.roll
@@ -179,6 +448,52 @@ describe("saveErrorText", () => {
     expect(saveErrorText(t, { code: "internal", message: "x" })).toBe(
       t.errors.generic
     )
+  })
+})
+
+describe("undoPayload (MEDIUM 2)", () => {
+  const roster = students.map((s) => ({ studentId: s.studentId }))
+
+  it("null when there is nothing to go back to (undoMarks null)", () => {
+    expect(undoPayload(roster, null, { s1: "present" })).toBeNull()
+  })
+
+  it("falls back to a student's current mark when the saved snapshot has none for them", () => {
+    const [s1, s2, s3] = students
+    const undoMarks: Marks = {
+      [s1!.studentId]: "present",
+      [s2!.studentId]: "absent",
+    }
+    const marks: Marks = {
+      [s1!.studentId]: "late",
+      [s2!.studentId]: "excused",
+      [s3!.studentId]: "half_day",
+    }
+    // s3 has no entry in `undoMarks` (enrolled after that save) — Undo
+    // keeps her CURRENT mark from `marks`, not a fabricated or missing one.
+    expect(undoPayload(roster, undoMarks, marks)).toEqual({
+      [s1!.studentId]: "present",
+      [s2!.studentId]: "absent",
+      [s3!.studentId]: "half_day",
+    })
+  })
+
+  it("no Undo offered when a student has no mark at all — not in the saved snapshot, not marked now", () => {
+    const [s1, s2, s3] = students
+    const undoMarks: Marks = {
+      [s1!.studentId]: "present",
+      [s2!.studentId]: "absent",
+    }
+    // s3 is missing from `undoMarks` AND still unmarked in `marks` — the
+    // component's own `blocked` gate makes this unreachable through the
+    // UI (every visible student must already be marked before any save
+    // can succeed), so it is proven directly against the pure function.
+    const marks: Marks = {
+      [s1!.studentId]: "present",
+      [s2!.studentId]: "absent",
+      [s3!.studentId]: null,
+    }
+    expect(undoPayload(roster, undoMarks, marks)).toBeNull()
   })
 })
 
