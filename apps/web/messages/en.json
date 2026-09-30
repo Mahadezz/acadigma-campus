@@ -963,8 +963,8 @@
       },
       "attendance": {
         "title": "Attendance policy",
-        "description": "Late, half-day, cutoff time and the minimum warning",
-        "keywords": "attendance late half day cutoff minimum present absent eligible exam warning"
+        "description": "Late, half-day, and the minimum-attendance warning",
+        "keywords": "attendance late half day minimum present absent eligible exam warning"
       },
       "academic": {
         "title": "Academic",
@@ -1088,13 +1088,7 @@
       "halfDayCountsPresent": "Half day counts as present",
       "minAttendancePercent": "Minimum attendance % (warning only)",
       "minAttendanceHelp": "Below this, the report card and eligibility screens show a warning. It never blocks an exam by itself.",
-      "belowMinimum": "Below the {min} % minimum — the report card and eligibility screens would show a warning.",
-      "cutoff": "Late after",
-      "mode": "Session mode",
-      "modeDaily": "Daily — one register per day",
-      "modePeriod": "Per period",
-      "blockExamOnShortfall": "Block exam entry below the minimum",
-      "blockWarning": "Turning this on refuses exam entry for a student below the minimum, not just a warning."
+      "belowMinimum": "Below the {min} % minimum — the report card and eligibility screens would show a warning."
     },
     "grading": {
       "title": "Grading",

@@ -9,12 +9,7 @@ import { previewAttendanceEffect } from "@acadigma/domain/attendance"
 import type { AttendancePolicy } from "@acadigma/domain/settings"
 import { Input } from "@acadigma/ui/components/input"
 import { Label } from "@acadigma/ui/components/label"
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@acadigma/ui/components/native-select"
 import { Switch } from "@acadigma/ui/components/switch"
-import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import { formatMonthYear } from "@/lib/format"
 import type { Messages } from "@/lib/i18n"
@@ -31,14 +26,22 @@ const fill = (template: string, values: Record<string, string>) =>
   template.replace(/\{(\w+)\}/g, (_, k: string) => values[k] ?? "")
 
 /**
- * F-OP-07 Part 3 §4 W4 — every attendance-policy field with the live
- * plain-English effect line. Only the sample's raw statuses ever leave the
- * server (fetched once, in `page.tsx`); every toggle after that is
- * recomputed in the browser with the exact same pure function the register
- * and the SQL mirror use (`previewAttendanceEffect`,
- * `packages/domain/src/attendance/policy-preview.ts`) — no round trip per
- * keystroke, and no stored `attendance_records` row is ever touched (§5.8
- * rule 2, stated again on screen below).
+ * F-OP-07 Part 3 §4 W4 — the attendance-policy fields that an actual
+ * consumer reads, with the live plain-English effect line. `cutoff`, `mode`
+ * and `block_exam_on_shortfall` are real columns in `AttendancePolicy`
+ * (Part 1) but have no reader anywhere in the codebase today (no auto-late
+ * marking, no period-mode attendance, no exam-entry check) — showing a
+ * control for them would tell a school its exams are being blocked when
+ * nothing enforces that (lead review of PR #122). Left out of this form
+ * until whichever future Part builds the behaviour they'd control; see
+ * D-212 and spec §11.
+ *
+ * Only the sample's raw statuses ever leave the server (fetched once, in
+ * `page.tsx`); every toggle after that is recomputed in the browser with
+ * the exact same pure function the register and the SQL mirror use
+ * (`previewAttendanceEffect`, `packages/domain/src/attendance/policy-preview.ts`)
+ * — no round trip per keystroke, and no stored `attendance_records` row is
+ * ever touched (§5.8 rule 2, stated again on screen below).
  */
 export function AttendancePolicyForm({
   policy,
@@ -165,17 +168,6 @@ export function AttendancePolicyForm({
             }
           />
         </div>
-        <div className="flex min-h-11 items-center justify-between gap-3">
-          <Label htmlFor={`${id}-block`}>{a.blockExamOnShortfall}</Label>
-          <Switch
-            id={`${id}-block`}
-            checked={form.block_exam_on_shortfall}
-            onCheckedChange={(checked) =>
-              patch({ block_exam_on_shortfall: checked })
-            }
-          />
-        </div>
-
         <div className="space-y-1">
           <Label htmlFor={`${id}-min`}>{a.minAttendancePercent}</Label>
           <Input
@@ -198,39 +190,7 @@ export function AttendancePolicyForm({
           />
           <p className="text-muted-foreground text-xs">{a.minAttendanceHelp}</p>
         </div>
-
-        <div className="space-y-1">
-          <Label htmlFor={`${id}-cutoff`}>{a.cutoff}</Label>
-          <Input
-            id={`${id}-cutoff`}
-            type="time"
-            className="min-h-11 w-32"
-            value={form.cutoff}
-            onChange={(e) => patch({ cutoff: e.target.value })}
-          />
-        </div>
-
-        <div className="space-y-1">
-          <Label htmlFor={`${id}-mode`}>{a.mode}</Label>
-          <NativeSelect
-            id={`${id}-mode`}
-            className="min-h-11"
-            value={form.mode}
-            onChange={(e) =>
-              patch({ mode: e.target.value as AttendancePolicy["mode"] })
-            }
-          >
-            <NativeSelectOption value="daily">{a.modeDaily}</NativeSelectOption>
-            <NativeSelectOption value="period">
-              {a.modePeriod}
-            </NativeSelectOption>
-          </NativeSelect>
-        </div>
       </div>
-
-      {form.block_exam_on_shortfall ? (
-        <InlineAlert tone="error">{a.blockWarning}</InlineAlert>
-      ) : null}
 
       <StickySaveBar
         dirty={dirty}

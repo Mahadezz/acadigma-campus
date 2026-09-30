@@ -963,8 +963,8 @@
       },
       "attendance": {
         "title": "উপস্থিতি নীতি",
-        "description": "দেরি, হাফ-ডে, কাটঅফ সময় ও ন্যূনতম সতর্কতা",
-        "keywords": "উপস্থিতি দেরি হাফ ডে attendance late half day cutoff minimum exam warning"
+        "description": "দেরি, হাফ-ডে ও ন্যূনতম উপস্থিতির সতর্কতা",
+        "keywords": "উপস্থিতি দেরি হাফ ডে attendance late half day minimum exam warning"
       },
       "academic": {
         "title": "একাডেমিক",
@@ -1088,13 +1088,7 @@
       "halfDayCountsPresent": "হাফ ডে উপস্থিত গণ্য",
       "minAttendancePercent": "ন্যূনতম উপস্থিতি % (শুধু সতর্কতা)",
       "minAttendanceHelp": "এর নিচে থাকলে রিপোর্ট কার্ড ও যোগ্যতার পাতায় সতর্কতা দেখাবে। এটি নিজে থেকে পরীক্ষা আটকায় না।",
-      "belowMinimum": "ন্যূনতম {min}%-এর নিচে — রিপোর্ট কার্ড ও যোগ্যতার পাতায় সতর্কতা দেখাবে।",
-      "cutoff": "এর পরে দেরি",
-      "mode": "সেশন মোড",
-      "modeDaily": "দৈনিক — দিনে একবার হাজিরা",
-      "modePeriod": "প্রতি পিরিয়ড",
-      "blockExamOnShortfall": "ন্যূনতমের নিচে পরীক্ষার এন্ট্রি আটকান",
-      "blockWarning": "এটি চালু করলে ন্যূনতমের নিচে থাকা শিক্ষার্থীর পরীক্ষার এন্ট্রি আটকে যাবে, শুধু সতর্কতা নয়।"
+      "belowMinimum": "ন্যূনতম {min}%-এর নিচে — রিপোর্ট কার্ড ও যোগ্যতার পাতায় সতর্কতা দেখাবে।"
     },
     "grading": {
       "title": "গ্রেডিং",
