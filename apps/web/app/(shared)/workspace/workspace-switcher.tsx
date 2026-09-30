@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -25,10 +25,13 @@ import { Separator } from "@acadigma/ui/components/separator"
 import { FormSheet } from "@acadigma/ui/primitives/form-sheet"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
+import { backTarget } from "@/lib/back-route"
 import type { Messages } from "@/lib/i18n"
+import { record } from "@/lib/in-app-history"
 import { purgeDataCaches, runOfflineCheck } from "@/lib/offline/check"
 
 import { switchWorkspace } from "./actions"
+import { ShellBack } from "./shell-back"
 
 /**
  * F-ID-03 §4.2 / §6 "Workspace switcher (top bar chip, every shell)".
@@ -57,11 +60,35 @@ export type WorkspaceSwitcherProps = {
   shellLink?: { href: string; label: string }
 }
 
+/**
+ * D-408: the leading slot is "back, then workspace". This component is the
+ * one leading element every shell already renders, so the shell back
+ * chevron lives here. On a page with a back target the chip steps aside
+ * below `lg` (a phone header has room for one leading control; the chip
+ * is on every top-level page).
+ */
+export function WorkspaceSwitcher(props: WorkspaceSwitcherProps) {
+  const current = props.workspaces.find(
+    (w) => w.workspaceId === props.currentWorkspaceId && w.status !== "removed"
+  )
+  const pathname = usePathname()
+  React.useEffect(() => record(pathname), [pathname])
+  const back = backTarget(pathname)
+  return (
+    <div className="flex min-w-0 items-center gap-1">
+      {back ? <ShellBack target={back} workspace={current} /> : null}
+      <div className={back ? "hidden min-w-0 lg:flex" : "flex min-w-0"}>
+        <WorkspaceChip {...props} />
+      </div>
+    </div>
+  )
+}
+
 function initialOf(name: string): string {
   return name.trim().charAt(0).toUpperCase() || "?"
 }
 
-export function WorkspaceSwitcher({
+function WorkspaceChip({
   workspaces,
   currentWorkspaceId,
   t,

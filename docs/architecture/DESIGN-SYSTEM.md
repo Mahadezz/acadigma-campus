@@ -17,6 +17,90 @@ prototype did, and why most of it is not being kept).
 
 ---
 
+## 0. Reference (v2, D-408): read this before building a screen
+
+The one-page contract. Start from the closest approved screen in
+[`design-reference/`](design-reference/) and these values. Do not start from
+a blank page or from a component library's defaults. Values live in
+`packages/ui/tokens/tokens.css`; this table is their meaning.
+
+### 0.1 Approved screens
+
+| Screen                            | Light                                           | Dark                                           |
+| --------------------------------- | ----------------------------------------------- | ---------------------------------------------- |
+| Dashboard, phone 360×800          | `design-reference/dashboard-light-phone.jpg`    | `design-reference/dashboard-dark-phone.jpg`    |
+| Dashboard, desktop 1280×800       | `design-reference/dashboard-light-desktop.jpg`  | `design-reference/dashboard-dark-desktop.jpg`  |
+| Sub-page with shell back, phone   | `design-reference/appearance-light-phone.jpg`   | `design-reference/appearance-dark-phone.jpg`   |
+| Sub-page with shell back, desktop | `design-reference/appearance-light-desktop.jpg` | `design-reference/appearance-dark-desktop.jpg` |
+| Bottom sheet (More), phone        | `design-reference/sheet-light-phone.jpg`        | `design-reference/sheet-dark-phone.jpg`        |
+
+### 0.2 Colour
+
+| Token                                                             | Light                                      | Dark                                | For                                                                   |
+| ----------------------------------------------------------------- | ------------------------------------------ | ----------------------------------- | --------------------------------------------------------------------- |
+| `--ambient-base` + `--ambient-gradient`                           | `#edf1ef` + green/sky/marigold/teal washes | `#070a0b` + the same hues, deepened | The page. Only `AppShell` paints it. Never cream.                     |
+| `--foreground`                                                    | `#0b0b0b`                                  | `#f4f4f2`                           | Primary text, big numbers.                                            |
+| `--glass-muted-foreground` (as `--muted-foreground` in the shell) | `#4a4a4a`                                  | `#c4c4c4`                           | Secondary text on glass or on the mesh.                               |
+| `--muted-foreground` (outside the shell)                          | `#636363`                                  | `#8e8e8e`                           | Secondary text on paper (auth, onboarding, print).                    |
+| `--glass-bg` / `-panel` / `-overlay`                              | white 72 / 42 / 82 %                       | near-black 72 / 62 / 86 %           | Chrome / resting cards / sheets and dialogs.                          |
+| `--primary` / `--primary-foreground`                              | `#0b0b0b` / `#f4f4f2`                      | `#f4f4f2` / `#0b0b0b`               | The one primary action per screen (a solid ink button).               |
+| `--success` · `--info` · `--warning` · `--danger`                 | green · blue · amber · red                 | lighter versions of each            | Meaning only: status, icon chips (`/15` tint + `-ink` glyph), charts. |
+| `--card` / `--popover` / `--background`                           | `#fbfbfa` / `#fbfbfa` / `#f4f4f2`          | `#121212` / `#121212` / `#0b0b0b`   | Opaque surfaces: glass fallbacks, lists, forms, print.                |
+
+Nothing else carries a hue. No gradient except the ambient mesh.
+
+### 0.3 Type (Inter + Hind Siliguri; 1.125 minor third)
+
+| Token           | Size    | For                                                       |
+| --------------- | ------- | --------------------------------------------------------- |
+| `text-4xl`      | 56px    | The one hero number on a glass card (attendance).         |
+| `text-3xl`      | 36px    | Dashboard page title from `lg`.                           |
+| `text-2xl`      | 28px    | Page title on phone; a card's secondary big value (plan). |
+| `text-lg`       | 18px    | An empty card's headline; sheet titles.                   |
+| `text-base`     | 16px    | Body, card titles, list rows, buttons.                    |
+| `text-sm`       | 13px    | Captions, counts, descriptions.                           |
+| `text-xs`/`2xs` | 12/11px | Timestamps; tab-bar labels.                               |
+
+Weights 400/500/600 only. `tracking-tight` on Latin headings, never on
+Bengali. Numbers are `tabular-nums`. Sentence case everywhere, with no
+uppercase labels and no monospace in UI chrome.
+
+### 0.4 Space and size
+
+A 4px grid: `--space-1…20` = 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80. The
+page gutter is 16px on phone and 24–32px from `sm`. Cards are padded 20px
+with 16–20px gaps. Every target is ≥ 44px; tab-bar tiles are 56px.
+
+### 0.5 Glass recipe
+
+A fill from `--glass-bg*`, `backdrop-filter: blur(24px) saturate(180% | 150%)`,
+a 1px `--glass-border`, an inner 1px top highlight, `--glass-shadow-1` plus
+`--glass-shadow-2`, and radius `--radius-glass` (18px). Use `glass-chrome`,
+`glass-panel` or `glass-overlay`; never hand-roll the recipe. Only chrome, a
+screen's few resting cards and overlays are glass, never one card per list
+row. After touching any glass or mesh token, run
+`node scripts/check-glass-contrast.mjs`. Full rules: §1.8.
+
+### 0.6 Five things this product must never do
+
+1. **A cream or beige page, or a flat grey one.** The page is the ambient mesh.
+2. **Monospace, uppercase or tracked-out eyebrow labels**, or numbered
+   "01 / 02" section markers on content that is not a sequence.
+3. **Pill buttons everywhere, or more than one filled button on a screen.**
+   There is one ink primary; everything else is ghost, outline or a link.
+   Buttons are rounded rectangles (6–16px), not pills.
+4. **A spinner where the content's shape is known.** Use a `Skeleton` in
+   the final layout.
+5. **An untranslated string.** Every piece of copy exists in English and
+   Bengali, from `messages/*.json` or, temporarily, an inline
+   `locale === "bn"` pair.
+
+Also never: purple-to-blue "AI" gradients, italic accent words in
+headlines, a page-level back link (the shell owns back, §3.1), blur on a
+scrolling list, or text below 4.5:1.
+
+---
+
 ## 1. Design direction
 
 ### 1.1 The read
@@ -226,6 +310,93 @@ and syncs across devices, per PRODUCT-DECISIONS 1.10.
 Dark mode is the common case here, not a nicety — a teacher marking attendance
 in a corridor at 7am and an admin working a night shift on fee collection are
 both real. Ship it correct.
+
+**Manual control (D-408).** `/app/settings/appearance` is the one place a
+user picks Light/Dark/System — never the header, never a nav item. It is
+built on `next-themes`'s existing `useTheme()`/`setTheme()`
+(`apps/web/app/providers.tsx`), which already persisted the choice
+per-device (`localStorage`) before this Part gave it a visible control.
+**Correction to the paragraph above:** there is no `user_preferences.theme`
+column today — that line describes a cross-device-synced preference that was
+never built; D-408 did not add one. A synced preference is a real, separate
+follow-up if the owner asks for it; until then "syncs across devices" is
+aspirational, not shipped.
+
+### 1.8 Liquid glass materials (D-408)
+
+Glass is the resting material of the signed-in app, on an **ambient mesh**.
+It is never used for a card per row of a scrolling list: `backdrop-filter`
+on a long list is the case that is expensive on the low-end Android phones
+this product targets (CLAUDE.md §12).
+
+**The mesh** (`ambient-surface` on `AppShell`): four soft radial washes in
+the product's own hues. They are the green of the flag and the register
+ledger, a clear-sky blue, marigold and teal, over a cool off-white
+(`--ambient-base: #edf1ef`, deliberately not cream). Dark uses the same
+hues, deepened, over `#070a0b`. It is painted on `position: fixed`
+pseudo-elements, so it never scrolls or repaints with content, plus a 5–7 %
+greyscale grain. Without it the blur has nothing to show.
+
+**Three tints, one construction** (`packages/ui/tokens/tokens.css`). Each
+is a translucent fill, `backdrop-filter: blur(24px) saturate(…)`, a 1px
+inner top highlight, a hairline edge and a soft layered shadow.
+
+| Utility         | Tint                                          | Used by                                                              |
+| --------------- | --------------------------------------------- | -------------------------------------------------------------------- |
+| `glass-chrome`  | `--glass-bg` (72 %; content scrolls under it) | `TopBar`, floating `BottomNav`, desktop sidebar                      |
+| `glass-panel`   | `--glass-bg-panel` (42 % light / 62 % dark)   | `Card variant="glass"`: the dashboard's cards, Settings → Appearance |
+| `glass-overlay` | `--glass-bg-overlay` (82–86 %)                | `SheetContent`, `DialogContent`, toasts: they sit over a scrim       |
+
+Radius on glass is `--radius-glass` (18px). The D-57/D-68 6px radius and
+hairline ring stay on every non-glass surface: lists, forms, table rows and
+default `Card`s.
+
+**Vibrancy.** Secondary text on glass or on the mesh uses
+`--glass-muted-foreground` (`#4a4a4a` light / `#c4c4c4` dark). It is one
+step stronger than paper's `--muted-foreground`. `ambient-surface` and the
+three glass utilities set it as `--muted-foreground`. The value only ever
+moves toward `--foreground`, so an opaque surface inside the shell only
+gains contrast.
+
+**Contrast is measured, not guessed.** `node scripts/check-glass-contrast.mjs`
+parses tokens.css and finds the worst spot. That is every mesh stop at full
+strength over the base, plus the grain's extreme pixel, run through the
+tint's own `saturate()`, with the tint composited in gamma sRGB. It checks
+`--foreground` and the muted ink against that spot, for each of the three
+tints and for the bare mesh; link, primary, success and danger inks on
+`glass-panel`; and both inks on `glass-chrome` over a solid
+`--primary` block scrolling under it (blur counted as no help), in both
+themes. All 28 pairs pass ≥ 4.5:1; the lowest is light muted text on
+chrome over the black primary button at 4.60:1. CI runs it (`Glass
+contrast` step).
+
+**Fallbacks** (unlayered, section 13 of tokens.css). Where neither
+`backdrop-filter` nor `-webkit-backdrop-filter` is supported (Safari before
+18 needs the prefix), and under `prefers-reduced-transparency: reduce`,
+every tint drops to its opaque D-57 surface (`--background` / `--card` /
+`--popover`) with no blur. Reduced motion is the global section-12 switch.
+
+This **supersedes** D-68's "hairline ring, never a drop shadow" rule for
+glass surfaces only.
+
+### 1.9 UX checklist (owner standard, D-408)
+
+Run this on every screen before and after building it — it is the standing
+review lens, not a one-time pass:
+
+| Law               | Question                                                                          |
+| ----------------- | --------------------------------------------------------------------------------- |
+| **Fitts**         | Is the primary action large, in the thumb zone, and the easiest thing to hit?     |
+| **Hick**          | Are we showing 3–5 choices at a decision point, one marked recommended?           |
+| **Zeigarnik**     | Does unfinished work stay visible (progress, partial state) instead of vanishing? |
+| **Jakob**         | Does it use the pattern the user already knows (sheet, tabs, radio group)?        |
+| **Goal Gradient** | Can the user see the finish line on any flow longer than two steps?               |
+| **Von Restorff**  | Does exactly one thing stand out per screen — everything else quiet?              |
+| **Miller**        | Is information chunked to roughly 5–7 items, related things grouped?              |
+
+A PR that adds or reshapes a screen names, in its description, which laws
+shaped the layout when the choice was not obvious — the same discipline
+`ux-laws`'s own review format asks for.
 
 ---
 
@@ -533,16 +704,34 @@ xl  1280  tables gain optional columns; detail pages gain a right rail
   action bar (attendance, marks).
 - For a **parent**, the workspace switcher is replaced by the **child
   switcher** when they are linked to more than one student.
+- **Back (D-408).** Every page except a shell root, basic home or a nav
+  destination with nothing above it in the URL gets one back control at the
+  far left of the TopBar, where every phone app puts
+  it (Jakob). Below `lg` (phone and tablet) it is a 48px chevron, and the
+  workspace switcher steps aside on that page. From `lg` up it is the
+  chevron plus the parent page's name. With in-app history it calls
+  `router.back()`, so the chevron, the browser and the Android back button
+  agree. With none (a deep link, a new tab, a reload) it is a plain link to
+  the logical parent, so it never dead-ends and never leaves the app. The
+  parent comes from the URL: drop segments until what is left is a nav
+  destination (`IMPLEMENTED_NAV_ROUTES`), a named non-nav page (`PARENT_PAGES`) or the shell root
+  (`apps/web/lib/back-route.ts`). Pages carry no back links of their own
+  (a few still do, see the D-408 test report).
 
-**BottomNav (56px + safe bottom).**
+**BottomNav (D-408: a floating glass bar, 64px, lifted 8px off the safe area).**
+
+- Inset 12px from the screen edges and 18px of radius, so the mesh shows
+  around it. From `md` (tablet) it is a centred 28rem dock rather than a
+  full-width bar.
 
 - 5 items maximum, always 5 slots wide so the labels never reflow between roles.
 - Icon 22px + label at `--text-2xs`, both visible. Icon-only nav fails for a
   workforce with mixed literacy in English UI terms.
 - Target is the **full 56px column height**, not the icon.
-- Active state: the icon fills, the label goes `--weight-semibold`, and a 2px
-  `--primary` bar sits on the **top** edge of the slot (not the bottom — the
-  bottom edge is under the user's thumb and often under the gesture bar).
+- Active state: a raised tile behind the icon and label (white 80 % light /
+  white 12 % dark) and a `--weight-semibold` label. This replaces the
+  top-edge bar (D-408): the floating bar already sits clear of the gesture
+  area.
 - Slot 5 is always **More**, opening a sheet. A badge on More aggregates the
   badges of everything inside it.
 - The nav hides on scroll-down and returns on scroll-up **only** on pure reading

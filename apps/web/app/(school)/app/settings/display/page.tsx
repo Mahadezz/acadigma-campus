@@ -25,11 +25,7 @@ export default async function DisplaySettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <SubPageHeader
-        backLabel={t.settings.back}
-        title={s.title}
-        description={s.description}
-      />
+      <SubPageHeader title={s.title} description={s.description} />
       <DisplaySettingsForm
         textSize={prefs.textSize}
         uiMode={prefs.uiMode}

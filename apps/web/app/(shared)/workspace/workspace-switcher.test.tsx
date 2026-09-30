@@ -9,8 +9,10 @@ vi.mock("./actions", () => ({
 }))
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
+  usePathname: () => mockPathname,
 }))
+let mockPathname = "/app/dashboard"
 
 const mockQueryClientClear = vi.fn()
 vi.mock("@tanstack/react-query", () => ({
@@ -233,5 +235,45 @@ describe("WorkspaceSwitcher", () => {
     expect(
       screen.queryByRole("button", { name: /switch workspace/i })
     ).toBeNull()
+  })
+})
+
+describe("WorkspaceSwitcher — shell back (D-408)", () => {
+  const props = {
+    workspaces: WORKSPACES,
+    currentWorkspaceId: WORKSPACES[0]!.workspaceId,
+    t: T,
+  }
+
+  it("shows no back link on a top-level page", () => {
+    mockPathname = "/app/dashboard"
+    render(<WorkspaceSwitcher {...props} />)
+    expect(screen.queryByRole("link", { name: /back to/i })).toBeNull()
+  })
+
+  it("links a deep page to its logical parent, named for screen readers", async () => {
+    mockPathname = "/app/exams/e1/results"
+    render(<WorkspaceSwitcher {...props} />)
+    // jsdom applies no CSS, so both language spans are in the name here.
+    const back = await screen.findByRole("link", {
+      name: /^Back to Exam(?!s)/,
+    })
+    expect(back.getAttribute("href")).toBe("/app/exams/e1")
+    // The workspace chip is still rendered (hidden below lg by CSS only).
+    expect(
+      screen.getByRole("button", { name: /switch workspace/i })
+    ).toBeTruthy()
+  })
+
+  it("names a nav parent once the nav config has loaded (desktop label)", async () => {
+    mockPathname = "/app/exams/e1"
+    render(<WorkspaceSwitcher {...props} />)
+    const back = await screen.findByRole(
+      "link",
+      { name: /^Back to Exams/ },
+      // A real dynamic import: slower under a full parallel run.
+      { timeout: 10_000 }
+    )
+    expect(back.getAttribute("href")).toBe("/app/exams")
   })
 })

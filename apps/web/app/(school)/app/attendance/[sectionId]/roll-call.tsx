@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 
 import dynamic from "next/dynamic"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-import { ArrowLeftIcon, CheckCheckIcon, Undo2Icon } from "lucide-react"
+import { CheckCheckIcon, Undo2Icon } from "lucide-react"
 
 import type {
   ApiError,
@@ -454,15 +453,6 @@ export function RollCall({
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      {!basic ? (
-        <Button asChild variant="ghost" className="h-11 px-2">
-          <Link href="/app/attendance">
-            <ArrowLeftIcon aria-hidden="true" />
-            {t.back}
-          </Link>
-        </Button>
-      ) : null}
-
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">{dateLabel}</p>
@@ -572,7 +562,7 @@ export function RollCall({
 
       {!readOnly && students.length > 0 ? (
         // Sticky above the phone's bottom nav (56px + safe area), in the thumb zone.
-        <div className="bg-background sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 border-t py-3 lg:bottom-0">
+        <div className="bg-background sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 border-t py-3 lg:bottom-0">
           <div className="space-y-2">
             {/* Review fix (LOW 5): focus target once a save finishes — see
              * the `saveTick` effect above. Always mounted (this block's own

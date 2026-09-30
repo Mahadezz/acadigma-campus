@@ -52,9 +52,10 @@ describe("DashboardView", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Acadigma Demo School" })
     ).toBeTruthy()
-    // D-407: exactly one eyebrow on the whole screen (the page date) —
-    // DESIGN-SYSTEM §8.1's "one per screen at most, and usually none".
-    expect(document.querySelectorAll(".eyebrow")).toHaveLength(1)
+    // D-408: no eyebrow at all — the date is a plain line under the name
+    // (D-407's ceiling of one still holds).
+    expect(document.querySelectorAll(".eyebrow")).toHaveLength(0)
+    expect(screen.getByText("Thursday 25 September")).toBeTruthy()
     expect(screen.getByRole("region", { name: "Today" })).toBeTruthy()
     expect(screen.getByText("14 days left in your trial")).toBeTruthy()
     expect(screen.getByText("3 active")).toBeTruthy()
@@ -144,11 +145,30 @@ describe("DashboardView", () => {
         attendance={{
           rate: "92.5% present so far",
           marked: "3 of 5 classes marked",
+          percent: "92.5%",
+          done: 3,
+          total: 5,
         }}
       />
     )
     expect(screen.getByText("92.5% present so far")).toBeTruthy()
+    expect(screen.getByText("92.5%")).toBeTruthy()
+    expect(
+      screen.getByRole("progressbar", { name: "3 of 5 classes marked" })
+    ).toBeTruthy()
     expect(screen.getByText("3 of 5 classes marked")).toBeTruthy()
     expect(screen.queryByText(en.dashboard.attendance.emptyTitle)).toBeNull()
+  })
+
+  it("offers one primary action, only to a caller who can take attendance", () => {
+    const { rerender } = render(<DashboardView {...BASE} />)
+    expect(screen.queryByRole("link", { name: "Open attendance" })).toBeNull()
+    rerender(<DashboardView {...BASE} attendanceHref="/app/attendance" />)
+    // Rendered twice (phone sticky + desktop header), shown one at a time by CSS.
+    const links = screen.getAllByRole("link", { name: "Open attendance" })
+    expect(links.map((l) => l.getAttribute("href"))).toEqual([
+      "/app/attendance",
+      "/app/attendance",
+    ])
   })
 })

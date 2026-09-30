@@ -39,8 +39,10 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <div
+      // D-408: ambient-surface paints the fixed mesh every glass layer
+      // (TopBar, BottomNav, sidebar, glass cards) sits on.
       className={cn(
-        "bg-background text-foreground min-h-dvh",
+        "ambient-surface text-foreground min-h-dvh",
         // Room for the fixed sidebar on desktop.
         sidebar && "lg:grid lg:grid-cols-[16rem_1fr]",
         className
@@ -48,7 +50,7 @@ export function AppShell({
     >
       {sidebar ? (
         <aside
-          className="bg-sidebar text-sidebar-foreground border-sidebar-border sticky top-0 hidden h-dvh border-r lg:block"
+          className="glass-chrome text-sidebar-foreground sticky top-0 hidden h-dvh border-r lg:block"
           aria-label="Main navigation"
         >
           {sidebar}
@@ -62,8 +64,9 @@ export function AppShell({
           id="main"
           className={cn(
             "flex-1 px-4 py-4 sm:px-6 lg:px-8",
-            // Keep the last row of content clear of the fixed tab bar.
-            bottomNav && "pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-8"
+            // Keep the last row of content clear of the floating tab bar
+            // (4rem tall, lifted 0.5rem off the safe area).
+            bottomNav && "pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8"
           )}
         >
           {children}

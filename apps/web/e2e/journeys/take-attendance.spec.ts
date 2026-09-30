@@ -63,7 +63,9 @@ test("owner marks all present, flips one absent and saves", async ({
   ).toBeVisible()
   expect(Date.now() - started).toBeLessThan(30_000)
 
-  await page.getByRole("link", { name: "Attendance today" }).click()
+  // D-408: the shell's back chevron replaced roll call's own back link.
+  await page.getByRole("link", { name: /^Back/ }).click()
+  await expect(page).toHaveURL(/\/app\/attendance$/)
   await expect(page.getByText(/classes marked/)).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 })

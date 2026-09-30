@@ -2,12 +2,26 @@ import * as React from "react"
 
 import { cn } from "../../lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+/**
+ * `variant="glass"` (D-408) is opt-in, never the default: glass is for a
+ * screen's handful of resting cards (the dashboard's), never a card per row
+ * of a long list — blur on a scrolling list is the performance case the
+ * non-negotiable rules out. A plain Card is unchanged.
+ */
+function Card({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"div"> & { variant?: "default" | "glass" }) {
   return (
     <div
       data-slot="card"
+      data-variant={variant}
       className={cn(
-        "flex flex-col gap-6 rounded-lg bg-card py-6 text-card-foreground shadow-flat",
+        "flex flex-col gap-6 py-6 text-card-foreground",
+        variant === "glass"
+          ? "glass-panel rounded-[var(--radius-glass)] border"
+          : "rounded-lg bg-card shadow-flat",
         className
       )}
       {...props}

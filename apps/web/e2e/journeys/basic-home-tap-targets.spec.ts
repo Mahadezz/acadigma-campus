@@ -66,9 +66,10 @@ test("basic home shows the All classes block for an owner, essentials row, and e
   // profile screen exists to link to — Sign out and the language switch
   // added, replacing the UserMenu this shell no longer renders).
   await expect(page.getByRole("link", { name: /Settings/ })).toBeVisible()
+  // D-408: the language switch moved to Settings → Theme & language.
   await expect(
-    page.getByRole("button", { name: /বাংলা|English/ })
-  ).toBeVisible()
+    page.getByRole("button", { name: /^(বাংলা|English)$/ })
+  ).toHaveCount(0)
   await expect(
     page.getByRole("button", { name: "Switch to full app" })
   ).toBeVisible()

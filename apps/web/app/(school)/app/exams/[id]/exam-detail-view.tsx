@@ -5,8 +5,6 @@ import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-import { ChevronLeftIcon } from "lucide-react"
-
 import type {
   ExamDetail,
   ExamPaper,
@@ -178,13 +176,6 @@ export function ExamDetailView({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <Link
-        href="/app/exams"
-        className="text-muted-foreground inline-flex min-h-11 items-center gap-1 text-sm"
-      >
-        <ChevronLeftIcon className="size-4" aria-hidden /> {t.back}
-      </Link>
-
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-semibold tracking-tight">{exam.name}</h2>

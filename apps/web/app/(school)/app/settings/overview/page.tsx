@@ -65,17 +65,13 @@ export default async function SettingsOverviewPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <SubPageHeader
-        backLabel={t.settings.back}
-        title={s.title}
-        description={s.description}
-      />
+      <SubPageHeader title={s.title} description={s.description} />
       {/* F-ID-10 §2/§6 (D-403): text size is every role's own setting, but
           this page's caller (teacher/staff, no workspace.settings.write) is
           redirected away from the grouped Settings list above, which is the
           list's only other link to /app/settings/display — without this,
           those roles could never reach the text-size screen at all. Plain
-          `<Link>`, matching `SubPageHeader`'s own back-link styling, not a
+          `<Link>` in the muted inline-link style, not a
           `Button`: this route had no client component before, and this is
           one line for one link, not a reason to pull one in. */}
       <Link

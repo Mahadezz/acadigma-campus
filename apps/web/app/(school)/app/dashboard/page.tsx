@@ -21,7 +21,7 @@ import { IMPLEMENTED_NAV_ROUTES } from "@/lib/implemented-routes"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
-import { DashboardView } from "./dashboard-view"
+import { DashboardView, type DashboardViewProps } from "./dashboard-view"
 
 import type { Metadata } from "next"
 
@@ -97,6 +97,7 @@ export default async function DashboardPage() {
         readOnly: s.accessMode === "read_only",
       }}
       attendance={attendanceSlot(d, numberLocale, day, settings)}
+      attendanceHref={canReadAttendance ? "/app/attendance" : undefined}
       membersByRole={s.membersByRole}
       staffRecordCount={s.staffRecordCount}
       checklist={buildSetupChecklist({
@@ -132,14 +133,14 @@ export default async function DashboardPage() {
   )
 }
 
-/** F-AC-03 (D-104): "92.5 %" and "3 of 5 classes marked", or null until a
- * class is marked today. */
+/** F-AC-03 (D-104): "92.5% present so far", "3 of 5 classes marked" and
+ * the numbers behind them, or null until a class is marked today. */
 function attendanceSlot(
   d: Messages["dashboard"],
   numberLocale: string,
   day: Awaited<ReturnType<typeof getAttendanceDay>> | null,
   settings: Awaited<ReturnType<typeof getSchoolSettings>> | null
-): { marked: string; rate: string } | null {
+): DashboardViewProps["attendance"] {
   if (!day?.ok) return null
   const marked = day.data.sections.flatMap((s) =>
     s.session ? [s.session] : []
@@ -152,6 +153,9 @@ function attendanceSlot(
   const n = new Intl.NumberFormat(numberLocale)
   return {
     rate: d.attendance.rate.replace("{rate}", n.format(rate)),
+    percent: `${n.format(rate)}%`,
+    done: marked.length,
+    total: day.data.sections.length,
     marked: d.attendance.marked
       .replace("{done}", n.format(marked.length))
       .replace("{total}", n.format(day.data.sections.length)),

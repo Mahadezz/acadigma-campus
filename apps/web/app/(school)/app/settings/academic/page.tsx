@@ -46,11 +46,7 @@ export default async function AcademicSettingsPage({
   if (!years.ok) {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
-        <SubPageHeader
-          backLabel={t.settings.back}
-          title={a.title}
-          description={a.description}
-        />
+        <SubPageHeader title={a.title} description={a.description} />
         <InlineAlert tone="error">{years.error.message}</InlineAlert>
       </div>
     )
@@ -79,11 +75,7 @@ export default async function AcademicSettingsPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <SubPageHeader
-        backLabel={t.settings.back}
-        title={a.title}
-        description={a.description}
-      />
+      <SubPageHeader title={a.title} description={a.description} />
       <AcademicManager
         years={years.data}
         selectedYearId={selectedYear?.id ?? null}

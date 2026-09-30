@@ -494,7 +494,7 @@ export function MarksEntry({
 
       {!readOnly && sheet.rows.length > 0 ? (
         // Sticky above the phone's bottom nav (56px + safe area), in the thumb zone.
-        <div className="bg-background sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 space-y-2 border-t py-3 lg:bottom-0">
+        <div className="bg-background sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 space-y-2 border-t py-3 lg:bottom-0">
           {notice ? (
             <InlineAlert tone={notice.tone}>{notice.text}</InlineAlert>
           ) : null}

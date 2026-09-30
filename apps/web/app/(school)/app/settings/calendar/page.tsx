@@ -35,11 +35,7 @@ export default async function HolidaysPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <SubPageHeader
-        backLabel={t.settings.back}
-        title={s.title}
-        description={s.description}
-      />
+      <SubPageHeader title={s.title} description={s.description} />
       {holidays.ok ? (
         <HolidaysManager
           holidays={holidays.data}

@@ -101,14 +101,32 @@ export function BottomNav({
   return (
     <nav
       aria-label={label}
+      // D-408: a floating glass bar, inset from the screen edges and lifted
+      // clear of the gesture bar, so the ambient mesh shows around it.
       className={cn(
-        "bg-background/95 border-border supports-[backdrop-filter]:bg-background/85 fixed inset-x-0 bottom-0 z-[var(--z-bottomnav)] border-t backdrop-blur lg:hidden",
+        "glass-chrome fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[var(--z-bottomnav)] rounded-[1.375rem] border md:inset-x-auto md:left-1/2 md:w-[28rem] md:-translate-x-1/2 lg:hidden",
         className
       )}
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="flex h-14 items-stretch justify-around">{children}</ul>
+      <ul className="flex items-stretch justify-around gap-1 p-1">
+        {children}
+      </ul>
     </nav>
+  )
+}
+
+/** One tab's classes. D-408: the active tab is a tinted tile, not the old
+ * top-edge bar — the floating bar already sits clear of the gesture area. */
+function bottomNavItemClass(active: boolean) {
+  return cn(
+    // Full 56px tile height is the target, not just the icon (§3.1).
+    "flex h-14 w-full flex-col items-center justify-center gap-0.5 rounded-[var(--radius-glass)] px-1 py-2 text-[0.6875rem]",
+    "focus-visible:ring-ring outline-none focus-visible:ring-2 focus-visible:ring-inset",
+    // app-polish: tap feedback (<150ms scale) on every pressable.
+    "transition-[color,background-color,transform] duration-150 ease-out active:scale-95",
+    active
+      ? "bg-white/80 text-foreground font-semibold shadow-[0_1px_3px_rgb(0_0_0/0.08)] dark:bg-white/[0.12] dark:shadow-none"
+      : "text-muted-foreground hover:text-foreground font-medium"
   )
 }
 
@@ -143,28 +161,11 @@ export function BottomNavItem({
 
   return (
     <li className="relative flex-1">
-      {/* §3.1: the active bar sits on the TOP edge of the slot — the bottom
-       * edge is under the thumb and often under the gesture bar. */}
-      {active ? (
-        <span
-          aria-hidden="true"
-          className="bg-primary absolute inset-x-0 top-0 h-0.5"
-        />
-      ) : null}
       <Comp
         // `page` is the correct value for a nav item pointing at the current screen.
         aria-current={active ? "page" : undefined}
         {...extraProps}
-        className={cn(
-          // Full 56px column height is the target, not just the icon (§3.1).
-          "flex h-14 w-full flex-col items-center justify-center gap-0.5 px-1 py-2 text-[0.6875rem]",
-          "focus-visible:ring-ring outline-none focus-visible:ring-2 focus-visible:ring-inset",
-          "[transition-duration:var(--duration-fast)] [transition-property:color] [transition-timing-function:var(--ease-standard)]",
-          active
-            ? "text-primary font-semibold"
-            : "text-muted-foreground hover:text-foreground font-medium",
-          className
-        )}
+        className={cn(bottomNavItemClass(active), className)}
         {...props}
       >
         <span className="relative flex size-6 items-center justify-center [&_svg]:size-5">
@@ -310,7 +311,7 @@ export function MoreSheet({
         <div className="flex flex-col gap-4 px-4 pb-4">
           {groups.map((group) => (
             <div key={group.id}>
-              <h3 className="text-muted-foreground mb-1 px-1 text-xs font-semibold tracking-wide uppercase">
+              <h3 className="text-muted-foreground mb-1 px-1 text-xs font-medium">
                 {locale === "bn" ? group.labelBn : group.labelEn}
               </h3>
               <ul className="divide-border divide-y">
@@ -399,6 +400,11 @@ export function BottomNavFromConfig({
   )
   const moreBadgeCount = aggregateMoreBadgeCount(filtered)
   const hasMore = filtered.more.length > 0
+  // D-408: a page reached through More lights the More tile (visual only —
+  // it is a button, so no aria-current).
+  const moreActive = filtered.more.some((group) =>
+    group.items.some((navItem) => isActive(navItem.href))
+  )
 
   return (
     <>
@@ -410,24 +416,11 @@ export function BottomNavFromConfig({
           const badge = navItem.badge?.count
           return (
             <li key={navItem.id} className="relative flex-1">
-              {active ? (
-                <span
-                  aria-hidden="true"
-                  className="bg-primary absolute inset-x-0 top-0 h-0.5"
-                />
-              ) : null}
               {renderLink({
                 href: navItem.href,
                 label,
                 active,
-                className: cn(
-                  "flex h-14 w-full flex-col items-center justify-center gap-0.5 px-1 py-2 text-[0.6875rem]",
-                  "focus-visible:ring-ring outline-none focus-visible:ring-2 focus-visible:ring-inset",
-                  "[transition-duration:var(--duration-fast)] [transition-property:color]",
-                  active
-                    ? "text-primary font-semibold"
-                    : "text-muted-foreground hover:text-foreground font-medium"
-                ),
+                className: bottomNavItemClass(active),
                 children: (
                   <>
                     <span className="relative flex size-6 items-center justify-center [&_svg]:size-5">
@@ -457,6 +450,7 @@ export function BottomNavFromConfig({
             aria-expanded={moreOpen}
             aria-controls={moreSheetId}
             onClick={() => setMoreOpen(true)}
+            className={moreActive ? bottomNavItemClass(true) : undefined}
           />
         ) : null}
       </BottomNav>

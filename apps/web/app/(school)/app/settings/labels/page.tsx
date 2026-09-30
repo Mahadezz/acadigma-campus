@@ -30,11 +30,7 @@ export default async function LabelsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <SubPageHeader
-        backLabel={t.settings.back}
-        title={t.labels.title}
-        description={t.labels.lead}
-      />
+      <SubPageHeader title={t.labels.title} description={t.labels.lead} />
       {result.ok ? (
         <LabelsView t={t.labels} labels={result.data} />
       ) : (
