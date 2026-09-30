@@ -89,6 +89,8 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 
 ## 12. Docs owed
 
+- **Local gate doesn't exist (found 2026-09-30)** ⚪ — CLAUDE.md and the builder brief tell every builder to run `pnpm verify` and `pnpm test:contracts`, but neither script has ever been in `package.json`. On Windows `pnpm verify` falls through to cmd's built-in `VERIFY` and prints "VERIFY is off", so a builder can believe the gate ran. CI still runs the real jobs, so nothing broken reached main. Fix (small chore PR): add a root `verify` script (format:check + typecheck + lint + test + every `scripts/check-*.mjs`) and a `test:contracts` script matching CI's contracts job, or correct CLAUDE.md/HANDBOOK/BUILDER-BRIEF to the real commands.
+
 - BUILD-LOG entries for #93–#111 (one docs-only PR).
 - Prompt-audit findings for CLAUDE.md / playbook / BUILDER-BRIEF (13 findings, delivered in chat 2026-09-29): apply the project hunks (#1–5, #10–13) in a docs PR; **#8 and #9 need the owner** (#8 lanes start independent work while a PR waits; #9 CLAUDE.md still says merges need the owner's approval, but the owner now lets the lead merge).
 - BUILDER-BRIEF: tell builders to load `ux-laws` + `app-polish` for UI work (the playbook already says so).
