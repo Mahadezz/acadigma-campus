@@ -32,6 +32,17 @@ Last updated: 2026-10-01 Dhaka.
 - Website copy (owner not yet answered): Parents page "not available yet" → "Parents app coming soon; invited parents can already see results in Campus".
 - Later: parents./students./ledger. front doors are config (PRODUCTS) once those domains exist.
 
+## 1c. Staff self check-in (F-AC-04 Part 1) · 🟡 ops lane (2026-10-01)
+
+Lead decisions made so the builder doesn't guess (recorded in the spec + DECISION-LOG in its PR; 👤 owner may overturn any):
+- The check-in card shows on the dashboard **and** the basic-mode home (older teachers land there).
+- No check-in on weekends/holidays ("No school today"); those days aren't written as rows.
+- Self check-in records present or late (with minutes late); checking out only records the time; only an admin can mark half-day (later Part).
+- Check-in time comes from the server's Dhaka clock, never the phone's; writes only through a checked database function.
+- Default start 08:00 with 10 minutes' grace, no settings screen yet.
+
+**Timetable** is parked: its spec and DATA-MODEL disagree on the table shape (one `periods` table vs `bell_schedules` + `bell_periods`), and bell times also appear in school settings — needs an Opus spec pass before any builder starts.
+
 ## 2. Design System v2 — ✅ merged #109 (see DONE). Follow-ups (ponytail LATER list) are in the #109 test report.
 
 **Owner's words:** "the UI … looked so cheap and generic use glass morphism liquid glass … a white theme as well so dark and white theme both"; "don't market that it's also in bangla … language selector tucked away in the settings panel"; "no going back options … I want a going back thing … pc and phone and tablets … optimize it for phone".
