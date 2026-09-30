@@ -36,6 +36,10 @@ test.describe("front door", () => {
   }) => {
     await page.goto("/")
     const chooser = page.locator("#get-the-app")
+    // One filled action above the tabs; the store apps are never linked.
+    await expect(
+      chooser.getByRole("link", { name: "Open Campus" })
+    ).toHaveAttribute("href", "/login")
     const tabs = chooser.getByRole("tab")
     await expect(tabs).toHaveCount(5)
 

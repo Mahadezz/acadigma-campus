@@ -409,15 +409,20 @@ follows **acadigma.com**, read from `acadigma-website` (`globals.css`,
 - **Tokens:** none new. The website's ink/paper values are already ours
   (D-57), and a `dark` class on a section flips it to ink exactly as on the
   website (the footer; the "you are here" product card).
-- **Type:** hero `clamp(2.5rem, 7vw, 5rem)`, semibold, `-0.05em`, leading
-  0.95; section titles `clamp(2rem, 5vw, 3.5rem)`, `-0.045em`. The website's
+- **Type:** hero `clamp(3rem, 8.4vw, 7.25rem)`, semibold, `-0.055em`,
+  leading 0.92 (the website's `hero.tsx`); section titles
+  `clamp(2.25rem, 5vw, 4.5rem)`, `-0.045em`, leading 0.98 (`suite.tsx`);
+  sections `py-24 sm:py-32`. The hero eyebrow is the website's mono pill with a
+  pulsing dot (hidden under reduced motion). The website's
   second headline line is `#a3a3a3` (2.3:1); ours is `--muted-foreground`.
 - **Shape:** interactive elements are full pills (`rounded-full`, 52px in the
   hero, 44px tabs); cards are 24px (`rounded-3xl`), including `AuthCard` from
   `sm` up; edges are `shadow-flat` rings, except the hero mark tile, which
   keeps the website's one soft shadow.
-- **Texture:** `(marketing)/front-door/cell-field.tsx`, the website's grid of
-  rounded cells under a radial mask, static (no pointer spotlight).
+- **Texture:** `app/(shared)/brand/cell-field.tsx`, the website's grid of
+  rounded cells under a radial mask plus its darker spotlight field, held at the
+  website's resting spot (no pointer tracking). Inline SVG patterns, not
+  `data:` images.
 - **Motion:** hover and press only. The website's `motion` hero, flip-words
   and parallax footer are not ported (D-68: no `motion` dependency).
 - **Honesty:** only live features are named as live; unbuilt apps say

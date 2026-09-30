@@ -3,10 +3,11 @@ import Link from "next/link"
 import { GridMark, PRODUCT_NAMES } from "@acadigma/ui/primitives/logo"
 
 import { LanguageToggle } from "@/app/(auth)/language-toggle"
+import { WEBSITE_URL } from "@/lib/acadigma-website"
 import type { Locale, Messages } from "@/lib/i18n"
 import { LEGAL_DOCUMENTS } from "@/lib/legal/documents"
 
-import { CONTACT, PRODUCTS, WEBSITE_URL, productUrl } from "./products"
+import { CONTACT, PRODUCTS, productUrl } from "./products"
 
 /**
  * The acadigma.com footer (`acadigma-website/src/components/site/site-footer.tsx`),
@@ -124,7 +125,7 @@ export function SiteFooter({
           and screen readers never meet a 6%-opacity word. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none h-[18vw] overflow-hidden text-center text-[24vw] leading-[0.8] font-semibold tracking-[-0.07em] text-white/[0.06] select-none before:content-['Acadigma']"
+        className="pointer-events-none h-[15vw] overflow-hidden text-center text-[21vw] leading-[0.8] font-semibold tracking-[-0.07em] text-white/[0.06] select-none before:content-['Acadigma']"
       />
     </footer>
   )

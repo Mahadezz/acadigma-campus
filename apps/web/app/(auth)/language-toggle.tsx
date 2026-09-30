@@ -27,12 +27,12 @@ export function LanguageToggle({ current }: { current: Locale }) {
   }
 
   return (
-    <div className="flex justify-center gap-2 text-sm">
+    <div className="flex items-center justify-center gap-1 text-sm">
       <button
         type="button"
         onClick={() => setLocale("bn")}
         aria-pressed={current === "bn"}
-        className={current === "bn" ? "font-semibold" : "text-muted-foreground"}
+        className={`min-h-11 px-2 ${current === "bn" ? "font-semibold" : "text-muted-foreground"}`}
       >
         বাংলা
       </button>
@@ -43,7 +43,7 @@ export function LanguageToggle({ current }: { current: Locale }) {
         type="button"
         onClick={() => setLocale("en")}
         aria-pressed={current === "en"}
-        className={current === "en" ? "font-semibold" : "text-muted-foreground"}
+        className={`min-h-11 px-2 ${current === "en" ? "font-semibold" : "text-muted-foreground"}`}
       >
         English
       </button>

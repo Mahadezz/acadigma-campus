@@ -2,8 +2,8 @@ import Link from "next/link"
 
 import { Logo } from "@acadigma/ui/primitives/logo"
 
-import { CellField } from "@/app/(marketing)/front-door/cell-field"
-import { WEBSITE_URL } from "@/app/(marketing)/front-door/products"
+import { CellField } from "@/app/(shared)/brand/cell-field"
+import { WEBSITE_URL } from "@/lib/acadigma-website"
 import { LEGAL_DOCUMENTS } from "@/lib/legal/documents"
 
 /**

@@ -2226,7 +2226,6 @@
     "signIn": "Sign in",
     "createAccount": "Create account",
     "homeLabel": "{name}, on acadigma.com",
-    "mainNav": "Main",
     "hero": {
       "campus": {
         "titleLine1": "Run your school",
@@ -2236,7 +2235,7 @@
     },
     "getApp": {
       "title": "Get the app",
-      "lead": "Campus installs from your browser on any device, so there is nothing to download from a store yet.",
+      "lead": "Install it straight from your browser. No store needed.",
       "tabsLabel": "Your device",
       "devices": {
         "web": "Web",
@@ -2274,11 +2273,12 @@
       },
       "install": "Install Acadigma",
       "native": {
-        "android": "A Play Store app is coming later.",
-        "iphone": "An App Store app is coming later.",
-        "windows": "A Windows app is coming later.",
-        "mac": "A Mac app is coming later."
-      }
+        "android": "A Play Store app is coming later. Until then, the browser install above is the app.",
+        "iphone": "An App Store app is coming later. Until then, the Home Screen app is the app.",
+        "windows": "A Windows download is coming later. Until then, the browser install is the app.",
+        "mac": "A Mac download is coming later. Until then, the browser install is the app."
+      },
+      "openCampus": "Open Campus"
     },
     "apps": {
       "title": "Acadigma apps",
@@ -2294,7 +2294,7 @@
         },
         "parents": {
           "role": "Parent app",
-          "line": "Coming soon as its own app. Parents a school has invited can already sign in here to see their child's published results and report cards."
+          "line": "Invited parents can already see results in Campus."
         },
         "students": {
           "role": "Student app",
@@ -2308,7 +2308,9 @@
     },
     "account": {
       "title": "One Acadigma account",
-      "body": "Sign in with the same email and password in every Acadigma app. Signing in with a phone number is not available yet."
+      "body": "Sign in with the same email and password in every Acadigma app. Signing in with a phone number is not available yet.",
+      "support": "Need help with your account?",
+      "supportLink": "Contact Acadigma"
     },
     "footer": {
       "tagline": "Smarter schools. Simpler admin. School software built in the USA and Bangladesh.",
@@ -2320,6 +2322,7 @@
       "pricing": "Pricing",
       "faq": "FAQ",
       "origin": "USA and Bangladesh"
-    }
+    },
+    "eyebrow": "Campus is live · Built in the USA & Bangladesh"
   }
 }
