@@ -132,6 +132,9 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 
 ## 13. Owner-only items (record; don't nag)
 
+- 👤 **Try it once on campus.acadigma.com:** sign in on two devices, then Account → Security → sign one out. If it shows "Could not sign out", tell the lead (means production lacks DELETE on auth.sessions — there is no dev branch to test on).
+- ⚠ **There is no Supabase dev branch** (CLAUDE.md says local dev uses one) — local runs and `pnpm db:push` point at production. Lead to raise a decision: create a dev branch (paid Supabase feature) or a second free project for development.
+
 - 👤 **Blocking #134 (staff check-in): regenerated DB types file.** A permission rule blocks deleting packages/db/src/types.generated.ts, and the documented CI download (D-55) refuses to overwrite it. Owner either runs the one-time `!` command given in chat (gh run download 36784518287 → copy → commit → push in .worktrees/ops-staff-checkin) or allows deleting that one generated file via /permissions (recommended — it recurs on every schema PR).
 
 - 👤 **Supabase JWT expiry → 10 minutes** (Authentication → Sessions / JWT settings, 3600 → 600 s). Why: after "sign out this device" (#132), a stolen or lost phone's current access pass keeps working for direct API calls until it expires — today up to an hour, with children's data. The app's own pages already block it; this closes the direct-API gap. Security review (Opus), 2026-10-01.
