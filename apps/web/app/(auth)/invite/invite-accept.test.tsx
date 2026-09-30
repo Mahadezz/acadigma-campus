@@ -69,7 +69,7 @@ describe("InviteAccept — guardian consent (D-114)", () => {
     ).toBeTruthy()
     expect(
       screen.getByText(
-        "I agree that Ideal School uses Acadigma Campus to share Rafi Ahmed's attendance, marks, results and school notices with me in this app."
+        "I agree that Ideal School uses Acadigma Campus to share Rafi Ahmed's school records, such as results and report cards, with me in this app."
       )
     ).toBeTruthy()
   })
@@ -96,6 +96,7 @@ describe("InviteAccept — guardian consent (D-114)", () => {
     expect(acceptInvitation).toHaveBeenCalledWith({
       token: TOKEN,
       consent: true,
+      locale: "en",
     })
   })
 })

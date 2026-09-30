@@ -24,8 +24,7 @@ import {
   previewGuardianInvitation as previewRow,
 } from "@acadigma/db"
 
-import { getMessages } from "@/lib/i18n"
-import { GUARDIAN_CONSENT } from "@/lib/legal/documents"
+import { GUARDIAN_CONSENT } from "@/lib/legal/guardian-consent"
 import { createClient } from "@/lib/supabase/server"
 import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie"
 
@@ -42,17 +41,16 @@ export async function previewInvitation(
 }
 
 /** Accepts with the parent's consent, recorded as the current consent text
- * in the language the page was shown in (D-114), then makes the school the
+ * in the language the screen showed it (D-114), then makes the school the
  * active workspace so `/family` opens it. */
 export async function acceptInvitation(
   input: unknown
 ): Promise<Result<null, ApiError>> {
   const parsed = guardianInviteAcceptInputSchema.safeParse(input)
   if (!parsed.success) return err(BAD_LINK)
-  const { locale } = await getMessages()
   const accepted = await acceptRow(await createClient(), parsed.data.token, {
     version: GUARDIAN_CONSENT.version,
-    locale,
+    locale: parsed.data.locale,
   })
   if (!accepted.ok) return accepted
 

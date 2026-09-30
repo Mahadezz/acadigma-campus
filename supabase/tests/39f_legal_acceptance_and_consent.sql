@@ -1,6 +1,7 @@
 -- =====================================================================
--- pgTAP · legal acceptance and guardian consent
---         (20260930041659_legal_acceptance_and_consent.sql, D-114)
+-- pgTAP · legal acceptance and guardian consent (D-114)
+--         (20260930041659_legal_acceptance_and_consent.sql and its review
+--          fixes, 20260930044136_legal_acceptance_review.sql)
 --
 --   A. Sign-up: the versions in the new user's metadata become Terms and
 --      Privacy rows with the published hash; no metadata, no rows; an
@@ -10,14 +11,15 @@
 --      nothing.
 --   C. Parent link: one consent_records row per invitation and person, with
 --      the hash of the locale shown; an unpublished version or locale
---      creates no link.
+--      creates no link; a link revoked before the consent was recorded
+--      gets none; the database refuses a second row for one invitation.
 --   D. Isolation and escalation: each row is visible to its own person and
 --      the school's owner, never to another school or another person; no
 --      client role reaches app.legal_documents or the hash lookup; the
 --      published texts cannot be edited.
 -- =====================================================================
 begin;
-select plan(30);
+select plan(32);
 
 create schema if not exists tests;
 grant usage on schema tests to authenticated;
@@ -78,14 +80,14 @@ grant all on vals to authenticated;
 -- A. Sign-up
 -- =====================================================================
 select tests.mkuser('39f00000-0000-4000-a000-000000000001', 'lc-signup@test.local',
-  '{"full_name":"Signed Up","legal":{"terms":"2026-09-30-interim","privacy":"2026-09-30-interim"}}');
+  '{"full_name":"Signed Up","legal":{"terms":"2026-09-30-interim","privacy":"2026-09-30-interim-2"}}');
 select tests.mkuser('39f00000-0000-4000-a000-000000000002', 'lc-nolegal@test.local',
   '{"full_name":"No Legal"}');
 
 select results_eq(
   $$select document, version, workspace_id, locale from public.legal_acceptances
      where user_id = '39f00000-0000-4000-a000-000000000001' order by document$$,
-  $$values ('privacy', '2026-09-30-interim', null::uuid, 'en'),
+  $$values ('privacy', '2026-09-30-interim-2', null::uuid, 'en'),
            ('terms',   '2026-09-30-interim', null::uuid, 'en')$$,
   'A1 sign-up with legal metadata records Terms and Privacy, personal (no workspace)');
 
@@ -187,7 +189,7 @@ select tests.logout();
 
 select tests.login('39f00000-0000-4000-a000-000000000004');
 select is(
-  public.accept_guardian_invitation((select v from vals where label = 'tok1'), '2026-09-30', 'bn')
+  public.accept_guardian_invitation((select v from vals where label = 'tok1'), '2026-09-30-2', 'bn')
     ->> 'student_id',
   '39f00000-0000-4000-c000-000000000001', 'C1 the parent accepts the link with consent');
 select tests.logout();
@@ -199,14 +201,14 @@ select results_eq(
      where c.consenting_user_id = '39f00000-0000-4000-a000-000000000004'$$,
   $$select 'student', '39f00000-0000-4000-c000-000000000001'::uuid,
            '39f00000-0000-4000-d000-000000000001'::uuid, 'guardian.portal_access',
-           '2026-09-30', 'web', 'bn', v::uuid from vals where label = 'ws'$$,
+           '2026-09-30-2', 'web', 'bn', v::uuid from vals where label = 'ws'$$,
   'C2 one consent row: the child, the guardian, the purpose, the version and the language shown');
 
 select is(
   (select c.text_sha256 from public.consent_records c
     where c.consenting_user_id = '39f00000-0000-4000-a000-000000000004'),
   (select d.text_sha256 from app.legal_documents d
-    where d.document = 'guardian_consent' and d.version = '2026-09-30' and d.locale = 'bn'),
+    where d.document = 'guardian_consent' and d.version = '2026-09-30-2' and d.locale = 'bn'),
   'C3 the consent row carries the hash of the Bengali text');
 
 select is(
@@ -218,7 +220,7 @@ select is(
 
 select tests.login('39f00000-0000-4000-a000-000000000004');
 select lives_ok(
-  $$select public.accept_guardian_invitation((select v from vals where label = 'tok1'), '2026-09-30', 'bn')$$,
+  $$select public.accept_guardian_invitation((select v from vals where label = 'tok1'), '2026-09-30-2', 'bn')$$,
   'C5 a double tap is not an error');
 select tests.logout();
 
@@ -232,7 +234,7 @@ select throws_ok(
   $$select public.accept_guardian_invitation((select v from vals where label = 'tok2'), '2099-01-01', 'en')$$,
   '22023', 'LEGAL_DOCUMENT_UNKNOWN', 'C7 an unpublished consent version is refused');
 select throws_ok(
-  $$select public.accept_guardian_invitation((select v from vals where label = 'tok2'), '2026-09-30', 'fr')$$,
+  $$select public.accept_guardian_invitation((select v from vals where label = 'tok2'), '2026-09-30-2', 'fr')$$,
   '22023', 'LEGAL_DOCUMENT_UNKNOWN', 'C8 an unpublished language is refused');
 select tests.logout();
 
@@ -241,6 +243,35 @@ select is(
     where user_id = '39f00000-0000-4000-a000-000000000004'
       and student_id = '39f00000-0000-4000-c000-000000000002'),
   0, 'C9 ... and neither refused call linked the second child');
+
+-- The second child's link accepted through the one-argument function (no
+-- consent), then revoked by the owner: accepting again "with consent" is
+-- not an error, but records nothing for a link that is no longer active.
+select tests.login('39f00000-0000-4000-a000-000000000004');
+select public.accept_guardian_invitation((select v from vals where label = 'tok2'));
+select tests.logout();
+select tests.login('39f00000-0000-4000-a000-000000000003');
+select public.revoke_guardian_link((select v::uuid from vals where label = 'ws'),
+  (select gu.id from public.guardian_users gu
+    where gu.user_id = '39f00000-0000-4000-a000-000000000004'
+      and gu.student_id = '39f00000-0000-4000-c000-000000000002'));
+select tests.logout();
+select tests.login('39f00000-0000-4000-a000-000000000004');
+select public.accept_guardian_invitation((select v from vals where label = 'tok2'), '2026-09-30-2', 'en');
+select tests.logout();
+select is(
+  (select count(*)::int from public.consent_records
+    where subject_id = '39f00000-0000-4000-c000-000000000002'),
+  0, 'C10 no consent is recorded for a link that was revoked');
+
+select throws_ok(
+  $$insert into public.consent_records
+      (workspace_id, subject_type, consenting_user_id, purpose, text_version, text_sha256, channel, invitation_id)
+    select c.workspace_id, c.subject_type, c.consenting_user_id, c.purpose, c.text_version,
+           c.text_sha256, c.channel, c.invitation_id
+      from public.consent_records c
+     where c.consenting_user_id = '39f00000-0000-4000-a000-000000000004'$$,
+  '23505', null, 'C11 the database refuses a second consent row for one invitation and person');
 
 -- =====================================================================
 -- D. Isolation and escalation

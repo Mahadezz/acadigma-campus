@@ -59,7 +59,7 @@ We will publish any new version on this page with its date. If the change matter
 
 export const PRIVACY_2026_09_30 = `# Privacy Notice (interim)
 
-Version 2026-09-30-interim.
+Version 2026-09-30-interim-2.
 
 This is an interim notice. It has not yet been reviewed by a lawyer. It describes what Acadigma Campus does today. A reviewed policy will replace it.
 
@@ -74,9 +74,10 @@ This is an interim notice. It has not yet been reviewed by a lawyer. It describe
 ## What we keep
 
 - Your account: your name, your email address, your password (stored only in a form that cannot be read back), and your settings such as language and theme.
-- School records that a school enters: students' names, gender, class and date of birth; guardians' names, relationship and phone numbers; attendance, marks and results; staff records.
+- School records that a school enters: students' names, gender, class and date of birth; guardians' names, relationship and phone numbers; attendance, marks and results; staff records, which can include a staff member's national ID number.
 - A record of changes: who changed which record, and when. Schools use it to answer questions about their records, and we use it to investigate security problems.
 - A scrambled (one-way hashed) form of your internet address, used to slow down people who try to guess passwords.
+- A record of what you agreed to, when, and the exact words.
 
 ## Parents
 
@@ -88,7 +89,7 @@ Our database and application servers are in Mumbai, India (Supabase and Vercel, 
 
 ## Who can see what
 
-- Staff at a school see only that school. Teachers see the classes they teach.
+- Staff at a school see only that school. What each staff member can change depends on their role.
 - Every record is locked to one school by the database itself, not only by the screen.
 - Acadigma staff do not browse school records.
 

@@ -7,15 +7,21 @@ import { DPA_2026_09_30, PRIVACY_2026_09_30, TERMS_2026_09_30 } from "./texts"
  * request can claim an acceptance of words that were never published.
  */
 export const LEGAL_DOCUMENTS = {
-  terms: { version: "2026-09-30-interim", text: TERMS_2026_09_30 },
-  privacy: { version: "2026-09-30-interim", text: PRIVACY_2026_09_30 },
-  dpa: { version: "2026-09-30-interim", text: DPA_2026_09_30 },
+  terms: {
+    title: "Terms of Use",
+    version: "2026-09-30-interim",
+    text: TERMS_2026_09_30,
+  },
+  privacy: {
+    title: "Privacy Notice",
+    version: "2026-09-30-interim-2",
+    text: PRIVACY_2026_09_30,
+  },
+  dpa: {
+    title: "Data Processing Agreement",
+    version: "2026-09-30-interim",
+    text: DPA_2026_09_30,
+  },
 } as const
 
 export type LegalDocumentKey = keyof typeof LEGAL_DOCUMENTS
-
-export function isLegalDocumentKey(key: string): key is LegalDocumentKey {
-  return Object.hasOwn(LEGAL_DOCUMENTS, key)
-}
-
-export { GUARDIAN_CONSENT } from "./guardian-consent"

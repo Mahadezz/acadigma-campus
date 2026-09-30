@@ -85,7 +85,7 @@ import { OnboardingShell } from "@acadigma/ui/primitives/onboarding-shell"
 
 import { OnlineOnly } from "@/app/(shared)/offline/online-only"
 import type { Messages } from "@/lib/i18n"
-import { fillNodes } from "@/lib/legal/legal-text"
+import { fillNodes, LegalLink } from "@/lib/legal/legal-text"
 import type { Locale } from "@/lib/locale"
 
 import {
@@ -1372,16 +1372,7 @@ function Step4({
               className="block leading-snug font-normal"
             >
               {fillNodes(t.dpaLabel, {
-                dpa: (
-                  <a
-                    href="/legal/dpa"
-                    target="_blank"
-                    rel="noopener"
-                    className="underline underline-offset-4"
-                  >
-                    {t.dpaLink}
-                  </a>
-                ),
+                dpa: <LegalLink href="/legal/dpa">{t.dpaLink}</LegalLink>,
               })}
             </Label>
           </div>

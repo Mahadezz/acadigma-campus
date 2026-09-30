@@ -189,7 +189,7 @@ export function InviteAccept({
       return
     }
     startTransition(async () => {
-      const r = await acceptInvitation({ token, consent: true })
+      const r = await acceptInvitation({ token, consent: true, locale })
       if (!r.ok) {
         setAcceptError(r.error)
         return

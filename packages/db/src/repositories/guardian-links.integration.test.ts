@@ -204,7 +204,7 @@ describe.skipIf(!RUN)(
       const accepted = await acceptGuardianInvitation(
         teacher,
         invite.data.token,
-        { version: "2026-09-30", locale: "en" }
+        { version: "2026-09-30-2", locale: "en" }
       )
       expect(accepted).toEqual({
         ok: true,

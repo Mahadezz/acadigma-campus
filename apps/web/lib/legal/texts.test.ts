@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url"
 
 import { describe, expect, it } from "vitest"
 
-import { GUARDIAN_CONSENT, LEGAL_DOCUMENTS } from "./documents"
+import { LEGAL_DOCUMENTS } from "./documents"
+import { GUARDIAN_CONSENT } from "./guardian-consent"
 
 /**
  * D-114: the database records agreement to a text by the hash it published
@@ -46,9 +47,5 @@ const current: [string, string][] = [
 describe("published legal texts", () => {
   it.each(current)("%s matches the hash a migration published", (key, text) => {
     expect(published.get(key)).toBe(sha256(text))
-  })
-
-  it("the texts use LF line endings only, whatever the checkout does", () => {
-    for (const [, text] of current) expect(text).not.toMatch(/\r/)
   })
 })

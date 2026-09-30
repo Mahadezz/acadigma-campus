@@ -39,19 +39,33 @@ export function LegalText({ text }: { text: string }) {
   )
 }
 
-/** `"… {terms} and {privacy}"` with each `{key}` replaced by a node. */
+/** `"… {terms} and {privacy}"` with each `{key}` replaced by a node
+ * (the template is our own message, never user input). */
 export function fillNodes(
   template: string,
   nodes: Record<string, ReactNode>
 ): ReactNode {
-  return template.split(/(\{\w+\})/).map((part, i) => {
-    const key = part.slice(1, -1)
-    return (
-      <Fragment key={i}>
-        {/^\{\w+\}$/.test(part) && Object.hasOwn(nodes, key)
-          ? nodes[key]
-          : part}
-      </Fragment>
-    )
-  })
+  return template
+    .split(/\{(\w+)\}/)
+    .map((part, i) => <Fragment key={i}>{i % 2 ? nodes[part] : part}</Fragment>)
+}
+
+/** A legal document, opened beside the form so what was typed is kept. */
+export function LegalLink({
+  href,
+  children,
+}: {
+  href: string
+  children: ReactNode
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="underline underline-offset-4"
+    >
+      {children}
+    </a>
+  )
 }

@@ -26,7 +26,7 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { PasswordField } from "@acadigma/ui/primitives/password-field"
 
 import type { Messages } from "@/lib/i18n"
-import { fillNodes } from "@/lib/legal/legal-text"
+import { fillNodes, LegalLink } from "@/lib/legal/legal-text"
 import {
   describeSubmitFailure,
   type SubmitFailureTone,
@@ -238,19 +238,5 @@ export function RegisterForm({
         </Button>
       </form>
     </Form>
-  )
-}
-
-/** Opens beside the form, so what was typed is not lost (D-114). */
-function LegalLink({ href, children }: { href: string; children: string }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener"
-      className="underline underline-offset-4"
-    >
-      {children}
-    </a>
   )
 }
