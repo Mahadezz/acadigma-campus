@@ -78,10 +78,7 @@ test("owner edits the attendance policy and sees the effect line and warning bef
       .getByRole("radio", { name: "Absent" })
       .click()
     await page.getByRole("button", { name: "Save" }).click()
-    await expect(
-      page.getByText(/^Save attendance for .+\? \d+ present, \d+ absent\.$/)
-    ).toBeVisible()
-    await page.getByRole("button", { name: "Yes, save" }).click()
+    // Full mode saves directly; the confirm sheet is basic-mode only.
     await expect(
       page.getByText(/^Saved: \d+ present, \d+ absent\.$/)
     ).toBeVisible()
