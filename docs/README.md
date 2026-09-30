@@ -12,6 +12,7 @@ Documents marked **binding** are contracts. Deviating from one requires a decisi
 
 | File                                                   | One line                                                                                                                                             |
 | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`BUILD-UPDATES.md`](product/BUILD-UPDATES.md)         | Plain-English build updates for investors and partners: what was finished and when (Dhaka time), with links to the live app and each pull request.   |
 | [`PRD.md`](product/PRD.md)                             | The product requirements: who it is for, what ships in v1, the non-functional requirements, and what success looks like.                             |
 | [`PRODUCT-DECISIONS.md`](product/PRODUCT-DECISIONS.md) | **Binding.** Every product ambiguity from the prototype resolved — one answer per question, with the reasoning; owner-made decisions marked.         |
 | [`FUTURE.md`](product/FUTURE.md)                       | Explicitly deferred: what is out of scope for v1, what would trigger it, and what v1 already prepares for it.                                        |
