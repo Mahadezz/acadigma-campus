@@ -8,9 +8,21 @@ import en from "@/messages/en.json"
 
 import { AttendancePolicyForm } from "./attendance-policy-form"
 
+// Radix Switch measures itself; jsdom has no ResizeObserver.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+)
+
 const mockUpdateSchoolSettings = vi.fn()
 const mockRefresh = vi.fn()
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mockRefresh }) }))
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: mockRefresh }),
+}))
 vi.mock("../actions", () => ({
   updateSchoolSettings: (...a: unknown[]) => mockUpdateSchoolSettings(...a),
 }))
@@ -65,9 +77,11 @@ describe("AttendancePolicyForm (F-OP-07 Part 3 §4 W4)", () => {
     fireEvent.click(screen.getByLabelText(t.attendance.halfDayCountsPresent))
     fireEvent.click(screen.getByRole("button", { name: t.save }))
 
-    await waitFor(() => expect(mockUpdateSchoolSettings).toHaveBeenCalledWith({
-      attendance_policy: { ...POLICY, half_day_counts_present: false },
-    }))
+    await waitFor(() =>
+      expect(mockUpdateSchoolSettings).toHaveBeenCalledWith({
+        attendance_policy: { ...POLICY, half_day_counts_present: false },
+      })
+    )
     await waitFor(() => expect(screen.queryByText(t.unsaved)).toBeNull())
   })
 

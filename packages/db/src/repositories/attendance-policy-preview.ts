@@ -19,10 +19,10 @@ import {
   type Result,
 } from "@acadigma/contracts"
 
+import { getAttendanceRegister } from "./attendance-register"
+
 import type { AcadigmaSupabaseClient } from "../client"
 import type { WorkspaceContext } from "../workspace-context"
-
-import { getAttendanceRegister } from "./attendance-register"
 
 export type AttendancePolicySample = {
   studentName: string | null

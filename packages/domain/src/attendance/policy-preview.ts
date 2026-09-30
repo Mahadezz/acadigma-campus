@@ -1,6 +1,9 @@
 import type { AttendanceStatus } from "@acadigma/contracts"
 
-import { attendancePercentage, type AttendanceWeightsPolicy } from "./percentage"
+import {
+  attendancePercentage,
+  type AttendanceWeightsPolicy,
+} from "./percentage"
 
 /**
  * F-OP-07 §4 W4 — the settings screen's live effect line: given one real

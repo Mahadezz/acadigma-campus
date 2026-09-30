@@ -47,7 +47,11 @@ export default async function AttendancePolicySettingsPage() {
       ) : (
         <AttendancePolicyForm
           policy={settings.data.attendancePolicy}
-          sample={sample.ok ? sample.data : { studentName: null, month: null, statuses: [] }}
+          sample={
+            sample.ok
+              ? sample.data
+              : { studentName: null, month: null, statuses: [] }
+          }
           t={t.settings}
         />
       )}

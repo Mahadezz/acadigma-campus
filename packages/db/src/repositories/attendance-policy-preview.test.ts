@@ -10,7 +10,8 @@ vi.mock("./attendance-register", () => ({
   getAttendanceRegister: mockGetAttendanceRegister,
 }))
 
-const { getAttendancePolicySample } = await import("./attendance-policy-preview")
+const { getAttendancePolicySample } =
+  await import("./attendance-policy-preview")
 
 const CTX: WorkspaceContext = {
   workspaceId: "11111111-1111-1111-1111-111111111111",
@@ -112,7 +113,9 @@ describe("getAttendancePolicySample", () => {
     })
     mockGetAttendanceRegister.mockResolvedValueOnce({
       ok: true,
-      data: { students: [{ studentNameEn: "Rina", recordedDays: 0, cells: [] }] },
+      data: {
+        students: [{ studentNameEn: "Rina", recordedDays: 0, cells: [] }],
+      },
     })
     const result = await getAttendancePolicySample(client, CTX)
     expect(result).toEqual({

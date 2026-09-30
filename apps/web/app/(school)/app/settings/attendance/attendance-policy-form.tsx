@@ -5,8 +5,8 @@ import { useId, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
 import type { AttendanceStatus } from "@acadigma/contracts"
-import type { AttendancePolicy } from "@acadigma/domain/settings"
 import { previewAttendanceEffect } from "@acadigma/domain/attendance"
+import type { AttendancePolicy } from "@acadigma/domain/settings"
 import { Input } from "@acadigma/ui/components/input"
 import { Label } from "@acadigma/ui/components/label"
 import {
@@ -130,7 +130,9 @@ export function AttendancePolicyForm({
           <Switch
             id={`${id}-late`}
             checked={form.late_counts_present}
-            onCheckedChange={(checked) => patch({ late_counts_present: checked })}
+            onCheckedChange={(checked) =>
+              patch({ late_counts_present: checked })
+            }
           />
         </div>
         <div className="flex min-h-11 items-center justify-between gap-3">
@@ -197,7 +199,9 @@ export function AttendancePolicyForm({
             }
           >
             <NativeSelectOption value="daily">{a.modeDaily}</NativeSelectOption>
-            <NativeSelectOption value="period">{a.modePeriod}</NativeSelectOption>
+            <NativeSelectOption value="period">
+              {a.modePeriod}
+            </NativeSelectOption>
           </NativeSelect>
         </div>
       </div>
