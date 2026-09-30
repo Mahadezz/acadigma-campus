@@ -19,7 +19,10 @@ function pages(dir: string): string[] {
 // D-409: every data route falls under a loading.tsx (its own or an ancestor's,
 // up to its shell), so a slow navigation never shows a blank screen.
 describe("loading.tsx coverage", () => {
-  const routes = SHELLS.flatMap((s) => pages(join(APP, s)))
+  // `/app` itself only redirects, so it never renders a screen to skeleton.
+  const routes = SHELLS.flatMap((s) => pages(join(APP, s))).filter(
+    (p) => !p.endsWith(join("(school)", "app", "page.tsx"))
+  )
 
   it("finds the routes", () => expect(routes.length).toBeGreaterThan(20))
 
