@@ -48,7 +48,11 @@ test("owner adds Class 6 – section with a class teacher, then archives it", as
   await page.getByRole("button", { name: "Add a section to Class 6" }).click()
   const name = `E2E${Date.now() % 1000}`
   await page.getByLabel("Section name").fill(name)
-  await page.getByLabel(/Class teacher/).selectOption({ index: 1 })
+  // A member who is not already a live section's class teacher (one per
+  // year, sections_one_class_teacher_per_year): the seeded teacher,
+  // alphabetically first, already has Class 6 – ক (e2e-fixtures.sql §5), so
+  // `index: 1` picked her and the save was refused (e2e-live, D-76).
+  await page.getByLabel(/Class teacher/).selectOption({ label: "Rezaul Karim" })
   await page.getByLabel(/Room/).fill("204")
   await settled(page)
   await expectNoA11yViolations(page, testInfo)
@@ -63,6 +67,12 @@ test("owner adds Class 6 – section with a class teacher, then archives it", as
   await page.getByRole("tab", { name: "Subjects" }).click()
   await page.getByRole("button", { name: "Use the NCTB starter list" }).click()
   await expect(page.getByText("Bangla 1st Paper")).toBeVisible()
+  // Let the action finish before axe or the next step: scanned mid-way, the
+  // button was coming back from its disabled (half-opacity) state
+  // (e2e-live, D-76).
+  await expect(
+    page.getByRole("button", { name: "Use the NCTB starter list" })
+  ).toBeEnabled()
   await expectNoA11yViolations(page, testInfo)
 })
 
@@ -80,6 +90,12 @@ test("owner gives a section its subjects, each with a teacher", async ({
   await page.getByRole("tab", { name: "Subjects" }).click()
   await page.getByRole("button", { name: "Use the NCTB starter list" }).click()
   await expect(page.getByText("Bangla 1st Paper")).toBeVisible()
+  // Let the action finish before axe or the next step: scanned mid-way, the
+  // button was coming back from its disabled (half-opacity) state
+  // (e2e-live, D-76).
+  await expect(
+    page.getByRole("button", { name: "Use the NCTB starter list" })
+  ).toBeEnabled()
   await page.getByRole("tab", { name: "Classes & sections" }).click()
 
   await page.getByRole("button", { name: "Add a section to Class 6" }).click()

@@ -79,10 +79,12 @@ select is(
   'a key with no history is not blocked');
 
 -- =====================================================================
--- C. throttle_record_failure: 5 failures allowed, the 6th blocks
---    (F-ID-01 §5 "Sign-in failures: 5 per (email, 15 min) -> 15 min block")
---    bucket 'loginByEmail' carries that threshold server-side now (security
---    review N2) -- the call takes only a bucket name and a key, no limits.
+-- C. throttle_record_failure: the 5th failure blocks, so the 6th attempt
+--    is refused before any credential check (F-ID-01 §9 AC6; §5 "Sign-in
+--    failures: 5 per (email, 15 min) -> 15 min block"; D-76 moved the block
+--    from `> limit` to `>= limit`). Bucket 'loginByEmail' carries that
+--    threshold server-side (security review N2) -- the call takes only a
+--    bucket name and a key, no limits.
 -- =====================================================================
 select is(
   (select blocked from public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)')),
@@ -90,15 +92,14 @@ select is(
 
 select public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)'); -- 2
 select public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)'); -- 3
-select public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)'); -- 4
 
 select is(
   (select blocked from public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)')),
-  false, 'failure 5 of 5 does not block yet');
+  false, 'failure 4 of 5 does not block yet');
 
 select is(
   (select blocked from public.throttle_record_failure('loginByEmail', 'login:sha256(a@test.local)')),
-  true, 'failure 6 (past the limit of 5) blocks the key');
+  true, 'failure 5 (reaching the limit of 5) blocks the key, so a 6th attempt is refused (AC6)');
 
 select throws_ok(
   $$select public.throttle_record_failure('not-a-real-bucket', 'login:sha256(nobody@test.local)')$$,

@@ -94,6 +94,12 @@ export default async function SettingsPage() {
           keywords: "theme dark light mode appearance language bangla",
           summary: "Light, dark or follow your device; English or বাংলা",
         },
+    // F-ID-01 Part 7 (D-113): password and account deletion, account-level.
+    {
+      href: "/account/security",
+      ...s.rows.account,
+      summary: s.rows.account.description,
+    },
   ]
 
   return (

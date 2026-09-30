@@ -1,3 +1,4 @@
 export * from "./commonPasswords"
 export * from "./passwordPolicy"
 export * from "./safeReturnTo"
+export * from "./deletionPolicy"

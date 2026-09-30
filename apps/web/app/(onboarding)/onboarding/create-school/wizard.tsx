@@ -44,6 +44,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@acadigma/ui/components/card"
+import { Checkbox } from "@acadigma/ui/components/checkbox"
 import {
   Command,
   CommandEmpty,
@@ -61,6 +62,7 @@ import {
   FormMessage,
 } from "@acadigma/ui/components/form"
 import { Input } from "@acadigma/ui/components/input"
+import { Label } from "@acadigma/ui/components/label"
 import {
   Popover,
   PopoverContent,
@@ -83,6 +85,7 @@ import { OnboardingShell } from "@acadigma/ui/primitives/onboarding-shell"
 
 import { OnlineOnly } from "@/app/(shared)/offline/online-only"
 import type { Messages } from "@/lib/i18n"
+import { fillNodes, LegalLink } from "@/lib/legal/legal-text"
 import type { Locale } from "@/lib/locale"
 
 import {
@@ -1185,6 +1188,9 @@ function Step4({
   const headingRef = useFocusHeadingOnMount(shouldFocusRef)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<ReviewError | null>(null)
+  // D-114: the owner accepts the DPA on the school's behalf before it exists.
+  const [dpaAccepted, setDpaAccepted] = useState(false)
+  const [dpaMissing, setDpaMissing] = useState(false)
   const errorRef = useRef<HTMLDivElement>(null)
 
   // Move focus to a failure so a screen-reader user hears it (§6: "a single
@@ -1203,13 +1209,20 @@ function Step4({
 
   async function handleCreate() {
     setError(null)
+    if (!dpaAccepted) {
+      setDpaMissing(true)
+      return
+    }
     const input = createSchoolWorkspaceInputSchema.safeParse(draft)
     if (!input.success) {
       setError({ message: t.createIncomplete, editStage: 1 })
       return
     }
     setCreating(true)
-    const result = await createSchoolWorkspace(input.data)
+    const result = await createSchoolWorkspace({
+      ...input.data,
+      dpa_accepted: true,
+    })
     if (result.ok) {
       // A full navigation, so /app renders against the new workspace cookie.
       window.location.assign(result.data.landingRoute)
@@ -1340,6 +1353,39 @@ function Step4({
         <p className="text-sm font-medium">
           {t.trialLine.replace("{days}", String(trialDays))}
         </p>
+
+        <div className="space-y-1">
+          <div className="flex min-h-11 items-start gap-3">
+            <Checkbox
+              id="dpa-accept"
+              className="mt-0.5"
+              checked={dpaAccepted}
+              aria-invalid={dpaMissing || undefined}
+              aria-describedby={dpaMissing ? "dpa-required" : undefined}
+              onCheckedChange={(checked) => {
+                setDpaAccepted(checked === true)
+                setDpaMissing(false)
+              }}
+            />
+            <Label
+              htmlFor="dpa-accept"
+              className="block leading-snug font-normal"
+            >
+              {fillNodes(t.dpaLabel, {
+                dpa: <LegalLink href="/legal/dpa">{t.dpaLink}</LegalLink>,
+              })}
+            </Label>
+          </div>
+          {dpaMissing ? (
+            <p
+              id="dpa-required"
+              role="alert"
+              className="text-destructive text-sm"
+            >
+              {t.dpaRequired}
+            </p>
+          ) : null}
+        </div>
 
         {/* F-ID-11 §4.9: creating a school needs the server. */}
         <OnlineOnly>

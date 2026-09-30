@@ -120,10 +120,18 @@ const serwist = new Serwist({
         plugins: [new ExpirationPlugin({ maxEntries: 64 })],
       }),
     },
-    // Everything else — RSC payloads, /api, auth, /platform, cross-origin — is
-    // never cached. An RSC fetch that fails offline makes Next fall back to a
-    // full navigation, which the page cache above answers (F-ID-11 OQ-3).
-    { matcher: () => true, handler: new NetworkOnly() },
+    // Everything else — /api, auth, /platform, cross-origin — is never cached.
+    // RSC payloads (`RSC: 1`) are not even proxied: relayed through this
+    // worker, a streamed RSC response intermittently never completed on the
+    // page side, so a `router.refresh()` hung and blocked Next's router
+    // queue — the language switch then did nothing until the next page load
+    // (e2e-live traces, D-76). Unhandled, they go straight to the network; one
+    // that fails offline still makes Next fall back to a full navigation,
+    // which the page cache above answers (F-ID-11 OQ-3).
+    {
+      matcher: ({ request }) => request.headers.get("RSC") !== "1",
+      handler: new NetworkOnly(),
+    },
   ],
   fallbacks: {
     entries: [

@@ -39,11 +39,12 @@ test.describe("school shell nav — owner", () => {
     const isPhone = testInfo.project.name === "phone"
     const nav = page.getByRole("navigation", { name: "School" })
 
-    // DESIGN-SYSTEM §3.2 school owner/admin: Overview first. Items whose page
-    // does not exist yet (Students, Billing & plan, ...) are hidden by
-    // `onlyImplemented` (D-400), so no link can 404.
+    // DESIGN-SYSTEM §3.2 school owner/admin: Overview first. Students has a
+    // page since F-AC-02 (#54), so it is in IMPLEMENTED_NAV_ROUTES and shows;
+    // items whose page does not exist yet (Billing & plan, ...) stay hidden by
+    // `onlyImplemented` (D-400) — asserted below — so no link can 404.
     await expect(nav.getByRole("link", { name: "Overview" })).toBeVisible()
-    await expect(nav.getByRole("link", { name: "Students" })).toHaveCount(0)
+    await expect(nav.getByRole("link", { name: "Students" })).toBeVisible()
 
     if (isPhone) {
       await page.getByRole("button", { name: /more/i }).click()

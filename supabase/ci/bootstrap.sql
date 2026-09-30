@@ -27,20 +27,27 @@ set search_path = "$user", public, extensions;
 create schema if not exists auth;
 
 -- Minimal shape of the table GoTrue manages. Columns cover what the pgTAP
--- fixtures (`tests.mkuser`) insert and what app.handle_new_user() reads.
+-- fixtures (`tests.mkuser`) insert and what app.handle_new_user() reads, plus
+-- the four token columns supabase/seed/*.sql now sets explicitly (real
+-- GoTrue scans them as non-nullable strings; a NULL 500s every login past
+-- the row's first -- supabase/auth#1940) so that seed data loads here too.
 create table if not exists auth.users (
-  instance_id          uuid,
-  id                   uuid primary key default gen_random_uuid(),
-  aud                  text,
-  role                 text,
-  email                text,
-  encrypted_password   text,
-  email_confirmed_at   timestamptz,
-  phone                text,
-  raw_app_meta_data    jsonb default '{}',
-  raw_user_meta_data   jsonb default '{}',
-  created_at           timestamptz default now(),
-  updated_at           timestamptz
+  instance_id             uuid,
+  id                      uuid primary key default gen_random_uuid(),
+  aud                     text,
+  role                    text,
+  email                   text,
+  encrypted_password      text,
+  email_confirmed_at      timestamptz,
+  phone                   text,
+  raw_app_meta_data       jsonb default '{}',
+  raw_user_meta_data      jsonb default '{}',
+  created_at              timestamptz default now(),
+  updated_at              timestamptz,
+  confirmation_token      text,
+  email_change            text,
+  email_change_token_new  text,
+  recovery_token          text
 );
 
 -- Mirrors the real GoTrue/PostgREST definitions: read the GUCs PostgREST sets

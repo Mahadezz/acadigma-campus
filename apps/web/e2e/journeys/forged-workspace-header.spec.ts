@@ -36,9 +36,11 @@ const FORGED_WORKSPACE_COOKIE = "acadigma_workspace"
 // seeded, and even if one existed, owner@acadigma.test holds no membership
 // row for it (AC1 does not require the id to name a real workspace).
 const FORGED_WORKSPACE_ID = "99999999-9999-4999-8999-999999999999"
-// supabase/seed/seed.sql's fixed id for "Acadigma Model School" — the real
-// workspace the dashboard page prints in a <code> tag when access is legitimate.
-const REAL_SCHOOL_WORKSPACE_ID = "5eed0000-0000-4000-b000-000000000001"
+// supabase/seed/seed.sql's school. The real dashboard (D-400) no longer
+// prints the workspace id the placeholder did, so the school's own name —
+// in the workspace switcher when access is legitimate — is the "their data"
+// marker instead (e2e-live, D-76).
+const REAL_SCHOOL_NAME = "Acadigma Model School"
 
 test.describe("forged x-workspace-id header", () => {
   test("a signed-in user with no membership in the forged workspace gets the 403 page, not its data", async ({
@@ -56,8 +58,12 @@ test.describe("forged x-workspace-id header", () => {
     // workspace's data still is").
     await expect(page).toHaveURL(/\/app(\/.*)?$/)
     await expect(page.getByText(/signed in as owner/i)).toBeVisible()
-    // The real workspace id is legitimately on screen before any forging.
-    await expect(page.getByText(REAL_SCHOOL_WORKSPACE_ID)).toBeVisible()
+    // The real school is legitimately on screen before any forging.
+    await expect(
+      page.getByRole("button", {
+        name: new RegExp(`currently ${REAL_SCHOOL_NAME}`),
+      })
+    ).toBeVisible()
 
     // Overwrite the active-workspace cookie with a workspace this account
     // never joined — the only "forged x-workspace-id" a browser can actually
@@ -75,7 +81,7 @@ test.describe("forged x-workspace-id header", () => {
     // Rendered by app/forbidden.tsx via Next's forbidden() boundary — same
     // URL, HTTP 403, no school data anywhere on the page.
     await expect(page.getByText(/you do not have access/i)).toBeVisible()
-    await expect(page.getByText(REAL_SCHOOL_WORKSPACE_ID)).toHaveCount(0)
+    await expect(page.getByText(REAL_SCHOOL_NAME)).toHaveCount(0)
 
     await expectNoA11yViolations(page, testInfo)
   })

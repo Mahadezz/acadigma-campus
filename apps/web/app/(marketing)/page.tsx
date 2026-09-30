@@ -14,6 +14,8 @@ import {
   CardTitle,
 } from "@acadigma/ui/components/card"
 
+import { LEGAL_DOCUMENTS } from "@/lib/legal/documents"
+
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -85,6 +87,22 @@ export default function HomePage() {
           </Card>
         ))}
       </section>
+
+      {/* D-114: the documents people agree to, one tap from the front door. */}
+      <nav
+        aria-label="Legal"
+        className="text-muted-foreground mt-16 flex flex-wrap justify-center gap-x-6 text-sm"
+      >
+        {Object.entries(LEGAL_DOCUMENTS).map(([key, d]) => (
+          <Link
+            key={key}
+            href={`/legal/${key}`}
+            className="inline-flex min-h-11 items-center"
+          >
+            {d.title}
+          </Link>
+        ))}
+      </nav>
     </main>
   )
 }

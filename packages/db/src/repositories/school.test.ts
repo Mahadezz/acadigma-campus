@@ -78,10 +78,15 @@ describe("createSchoolWorkspace", () => {
       error: null,
     })
 
-    const result = await createSchoolWorkspace(client, input)
+    const result = await createSchoolWorkspace(
+      client,
+      input,
+      "2026-09-30-interim"
+    )
 
     expect(client.rpc).toHaveBeenCalledWith("create_school_workspace", {
       p_input: input,
+      p_dpa_version: "2026-09-30-interim",
     })
     expect(result).toEqual({ ok: true, data: { workspaceId, replayed: false } })
   })
@@ -98,7 +103,8 @@ describe("createSchoolWorkspace", () => {
   ])("maps %s to %s", async (message, code) => {
     const result = await createSchoolWorkspace(
       fakeClient({ data: null, error: { message } }),
-      input
+      input,
+      "2026-09-30-interim"
     )
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe(code)
@@ -112,7 +118,8 @@ describe("createSchoolWorkspace", () => {
   ])("maps a returned {error: %s} to %s", async (code, expected) => {
     const result = await createSchoolWorkspace(
       fakeClient({ data: { error: code }, error: null }),
-      input
+      input,
+      "2026-09-30-interim"
     )
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe(expected)
@@ -121,7 +128,8 @@ describe("createSchoolWorkspace", () => {
   it("flags the eiin field on EIIN_TAKEN so step 1 can show it inline", async () => {
     const result = await createSchoolWorkspace(
       fakeClient({ data: null, error: { message: "EIIN_TAKEN" } }),
-      input
+      input,
+      "2026-09-30-interim"
     )
     if (!result.ok) expect(result.error.fieldErrors).toHaveProperty("eiin")
   })
@@ -129,7 +137,8 @@ describe("createSchoolWorkspace", () => {
   it("treats an unexpected RPC shape as internal", async () => {
     const result = await createSchoolWorkspace(
       fakeClient({ data: { nope: true }, error: null }),
-      input
+      input,
+      "2026-09-30-interim"
     )
     if (!result.ok) expect(result.error.code).toBe("internal")
     expect(result.ok).toBe(false)

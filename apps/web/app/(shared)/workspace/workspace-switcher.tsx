@@ -183,7 +183,9 @@ function WorkspaceChip({
       <Button
         type="button"
         variant="ghost"
-        className="min-w-0 gap-2 px-1"
+        // `shrink` overrides Button's `shrink-0`, so the name truncates when
+        // the top bar is full (D-76).
+        className="min-w-0 shrink gap-2 px-1"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}

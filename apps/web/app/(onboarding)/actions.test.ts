@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest"
 
+import { LEGAL_DOCUMENTS } from "@/lib/legal/documents"
+
 /**
  * PR #34 follow-up (security review, medium) / D-67: `checkEiinAvailability`
  * now runs through the `eiinCheck` throttle bucket before calling
@@ -143,6 +145,8 @@ describe("createSchoolWorkspace", () => {
     idempotency_key: "0b6f4a8e-3c1d-4e2a-9f7b-5d8c6e4a2b10",
   }
   const workspaceId = "5f0c2a1e-8b7d-4c3a-9e6f-1a2b3c4d5e6f"
+  // D-114: the wizard sends the owner's DPA acceptance with the school.
+  const request = { ...input, dpa_accepted: true }
 
   it("creates the school, makes it the active workspace and lands on /app", async () => {
     mockGetUser.mockResolvedValue({ data: { user: FAKE_USER } })
@@ -152,7 +156,7 @@ describe("createSchoolWorkspace", () => {
     })
     mockCookieSet.mockClear()
 
-    const result = await createSchoolWorkspace(input)
+    const result = await createSchoolWorkspace(request)
 
     expect(result).toEqual({
       ok: true,
@@ -160,6 +164,7 @@ describe("createSchoolWorkspace", () => {
     })
     expect(mockRpc).toHaveBeenCalledWith("create_school_workspace", {
       p_input: input,
+      p_dpa_version: LEGAL_DOCUMENTS.dpa.version,
     })
     expect(mockCookieSet).toHaveBeenCalledWith(
       "acadigma_workspace",
@@ -171,7 +176,7 @@ describe("createSchoolWorkspace", () => {
   it("refuses an invalid academic year before reaching the database", async () => {
     mockRpc.mockClear()
     const result = await createSchoolWorkspace({
-      ...input,
+      ...request,
       academic_year: {
         name: "2026",
         starts_on: "2026-12-31",
@@ -184,14 +189,25 @@ describe("createSchoolWorkspace", () => {
   })
 
   it("refuses a payload without grade levels", async () => {
-    const result = await createSchoolWorkspace({ ...input, grade_levels: [] })
+    const result = await createSchoolWorkspace({ ...request, grade_levels: [] })
     expect(result.ok).toBe(false)
+  })
+
+  it("creates nothing without the owner's DPA acceptance", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: FAKE_USER } })
+    mockRpc.mockClear()
+    for (const body of [input, { ...input, dpa_accepted: false }]) {
+      const result = await createSchoolWorkspace(body)
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.error.code).toBe("validation_failed")
+    }
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
   it("requires a signed-in user", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     mockRpc.mockClear()
-    const result = await createSchoolWorkspace(input)
+    const result = await createSchoolWorkspace(request)
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe("unauthenticated")
     expect(mockRpc).not.toHaveBeenCalled()
@@ -201,7 +217,7 @@ describe("createSchoolWorkspace", () => {
     mockGetUser.mockResolvedValue({ data: { user: FAKE_USER } })
     mockRpc.mockResolvedValue({ data: null, error: { message: "EIIN_TAKEN" } })
     mockCookieSet.mockClear()
-    const result = await createSchoolWorkspace(input)
+    const result = await createSchoolWorkspace(request)
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe("conflict")
     expect(mockCookieSet).not.toHaveBeenCalled()

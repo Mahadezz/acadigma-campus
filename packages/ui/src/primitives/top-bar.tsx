@@ -48,7 +48,10 @@ export function TopBar({
     >
       <div className="flex h-14 items-center gap-2 px-4 sm:px-6 lg:px-8">
         {leading ? (
-          <div className="flex shrink-0 items-center">{leading}</div>
+          // min-w-0, not shrink-0: with four action targets (the offline
+          // chip appears beside bell and account) a long workspace name must
+          // truncate, not push the bar past 360 px (D-76).
+          <div className="flex min-w-0 items-center">{leading}</div>
         ) : null}
 
         <div className="min-w-0 flex-1">

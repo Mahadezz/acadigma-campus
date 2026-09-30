@@ -88,6 +88,13 @@ export default async function SettingsOverviewPage() {
       >
         {t.settings.membership.link}
       </Link>
+      {/* D-113: the account page (password, delete account). */}
+      <Link
+        href="/account/security"
+        className="text-muted-foreground hover:text-foreground -ml-2 inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm underline-offset-4 hover:underline"
+      >
+        {t.settings.rows.account.title}
+      </Link>
       <div className="grid gap-4 lg:grid-cols-2">
         {groups.map((group) => (
           <section key={group.title} className="rounded-lg border p-4">

@@ -152,3 +152,38 @@ export const changePasswordOutputSchema = z.object({
   revokedSessions: z.number().int().min(0),
 })
 export type ChangePasswordOutput = z.infer<typeof changePasswordOutputSchema>
+
+// ---------------------------------------------------------------------------
+// Part 7 — account deletion (F-ID-01 §4.9, D-113)
+// ---------------------------------------------------------------------------
+
+/** The word the person types to confirm (§4.9 step 2). Never translated: it
+ * is a deliberate, language-independent act. */
+export const ACCOUNT_DELETION_CONFIRMATION = "DELETE"
+
+export const accountDeletionRequestInputSchema = z.object({
+  confirmation: z.literal(ACCOUNT_DELETION_CONFIRMATION, {
+    errorMap: () => ({ message: "Type DELETE to confirm." }),
+  }),
+  password: z.string().min(1, "Enter your password."),
+})
+export type AccountDeletionRequestInput = z.infer<
+  typeof accountDeletionRequestInputSchema
+>
+
+export const accountDeletionRequestOutputSchema = z.object({
+  /** ISO timestamp; nothing is removed before it. */
+  scheduledPurgeAt: z.string().min(1),
+})
+export type AccountDeletionRequestOutput = z.infer<
+  typeof accountDeletionRequestOutputSchema
+>
+
+/** A school the person is the only active owner of — each one blocks. */
+export const accountDeletionBlockerSchema = z.object({
+  workspaceId: z.string().uuid(),
+  name: z.string(),
+})
+export type AccountDeletionBlocker = z.infer<
+  typeof accountDeletionBlockerSchema
+>

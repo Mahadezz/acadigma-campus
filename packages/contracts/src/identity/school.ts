@@ -214,6 +214,12 @@ export type CreateSchoolWorkspaceInput = z.infer<
   typeof createSchoolWorkspaceInputSchema
 >
 
+/** What the wizard sends the action: the school plus the owner's
+ * acceptance of the DPA on its behalf (D-114). The DPA version is the
+ * server's, never the request's. */
+export const createSchoolWorkspaceRequestSchema =
+  createSchoolWorkspaceInputSchema.extend({ dpa_accepted: z.literal(true) })
+
 export const createSchoolWorkspaceOutputSchema = z.object({
   workspaceId: uuidSchema,
   landingRoute: z.string(),
