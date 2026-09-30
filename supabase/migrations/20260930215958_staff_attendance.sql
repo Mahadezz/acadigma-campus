@@ -138,6 +138,26 @@ $$;
 
 revoke all on function app.staff_member_id(uuid) from public, anon;
 
+-- The whole status rule in one pure function, so its boundaries are tested
+-- directly (a pgTAP run cannot move now()). Late only once the grace has
+-- passed; minutes_late counts from the on-time time, never from the grace.
+create or replace function app.staff_check_in_status(p_local time, p_start time, p_grace integer)
+returns table (status public.staff_attendance_status, minutes_late integer)
+language sql
+immutable
+set search_path = ''
+as $
+  with m as (
+    select greatest(0, floor(extract(epoch from (p_local - p_start)) / 60)::integer) as mins
+  )
+  select case when m.mins > p_grace then 'late'::public.staff_attendance_status
+              else 'present'::public.staff_attendance_status end,
+         case when m.mins > p_grace then m.mins else null end
+    from m
+$;
+
+revoke all on function app.staff_check_in_status(time, time, integer) from public, anon;
+
 create or replace function public.staff_attendance_today(p_workspace_id uuid)
 returns jsonb
 language plpgsql
@@ -180,7 +200,7 @@ declare
   v_policy  jsonb := app.staff_attendance_policy(p_workspace_id);
   v_start   time := (v_policy ->> 'on_time_until')::time;
   v_grace   integer := (v_policy ->> 'grace_minutes')::integer;
-  v_minutes integer;
+  v_st      record;
   v_row     public.staff_attendance;
 begin
   if auth.uid() is null or v_member is null then
@@ -197,18 +217,12 @@ begin
     raise exception 'NOT_SCHOOL_DAY' using errcode = '22023';
   end if;
 
-  -- Minutes after the on-time time; late only once the grace has passed.
-  v_minutes := greatest(0, floor(extract(epoch from (v_local::time - v_start)) / 60)::integer);
+  select * into v_st from app.staff_check_in_status(v_local::time, v_start, v_grace);
 
   insert into public.staff_attendance
     (workspace_id, member_id, date, status, check_in_at, minutes_late, source)
   values
-    (p_workspace_id, v_member, v_today,
-     case when v_minutes > v_grace then 'late'::public.staff_attendance_status
-          else 'present'::public.staff_attendance_status end,
-     v_now,
-     case when v_minutes > v_grace then v_minutes else null end,
-     'self')
+    (p_workspace_id, v_member, v_today, v_st.status, v_now, v_st.minutes_late, 'self')
   on conflict (member_id, date) do nothing
   returning * into v_row;
 
