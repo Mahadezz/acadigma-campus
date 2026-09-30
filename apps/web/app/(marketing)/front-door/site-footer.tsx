@@ -13,16 +13,14 @@ import { CONTACT, PRODUCTS, WEBSITE_URL, productUrl } from "./products"
  * ported without `motion`: a `dark` section on any theme, product, follow and
  * company columns, and the static "Acadigma" wordmark (the website's
  * parallax is dropped, D-410). Adds the legal documents (D-114) and the
- * language switch, which the website does not have. Shared by the front
- * door and the `(auth)` layout so the flow ends the same way everywhere.
+ * language switch, which the website does not have.
  */
 export function SiteFooter({
   t,
   locale,
 }: {
   t: Messages["frontDoor"]
-  /** Shows the language switch; omitted where the page already has one (auth). */
-  locale?: Locale
+  locale: Locale
 }) {
   const f = t.footer
   const columns = [
@@ -119,7 +117,7 @@ export function SiteFooter({
         <span>
           © {new Date().getFullYear()} Acadigma · {f.origin}
         </span>
-        {locale ? <LanguageToggle current={locale} /> : null}
+        <LanguageToggle current={locale} />
       </div>
 
       {/* Decoration, not text: drawn by CSS `content` so contrast checks

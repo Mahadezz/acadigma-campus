@@ -424,7 +424,7 @@ follows **acadigma.com**, read from `acadigma-website` (`globals.css`,
   "Coming soon", native store builds say "coming later", never a date or a
   store badge.
 - **Reuse:** `FrontDoor` takes a product key; `front-door/products.ts` is the
-  one list of apps. `SiteFooter` is shared by `/` and the `(auth)` layout.
+  one list of apps. The `(auth)` layout carries the texture and a one-line footer (acadigma.com and the legal documents), not the full dark footer: that became the largest text on a phone and pushed `/login`'s Lighthouse LCP from 2.6 s to 4.1 s.
 
 Screenshots: `docs/test-reports/assets/2026-09-30-front-door/`.
 

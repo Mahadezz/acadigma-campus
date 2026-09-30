@@ -32,7 +32,7 @@ None. Copy lives in `apps/web/messages/{en,bn}.json` under `frontDoor`. Product 
 5. **One Acadigma account** — the same email sign-in works across the apps; phone-number sign-in is not available yet (no date).
 6. **Footer** — mirrors the website footer (dark, product list, follow links, company links) plus the legal documents (D-114) and the language switch.
 
-The `(auth)` layout (`/login`, `/register`, `/forgot`, `/reset`, `/verify`, `/invite`) gets the same background texture and a matching footer; forms, server actions and validation are untouched.
+The `(auth)` layout (`/login`, `/register`, `/forgot`, `/reset`, `/verify`, `/invite`) gets the same background texture, the Campus lockup and a one-line footer (acadigma.com and the legal documents; the full dark footer made `/login`'s Lighthouse LCP 4.1 s); forms, server actions and validation are untouched.
 
 ## 5. Rules
 
