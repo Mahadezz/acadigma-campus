@@ -4318,7 +4318,16 @@ export type Database = {
       }
     }
     Functions: {
-      accept_guardian_invitation: { Args: { p_token: string }; Returns: Json }
+      accept_guardian_invitation:
+        | { Args: { p_token: string }; Returns: Json }
+        | {
+            Args: {
+              p_consent_version: string
+              p_locale: string
+              p_token: string
+            }
+            Returns: Json
+          }
       account_deletion_blockers: {
         Args: never
         Returns: {
@@ -4357,7 +4366,9 @@ export type Database = {
         Returns: Json
       }
       create_exam: { Args: { p_input: Json }; Returns: string }
-      create_school_workspace: { Args: { p_input: Json }; Returns: Json }
+      create_school_workspace:
+        | { Args: { p_input: Json }; Returns: Json }
+        | { Args: { p_dpa_version: string; p_input: Json }; Returns: Json }
       exam_marks_progress: {
         Args: { p_exam_id: string; p_workspace_id: string }
         Returns: Json

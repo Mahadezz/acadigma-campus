@@ -335,3 +335,9 @@ Built on `feat/identity-account-deletion`. Where this differs from §3, §4.9 an
 - **Grace banner** on every signed-in shell and on `/account/security`: "Your account will be deleted on {date}." + **Keep my account** (`cancelAccountDeletion`, idempotent: nothing pending is a success).
 - **Purge** is SQL, run nightly by pg_cron (`account-purge`, 02:30 Asia/Dhaka): `app.run_account_purges()` → `app.purge_account(id)`, one transaction per account. Removed / anonymised / kept per table: D-113 §2. The profile becomes a tombstone ("Deleted user", `deleted_at`) and `auth.users` is deleted; `profiles.id` no longer references `auth.users`. `audit_events` is never touched. A person who became a sole owner during the grace has the request cancelled, not the school orphaned.
 - **Not built in this Part:** confirmation email and notifications (F-ID-07), platform-staff cancel, OTP re-auth (Part 5), storage-object removal (no personal-workspace uploads exist; the purge refuses with `FILES_PRESENT` if any appear).
+
+### Status / deviations recorded 2026-09-30 (legal acceptance, D-114)
+
+- **Registration records the agreement** it asks for (legal audit item 4). The checkbox now reads "I am 18 or older and I agree to the Terms of Use and the Privacy Notice", both linked to `/legal/terms` and `/legal/privacy` (new tab). `registerWithPassword` sends the server's current versions in the sign-up metadata (`legal: {terms, privacy}`); `app.tg_record_signup_legal` writes the two `legal_acceptances` rows in the transaction that creates the user. The texts are interim and unreviewed (OWNER-QUESTIONS, D-114).
+- **Not built:** a re-acceptance screen when a version changes, and for accounts created before 2026-09-30 (which have no rows); IP hash and user agent on the rows.
+- **Tests:** pgTAP `39f` A1-A5; `register-legal.test.ts`; `legal-documents.spec.ts` (public pages and the links at both viewports).

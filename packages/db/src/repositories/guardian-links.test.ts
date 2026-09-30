@@ -17,6 +17,8 @@ const CTX = {
   role: "owner",
 } as unknown as WorkspaceContext
 
+const CONSENT = { version: "2026-09-30", locale: "bn" } as const
+
 type Reply = { data: unknown; error: unknown }
 
 function fakeClient(
@@ -77,25 +79,34 @@ describe("guardian links (D-108)", () => {
     const expired = await acceptGuardianInvitation(
       fakeClient({ data: null, error: { message: "INVITATION_EXPIRED" } })
         .client,
-      "t"
+      "t",
+      CONSENT
     )
     expect(!expired.ok && expired.error.message).toMatch(/expired/)
     const conflict = await acceptGuardianInvitation(
       fakeClient({ data: null, error: { message: "MEMBERSHIP_CONFLICT" } })
         .client,
-      "t"
+      "t",
+      CONSENT
     )
     expect(!conflict.ok && conflict.error.code).toBe("conflict")
     // The screen translates by this code (D-108 review).
     expect(!conflict.ok && conflict.error.fieldErrors?._root).toEqual([
       "MEMBERSHIP_CONFLICT",
     ])
-    const done = await acceptGuardianInvitation(
-      fakeClient({ data: { workspace_id: "w", student_id: "s" }, error: null })
-        .client,
-      "t"
-    )
+    const accepted = fakeClient({
+      data: { workspace_id: "w", student_id: "s" },
+      error: null,
+    })
+    const done = await acceptGuardianInvitation(accepted.client, "t", CONSENT)
     expect(done).toEqual({ ok: true, data: { workspaceId: "w" } })
+    // D-114: the consent version and language travel with the acceptance.
+    expect(accepted.calls).toEqual([
+      [
+        "accept_guardian_invitation",
+        { p_token: "t", p_consent_version: "2026-09-30", p_locale: "bn" },
+      ],
+    ])
   })
 
   it("parses both preview shapes", async () => {

@@ -12,6 +12,7 @@ import { cookies } from "next/headers"
 import {
   apiError,
   err,
+  guardianInviteAcceptInputSchema,
   guardianInviteTokenInputSchema,
   ok,
   type ApiError,
@@ -23,6 +24,7 @@ import {
   previewGuardianInvitation as previewRow,
 } from "@acadigma/db"
 
+import { GUARDIAN_CONSENT } from "@/lib/legal/guardian-consent"
 import { createClient } from "@/lib/supabase/server"
 import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie"
 
@@ -38,13 +40,18 @@ export async function previewInvitation(
   return previewRow(await createClient(), parsed.data.token)
 }
 
-/** Accepts, then makes the school the active workspace so `/family` opens it. */
+/** Accepts with the parent's consent, recorded as the current consent text
+ * in the language the screen showed it (D-114), then makes the school the
+ * active workspace so `/family` opens it. */
 export async function acceptInvitation(
   input: unknown
 ): Promise<Result<null, ApiError>> {
-  const parsed = guardianInviteTokenInputSchema.safeParse(input)
+  const parsed = guardianInviteAcceptInputSchema.safeParse(input)
   if (!parsed.success) return err(BAD_LINK)
-  const accepted = await acceptRow(await createClient(), parsed.data.token)
+  const accepted = await acceptRow(await createClient(), parsed.data.token, {
+    version: GUARDIAN_CONSENT.version,
+    locale: parsed.data.locale,
+  })
   if (!accepted.ok) return accepted
 
   const cookieStore = await cookies()
