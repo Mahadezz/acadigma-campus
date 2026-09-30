@@ -4479,11 +4479,11 @@ export type Database = {
         Returns: undefined
       }
       request_account_deletion: { Args: never; Returns: string }
-      revoke_my_session: { Args: { p_session_id: string }; Returns: boolean }
       revoke_guardian_link: {
         Args: { p_link_id: string; p_workspace_id: string }
         Returns: undefined
       }
+      revoke_my_session: { Args: { p_session_id: string }; Returns: boolean }
       save_attendance: {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
