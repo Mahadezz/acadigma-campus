@@ -220,6 +220,7 @@ export async function exportWorkspaceData(
 
 const PURGE_CODES = new Set([
   "NOT_DUE",
+  "SUSPENDED",
   "FILES_PRESENT",
   "ACTIVE_SUBSCRIPTION",
   "UNPAID_BALANCE",
@@ -227,9 +228,13 @@ const PURGE_CODES = new Set([
 
 /**
  * The daily purge (service role only — `withServiceRole` in the cron route).
- * Deletes each school whose grace has ended, one transaction per school, so
- * one refusal (FILES_PRESENT) never blocks the others. Ids only, never names.
+ * Deletes the schools whose grace ended longest ago, one transaction per
+ * school, at most PURGE_PER_RUN per run so a run stays inside the route's
+ * maxDuration. A refused school (FILES_PRESENT, SUSPENDED…) fails fast and
+ * does not count, so stuck schools never starve the rest. Ids only.
  */
+export const PURGE_PER_RUN = 5
+
 export async function purgeDueWorkspaces(
   client: AcadigmaSupabaseClient
 ): Promise<
@@ -239,6 +244,7 @@ export async function purgeDueWorkspaces(
     .from("workspaces")
     .select("id")
     .lte("deletion_scheduled_at", new Date().toISOString())
+    .order("deletion_scheduled_at", { ascending: true })
     .limit(50)
   if (error) return err(UNAVAILABLE)
 
@@ -247,6 +253,7 @@ export async function purgeDueWorkspaces(
   for (const { id } of z
     .array(z.object({ id: z.string() }))
     .parse(data ?? [])) {
+    if (purged.length >= PURGE_PER_RUN) break
     const res = await client.rpc("purge_due_workspace", { p_workspace_id: id })
     // Named codes only — a raw Postgres message may carry key values.
     if (res.error)

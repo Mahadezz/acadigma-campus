@@ -203,4 +203,30 @@ describe("danger zone repository (D-211)", () => {
       data: { purged: ["w1"], failed: [{ id: "w2", code: "FILES_PRESENT" }] },
     })
   })
+
+  it("stops after five deletions; refused schools do not use up the run", async () => {
+    const ids = ["s1", "s2", "d1", "d2", "d3", "d4", "d5", "d6"]
+    const { client, calls } = fakeClient(
+      {
+        purge_due_workspace: (args) => {
+          const id = (args as { p_workspace_id: string }).p_workspace_id
+          if (id === "s1") return refuse("SUSPENDED")
+          if (id === "s2") return refuse("duplicate key (id)=(x)")
+          return { data: null, error: null }
+        },
+      },
+      { data: ids.map((id) => ({ id })), error: null }
+    )
+    expect(await purgeDueWorkspaces(client)).toEqual({
+      ok: true,
+      data: {
+        purged: ["d1", "d2", "d3", "d4", "d5"],
+        failed: [
+          { id: "s1", code: "SUSPENDED" },
+          { id: "s2", code: "UNKNOWN" },
+        ],
+      },
+    })
+    expect(calls).toHaveLength(7)
+  })
 })

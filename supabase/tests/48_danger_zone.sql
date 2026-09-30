@@ -17,7 +17,7 @@
 --   * the export reads only through the caller's RLS, owner only, 3 a day.
 -- =====================================================================
 begin;
-select plan(55);
+select plan(56);
 
 create schema if not exists tests;
 
@@ -331,6 +331,14 @@ select tests.login('f2110000-0000-0000-0000-000000000001');
 select throws_ok($$select public.cancel_workspace_deletion((select id from ids where label = 'a'))$$,
   '55000', 'DELETION_DUE', 'a deletion whose date has passed can no longer be cancelled');
 select tests.logout();
+
+-- A suspended school (platform hold) is not deleted: its owner cannot cancel.
+update public.workspaces set status = 'suspended'
+ where id = (select id from ids where label = 'a');
+select throws_ok($$select public.purge_due_workspace((select id from ids where label = 'a'))$$,
+  '55000', 'SUSPENDED', 'the purge refuses a suspended school');
+update public.workspaces set status = 'active'
+ where id = (select id from ids where label = 'a');
 
 -- A school that started paying during its grace is not deleted.
 update public.subscriptions set status = 'active'

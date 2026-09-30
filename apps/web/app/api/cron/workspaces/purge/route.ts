@@ -15,6 +15,11 @@ import { requestLogger } from "@/lib/logger"
  */
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
+// D-211: each school's delete cascades through every tenant table; the
+// repository deletes at most PURGE_PER_RUN (5) schools per run to stay inside
+// this budget (the same 60 s the PDF route already deploys with). The rest
+// wait for the next daily run, oldest first.
+export const maxDuration = 60
 
 export async function GET(request: Request): Promise<Response> {
   const noStore = { "cache-control": "no-store" }
