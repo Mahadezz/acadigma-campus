@@ -34,11 +34,12 @@ test.describe("legal documents", () => {
     page,
   }) => {
     await page.goto("/register")
+    // Scoped to the form: the site footer (D-410) links the same documents.
     await expect(
-      page.getByRole("link", { name: "Terms of Use" })
+      page.getByRole("main").getByRole("link", { name: "Terms of Use" })
     ).toHaveAttribute("href", "/legal/terms")
     await expect(
-      page.getByRole("link", { name: "Privacy Notice" })
+      page.getByRole("main").getByRole("link", { name: "Privacy Notice" })
     ).toHaveAttribute("href", "/legal/privacy")
     await expect(page.getByText(/I am 18 or older/)).toBeVisible()
   })
