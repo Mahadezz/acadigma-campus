@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { AuthRetryableFetchError } from "@supabase/supabase-js"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as AcadigmaDomainAuth from "@acadigma/domain/auth"
@@ -56,6 +57,7 @@ const mockRpc = vi.fn()
 const mockSignInWithPassword = vi.fn()
 const mockMaybeSingleProfile = vi.fn()
 const mockGetUser = vi.fn()
+const mockSignUp = vi.fn()
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
@@ -65,6 +67,7 @@ vi.mock("@/lib/supabase/server", () => ({
       signOut: mockSignOut,
       signInWithPassword: mockSignInWithPassword,
       getUser: mockGetUser,
+      signUp: mockSignUp,
     },
     rpc: mockRpc,
     from: (table: string) => {
@@ -126,7 +129,8 @@ vi.mock("@acadigma/domain/auth", async (importOriginal) => {
   }
 })
 
-const { resetPassword, signInWithPassword, signOut } = await import("./actions")
+const { registerWithPassword, resetPassword, signInWithPassword, signOut } =
+  await import("./actions")
 
 const FAKE_USER = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -295,7 +299,10 @@ describe("signInWithPassword (F-ID-03 review: stale workspace cookie on a shared
   it("does not clear the cookie when the credentials are rejected", async () => {
     mockSignInWithPassword.mockImplementation(async () => {
       mockCallOrder.push("signInWithPassword")
-      return { data: { user: null }, error: { status: 400, code: "invalid" } }
+      return {
+        data: { user: null },
+        error: { status: 400, code: "invalid_credentials" },
+      }
     })
 
     const result = await signInWithPassword({
@@ -307,6 +314,109 @@ describe("signInWithPassword (F-ID-03 review: stale workspace cookie on a shared
     expect(result.ok).toBe(false)
     expect(mockCookieDelete).not.toHaveBeenCalled()
   })
+
+  it("does not spend the brute-force throttle on a GoTrue infra error (D-76 fix)", async () => {
+    mockSignInWithPassword.mockImplementation(async () => {
+      mockCallOrder.push("signInWithPassword")
+      return {
+        data: { user: null },
+        error: { status: 503, code: "unexpected_failure" },
+      }
+    })
+
+    const result = await signInWithPassword({
+      email: "person@test.local",
+      password: "whatever-they-typed",
+      remember: true,
+    })
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.message).toBe("Email or password is incorrect.")
+    }
+    expect(mockThrottleRecordFailure).not.toHaveBeenCalled()
+  })
+
+  it("still spends the brute-force throttle when the account is unconfirmed or banned", async () => {
+    mockSignInWithPassword.mockImplementation(async () => {
+      mockCallOrder.push("signInWithPassword")
+      return {
+        data: { user: null },
+        error: { status: 400, code: "email_not_confirmed" },
+      }
+    })
+
+    const result = await signInWithPassword({
+      email: "person@test.local",
+      password: "whatever-they-typed",
+      remember: true,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(mockThrottleRecordFailure).toHaveBeenCalledWith(
+      expect.anything(),
+      "loginByEmail",
+      expect.anything()
+    )
+    expect(mockThrottleRecordFailure).toHaveBeenCalledWith(
+      expect.anything(),
+      "loginByIp",
+      expect.anything()
+    )
+  })
+
+  it.each([
+    ["no code at all", { status: 400 }],
+    ["a code this app has never seen", { status: 400, code: "brand_new_code" }],
+    ["a 422 without a code", { status: 422 }],
+  ])(
+    "spends the brute-force throttle for a rejection with %s (deny-list, #90 review)",
+    async (_label, error) => {
+      mockSignInWithPassword.mockResolvedValue({ data: { user: null }, error })
+
+      const result = await signInWithPassword({
+        email: "person@test.local",
+        password: "whatever-they-typed",
+        remember: true,
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.message).toBe("Email or password is incorrect.")
+      }
+      expect(mockThrottleRecordFailure).toHaveBeenCalledWith(
+        expect.anything(),
+        "loginByEmail",
+        expect.anything()
+      )
+    }
+  )
+
+  it.each([
+    ["a network failure (status 0)", { status: 0 }],
+    ["a 502", { status: 502, code: "unexpected_failure" }],
+    [
+      "an AuthRetryableFetchError",
+      new AuthRetryableFetchError("fetch failed", 0),
+    ],
+  ])(
+    "does not spend the throttle on %s, and answers identically",
+    async (_label, error) => {
+      mockSignInWithPassword.mockResolvedValue({ data: { user: null }, error })
+
+      const result = await signInWithPassword({
+        email: "person@test.local",
+        password: "whatever-they-typed",
+        remember: true,
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.message).toBe("Email or password is incorrect.")
+      }
+      expect(mockThrottleRecordFailure).not.toHaveBeenCalled()
+    }
+  )
 
   it("still clears the cookie even when the account turns out to be suspended", async () => {
     mockMaybeSingleProfile.mockImplementation(async () => {
@@ -425,5 +535,49 @@ describe("signOut (review fix: shared-device display-preference leak)", () => {
       "NEXT_REDIRECT"
     )
     expect(mockCallOrder).toContain("redirect:/login")
+  })
+})
+
+describe("registerWithPassword (D-76: a taken email refused outright by GoTrue)", () => {
+  const input = {
+    fullName: "Duplicate Owner",
+    email: "owner@acadigma.test",
+    password: "Correct-Horse-Battery-99!",
+    termsAccepted: true,
+  }
+
+  it.each(["user_already_exists", "email_exists"])(
+    "maps GoTrue's 422 %s to the duplicate-account message, not a generic failure",
+    async (code) => {
+      mockSignUp.mockResolvedValue({
+        data: { user: null },
+        error: { status: 422, code },
+      })
+
+      const result = await registerWithPassword(input)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.code).toBe("conflict")
+        expect(result.error.message).toMatch(/already has an account/)
+      }
+      expect(mockThrottleRecordFailure).toHaveBeenCalledWith(
+        expect.anything(),
+        "register",
+        expect.any(String)
+      )
+    }
+  )
+
+  it("still answers a genuine GoTrue failure with the generic retry message", async () => {
+    mockSignUp.mockResolvedValue({
+      data: { user: null },
+      error: { status: 503, code: "unexpected_failure" },
+    })
+
+    const result = await registerWithPassword(input)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe("dependency_unavailable")
   })
 })

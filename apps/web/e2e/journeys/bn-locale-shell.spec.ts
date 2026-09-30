@@ -48,7 +48,14 @@ async function expectNoHorizontalScroll(page: Page): Promise<void> {
 // eliminate a race with a test that happens to run concurrently while this
 // suite is mid-বাংলা — a dedicated account is the real fix, tracked as a
 // follow-up rather than built here).
-test.afterEach(async ({ page }) => {
+test.afterEach(async ({ page }, testInfo) => {
+  // The reset gets its own budget: sharing the test's 30 s, a slow body left
+  // it cut off mid-way and the seeded owner stuck in বাংলা/basic mode for the
+  // rest of the e2e-live shard (D-76).
+  testInfo.setTimeout(testInfo.timeout + 30_000)
+  // Re-render from the server first: a test cut off mid-switch can leave
+  // the stored locale বাংলা behind an English page (D-76).
+  if (/\/app/.test(page.url())) await page.goto("/app/dashboard")
   const bnMenuButton = page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" })
   if (!(await bnMenuButton.isVisible().catch(() => false))) return
   await bnMenuButton.click()
@@ -59,14 +66,22 @@ test.afterEach(async ({ page }) => {
 test("switching to বাংলা from the school shell's user menu translates dashboard, nav and settings", async ({
   page,
 }, testInfo) => {
+  // A locale write + refresh and two axe scans of বাংলা pages: past the
+  // 30 s default on the e2e-live runner (D-76).
+  test.setTimeout(90_000)
   await signIn(page, "owner@acadigma.test")
   await switchToBengali(page)
 
   // Dashboard: the shell chrome and the page itself both read বাংলা.
   await expect(page).toHaveURL(/\/app\/dashboard$/)
-  await expect(page.getByRole("heading", { name: /^আজ/ })).toBeVisible()
+  // The real dashboard (D-400/D-407) replaced the "Workspace resolved"
+  // placeholder this journey was written against; "আজ" alone, since
+  // "আজকের হাজিরা" also starts with it (e2e-live, D-76).
   await expect(
-    page.getByRole("heading", { name: "ওয়ার্কস্পেস নিশ্চিত হয়েছে" })
+    page.getByRole("heading", { name: "আজ", exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "আজকের হাজিরা" })
   ).toBeVisible()
   await expect(page.getByText(/সাইন ইন করা আছে/)).toBeVisible()
   await expectNoHorizontalScroll(page)
@@ -94,6 +109,9 @@ test("switching to বাংলা from the school shell's user menu translates 
 test("switching back to English is reachable from the same menu", async ({
   page,
 }) => {
+  // A locale write + refresh and two axe scans of বাংলা pages: past the
+  // 30 s default on the e2e-live runner (D-76).
+  test.setTimeout(90_000)
   await signIn(page, "owner@acadigma.test")
   await switchToBengali(page)
 
@@ -101,6 +119,6 @@ test("switching back to English is reachable from the same menu", async ({
   await page.getByRole("menuitemradio", { name: "English" }).click()
   await expect(page.locator("html")).toHaveAttribute("lang", "en")
   await expect(
-    page.getByRole("heading", { name: "Workspace resolved" })
+    page.getByRole("heading", { name: "Today's attendance" })
   ).toBeVisible()
 })

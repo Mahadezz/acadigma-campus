@@ -58,8 +58,10 @@ async function publishAnExam(page: Page, name: string) {
     .first()
     .click()
   await expect(page).toHaveURL(/\/app\/marks\/[0-9a-f-]{36}$/)
-  await page.waitForLoadState("networkidle") // typed marks need a hydrated page
+  // Wait on the marks boxes themselves, not a load event ("networkidle"
+  // never came on the e2e-live runner, D-76).
   const inputs = page.getByRole("textbox")
+  await expect(inputs.first()).toBeEditable()
   const count = await inputs.count()
   await inputs.first().click()
   for (let i = 0; i < count; i += 1) {

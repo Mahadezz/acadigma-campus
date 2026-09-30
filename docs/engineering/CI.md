@@ -17,7 +17,7 @@ Implements D-14 and ARCHITECTURE §9. Runners: `ubuntu-latest`. Node 24, pnpm 10
 
 Concurrency: `group: ${{ github.workflow }}-${{ github.ref }}`, `cancel-in-progress: true` on PRs and `false` on `main`. A superseded PR run is wasted money; a cancelled `main` run is a half-applied release.
 
-Draft PRs run every job except `e2e` and `lighthouse` — the expensive ones start when the PR is marked ready. That keeps the "push on the first commit" habit (HANDBOOK §2) cheap.
+Draft PRs run every job except `e2e`, `e2e-live` (D-76) and `lighthouse` — the expensive ones start when the PR is marked ready. That keeps the "push on the first commit" habit (HANDBOOK §2) cheap.
 
 **Job skipping (D-70) — fails closed by design.** A first job, `changes`, diffs the PR against its base (`git diff --no-renames --name-only <base>...HEAD`, no third-party action) and outputs three booleans, each **defaulting to the side that runs more, not less**:
 
@@ -31,7 +31,7 @@ Everything downstream reads these outputs instead of recomputing the diff, and e
 
 - `lint`, `typecheck`, `unit`, `contracts`, `build`, `security`, and `db` run unless the relevant output is the literal string `'false'`.
 - `db-integration` (D-73) runs unless `dbIntegration` is the literal string `'false'` — on drafts too, same as `db`/`unit`/`build`.
-- `e2e`, `lighthouse` run on `pull_request` (not draft) and on `merge_group` — never on `push` to `main`, since they already ran on the PR that merged — and only when `app` or `db` is not `'false'`.
+- `e2e`, `e2e-live` (D-76), `lighthouse` run on `pull_request` (not draft) and on `merge_group` — never on `push` to `main`, since they already ran on the PR that merged — and only when `app` or `db` is not `'false'`.
 - Every one of the jobs above starts its `if` with **`!cancelled()`**. Without a status-check function in the expression, GitHub silently ANDs an implicit `success()` across every job named in `needs` — so even an `if` that explicitly reads `needs.changes.outputs.db != 'false'` would still auto-skip the moment `changes` (or, for `e2e`/`lighthouse`, `db`) reports anything other than `'success'`, including a legitimate `'skipped'` (actions/runner#491). `!cancelled()` removes that implicit gate, so the written condition — not GitHub's default — decides. `e2e` and `lighthouse` still explicitly require `needs.build.result == 'success'`, and `e2e` additionally requires `needs.db.result` to be `'success'` **or** `'skipped'` (never `'failure'`).
 - `changeset`, `docs-sync`, `report` and `guard` are unaffected — they either run unconditionally on every PR/push or already do their own contextual pass/fail (`changeset`/`docs-sync` pass automatically for a docs-only diff; see §2.10-2.11).
 
@@ -114,6 +114,24 @@ Skipped only when the `changes` job's `dbIntegration` output is `'false'` (§1) 
 **Runtime and required-check status:** 1m44s on this job's introducing PR's first run (well under the ~8-minute target) — before the `[db.seed]` fix above, which adds one more `psql`-equivalent SQL file to the same `supabase start` step and should not move this meaningfully. Only added to §3's required list once a few more runs confirm it stays reliably fast; until then it is a real gate (a red run still fails the PR) but not yet a branch-protection-required check, so a `db-integration` outage cannot itself block every merge before its stability is proven.
 
 **Not yet done (tracked at D-73, resolves OQ-27):** the skip-gated Playwright journeys (`E2E_LIVE_SUPABASE` + a seeded owner) still don't run anywhere in CI. Doing that against this same local stack needs three more things this PR didn't build: (a) a second `next build`/`next start` pointed at the local stack's `API_URL`/`ANON_KEY` instead of the production `NEXT_PUBLIC_SUPABASE_*` values baked into the `build` job's artifact, (b) a seeded owner account plus the minimal fixtures (a school, a section, a class-teacher assignment, …) each currently-skipped journey expects, and (c) running `pnpm test:e2e` scoped to those specs with `E2E_LIVE_SUPABASE=1` and `E2E_OWNER_EMAIL`/`E2E_OWNER_PASSWORD` set to the account from (b). None of that is wired up here — this job only proves the repository layer resolves real PostgREST correctly, not the UI on top of it.
+
+**Update (D-76):** (a)-(c) above are now the `e2e-live` job, immediately below.
+
+### `e2e-live` → **`CI / e2e-live`** (D-76, resolves OQ-27)
+
+Closes the gap `db-integration` left open, immediately above: that job proves the repository layer resolves real PostgREST correctly, but not the UI on top of it, and the `e2e` job (§2.9) builds against the production `NEXT_PUBLIC_SUPABASE_*` values (this workflow's top-level `env:`) with every seeded-account journey skipping itself (`E2E_LIVE_SUPABASE` unset) — 106 of ~126 Playwright tests never actually ran in CI before this job existed.
+
+Skipped only when the `changes` job's `app`/`db` outputs are both `'false'` (same rule as `e2e`/`lighthouse`, §1); not on `push` to `main`; skipped on draft PRs (the expensive jobs start when the PR is marked ready, §1).
+
+1. `supabase/setup-cli` (same pinned version as `db`/`db-integration`) then `supabase start` — a fresh local stack, migrations and **both** `supabase/seed/*.sql` files applied (`config.toml`'s `[db.seed] sql_paths = ["./seed/seed.sql", "./seed/e2e-fixtures.sql"]`).
+2. `supabase status -o env` supplies this job's own `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (overriding the workflow's production values, this job only, via `$GITHUB_ENV`), `SUPABASE_SERVICE_ROLE_KEY`, `E2E_MAILPIT_URL`, `E2E_LIVE_SUPABASE=1`, and the seeded accounts' credentials (`E2E_OWNER_*`/`E2E_TEACHER_*` from `seed.sql`; `E2E_TEST_USER_*`/`E2E_ONBOARDING_TEST_*`/`E2E_PARENT_*` from `e2e-fixtures.sql`). None of these are secrets: fixed, well-known local-CLI demo keys and seeded-fixture passwords for an ephemeral, network-isolated stack this job tears down with the runner.
+3. A **second, separate** `next build` (`pnpm --filter @acadigma/web build`) — Next.js inlines `NEXT_PUBLIC_*` at build time, so the `build` job's artifact (built against the production project) cannot be reused here.
+4. `pnpm test:e2e` (`PLAYWRIGHT_PORT=3110`, `apps/web/playwright.config.ts`'s own `webServer` starts `next start` and waits for `/api/health`) — every spec file, both the `phone` and `desktop` projects, with axe. Every journey that used to skip on `E2E_LIVE_SUPABASE` now runs for real.
+5. `playwright-report-live` (HTML report + screenshots/videos/traces on failure) uploaded as an artifact, same as `e2e`'s own `playwright-report`.
+
+`supabase/seed/e2e-fixtures.sql` (runs after `seed.sql`, since it reads the Model School/owner/teacher ids `seed.sql` just created) adds: the current academic year and Class 6 grade level (the Model School was inserted directly rather than through `create_school_workspace`, so it had neither); the NCTB starter subject catalogue; the Bangladesh GPA-5 grade scale and its bands, through the real `public.seed_bd_grade_scale` RPC (pre-seeded so `compute-results.spec.ts`/`publish-results.spec.ts` never race `grading-settings.spec.ts`'s own "Use the Bangladesh default" click across parallel workers); Class 6 – ক's 40 students (the same body as the pre-existing `demo-class-6-ka.sql` manual runbook — inlined rather than `\i`'d, since the Supabase CLI applies `[db.seed] sql_paths` as batched SQL, not through `psql`, so a `\i`/`\ir` meta-command in that list fails outright); that section's class teacher (`teacher@acadigma.test`); and three more `auth.users` rows through the same real-insert pattern `seed.sql` already uses (D-76: `E2E_TEST_USER_*`/`E2E_ONBOARDING_TEST_*` — two separate membership-less accounts, not one shared between `create-school-wizard.spec.ts` and the onboarding chooser test, which raced each other's assumptions once both actually ran — and `E2E_PARENT_*`, which must NOT already be a member of the school, unlike the pre-existing seeded `parent@acadigma.test`).
+
+**Not made a required check by this PR** — the lead decides that once a few runs confirm it stays reliably fast, same as `db-integration` above.
 
 ### 2.4 `unit` → **`CI / unit`**
 
@@ -213,6 +231,8 @@ CI / docs-sync
 `CI / changes` (D-70) is required precisely because everything else's skip decision depends on it: every downstream job's `if` is written to run rather than skip when `changes` itself errors or is cancelled (§1 — fail closed), but a _required_ `CI / changes` still means a broken `changes` job blocks the merge outright instead of merely costing everyone a full, un-skipped run.
 
 `CI / db-integration` (D-73) is **not yet in this list.** It is a real gate today — a red run fails the PR like any other job — but is deliberately kept out of branch protection until a run of runs confirms it stays reliably fast (target: well under the §8 12-minute PR budget on its own). Add it here once that holds.
+
+`CI / e2e-live` (D-76) is **not yet in this list**, for the same reason and by the same deliberate choice — the lead decides once its own run history confirms it stays reliably fast.
 
 Additional branch protection settings on `main`:
 
