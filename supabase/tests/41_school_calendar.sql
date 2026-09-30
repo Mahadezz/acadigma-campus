@@ -126,8 +126,8 @@ select throws_ok(
 
 select tests.login('41000000-0000-4000-a000-000000000005');
 select throws_ok(
-  $insert into public.working_day_overrides (workspace_id, date, is_working, reason)
-    values ('41000000-0000-4000-b000-00000000000a', '2026-04-10', true, 'make-up')$,
+  $$insert into public.working_day_overrides (workspace_id, date, is_working, reason)
+    values ('41000000-0000-4000-b000-00000000000a', '2026-04-10', true, 'make-up')$$,
   '42501', 'new row violates row-level security policy for table "working_day_overrides"',
   'a staff member cannot create a working-day override');
 
@@ -148,12 +148,12 @@ select throws_ok(
   '23514', 'new row for relation "working_day_overrides" violates check constraint "working_day_overrides_reason_check"',
   'an override without a reason is refused (AC13)');
 select throws_ok(
-  $insert into public.working_day_overrides (workspace_id, date, is_working, reason)
-    values ('41000000-0000-4000-b000-00000000000b', '2026-04-10', true, 'cross-school')$,
+  $$insert into public.working_day_overrides (workspace_id, date, is_working, reason)
+    values ('41000000-0000-4000-b000-00000000000b', '2026-04-10', true, 'cross-school')$$,
   '42501', 'new row violates row-level security policy for table "working_day_overrides"',
   'an admin of School A cannot create an override in School B');
 select throws_ok(
-  $update public.holidays set workspace_id = '41000000-0000-4000-b000-00000000000b'
+  $$update public.holidays set workspace_id = '41000000-0000-4000-b000-00000000000b'
      where id = '41000000-0000-4000-c000-000000000001'$$,
   '42501', 'workspace_id is immutable',
   'a holiday cannot move to another workspace');
