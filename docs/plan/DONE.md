@@ -6,6 +6,8 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 ## 2026-09-30
 
+- **#119 merged** (9927a0f): delete your own account — type DELETE + password (password sign-in within 5 min enforced in the database), all sessions end, "Keep my account" banner for 30 days, blocked while sole owner of a school (links to transfer), nightly purge anonymises to "Deleted user" and keeps school records. 2 Opus security rounds; migrations live. Owner request 2026-09-29 done (with #117).
+
 - **#117 merged** (43ddf15): Settings → Danger zone, owner only — export (CSV zip), archive/restore (12 months), delete with 30-day grace + banner + cancel, nightly purge (≤5 schools/run, oldest first, refuses suspended schools, unpaid balances, files). 2 Opus security reviews + DB review; migrations live.
 - **acadigma-website #2 merged**: design audit (Apple principles) — top issue: coming-soon pages and films still present unbuilt features as working → fixes in progress.
 - threeui (MengTo) scanned: 100/100 by the skill scanner but false alarms (it's a web app, not a skill: 119 'code outside scanner coverage', CLI refuses to overwrite without --force). Verdict CAUTION — never install as a skill; copy single components by hand if wanted for the website.

@@ -46,7 +46,7 @@ Last updated: 2026-09-29 ~23:10 Dhaka.
 
 ## 4. (moved to DONE — #115 merged 2026-09-29)
 
-## 5. Account deletion — F-ID-01 Part 7 · 🟡 PR #119 (security MERGE; builder merging main + LOW fixes: two-owner race at purge, deleted users refused by create-school/accept-invite, demo-seed ordering)
+## 5. Account deletion — ✅ merged #119 (see DONE)
 
 **Owner:** "dont forget to add the account and workspace deletation". Spec: 30-day grace with banner + cancel; blocked while sole owner of a school (points to ownership transfer); nightly purge job anonymises, keeps audit rows. Was scheduled for M4 (~Apr 2027) — pulled forward; log the pull-forward as a decision in the PR.
 
@@ -56,7 +56,7 @@ Built: owner-only export (CSV zip, 3/day, downloads directly — deviation from 
 
 Owner-only; type the school name to confirm; 30-day cancellable grace with daily banner; refused while a subscription or unpaid balance exists; final platform audit record. Same Part: transfer ownership, export all data (CSV zip, 7-day link), archive/unarchive. Pulled forward; log it.
 
-## 7. Browser tests in CI — PR #90 · 🟡 (testing lane)
+## 7. Browser tests in CI — PR #90 · 🟡 GREEN (all 4 live shards) — lead security (Opus) + React reviews running; fixed 4 real app bugs (throttle off-by-one, register-existing-email message ⚠ check enumeration, 360px top-bar overflow, SW RSC relay); 2 flakes remain (bn-locale-shell, guardian-invite retry)
 
 Runs every logged-in Playwright journey in CI against a seeded database, so "green" means the UI really works. Shards 1 & 3 green; 2 & 4 were failing — fresh Opus builder fixing root causes. **Unblocks #82 and the live security round.**
 
@@ -65,6 +65,9 @@ Runs every logged-in Playwright journey in CI against a seeded database, so "gre
 All reviews passed (React, lead; Undo fix corrected so a late-joining student keeps their mark). Held so its browser journey runs for real in CI once #90 lands; then merge.
 
 ## 9. Lane Parts in progress
+
+- identity: fresh Opus builder — next queue Part OR the legal-audit consent/ToS/DPA fixes (builder decides + logs).
+- ops: fresh Sonnet builder — next F-OP-07 Part (3 attendance policy / 4 grade scale / 5 calendar / 6 remainder), chosen for pilot + demo value.
 
 - **#112 (identity)** F-ID-03 Part 7 — remove a member, leave a school, transfer ownership. Draft.
 - Each needs: green CI → lead reviews (security Opus for anything touching roles/RLS, DB review for migrations, React/TS) → one fix batch → re-verify → merge → verify live migration + smoke.
