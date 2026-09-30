@@ -102,7 +102,7 @@ select lives_ok(
       'working_days', jsonb_build_array(6, 7, 1, 2, 3, 4),
       'academic_year', jsonb_build_object('name', '2026', 'starts_on', '2026-01-01', 'ends_on', '2026-12-31'),
       'grade_levels', jsonb_build_array(jsonb_build_object('name', 'Class 6', 'level_number', 6)),
-      'idempotency_key', '16000001-0000-4000-8000-0000000000aa')) ->> 'workspace_id')::uuid$$,
+      'idempotency_key', '16000001-0000-4000-8000-0000000000aa'), '2026-09-30-interim') ->> 'workspace_id')::uuid$$,
   'an authenticated owner can create their own school workspace, end to end, with no 42501 from the bootstrap/guard interaction');
 
 select is(

@@ -82,11 +82,11 @@ grant all on ids to authenticated;
 
 select tests.login('f1020000-0000-0000-0000-000000000001');
 insert into ids select 'a', (public.create_school_workspace(
-  tests.school_input('a1020000-0000-4000-8000-000000000001', '{"eiin": null, "name": "School A"}')) ->> 'workspace_id')::uuid;
+  tests.school_input('a1020000-0000-4000-8000-000000000001', '{"eiin": null, "name": "School A"}'), '2026-09-30-interim') ->> 'workspace_id')::uuid;
 select tests.logout();
 select tests.login('f1020000-0000-0000-0000-000000000005');
 insert into ids select 'b', (public.create_school_workspace(
-  tests.school_input('a1020000-0000-4000-8000-000000000002', '{"eiin": null, "name": "School B"}')) ->> 'workspace_id')::uuid;
+  tests.school_input('a1020000-0000-4000-8000-000000000002', '{"eiin": null, "name": "School B"}'), '2026-09-30-interim') ->> 'workspace_id')::uuid;
 select tests.logout();
 
 insert into public.workspace_members (workspace_id, user_id, role, status) values

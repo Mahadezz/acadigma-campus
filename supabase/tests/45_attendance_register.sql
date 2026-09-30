@@ -106,12 +106,12 @@ select tests.mkuser('d2080000-0000-0000-0000-000000000002', 'd208.owner.f@test.l
 
 select tests.login('d2080000-0000-0000-0000-000000000001');
 insert into ids select 'e', (public.create_school_workspace(
-  tests.school_input('d2080000-0000-4000-8000-000000000001', 'School E')) ->> 'workspace_id')::uuid;
+  tests.school_input('d2080000-0000-4000-8000-000000000001', 'School E'), '2026-09-30-interim') ->> 'workspace_id')::uuid;
 select tests.logout();
 
 select tests.login('d2080000-0000-0000-0000-000000000002');
 insert into ids select 'f', (public.create_school_workspace(
-  tests.school_input('d2080000-0000-4000-8000-000000000002', 'School F')) ->> 'workspace_id')::uuid;
+  tests.school_input('d2080000-0000-4000-8000-000000000002', 'School F'), '2026-09-30-interim') ->> 'workspace_id')::uuid;
 select tests.logout();
 
 insert into ids

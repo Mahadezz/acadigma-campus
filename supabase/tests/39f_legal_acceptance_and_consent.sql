@@ -17,9 +17,12 @@
 --      the school's owner, never to another school or another person; no
 --      client role reaches app.legal_documents or the hash lookup; the
 --      published texts cannot be edited.
+--   E. The contract step (20260930052627_consent_contract.sql): the
+--      one-argument functions are not client-callable; no client writes
+--      either consent table; every acceptance writes an audit event.
 -- =====================================================================
 begin;
-select plan(32);
+select plan(37);
 
 create schema if not exists tests;
 grant usage on schema tests to authenticated;
@@ -247,7 +250,10 @@ select is(
 -- The second child's link accepted through the one-argument function (no
 -- consent), then revoked by the owner: accepting again "with consent" is
 -- not an error, but records nothing for a link that is no longer active.
+-- (The one-argument function is not client-callable since the D-114
+-- contract step, so this runs as its owner with the parent's claims.)
 select tests.login('39f00000-0000-4000-a000-000000000004');
+select set_config('role', 'postgres', true);
 select public.accept_guardian_invitation((select v from vals where label = 'tok2'));
 select tests.logout();
 select tests.login('39f00000-0000-4000-a000-000000000003');
@@ -318,6 +324,43 @@ select throws_ok(
   $$update app.legal_documents set text_sha256 = sha256('x') where document = 'terms'$$,
   '42501', 'legal_documents is append-only: UPDATE is not permitted',
   'D9 a published text''s hash cannot be changed');
+
+-- =====================================================================
+-- E. Contract step
+-- =====================================================================
+select ok(
+  not has_function_privilege('authenticated', 'public.create_school_workspace(jsonb)', 'execute')
+  and not has_function_privilege('anon', 'public.create_school_workspace(jsonb)', 'execute'),
+  'E1 no client creates a school without a DPA version');
+select ok(
+  not has_function_privilege('authenticated', 'public.accept_guardian_invitation(text)', 'execute')
+  and not has_function_privilege('anon', 'public.accept_guardian_invitation(text)', 'execute'),
+  'E2 no client accepts a parent link without consent');
+
+select tests.login('39f00000-0000-4000-a000-000000000003');
+select throws_ok(
+  $$select public.accept_guardian_invitation((select v from vals where label = 'tok1'))$$,
+  '42501', null, 'E3 ... a direct call is refused');
+select tests.logout();
+
+select ok(
+  not has_table_privilege('authenticated', 'public.legal_acceptances', 'insert')
+  and not has_table_privilege('authenticated', 'public.legal_acceptances', 'update')
+  and not has_table_privilege('authenticated', 'public.legal_acceptances', 'delete')
+  and not has_table_privilege('authenticated', 'public.consent_records', 'insert')
+  and not has_table_privilege('authenticated', 'public.consent_records', 'update')
+  and not has_table_privilege('authenticated', 'public.consent_records', 'delete'),
+  'E4 no signed-in client inserts, updates or deletes either consent table directly');
+
+select results_eq(
+  $$select e.workspace_id, e.actor_id, e.subject_user_id, e.after ->> 'document', e.after ->> 'version'
+      from public.audit_events e
+     where e.action = 'legal.accepted'
+       and e.subject_user_id = '39f00000-0000-4000-a000-000000000003'$$,
+  $$select v::uuid, '39f00000-0000-4000-a000-000000000003'::uuid,
+           '39f00000-0000-4000-a000-000000000003'::uuid, 'dpa', '2026-09-30-interim'
+      from vals where label = 'ws'$$,
+  'E5 the owner''s DPA acceptance wrote one legal.accepted audit event for the school');
 
 select * from finish();
 rollback;
