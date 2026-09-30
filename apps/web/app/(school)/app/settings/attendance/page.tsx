@@ -38,7 +38,6 @@ export default async function AttendancePolicySettingsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <SubPageHeader
-        backLabel={t.settings.back}
         title={a.title}
         description={a.description}
       />
