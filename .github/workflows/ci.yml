@@ -533,6 +533,8 @@ jobs:
         # over-long shard still writes its HTML report (traces, screenshots)
         # instead of being killed with nothing uploaded (D-76).
         run: pnpm --filter @acadigma/web exec playwright test --workers=1 --shard=${{ matrix.shard }}/4 --global-timeout=1500000 e2e/journeys/enter-marks.spec.ts e2e/journeys/guardian-invite.spec.ts e2e/journeys/exams.spec.ts e2e/journeys/compute-results.spec.ts e2e/journeys/publish-results.spec.ts --pass-with-no-tests
+        env:
+          DEBUG: pw:webserver
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
