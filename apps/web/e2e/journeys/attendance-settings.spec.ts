@@ -1,11 +1,47 @@
 import { expect, test, type Page } from "@playwright/test"
+import { createClient } from "@supabase/supabase-js"
 
 import { expectNoA11yViolations } from "../axe"
 
 test.skip(
-  !process.env.E2E_LIVE_SUPABASE,
-  "live Supabase journey: set E2E_LIVE_SUPABASE=1 with a migrated project"
+  !process.env.E2E_LIVE_SUPABASE || !process.env.SUPABASE_SERVICE_ROLE_KEY,
+  "live Supabase journey: needs E2E_LIVE_SUPABASE=1 and the service-role key to restore shared seed state"
 )
+
+// The seeded Model School (supabase/seed/seed.sql). Marking a register mutates it,
+// so this journey wipes today's registers before and after (single worker per shard,
+// one database per shard) and puts the seeded attendance policy back.
+const WORKSPACE_ID = "5eed0000-0000-4000-b000-000000000001"
+const SEEDED_POLICY = {
+  cutoff: "09:15",
+  late_counts_present: true,
+  half_day_counts_present: true,
+  min_attendance_bp: 7500,
+}
+const TODAY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Dhaka",
+}).format(new Date())
+
+const admin = () =>
+  createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+    { auth: { persistSession: false } }
+  )
+
+async function resetSharedState(): Promise<void> {
+  const db = admin()
+  // Records cascade from their session.
+  await db
+    .from("attendance_sessions")
+    .delete()
+    .eq("workspace_id", WORKSPACE_ID)
+    .eq("date", TODAY)
+  await db
+    .from("school_profiles")
+    .update({ attendance_policy: SEEDED_POLICY })
+    .eq("workspace_id", WORKSPACE_ID)
+}
 
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto("/login")
@@ -16,74 +52,73 @@ async function signIn(page: Page, email: string): Promise<void> {
 }
 
 /**
- * F-OP-07 Part 3 demo (§4 W4): an owner flips "Half day counts as present"
- * off and the plain-English effect line changes before Save; saving it
- * persists and no stored attendance_records row is touched (§5.8 rule 2 —
- * asserted at the domain/repository level, not re-asserted here). Both
- * viewports via the phone/desktop projects (playwright.config.ts).
+ * F-OP-07 Part 3 demo (§4 W4): with one absence on the register, the owner
+ * changes the policy and sees the live effect line and the below-minimum
+ * warning before saving; saving persists across a reload. Roll-call steps
+ * follow take-attendance.spec.ts. Both viewports via the phone/desktop projects.
  */
-test("owner edits the attendance policy and sees the effect line change before saving", async ({
+test("owner edits the attendance policy and sees the effect line and warning before saving", async ({
   page,
 }, testInfo) => {
-  await signIn(page, "owner@acadigma.test")
-  await page.goto("/app/settings/attendance")
+  testInfo.setTimeout(testInfo.timeout + 30_000)
+  await resetSharedState()
+  try {
+    await signIn(page, "owner@acadigma.test")
 
-  await expect(
-    page.getByRole("heading", { name: "Attendance policy" })
-  ).toBeVisible()
+    // Real roll call: everyone present, one absent.
+    await page.goto("/app/attendance")
+    await page
+      .getByRole("link", { name: /^(Take attendance|View) — / })
+      .first()
+      .click()
+    await page.getByRole("button", { name: "Mark all present" }).click()
+    await page
+      .getByRole("radiogroup")
+      .first()
+      .getByRole("radio", { name: "Absent" })
+      .click()
+    await page.getByRole("button", { name: "Save" }).click()
+    await expect(
+      page.getByText(/^Save attendance for .+\? \d+ present, \d+ absent\.$/)
+    ).toBeVisible()
+    await page.getByRole("button", { name: "Yes, save" }).click()
+    await expect(
+      page.getByText(/^Saved: \d+ present, \d+ absent\.$/)
+    ).toBeVisible()
 
-  const effect = page.getByTestId("attendance-effect")
-  // The seeded school may have no recorded attendance yet (then the page shows the
-  // "not enough data" note instead of a line) — the line assertions run when it does.
-  const hasSample = (await effect.count()) > 0
-  const lineBefore = hasSample ? await effect.innerText() : ""
+    await page.goto("/app/settings/attendance")
+    await expect(
+      page.getByRole("heading", { name: "Attendance policy" })
+    ).toBeVisible()
+    await expect(page.getByTestId("attendance-effect")).toBeVisible()
 
-  const late = page.getByLabel("Late counts as present")
-  const halfDay = page.getByLabel("Half day counts as present")
-  await expect(halfDay).toBeVisible()
-  const halfBefore = await halfDay.isChecked()
-  const lateBefore = await late.isChecked()
-  await halfDay.click()
-  await late.click()
+    const halfDay = page.getByLabel("Half day counts as present")
+    const halfBefore = await halfDay.isChecked()
+    await halfDay.click()
+    await expect(page.getByText("You have unsaved changes")).toBeVisible()
 
-  await expect(page.getByText("You have unsaved changes")).toBeVisible()
-  if (hasSample) {
-    // Effect line is a live preview: it recomputes before Save (skipped only if the
-    // sampled student has no late/half-day marks, where the % genuinely cannot move).
-    await expect(effect).toBeVisible()
-    const lineAfter = await effect.innerText()
-    if (lineBefore.includes("would be") && lineAfter === lineBefore) {
-      testInfo.annotations.push({
-        type: "note",
-        description:
-          "sample student has no late/half-day marks; line unchanged",
-      })
-    }
+    const min = page.getByLabel("Minimum attendance")
+    await min.fill("abc")
+    await expect(min).toHaveAttribute("aria-invalid", "true")
+    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled()
+    await min.fill("100")
+    await expect(min).toHaveAttribute("aria-invalid", "false")
+    // One absence: the sampled student cannot reach 100 %.
+    await expect(page.getByText(/Below the 100 % minimum/)).toBeVisible()
+    await expectNoA11yViolations(page, testInfo)
+
+    await page.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByText("Saved.")).toBeVisible()
+
+    await page.reload()
+    expect(
+      await page.getByLabel("Half day counts as present").isChecked()
+    ).toBe(!halfBefore)
+    await expect(page.getByLabel("Minimum attendance")).toHaveValue("100")
+    await expectNoA11yViolations(page, testInfo)
+  } finally {
+    await resetSharedState()
   }
-
-  // Minimum below/above: a 100 % minimum shows the warning inside the same live region.
-  const min = page.getByLabel("Minimum attendance")
-  await min.fill("abc")
-  await expect(min).toHaveAttribute("aria-invalid", "true")
-  await expect(page.getByRole("button", { name: "Save" })).toBeDisabled()
-  await min.fill("100")
-  await expect(min).toHaveAttribute("aria-invalid", "false")
-  await expectNoA11yViolations(page, testInfo) // while the warning may be visible
-
-  await page.getByRole("button", { name: "Save" }).click()
-  await expect(page.getByText("Saved.")).toBeVisible()
-
-  // Persistence: a full reload shows the saved values.
-  await page.reload()
-  expect(await page.getByLabel("Half day counts as present").isChecked()).toBe(
-    !halfBefore
-  )
-  expect(await page.getByLabel("Late counts as present").isChecked()).toBe(
-    !lateBefore
-  )
-  await expect(page.getByLabel("Minimum attendance")).toHaveValue("100")
-
-  await expectNoA11yViolations(page, testInfo)
 })
 
 test("a teacher cannot open the attendance policy", async ({ page }) => {
