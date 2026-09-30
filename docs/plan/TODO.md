@@ -92,7 +92,8 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 ## 12. Docs owed
 
 - ✅ Local gate + Friday-safe attendance journeys — merged #126 (0427a1f): `pnpm verify` / `pnpm test:contracts` now exist.
-- **Self-host fonts** ⚪ (after #109 merges — touches apps/web/app/fonts.ts): `next/font/google` downloads fonts at build time; the download failed twice on 2026-09-30 (#122 build, #126 e2e shard 4: `TypeError: Cannot read properties of null (reading "1")` in next/font google loader). Switch to `next/font/local` with the font files committed → no network in the build.
+- **Self-host fonts** 🔴👤 (after #109 merges — touches apps/web/app/fonts.ts): `next/font/google` downloads fonts at build time; the download failed twice on 2026-09-30 (#122 build, #126 e2e shard 4: `TypeError: Cannot read properties of null (reading "1")` in next/font google loader). Switch to `next/font/local` with the font files committed → no network in the build.
+  - Blocked 2026-09-30: downloading the font files was denied by permissions (curl to fonts.googleapis.com / fonts.gstatic.com). 👤 Owner: allow that once, or drop the woff2 files in F:	mponts (Inter variable latin; Hind Siliguri 400/500/600 bengali+latin; JetBrains Mono 400/500 latin), or approve @fontsource packages (new dependency → decision). Worktree .worktrees/lead-fonts (chore/self-host-fonts) is ready, nothing committed.
 
 - BUILD-LOG entries for #93–#111 (one docs-only PR).
 - Prompt-audit findings for CLAUDE.md / playbook / BUILDER-BRIEF (13 findings, delivered in chat 2026-09-29): apply the project hunks (#1–5, #10–13) in a docs PR; **#8 and #9 need the owner** (#8 lanes start independent work while a PR waits; #9 CLAUDE.md still says merges need the owner's approval, but the owner now lets the lead merge).
