@@ -82,6 +82,12 @@ test.afterEach(async ({ page }, testInfo) => {
   const normalCard = page.getByRole("radio", { name: /^Normal/ })
   if (!(await normalCard.isChecked().catch(() => true))) {
     await normalCard.click()
+    // The save is a server action: leaving before it lands can drop the
+    // write and leave the shared owner on Extra large for the next journey.
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-text-size",
+      "normal"
+    )
   }
 })
 
