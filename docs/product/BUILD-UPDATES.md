@@ -32,6 +32,7 @@ Every piece below was built, tested at phone and desktop size, security-reviewed
 
 ## 1 October 2026
 
+- **01:06 — New front page for the app.** campus.acadigma.com now looks like acadigma.com, with an "Open Campus" button and a "Get the app" section showing how to install it from the browser on Android, iPhone, Windows and Mac (store apps are coming later). Sign-in and sign-up pages match. [#128](https://github.com/Mahadezz/acadigma-campus/pull/128)
 - **00:05 — The app feels faster.** Most data pages show a grey outline while they load instead of a blank screen; pull down to refresh on a phone; buttons show a pressed state the instant they are tapped. [#127](https://github.com/Mahadezz/acadigma-campus/pull/127)
 
 ## 30 September 2026
