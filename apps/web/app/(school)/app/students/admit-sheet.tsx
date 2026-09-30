@@ -24,6 +24,7 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import type { Messages } from "@/lib/i18n"
 
 import { quickAdmitStudent } from "./actions"
+
 import type { SectionOption } from "./students-view"
 
 /**
