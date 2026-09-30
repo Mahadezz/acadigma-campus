@@ -3,13 +3,14 @@
 import * as React from "react"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 import { ChevronLeftIcon } from "lucide-react"
 
 import type { MembershipSummary } from "@acadigma/contracts"
 
-import { backTarget, navLabel, type BackTarget } from "@/lib/back-route"
+import { navLabel, type BackTarget } from "@/lib/back-route"
+import { canGoBack } from "@/lib/in-app-history"
 
 /**
  * D-408: the shell's one back affordance — top-left, where every phone app
@@ -26,36 +27,10 @@ import { backTarget, navLabel, type BackTarget } from "@/lib/back-route"
  * label, screen-reader text) comes from the nav configs, loaded lazily so
  * they stay out of every page's first-load JS (250 kB budget). Until then
  * it reads "Back".
+ *
+ * Loaded lazily by `WorkspaceSwitcher` (`next/dynamic`, still server
+ * rendered): the whole control stays out of every page's first-load JS.
  */
-
-// Pathnames visited in this tab since the app loaded. Module scope, so it
-// survives shell remounts and resets on a full load — exactly "in-app".
-const visited: string[] = []
-// Set by the browser's own back/forward (and router.back()), so a Link
-// that happens to revisit an earlier page still counts as a new visit.
-let popped = false
-if (typeof window !== "undefined") {
-  window.addEventListener("popstate", () => {
-    popped = true
-  })
-}
-
-/** Exported for shell-back.test.ts. */
-export function record(pathname: string) {
-  if (visited.at(-1) !== pathname) {
-    if (popped && visited.at(-2) === pathname) visited.pop()
-    else visited.push(pathname)
-  }
-  popped = false
-}
-
-export const canGoBack = () => visited.length > 1
-
-export function useBackTarget() {
-  const pathname = usePathname()
-  React.useEffect(() => record(pathname), [pathname])
-  return backTarget(pathname)
-}
 
 type Named = { href: string; labelEn: string; labelBn: string }
 

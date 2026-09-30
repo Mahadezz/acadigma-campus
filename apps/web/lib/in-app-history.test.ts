@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { canGoBack, record } from "./shell-back"
+import { canGoBack, record } from "./in-app-history"
 
 describe("in-app history (D-408)", () => {
   it("counts a Link back to an earlier page as a visit, and a popstate as a step back", () => {

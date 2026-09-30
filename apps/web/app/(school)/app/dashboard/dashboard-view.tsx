@@ -18,6 +18,7 @@ import { buttonVariants } from "@acadigma/ui/components/button-variants"
 import { Card, CardAction, CardHeader } from "@acadigma/ui/components/card"
 import { Progress } from "@acadigma/ui/components/progress"
 import { cn } from "@acadigma/ui/lib/utils"
+import { CountUp } from "@acadigma/ui/primitives/count-up"
 import { StatusChip } from "@acadigma/ui/primitives/status-chip"
 
 import type { Messages } from "@/lib/i18n"
@@ -234,7 +235,7 @@ function AttendanceCard({
             aria-hidden="true"
             className="text-4xl font-semibold tracking-tight tabular-nums"
           >
-            {attendance.percent}
+            <CountUp text={attendance.percent} />
           </span>
         </p>
         <Progress
