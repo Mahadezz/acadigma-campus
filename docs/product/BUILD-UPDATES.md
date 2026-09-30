@@ -95,7 +95,7 @@ Every piece below was built, tested at phone and desktop size, security-reviewed
 ## 17–24 September 2026 — the secure foundation
 
 - **24 Sep 19:31 — Milestone 0 complete.** [#17](https://github.com/Mahadezz/acadigma-campus/pull/17)
-- **24 Sep 15:09 — Audit trail:** every change is recorded by the database itself. [#6](https://github.com/Mahadezz/acadigma-campus/pull/6)
+- **24 Sep 15:09 — Audit trail:** changes to school records are recorded by the database itself. [#6](https://github.com/Mahadezz/acadigma-campus/pull/6)
 - **24 Sep 11:30 — Schools and membership:** each school's data is walled off from every other school, enforced by the database. [#7](https://github.com/Mahadezz/acadigma-campus/pull/7)
 - **17 Sep 22:18 — Sign up and sign in.** [#3](https://github.com/Mahadezz/acadigma-campus/pull/3)
 - **17 Sep 21:35 — Plans and limits engine** _(behind the scenes)_; no billing screens yet. [#2](https://github.com/Mahadezz/acadigma-campus/pull/2)
