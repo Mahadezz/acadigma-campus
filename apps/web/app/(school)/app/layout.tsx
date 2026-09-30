@@ -56,6 +56,7 @@ import { SchoolBottomNav, SchoolSidebar } from "./nav"
 export default async function SchoolLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  console.log(`[dbg] layout start`)
   const ctx = await requireShell("school")
   const { t, locale } = await getMessages()
 
@@ -154,6 +155,7 @@ export default async function SchoolLayout({
     )
   }
 
+  console.log(`[dbg] layout pre-nav`)
   const [entitledModules, workspacesResult, guardianLink] = await Promise.all([
     resolveEntitledNavModules(ctx, client),
     listMyWorkspaces(),

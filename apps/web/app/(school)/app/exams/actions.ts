@@ -113,8 +113,11 @@ export async function setExamStatus(
     )
   }
 
+  console.log(`[dbg] action setExamStatus before repo`)
   const result = await setExamStatusRepo(ctx, supabase, parsed.data)
+  console.log(`[dbg] action setExamStatus after repo ok=${result.ok}`)
   if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`)
+  console.log(`[dbg] action setExamStatus after revalidate`)
   return result
 }
 

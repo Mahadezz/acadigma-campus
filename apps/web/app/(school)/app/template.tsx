@@ -16,8 +16,10 @@ import { requireShell } from "@/lib/workspace"
 export default async function SchoolTemplate({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  console.log(`[dbg] template start`)
   const ctx = await requireShell("school")
   const state = await getDangerZoneState(ctx, await createClient())
+  console.log(`[dbg] template state ok`)
   const scheduled = state.ok ? state.data.deletionScheduledAt : null
   if (!scheduled || !state.ok) return children
 

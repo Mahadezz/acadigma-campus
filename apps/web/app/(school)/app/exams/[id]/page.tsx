@@ -24,18 +24,23 @@ export default async function ExamPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const dbg = (m: string) => console.log(`[dbg] page ${m}`)
+  dbg("start")
   const ctx = await requireShell("school")
+  dbg("shell ok")
   if (!can(ctx.role, "exams.read")) forbidden()
   const { id } = await params
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound()
 
   const { t, locale } = await getMessages()
+  dbg("messages ok")
   const supabase = await createClient()
   const canWrite = can(ctx.role, "exams.write")
   const [exam, teachers] = await Promise.all([
     getExam(ctx, supabase, id),
     canWrite ? listClassTeacherOptions(supabase, ctx) : null,
   ])
+  dbg("exam+teachers ok")
   if (!exam.ok) {
     if (exam.error.code === "not_found") notFound()
     return (
@@ -49,6 +54,7 @@ export default async function ExamPage({
       ? await listPublishCandidates(ctx, supabase, id)
       : null
 
+  dbg("candidates ok")
   if (candidates && !candidates.ok) {
     return (
       <div className="mx-auto max-w-3xl">
