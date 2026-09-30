@@ -83,27 +83,31 @@ describe.skipIf(!RUN)(
       teacher = t.client
       teacherId = t.id
 
-      const school = await createSchoolWorkspace(owner, {
-        name: "D-109 Guardian School",
-        board: "dhaka",
-        medium: "bangla",
-        timezone: "Asia/Dhaka",
-        working_days: [6, 7, 1, 2, 3, 4],
-        academic_year: {
-          name: "2026",
-          starts_on: "2026-01-01",
-          ends_on: "2026-12-31",
-        },
-        grade_levels: [
-          {
-            name: "Class 6",
-            name_bn: "ষষ্ঠ শ্রেণি",
-            level_number: 6,
-            stage: "secondary",
+      const school = await createSchoolWorkspace(
+        owner,
+        {
+          name: "D-109 Guardian School",
+          board: "dhaka",
+          medium: "bangla",
+          timezone: "Asia/Dhaka",
+          working_days: [6, 7, 1, 2, 3, 4],
+          academic_year: {
+            name: "2026",
+            starts_on: "2026-01-01",
+            ends_on: "2026-12-31",
           },
-        ],
-        idempotency_key: randomUUID(),
-      })
+          grade_levels: [
+            {
+              name: "Class 6",
+              name_bn: "ষষ্ঠ শ্রেণি",
+              level_number: 6,
+              stage: "secondary",
+            },
+          ],
+          idempotency_key: randomUUID(),
+        },
+        "2026-09-30-interim"
+      )
       if (!school.ok) throw new Error(JSON.stringify(school.error))
       const workspaceId = school.data.workspaceId
       ownerCtx = {
@@ -199,7 +203,8 @@ describe.skipIf(!RUN)(
       if (!invite.ok) throw new Error(JSON.stringify(invite.error))
       const accepted = await acceptGuardianInvitation(
         teacher,
-        invite.data.token
+        invite.data.token,
+        { version: "2026-09-30-2", locale: "en" }
       )
       expect(accepted).toEqual({
         ok: true,

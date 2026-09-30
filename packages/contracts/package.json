@@ -1,8 +1,9 @@
 {
   "name": "@acadigma/contracts",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "private": true,
   "type": "module",
+  "sideEffects": false,
   "description": "Zod schemas and inferred types shared by UI, server actions, jobs and tests.",
   "exports": {
     ".": "./src/index.ts",

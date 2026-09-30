@@ -26,6 +26,7 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { PasswordField } from "@acadigma/ui/primitives/password-field"
 
 import type { Messages } from "@/lib/i18n"
+import { fillNodes, LegalLink } from "@/lib/legal/legal-text"
 import {
   describeSubmitFailure,
   type SubmitFailureTone,
@@ -210,7 +211,16 @@ export function RegisterForm({
                   }
                 />
               </FormControl>
-              <FormLabel className="font-normal">{t.termsLabel}</FormLabel>
+              <FormLabel className="block font-normal">
+                {fillNodes(t.termsLabel, {
+                  terms: (
+                    <LegalLink href="/legal/terms">{t.termsLink}</LegalLink>
+                  ),
+                  privacy: (
+                    <LegalLink href="/legal/privacy">{t.privacyLink}</LegalLink>
+                  ),
+                })}
+              </FormLabel>
               <FormMessage />
             </FormItem>
           )}

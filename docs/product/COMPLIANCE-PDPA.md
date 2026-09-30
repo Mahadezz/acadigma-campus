@@ -832,6 +832,8 @@ Priority: **P0** = before the first real school holds real children's data · **
 | **P8** | **DPA/Terms/Privacy acceptance step** in the school creation wizard, blocking, with a stored PDF (§2.5)                                                                                                                                                       | **P0**   | `F-ID-05-onboarding.md`                             |
 | **P9** | **Sign-up** records Terms + Privacy acceptance to `legal_acceptances`                                                                                                                                                                                         | **P0**   | `F-ID-01` §4.1                                      |
 
+**Status 2026-09-30 (D-114):** P9 built (sign-up writes `terms` + `privacy`). P8 built without the stored PDF: the DPA is a required checkbox on the wizard's review step and writes `dpa` with the school. P3 built as the consent panel + `consent_records` row inside `accept_guardian_invitation` (the guardian link of D-108; `app.redeem_invitation` does not exist yet), without the bn/en toggle — the text is shown in the page's language. The hash of every text lives in `app.legal_documents`. The texts are **interim and unreviewed** (`apps/web/lib/legal/`), not the drafts in `legal/`. P1's assurance level, P4-P7 and the PDF remain open.
+
 ### 9.2 Rights and erasure
 
 | #       | Change                                                                                                                                                                      | Priority | Spec to amend                                   |
