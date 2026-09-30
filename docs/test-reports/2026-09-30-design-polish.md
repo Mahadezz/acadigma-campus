@@ -28,7 +28,7 @@ Screenshots (light and dark, phone and desktop): `docs/test-reports/assets/2026-
 ## 3. Known issues
 
 - **Direct navigation to a role-refused page returns HTTP 200 with the forbidden page** (loading.tsx streams before `forbidden()`); five journeys changed from asserting 403 to asserting the page. Owner decision needed (D-409 consequences).
-- Earlier e2e-live hangs on exam Lock/Compute were a redundant `router.refresh()` after an await in an async transition (React 19); deleted, and exams/marks now have a skeleton (D-409).
+- Earlier e2e-live hangs on exam Lock/Compute were a bare `router.refresh()` after an await in an async transition (React 19); now wrapped in its own `startTransition`, and exams/marks now have a skeleton (D-409).
 - Skeleton is shown immediately; the 150 ms delay in DESIGN-SYSTEM §3.7 is not implemented (D-409).
 - Desktop has no visible refresh control beside "Updated ..."; only the focus-only button.
 - Only one action (text size) is optimistic; the rest are listed as Never or as follow-ups in §3.11.

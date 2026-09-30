@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 import type {
   ExamDetail,
@@ -73,6 +74,7 @@ export function ExamDetailView({
   /** The school's calendar day (ISO), for the progress rows' Closed badge. */
   today: string
 }) {
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [reversing, setReversing] = useState(false)
@@ -96,6 +98,7 @@ export function ExamDetailView({
         return
       }
       setReversing(false)
+      startTransition(() => router.refresh())
     })
   }
 
@@ -115,6 +118,7 @@ export function ExamDetailView({
           .replace("{n}", String(result.data.published))
           .replace("{withheld}", String(result.data.withheld))
       )
+      startTransition(() => router.refresh())
     })
   }
 
@@ -134,6 +138,7 @@ export function ExamDetailView({
           .replace("{failed}", String(result.data.failed))
           .replace("{incomplete}", String(result.data.incomplete))
       )
+      startTransition(() => router.refresh())
     })
   }
 
@@ -329,6 +334,7 @@ function PaperRow({
   subjectName: string
   fmt: (iso: string) => string
 }) {
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [date, setDate] = useState(paper.examDate ?? "")
   const [full, setFull] = useState(String(paper.fullMarks))
@@ -401,6 +407,7 @@ function PaperRow({
               entryClosesOn: closes || null,
             })
             setNotice(result.ok ? t.saved : result.error.message || t.error)
+            if (result.ok) startTransition(() => router.refresh())
           })
         }}
       >
