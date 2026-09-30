@@ -146,7 +146,7 @@ returns table (status public.staff_attendance_status, minutes_late integer)
 language sql
 immutable
 set search_path = ''
-as $
+as $$
   with m as (
     select greatest(0, floor(extract(epoch from (p_local - p_start)) / 60)::integer) as mins
   )
@@ -154,7 +154,7 @@ as $
               else 'present'::public.staff_attendance_status end,
          case when m.mins > p_grace then m.mins else null end
     from m
-$;
+$$;
 
 revoke all on function app.staff_check_in_status(time, time, integer) from public, anon;
 
