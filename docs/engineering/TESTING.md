@@ -39,7 +39,7 @@ What we do **not** do: snapshot tests of rendered markup (they fail on every des
 | Component             | Vitest + Testing Library (jsdom)        | every push | `CI / unit`       |
 | Integration (actions) | Vitest (node) + dev-branch Postgres     | every push | `CI / unit`       |
 | Database              | pgTAP via `pnpm db:test`                | every push | `CI / db`         |
-| Contract parity       | Vitest                                  | every push | `CI / contracts`  |
+| Contract parity       | node check scripts                      | every push | `CI / contracts`  |
 | e2e + a11y            | Playwright + `@axe-core/playwright`     | every push | `CI / e2e`        |
 | Performance           | Lighthouse CI + query budget assertions | every push | `CI / lighthouse` |
 
@@ -311,6 +311,8 @@ Run locally: `pnpm db:test` (applies pending migrations to the dev branch first,
 ---
 
 ## 4. Playwright
+
+Journeys that mark today's register call `test.skip(isSchoolOffToday(), ...)` (`e2e/school-day.ts`): the seeded school is off on Fridays (Asia/Dhaka).
 
 ### 4.1 Configuration
 

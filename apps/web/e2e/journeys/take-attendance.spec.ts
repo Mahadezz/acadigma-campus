@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test"
 
 import { expectNoA11yViolations } from "../axe"
+import { isSchoolOffToday } from "../school-day"
 
 /**
  * F-AC-03 §10 "take-attendance-one-thumb" (demo cut, D-104), at both
@@ -19,6 +20,7 @@ test.skip(
 )
 
 test.beforeEach(() => {
+  test.skip(isSchoolOffToday(), "Seeded school is off on Fridays")
   test.skip(
     !process.env.E2E_OWNER_EMAIL || !process.env.E2E_OWNER_PASSWORD,
     "E2E_OWNER_EMAIL / E2E_OWNER_PASSWORD are not set"

@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 import { createClient } from "@supabase/supabase-js"
 
 import { expectNoA11yViolations } from "../axe"
+import { isSchoolOffToday } from "../school-day"
 
 test.skip(
   !process.env.E2E_LIVE_SUPABASE || !process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -60,6 +61,7 @@ async function signIn(page: Page, email: string): Promise<void> {
 test("owner edits the attendance policy and sees the effect line and warning before saving", async ({
   page,
 }, testInfo) => {
+  test.skip(isSchoolOffToday(), "Seeded school is off on Fridays")
   testInfo.setTimeout(testInfo.timeout + 30_000)
   await resetSharedState()
   try {
