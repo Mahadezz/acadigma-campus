@@ -33,6 +33,16 @@ export async function expectNoA11yViolations(
     )
   )
 
+  // Next 15 streams page metadata: right after a client-side navigation the
+  // new <title> can land a moment after the content, and axe scanning in
+  // that gap reported document-title (e2e-live, D-76). Give it a moment; a
+  // page that really has no title still fails below.
+  await page
+    .waitForFunction(() => document.title.trim() !== "", null, {
+      timeout: 5_000,
+    })
+    .catch(() => undefined)
+
   let builder = new AxeBuilder({ page }).withTags(TAGS)
   for (const selector of exclude) {
     builder = builder.exclude(selector)
