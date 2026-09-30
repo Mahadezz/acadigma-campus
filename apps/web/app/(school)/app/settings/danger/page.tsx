@@ -27,12 +27,7 @@ export default async function DangerZonePage() {
   const { t, locale } = await getMessages()
   const d = t.dangerZone
 
-  const header = (
-    <SubPageHeader
-      title={d.title}
-      description={d.lead}
-    />
-  )
+  const header = <SubPageHeader title={d.title} description={d.lead} />
   if (!can(ctx.role, "settings.manage")) {
     return (
       <div className="mx-auto max-w-3xl space-y-4">

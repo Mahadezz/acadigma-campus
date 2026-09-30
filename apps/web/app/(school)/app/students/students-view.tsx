@@ -33,7 +33,7 @@ import { classLabel } from "./format"
 
 // D-408: the admit form loads on first open; /app/students is at the budget.
 const AdmitSheet = dynamic(() =>
-  import("./admit-sheet").then((m) => m.AdmitSheet),
+  import("./admit-sheet").then((m) => m.AdmitSheet)
 )
 
 type T = Messages["students"]
@@ -274,4 +274,3 @@ function StudentLink({
     </Link>
   )
 }
-
