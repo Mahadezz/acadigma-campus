@@ -48,7 +48,7 @@ export function MarksTab({
         <li key={paper.examSubjectId}>
           <Link
             href={`/app/marks/${paper.examSubjectId}`}
-            className="hover:bg-muted/50 flex min-h-16 flex-col justify-center gap-1 px-2 py-3"
+            className="motion-press hover:bg-muted/50 flex min-h-16 flex-col justify-center gap-1 px-2 py-3"
           >
             <span className="flex items-center justify-between gap-2 text-base font-medium">
               <BnEnText

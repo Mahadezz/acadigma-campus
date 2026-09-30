@@ -9,6 +9,7 @@ import { requireShell } from "@/lib/workspace"
 
 import { DeletionBanner } from "../account/deletion-banner"
 import { LastUpdated } from "../offline/last-updated"
+import { PullToRefresh } from "../pull-to-refresh"
 
 import { listMyWorkspaces } from "./actions"
 import { UserMenu } from "./user-menu"
@@ -70,6 +71,10 @@ export async function GatedShell({
         />
       }
     >
+      <PullToRefresh
+        label={t.shell.refresh}
+        refreshingLabel={t.shell.refreshing}
+      />
       {/* F-ID-11 §4.2 (D-308): the render time travels with a cached copy. */}
       {/* eslint-disable-next-line react-hooks/purity -- the render time is the value */}
       <LastUpdated renderedAt={Date.now()} locale={locale} />

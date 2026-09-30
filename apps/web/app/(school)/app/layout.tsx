@@ -25,6 +25,7 @@ import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
 import { getCachedSchoolProfile } from "@/lib/school-profile"
 import { createClient } from "@/lib/supabase/server"
 import { getUiPreferences } from "@/lib/ui-preferences"
+import { PullToRefresh } from "@/app/(shared)/pull-to-refresh"
 import { requireShell } from "@/lib/workspace"
 
 import { BasicShellWrapper } from "./basic-shell-wrapper"
@@ -133,6 +134,10 @@ export default async function SchoolLayout({
         }
         addPhoneLabel={s.help.addPhoneLink}
       >
+        <PullToRefresh
+          label={t.shell.refresh}
+          refreshingLabel={t.shell.refreshing}
+        />
         {lastUpdated}
         <div className="mb-3 flex justify-end empty:hidden">
           <OutboxChip
@@ -236,6 +241,10 @@ export default async function SchoolLayout({
         />
       }
     >
+      <PullToRefresh
+        label={t.shell.refresh}
+        refreshingLabel={t.shell.refreshing}
+      />
       {lastUpdated}
       {deletionBanner}
       {staleOutbox}

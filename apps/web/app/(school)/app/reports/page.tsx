@@ -67,7 +67,7 @@ export default async function ReportsPage() {
               <li key={run.id}>
                 <Link
                   href={`/app/reports/runs/${run.id}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-muted/50"
+                  className="motion-press flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-muted/50"
                 >
                   <span className="text-muted-foreground">
                     {new Date(run.requestedAt).toLocaleString()}

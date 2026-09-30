@@ -51,7 +51,7 @@ export function StudentsTab({
             <li key={student.id}>
               <Link
                 href={`/app/students/${student.id}`}
-                className="hover:bg-muted/50 flex min-h-14 items-center gap-3 px-2 py-2"
+                className="motion-press hover:bg-muted/50 flex min-h-14 items-center gap-3 px-2 py-2"
               >
                 <span className="text-muted-foreground w-14 shrink-0 text-right text-sm tabular-nums">
                   {student.rollNumber !== null

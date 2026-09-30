@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 import type { TextSize, UiMode } from "@acadigma/contracts"
 import { Card } from "@acadigma/ui/components/card"
@@ -55,16 +56,20 @@ export function DisplaySettingsForm({
   const router = useRouter()
   const [, startTransition] = React.useTransition()
   const [notice, setNotice] = React.useState<Notice | null>(null)
+  // D-409: the chosen size shows at once; the server value replaces it, and a
+  // failed save snaps back (useOptimistic reverts when the transition ends).
+  const [shownSize, setShownSize] = React.useOptimistic(textSize)
 
   function handleTextSizeChange(next: string) {
-    if (next === textSize) return
+    if (next === shownSize) return
     startTransition(async () => {
+      setShownSize(next as TextSize)
       const result = await updateUiPreferences({ textSize: next })
-      setNotice(
-        result.ok
-          ? { tone: "success", text: t.saved }
-          : { tone: "error", text: t.saveError }
-      )
+      if (result.ok) setNotice({ tone: "success", text: t.saved })
+      else {
+        setNotice(null)
+        toast.error(t.saveError)
+      }
     })
   }
 
@@ -92,7 +97,7 @@ export function DisplaySettingsForm({
         </Label>
         <RadioGroup
           aria-labelledby="text-size-label"
-          value={textSize}
+          value={shownSize}
           onValueChange={handleTextSizeChange}
           className="grid gap-3 sm:grid-cols-3"
         >

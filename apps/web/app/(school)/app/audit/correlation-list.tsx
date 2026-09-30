@@ -66,7 +66,7 @@ export function CorrelationList({
           <button
             type="button"
             onClick={() => onSelectEvent(event)}
-            className="hover:bg-muted focus-visible:ring-ring flex min-h-11 w-full flex-col items-start gap-1 rounded-md p-2 text-left outline-none focus-visible:ring-2"
+            className="motion-press hover:bg-muted focus-visible:ring-ring flex min-h-11 w-full flex-col items-start gap-1 rounded-md p-2 text-left outline-none focus-visible:ring-2"
           >
             <span className="text-muted-foreground text-xs">#{index + 1}</span>
             <span className="text-sm">
