@@ -130,9 +130,9 @@ select is(
   1,
   'B4: exactly one auth.new_device_signin row, carrying only the session id');
 select throws_ok(
-  $insert into public.notifications (recipient_id, event_type, title, action_url, data)
+  $$insert into public.notifications (recipient_id, event_type, title, action_url, data)
     values ('39800000-0000-4000-a000-000000000001', 'auth.new_device_signin', 'x',
-            '/account/security', '{"session_id":"39800000-0000-4000-c000-0000000000a1"}')$,
+            '/account/security', '{"session_id":"39800000-0000-4000-c000-0000000000a1"}')$$,
   '23505', 'duplicate key value violates unique constraint "notifications_new_device_once"',
   'B5: a second row for the same session is refused by a unique index (no race)');
 
