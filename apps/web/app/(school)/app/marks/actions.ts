@@ -94,7 +94,7 @@ export async function submitExamSubject(
   )
   if (result.ok && result.data.submitted) {
     revalidatePath("/app/exams", "layout")
-    revalidatePath(`/app/marks/${parsed.data.examSubjectId}`)
+    revalidatePath("/app/marks/[examSubjectId]", "page")
   }
   return result
 }

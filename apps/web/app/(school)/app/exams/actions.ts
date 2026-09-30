@@ -114,7 +114,7 @@ export async function setExamStatus(
   }
 
   const result = await setExamStatusRepo(ctx, supabase, parsed.data)
-  if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`)
+  if (result.ok) revalidatePath("/app/exams/[id]", "page")
   return result
 }
 
@@ -159,7 +159,7 @@ export async function computeResults(
   if (!writable.ok) return err(planReadOnlyApiError(writable.error))
 
   const result = await computeResultsRepo(ctx, supabase, parsed.data.examId)
-  if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`, "layout")
+  if (result.ok) revalidatePath("/app/exams/[id]", "layout")
   return result
 }
 
@@ -193,6 +193,6 @@ export async function publishResults(
     parsed.data.examId,
     parsed.data.withhold
   )
-  if (result.ok) revalidatePath(`${EXAMS_PATH}/${parsed.data.examId}`, "layout")
+  if (result.ok) revalidatePath("/app/exams/[id]", "layout")
   return result
 }
