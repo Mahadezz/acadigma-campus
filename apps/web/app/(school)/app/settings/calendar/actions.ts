@@ -14,15 +14,20 @@ import {
   apiErrorFromZod,
   createHolidayInputSchema,
   deleteHolidayInputSchema,
+  deleteWorkingDayOverrideInputSchema,
+  upsertWorkingDayOverrideInputSchema,
   err,
   planReadOnlyApiError,
   type ApiError,
   type Holiday,
   type Result,
+  type WorkingDayOverride,
 } from "@acadigma/contracts"
 import {
   createHoliday as createHolidayRepo,
   deleteHoliday as deleteHolidayRepo,
+  deleteWorkingDayOverride as deleteOverrideRepo,
+  upsertWorkingDayOverride as upsertOverrideRepo,
   requireWritable,
   type WorkspaceContext,
 } from "@acadigma/db"
@@ -33,7 +38,9 @@ import { requireWorkspace } from "@/lib/workspace"
 
 const PATH = "/app/settings/calendar"
 
-async function gateWrite(): Promise<
+async function gateWrite(
+  permission: "calendar.holiday.write" | "calendar.override.write" = "calendar.holiday.write"
+): Promise<
   Result<
     {
       ctx: WorkspaceContext
@@ -43,9 +50,9 @@ async function gateWrite(): Promise<
   >
 > {
   const ctx = await requireWorkspace()
-  if (!can(ctx.role, "calendar.holiday.write")) {
+  if (!can(ctx.role, permission)) {
     return err(
-      apiError("forbidden", "Only an owner or admin can change holidays.")
+      apiError("forbidden", "Only an owner or admin can change the calendar.")
     )
   }
   const supabase = await createClient()
@@ -80,6 +87,37 @@ export async function deleteHoliday(
   const { ctx, supabase } = gate.data
 
   const result = await deleteHolidayRepo(ctx, supabase, parsed.data.holidayId)
+  if (result.ok) revalidatePath(PATH)
+  return result
+}
+
+/** F-AC-11 §4.3: force a date open or shut. One row per date (upsert). */
+export async function saveWorkingDayOverride(
+  input: unknown
+): Promise<Result<WorkingDayOverride, ApiError>> {
+  const parsed = upsertWorkingDayOverrideInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+
+  const gate = await gateWrite("calendar.override.write")
+  if (!gate.ok) return gate
+  const { ctx, supabase } = gate.data
+
+  const result = await upsertOverrideRepo(ctx, supabase, parsed.data)
+  if (result.ok) revalidatePath(PATH)
+  return result
+}
+
+export async function deleteWorkingDayOverride(
+  input: unknown
+): Promise<Result<{ deleted: true }, ApiError>> {
+  const parsed = deleteWorkingDayOverrideInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+
+  const gate = await gateWrite("calendar.override.write")
+  if (!gate.ok) return gate
+  const { ctx, supabase } = gate.data
+
+  const result = await deleteOverrideRepo(ctx, supabase, parsed.data.date)
   if (result.ok) revalidatePath(PATH)
   return result
 }
