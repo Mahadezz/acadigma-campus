@@ -6,6 +6,8 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 ## 2026-09-30
 
+- **#90 merged** (7709a58): every logged-in Playwright journey now runs in CI against a seeded local Supabase (4 shards, no retries) — green CI now proves the UI works. Also fixed: sign-in throttle off-by-one + counts every non-infrastructure failure (brute-force protection can't silently switch off), register-existing-email message (allowed by F-ID-01 §4.1), 360px top-bar overflow with the offline chip, service worker no longer relays RSC requests; test seed refuses to run where real accounts exist. 2 Opus security rounds + React review; migration live.
+
 - **#119 merged** (9927a0f): delete your own account — type DELETE + password (password sign-in within 5 min enforced in the database), all sessions end, "Keep my account" banner for 30 days, blocked while sole owner of a school (links to transfer), nightly purge anonymises to "Deleted user" and keeps school records. 2 Opus security rounds; migrations live. Owner request 2026-09-29 done (with #117).
 
 - **#117 merged** (43ddf15): Settings → Danger zone, owner only — export (CSV zip), archive/restore (12 months), delete with 30-day grace + banner + cancel, nightly purge (≤5 schools/run, oldest first, refuses suspended schools, unpaid balances, files). 2 Opus security reviews + DB review; migrations live.

@@ -56,11 +56,11 @@ Built: owner-only export (CSV zip, 3/day, downloads directly — deviation from 
 
 Owner-only; type the school name to confirm; 30-day cancellable grace with daily banner; refused while a subscription or unpaid balance exists; final platform audit record. Same Part: transfer ownership, export all data (CSV zip, 7-day link), archive/unarchive. Pulled forward; log it.
 
-## 7. Browser tests in CI — PR #90 · 🟡 GREEN (all 4 live shards) — lead security (Opus) + React reviews running; fixed 4 real app bugs (throttle off-by-one, register-existing-email message ⚠ check enumeration, 360px top-bar overflow, SW RSC relay); 2 flakes remain (bn-locale-shell, guardian-invite retry)
+## 7. Browser tests in CI — ✅ merged #90 (see DONE). Follow-ups: bn-locale-shell flake (stalled refresh, not shared state); students page sits exactly at the 250 kB budget; optional `.max(256)` on the sign-in password schema.
 
 Runs every logged-in Playwright journey in CI against a seeded database, so "green" means the UI really works. Shards 1 & 3 green; 2 & 4 were failing — fresh Opus builder fixing root causes. **Unblocks #82 and the live security round.**
 
-## 8. Class hub (basic mode) — PR #82 · 🔴 held for #90
+## 8. Class hub (basic mode) — PR #82 · 🟡 unblocked: fresh builder merging main + running its live journey in CI → merge
 
 All reviews passed (React, lead; Undo fix corrected so a late-joining student keeps their mark). Held so its browser journey runs for real in CI once #90 lands; then merge.
 
@@ -77,7 +77,7 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 - **#113** docs-sync exempts the version-only release PR (stops the manual "docs: none" patch after every merge).
 - **#116** new release PR → after #113 merges, close/reopen so CI runs, merge.
 
-## 11. Security loop — build → attack → fix → repeat · 🟡
+## 11. Security loop — build → attack → fix → repeat · 🟡 (live round 3 now unblocked by #90)
 
 **Owner:** "start … attack the app get the report and fix … loops … until it is fixed". Scope (owner): code + local server + preview deploys, **never production**.
 - Round 1 (#104) and Round 2 (#106): 0 critical/high/medium; 1 low (CSP ships Report-Only while SECURITY.md §5.2 reads as enforcing). Both are draft report PRs (docs-sync fails on them — fix after #113 or add a README row).
