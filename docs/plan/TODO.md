@@ -132,6 +132,8 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 
 ## 13. Owner-only items (record; don't nag)
 
+- 👤 **Supabase JWT expiry → 10 minutes** (Authentication → Sessions / JWT settings, 3600 → 600 s). Why: after "sign out this device" (#132), a stolen or lost phone's current access pass keeps working for direct API calls until it expires — today up to an hour, with children's data. The app's own pages already block it; this closes the direct-API gap. Security review (Opus), 2026-10-01.
+
 - 👤 **Vercel deploy limit hit (2026-09-30 ~19:00):** the Hobby plan allows 100 deployments/day per ACCOUNT. Campus already deploys only `main` (apps/web/vercel.json), so the quota is being spent by the other projects on the account (acadigma-website previews, other client sites). Effect: #82 (merged 581c2b2) is not live until the limit resets (~24 h); production keeps serving the last good deploy (#124). Options: upgrade to Vercel Pro (~$20/month, far higher limit) — recommended once schools pilot; or turn off preview deploys on the other projects. Lead redeploys main after the reset.
 
 - 👤 Vercel: set a spend limit (Settings → Billing); Supabase: check the plan's spend cap — from the owner-shared hosting-bill post (invisible meters cause bill shock).
