@@ -419,11 +419,20 @@ function QueueRow({
       ) : (
         <div className="flex flex-wrap gap-2">
           {item.status === "conflict" ? (
-            <Button
-              className="h-11"
-              disabled={!online}
-              onClick={() => setChoosing(true)}
-            >
+            // No `disabled={!online}` here: ConflictSheet already degrades
+            // gracefully offline (its own effect shows `conflictLoadFailed`
+            // if `getAttendanceConflict` can't reach the server, and its
+            // Save/Keep/Use-mine footer buttons don't even render until
+            // `theirs` has loaded, so nothing can be submitted without a
+            // successful fetch). Gating this button on `online` bought no
+            // real safety and cost a real one: `useOnline()` reads
+            // `navigator.onLine` live, and a brief window where it reads
+            // `false` right after a reconnect (confirmed root cause of the
+            // e2e-live "Compare and choose" flake, D-76 follow-up) disabled
+            // the button, which sets `pointer-events: none` on it --
+            // Playwright (and a real tap) then lands on whatever DOM node
+            // is behind it instead.
+            <Button className="h-11" onClick={() => setChoosing(true)}>
               {copy.compareAndChoose}
             </Button>
           ) : null}

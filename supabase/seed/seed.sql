@@ -36,30 +36,40 @@ $$;
 --    Passwords (`password123`) are hashed here, at seed time, with pgcrypto's
 --    bcrypt — no hash literal lives in the repo (D-301).
 -- ---------------------------------------------------------------------
+-- `confirmation_token`/`email_change`/`email_change_token_new`/`recovery_token`
+-- are explicit '' below, not left to their (NULL) default: GoTrue scans every
+-- auth.users row it touches into non-nullable Go strings, and a NULL there
+-- fails that scan with "Database error querying schema" -- a well-known gap
+-- in the standard "insert a user by hand" seeding recipe (supabase/auth#1940).
+-- It does not surface on the row's OWN first login (whichever GoTrue query
+-- that hits skips these columns); it does on every later request GoTrue makes
+-- involving this row, e2e-live CI run 36457859794 / 36512053201's real
+-- symptom: every shard's owner sign-in works exactly once, then 500s.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-  raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, email_change, email_change_token_new, recovery_token)
 values
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000001',
    'authenticated', 'authenticated', 'owner@acadigma.test',
    extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"full_name":"Rezaul Karim"}'::jsonb, now(), now()),
+   '{"full_name":"Rezaul Karim"}'::jsonb, now(), now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000002',
    'authenticated', 'authenticated', 'teacher@acadigma.test',
    extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"full_name":"Farhana Akter"}'::jsonb, now(), now()),
+   '{"full_name":"Farhana Akter"}'::jsonb, now(), now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000003',
    'authenticated', 'authenticated', 'parent@acadigma.test',
    extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"full_name":"Shahidul Islam"}'::jsonb, now(), now())
+   '{"full_name":"Shahidul Islam"}'::jsonb, now(), now(), '', '', '', '')
 on conflict (id) do nothing;
 
 update public.profiles
@@ -218,16 +228,19 @@ on conflict (id) do nothing;
 --     (D-62, D-300), for the read-only Playwright journey.
 --     lapsed@acadigma.test owns it.
 -- ---------------------------------------------------------------------
+-- Same NULL-token gap as §1 above (auth#1940) -- explicit '' on the four
+-- GoTrue scans as non-nullable strings.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-  raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, email_change, email_change_token_new, recovery_token)
 values
   ('00000000-0000-0000-0000-000000000000',
    '5eed0000-0000-4000-a000-000000000004',
    'authenticated', 'authenticated', 'lapsed@acadigma.test',
    extensions.crypt('password123', extensions.gen_salt('bf')),
    now(), '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"full_name":"Nasrin Sultana"}'::jsonb, now(), now())
+   '{"full_name":"Nasrin Sultana"}'::jsonb, now(), now(), '', '', '', '')
 on conflict (id) do nothing;
 
 insert into public.workspaces (id, type, name, slug, owner_id, created_by, status)

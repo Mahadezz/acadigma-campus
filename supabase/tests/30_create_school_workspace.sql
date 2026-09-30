@@ -289,14 +289,15 @@ select is(
     where key = 'user:createSchool:f1050401-0000-0000-0000-000000000002'),
   1, 'the EIIN_TAKEN attempt was counted in the createSchool bucket');
 
--- Past 30 attempts in 15 minutes the bucket blocks, before any write.
-update public.auth_throttle set attempts = 30
+-- At 30 attempts in 15 minutes the bucket blocks, before any write (D-76:
+-- a bucket blocks when its attempts reach the limit).
+update public.auth_throttle set attempts = 29
  where key = 'user:createSchool:f1050401-0000-0000-0000-000000000002';
 select tests.login('f1050401-0000-0000-0000-000000000002');
 select is(
   (select public.create_school_workspace(tests.school_input(
       'b0000000-0000-4000-8000-00000000000b', '{"eiin": null, "name": "Honest School"}')) ->> 'error'),
-  'RATE_LIMITED', 'the 31st attempt in 15 minutes is refused with RATE_LIMITED');
+  'RATE_LIMITED', 'the 30th attempt in 15 minutes is refused with RATE_LIMITED');
 select tests.logout();
 select ok(
   (select blocked_until > now() from public.auth_throttle

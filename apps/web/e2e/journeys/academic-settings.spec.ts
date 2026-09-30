@@ -31,10 +31,11 @@ test("owner adds an academic year and a term, with the out-of-range error surfac
   await page.getByLabel("Starts").fill("2099-01-01")
   await page.getByLabel("Ends").fill("2099-12-31")
   await page.getByRole("button", { name: "Save" }).click()
-  await expect(page.getByText("2099")).toBeVisible()
+  // exact: the new year's dates line ("1 Jan 2099 – …") contains it too.
+  await expect(page.getByText("2099", { exact: true })).toBeVisible()
 
   await page.getByRole("tab", { name: "Terms" }).click()
-  await page.getByLabel("Academic year").selectOption({ label: /2099/ })
+  await page.getByLabel("Academic year").selectOption({ label: "2099" })
   await page.getByRole("button", { name: "Add term" }).click()
   await page.getByLabel("Name").fill("Out of range")
   await page.getByLabel("Starts").fill("2098-12-01")
@@ -47,7 +48,7 @@ test("owner adds an academic year and a term, with the out-of-range error surfac
   await page.getByLabel("Starts").fill("2099-01-01")
   await page.getByLabel("Ends").fill("2099-04-30")
   await page.getByRole("button", { name: "Save" }).click()
-  await expect(page.getByText("Out of range")).toBeVisible()
+  await expect(page.getByText("Out of range", { exact: true })).toBeVisible()
 
   await expectNoA11yViolations(page, testInfo)
 })
