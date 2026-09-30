@@ -1,12 +1,19 @@
 import Link from "next/link"
+import { notFound } from "next/navigation"
 
 import { LEGAL_DOCUMENTS, type LegalDocumentKey } from "@/lib/legal/documents"
 import { LegalText } from "@/lib/legal/legal-text"
 
 import type { Metadata } from "next"
 
-// `dynamicParams = false`: any other slug is a 404 before this code runs.
-type Params = Promise<{ document: LegalDocumentKey }>
+type Params = Promise<{ document: string }>
+
+/** `dynamicParams = false` alone still rendered an unknown slug (and threw)
+ * in the production build, so the page checks too. */
+function documentKey(slug: string): LegalDocumentKey {
+  if (!Object.hasOwn(LEGAL_DOCUMENTS, slug)) notFound()
+  return slug as LegalDocumentKey
+}
 
 /** D-114: `/legal/terms`, `/legal/privacy`, `/legal/dpa` — public, the
  * current version of each text a person agrees to. English only until the
@@ -22,12 +29,12 @@ export async function generateMetadata({
 }: {
   params: Params
 }): Promise<Metadata> {
-  const { document } = await params
+  const document = documentKey((await params).document)
   return { title: `${LEGAL_DOCUMENTS[document].title} — Acadigma Campus` }
 }
 
 export default async function LegalPage({ params }: { params: Params }) {
-  const { document } = await params
+  const document = documentKey((await params).document)
 
   return (
     <main
