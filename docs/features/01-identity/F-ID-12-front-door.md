@@ -1,13 +1,13 @@
 # F-ID-12 — Public front door and "Get the app"
 
-|                  |                                                                                                    |
-| ---------------- | -------------------------------------------------------------------------------------------------- |
-| Area             | identity (entry) · design lane                                                                     |
-| Status           | Part 1 in progress (D-410)                                                                         |
-| Owner branch     | `feat/design-front-door`                                                                           |
-| Depends on       | F-ID-01 (sign-in, registration — unchanged), D-68 (product marks), D-114 (legal links), D-408      |
-| Offline          | the page is public and static in content; the service worker's existing rules apply, nothing new   |
-| Base44 reference | none                                                                                               |
+|                  |                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| Area             | identity (entry) · design lane                                                                   |
+| Status           | Part 1 in progress (D-410)                                                                       |
+| Owner branch     | `feat/design-front-door`                                                                         |
+| Depends on       | F-ID-01 (sign-in, registration — unchanged), D-68 (product marks), D-114 (legal links), D-408    |
+| Offline          | the page is public and static in content; the service worker's existing rules apply, nothing new |
+| Base44 reference | none                                                                                             |
 
 ## 1. Purpose
 
@@ -43,9 +43,9 @@ The `(auth)` layout (`/login`, `/register`, `/forgot`, `/reset`, `/verify`, `/in
 
 ## 8. Parts
 
-| Part | Scope                                                                         | Demo                                                   |
-| ---- | ----------------------------------------------------------------------------- | ------------------------------------------------------ |
-| 1    | Front door for Campus, device chooser, apps row, account note, auth restyle   | Land on `/`, pick a device, reach `/login`/`/register` |
+| Part | Scope                                                                       | Demo                                                   |
+| ---- | --------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 1    | Front door for Campus, device chooser, apps row, account note, auth restyle | Land on `/`, pick a device, reach `/login`/`/register` |
 
 ## 9. Acceptance criteria (Part 1)
 

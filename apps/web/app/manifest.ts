@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Acadigma Campus",
     short_name: "Acadigma",
     description:
-      "Attendance, timetables, marks and billing for Bangladeshi schools.",
+      "Attendance, exams, marks, results and report cards for Bangladeshi schools.",
     start_url: "/app/dashboard",
     scope: "/",
     display: "standalone",
@@ -47,7 +47,6 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: "Attendance",
         url: "/app/attendance",
       },
-      { name: "Timetable", short_name: "Timetable", url: "/app/timetable" },
     ],
   }
 }

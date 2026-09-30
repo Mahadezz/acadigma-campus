@@ -2221,5 +2221,105 @@
       "notFound": "That label was no longer there.",
       "validation": "Please check the details you entered."
     }
+  },
+  "frontDoor": {
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "homeLabel": "{name}, on acadigma.com",
+    "mainNav": "Main",
+    "hero": {
+      "campus": {
+        "titleLine1": "Run your school",
+        "titleLine2": "from your phone.",
+        "lead": "Attendance that works offline, classes and exams, marks that become results, and report cards ready to print."
+      }
+    },
+    "getApp": {
+      "title": "Get the app",
+      "lead": "Campus installs from your browser on any device, so there is nothing to download from a store yet.",
+      "tabsLabel": "Your device",
+      "devices": {
+        "web": "Web",
+        "android": "Android",
+        "iphone": "iPhone",
+        "windows": "Windows",
+        "mac": "Mac"
+      },
+      "steps": {
+        "web": [
+          "Open campus.acadigma.com in Chrome, Edge, Safari or Firefox.",
+          "Sign in with your email and password.",
+          "Bookmark the page, or install it to open Campus like an app."
+        ],
+        "android": [
+          "Open campus.acadigma.com in Chrome.",
+          "Tap the menu (three dots), then Install app or Add to Home screen.",
+          "Open Acadigma from your home screen."
+        ],
+        "iphone": [
+          "Open campus.acadigma.com in Safari.",
+          "Tap Share, then Add to Home Screen.",
+          "Tap Add. Acadigma opens from your home screen."
+        ],
+        "windows": [
+          "Open campus.acadigma.com in Edge or Chrome.",
+          "Select the install icon at the right end of the address bar, then Install.",
+          "Open Acadigma from the Start menu, in its own window."
+        ],
+        "mac": [
+          "Open campus.acadigma.com in Chrome, Edge or Safari.",
+          "In Chrome or Edge, select the install icon in the address bar. In Safari, choose File, then Add to Dock.",
+          "Open Acadigma from the Dock or Launchpad."
+        ]
+      },
+      "install": "Install Acadigma",
+      "native": {
+        "android": "A Play Store app is coming later.",
+        "iphone": "An App Store app is coming later.",
+        "windows": "A Windows app is coming later.",
+        "mac": "A Mac app is coming later."
+      }
+    },
+    "apps": {
+      "title": "Acadigma apps",
+      "lead": "Campus is live today. The other apps are on the way.",
+      "live": "Live",
+      "soon": "Coming soon",
+      "here": "You are here",
+      "learnMore": "About {name} on acadigma.com",
+      "products": {
+        "campus": {
+          "role": "School operations",
+          "line": "Attendance, exams, marks and report cards, run from one place."
+        },
+        "parents": {
+          "role": "Parent app",
+          "line": "Coming soon as its own app. Parents a school has invited can already sign in here to see their child's published results and report cards."
+        },
+        "students": {
+          "role": "Student app",
+          "line": "Handouts, assignments and marks, in one app."
+        },
+        "ledger": {
+          "role": "Fees and finance",
+          "line": "Fees, expenses and payroll, in one place."
+        }
+      }
+    },
+    "account": {
+      "title": "One Acadigma account",
+      "body": "Sign in with the same email and password in every Acadigma app. Signing in with a phone number is not available yet."
+    },
+    "footer": {
+      "tagline": "Smarter schools. Simpler admin. School software built in the USA and Bangladesh.",
+      "products": "Products",
+      "follow": "Follow",
+      "company": "Acadigma",
+      "legal": "Legal",
+      "website": "acadigma.com",
+      "pricing": "Pricing",
+      "faq": "FAQ",
+      "origin": "USA and Bangladesh"
+    }
   }
 }
