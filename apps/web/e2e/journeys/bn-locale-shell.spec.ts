@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
 
 import { expectNoA11yViolations } from "../axe"
+import { setLocale } from "../locale"
 
 // Seeded-account journey (CLAUDE.md "Rules learned in practice"): needs the
 // live Supabase project with migrations + seed applied (OQ-27).
@@ -26,10 +27,14 @@ async function signIn(page: Page, email: string): Promise<void> {
   await expect(page).toHaveURL(/\/app(\/.*)?$/)
 }
 
+// D-408: the language picker moved from the avatar menu to Settings →
+// Theme & language; the avatar menu keeps a link to it.
 async function switchToBengali(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Account menu" }).click()
-  await page.getByRole("menuitemradio", { name: "বাংলা" }).click()
-  await expect(page.locator("html")).toHaveAttribute("lang", "bn")
+  await page.getByRole("menuitem", { name: "Theme & language" }).click()
+  await expect(page).toHaveURL(/\/app\/settings\/appearance$/)
+  await setLocale(page, "bn")
+  await page.goto("/app/dashboard")
 }
 
 async function expectNoHorizontalScroll(page: Page): Promise<void> {
@@ -55,15 +60,10 @@ test.afterEach(async ({ page }, testInfo) => {
   testInfo.setTimeout(testInfo.timeout + 30_000)
   // Re-render from the server first: a test cut off mid-switch can leave
   // the stored locale বাংলা behind an English page (D-76).
-  if (/\/app/.test(page.url())) await page.goto("/app/dashboard")
-  const bnMenuButton = page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" })
-  if (!(await bnMenuButton.isVisible().catch(() => false))) return
-  await bnMenuButton.click()
-  await page.getByRole("menuitemradio", { name: "English" }).click()
-  await expect(page.locator("html")).toHaveAttribute("lang", "en")
+  if (/\/app/.test(page.url())) await setLocale(page, "en")
 })
 
-test("switching to বাংলা from the school shell's user menu translates dashboard, nav and settings", async ({
+test("switching to বাংলা from Theme & language translates dashboard, nav and settings", async ({
   page,
 }, testInfo) => {
   // A locale write + refresh and two axe scans of বাংলা pages: past the
@@ -106,7 +106,7 @@ test("switching to বাংলা from the school shell's user menu translates 
   // journey — the seeded owner account is on a writable plan.
 })
 
-test("switching back to English is reachable from the same menu", async ({
+test("switching back to English is reachable from the same screen", async ({
   page,
 }) => {
   // A locale write + refresh and two axe scans of বাংলা pages: past the
@@ -115,9 +115,8 @@ test("switching back to English is reachable from the same menu", async ({
   await signIn(page, "owner@acadigma.test")
   await switchToBengali(page)
 
-  await page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" }).click()
-  await page.getByRole("menuitemradio", { name: "English" }).click()
-  await expect(page.locator("html")).toHaveAttribute("lang", "en")
+  await setLocale(page, "en")
+  await page.goto("/app/dashboard")
   await expect(
     page.getByRole("heading", { name: "Today's attendance" })
   ).toBeVisible()

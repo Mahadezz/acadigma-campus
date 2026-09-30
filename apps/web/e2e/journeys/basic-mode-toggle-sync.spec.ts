@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
 
 import { expectNoA11yViolations } from "../axe"
+import { setLocale } from "../locale"
 
 // Seeded-account journey (CLAUDE.md "Rules learned in practice"): needs the
 // live Supabase project with migrations + seed applied (OQ-27).
@@ -41,36 +42,9 @@ test.afterEach(async ({ page }, testInfo) => {
   // rest of the e2e-live shard (D-76).
   testInfo.setTimeout(testInfo.timeout + 30_000)
   if (!/\/app/.test(page.url())) return
-  // Both language switches below live on known pages: the full shell's
-  // account menu, or basic mode's essentials row on /app/home only. The AC3
-  // test ends on /app/dashboard in basic mode + বাংলা, where neither exists,
-  // so the reset found no switch and left the owner in বাংলা (e2e-live,
-  // D-76). /app/home shows one or the other in either mode.
-  await page.goto("/app/home")
-
-  // Review fix (nit #5): the বাংলা + Extra large test below switches locale
-  // from the shell's own menu; reset it to English FIRST, the same "narrow
-  // the contamination window on shared seeded state" rule this suite already
-  // follows for ui_mode/text_size below (`bn-locale-shell.spec.ts` follows it
-  // for `profiles.locale` too), so the resets after it can rely on English
-  // accessible names.
-  const bnMenuButton = page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" })
-  if (await bnMenuButton.isVisible().catch(() => false)) {
-    await bnMenuButton.click()
-    await page.getByRole("menuitemradio", { name: "English" }).click()
-    await expect(page.locator("html")).toHaveAttribute("lang", "en")
-  } else {
-    // Review fix (PR #72): the third test below turns on basic mode before
-    // switching to বাংলা, so the account menu above never renders — basic
-    // mode has no `UserMenu` at all (D-405 item 5). Its essentials row has
-    // its own language switch instead, labelled with the language it would
-    // switch TO — "English" while the current locale is bn.
-    const bnRowButton = page.getByRole("button", { name: "English" })
-    if (await bnRowButton.isVisible().catch(() => false)) {
-      await bnRowButton.click()
-      await expect(page.locator("html")).toHaveAttribute("lang", "en")
-    }
-  }
+  // D-408: English first, from Settings → Theme & language (both modes),
+  // so the resets below can rely on English accessible names.
+  await setLocale(page, "en")
 
   await page.goto("/app/settings/display")
   const basicSwitch = page.getByRole("switch", { name: "Basic mode" })
@@ -170,10 +144,9 @@ test("বাংলা with Extra large text size overflows neither the dashboard
   await page.getByRole("switch", { name: "Basic mode" }).click()
   await expect(page).toHaveURL(/\/app\/home$/)
 
-  // Review fix (PR #72): basic mode has no `UserMenu`/Account menu — the
-  // essentials row's own language switch button (labelled with the
-  // language it switches TO) replaces it here.
-  await page.getByRole("button", { name: "বাংলা" }).click()
+  // D-408: the language picker is on Settings → Theme & language only.
+  await setLocale(page, "bn")
+  await page.goto("/app/home")
   await expect(page.locator("html")).toHaveAttribute("lang", "bn")
   await expect(page.locator("html")).toHaveAttribute("data-text-size", "xlarge")
   await expectNoHorizontalScroll(page)
