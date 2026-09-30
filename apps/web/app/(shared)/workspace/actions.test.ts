@@ -22,15 +22,6 @@ vi.mock("@/lib/logger", () => ({
   requestLogger: vi.fn(async () => ({ warn: vi.fn() })),
 }))
 
-const mockCookieSet = vi.fn()
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(async () => ({ set: mockCookieSet })),
-}))
-const mockRevalidatePath = vi.fn()
-vi.mock("next/cache", () => ({
-  revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
-}))
-
 const { updateLocale } = await import("./actions")
 
 beforeEach(() => {
@@ -59,16 +50,6 @@ describe("updateLocale", () => {
     expect(mockFrom).toHaveBeenCalledWith("profiles")
     expect(mockUpdate).toHaveBeenCalledWith({ locale: "bn" })
     expect(mockEq).toHaveBeenCalledWith("id", "u1")
-  })
-
-  it("writes the locale cookie and revalidates, so its own response re-renders the page (D-76)", async () => {
-    await updateLocale("bn")
-    expect(mockCookieSet).toHaveBeenCalledWith(
-      "acadigma_locale",
-      "bn",
-      expect.objectContaining({ path: "/" })
-    )
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/", "layout")
   })
 
   it("returns an error result, not a throw, when the write fails", async () => {

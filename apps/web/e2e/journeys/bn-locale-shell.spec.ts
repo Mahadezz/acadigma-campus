@@ -29,11 +29,7 @@ async function signIn(page: Page, email: string): Promise<void> {
 async function switchToBengali(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Account menu" }).click()
   await page.getByRole("menuitemradio", { name: "বাংলা" }).click()
-  await expect(page.locator("html")).toHaveAttribute("lang", "bn", {
-    // The switch re-renders the whole server page (router.refresh); on the
-    // 2-core e2e-live runner that has taken over 10 s (D-76).
-    timeout: 20_000,
-  })
+  await expect(page.locator("html")).toHaveAttribute("lang", "bn")
 }
 
 async function expectNoHorizontalScroll(page: Page): Promise<void> {
@@ -64,11 +60,7 @@ test.afterEach(async ({ page }, testInfo) => {
   if (!(await bnMenuButton.isVisible().catch(() => false))) return
   await bnMenuButton.click()
   await page.getByRole("menuitemradio", { name: "English" }).click()
-  await expect(page.locator("html")).toHaveAttribute("lang", "en", {
-    // The switch re-renders the whole server page (router.refresh); on the
-    // 2-core e2e-live runner that has taken over 10 s (D-76).
-    timeout: 20_000,
-  })
+  await expect(page.locator("html")).toHaveAttribute("lang", "en")
 })
 
 test("switching to বাংলা from the school shell's user menu translates dashboard, nav and settings", async ({
@@ -125,11 +117,7 @@ test("switching back to English is reachable from the same menu", async ({
 
   await page.getByRole("button", { name: "অ্যাকাউন্ট মেনু" }).click()
   await page.getByRole("menuitemradio", { name: "English" }).click()
-  await expect(page.locator("html")).toHaveAttribute("lang", "en", {
-    // The switch re-renders the whole server page (router.refresh); on the
-    // 2-core e2e-live runner that has taken over 10 s (D-76).
-    timeout: 20_000,
-  })
+  await expect(page.locator("html")).toHaveAttribute("lang", "en")
   await expect(
     page.getByRole("heading", { name: "Today's attendance" })
   ).toBeVisible()

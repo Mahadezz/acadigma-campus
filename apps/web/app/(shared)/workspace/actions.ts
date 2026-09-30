@@ -22,7 +22,7 @@ import {
 import { upsertUiPreferences } from "@acadigma/db/repositories/ui-preferences"
 import { resolveLandingRoute } from "@acadigma/domain/workspace"
 
-import { LOCALE_COOKIE, isLocale, type Locale } from "@/lib/locale"
+import { isLocale, type Locale } from "@/lib/locale"
 import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -225,14 +225,6 @@ export async function updateLocale(
       )
     )
   }
-
-  // Same pattern as updateUiPreferences below (D-76): write the cookie here
-  // and revalidate, so this action's own response carries the re-rendered
-  // page. The client's `router.refresh()` alone was seen on e2e-live to
-  // leave the page in the old language for 20 s+ until the next navigation.
-  const cookieStore = await cookies()
-  cookieStore.set(LOCALE_COOKIE, locale, UI_PREFS_COOKIE_OPTS)
-  revalidatePath("/", "layout")
 
   return ok({ locale })
 }
