@@ -9,11 +9,13 @@ import { Button } from "@acadigma/ui/components/button"
 export function StickySaveBar({
   dirty,
   pending,
+  saveDisabled = false,
   onDiscard,
   t,
 }: {
   dirty: boolean
   pending: boolean
+  saveDisabled?: boolean
   onDiscard: () => void
   t: { unsaved: string; save: string; saving: string; discard: string }
 }) {
@@ -32,7 +34,11 @@ export function StickySaveBar({
       >
         {t.discard}
       </Button>
-      <Button type="submit" disabled={pending} className="min-h-11">
+      <Button
+        type="submit"
+        disabled={pending || saveDisabled}
+        className="min-h-11"
+      >
         {pending ? t.saving : t.save}
       </Button>
     </div>

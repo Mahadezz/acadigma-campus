@@ -69,6 +69,13 @@ export function AttendancePolicyForm({
   const [notice, setNotice] = useState<Notice | null>(null)
   const [pending, startTransition] = useTransition()
 
+  const minPercent = Number(minInput)
+  const minInvalid =
+    minInput.trim() === "" ||
+    !Number.isFinite(minPercent) ||
+    minPercent < 0 ||
+    minPercent > 100
+
   const weights = {
     late_counts_present: form.late_counts_present,
     half_day_counts_present: form.half_day_counts_present,
@@ -124,10 +131,12 @@ export function AttendancePolicyForm({
         {sample.statuses.length === 0 ? (
           <p className="text-muted-foreground text-sm">{a.noSampleYet}</p>
         ) : (
-          <>
-            <p className="text-sm" aria-live="polite">
+          <div aria-live="polite" data-testid="attendance-effect">
+            <p className="text-sm">
               {fill(a.effectLine, {
-                name: sample.studentName ?? "",
+                // One real student's name reaches admins here (the only PII in the
+                // preview payload); never render a blank in the sentence.
+                name: sample.studentName?.trim() || a.anonymousStudent,
                 month: sample.month
                   ? formatMonthYear(sample.month, locale)
                   : "",
@@ -136,13 +145,13 @@ export function AttendancePolicyForm({
               })}
             </p>
             {!after.eligible ? (
-              <p className="text-destructive text-sm" aria-live="polite">
+              <p className="text-destructive text-sm">
                 {fill(a.belowMinimum, {
                   min: (form.min_attendance_bp / 100).toString(),
                 })}
               </p>
             ) : null}
-          </>
+          </div>
         )}
         <p className="text-muted-foreground text-xs">{a.notRewritten}</p>
       </div>
@@ -179,22 +188,39 @@ export function AttendancePolicyForm({
               const raw = e.target.value
               setMinInput(raw)
               const percent = Number(raw)
-              if (raw.trim() === "" || Number.isNaN(percent)) return
-              patch({
-                min_attendance_bp: Math.max(
-                  0,
-                  Math.min(10_000, Math.round(percent * 100))
-                ),
-              })
+              if (
+                raw.trim() === "" ||
+                !Number.isFinite(percent) ||
+                percent < 0 ||
+                percent > 100
+              ) {
+                setDirty(true) // Save stays disabled until the text is valid
+                return
+              }
+              patch({ min_attendance_bp: Math.round(percent * 100) })
             }}
+            aria-invalid={minInvalid}
+            aria-describedby={`${id}-min-help${minInvalid ? ` ${id}-min-err` : ""}`}
           />
-          <p className="text-muted-foreground text-xs">{a.minAttendanceHelp}</p>
+          <p id={`${id}-min-help`} className="text-muted-foreground text-xs">
+            {a.minAttendanceHelp}
+          </p>
+          {minInvalid ? (
+            <p
+              id={`${id}-min-err`}
+              role="alert"
+              className="text-destructive text-xs"
+            >
+              {a.minAttendanceInvalid}
+            </p>
+          ) : null}
         </div>
       </div>
 
       <StickySaveBar
         dirty={dirty}
         pending={pending}
+        saveDisabled={minInvalid}
         onDiscard={discard}
         t={{
           unsaved: t.unsaved,

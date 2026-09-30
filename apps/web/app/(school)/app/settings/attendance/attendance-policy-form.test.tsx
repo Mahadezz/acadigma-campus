@@ -128,4 +128,47 @@ describe("AttendancePolicyForm (F-OP-07 Part 3 §4 W4)", () => {
     fireEvent.change(input, { target: { value: "95" } })
     expect(screen.getByText(/Below the 95 % minimum/)).toBeTruthy()
   })
+
+  it.each(["abc", "", "-5", "150"])(
+    "invalid minimum %j: flags the field, shows the error and disables Save",
+    (raw) => {
+      render(
+        <AttendancePolicyForm
+          policy={POLICY}
+          sample={SAMPLE}
+          t={t}
+          locale="en"
+        />
+      )
+      const input = screen.getByLabelText(t.attendance.minAttendancePercent)
+      fireEvent.change(input, { target: { value: raw } })
+
+      expect(input.getAttribute("aria-invalid")).toBe("true")
+      expect(input.getAttribute("aria-describedby")).toContain("-min-help")
+      expect(screen.getByText(t.attendance.minAttendanceInvalid)).toBeTruthy()
+      expect(
+        (screen.getByRole("button", { name: t.save }) as HTMLButtonElement)
+          .disabled
+      ).toBe(true)
+
+      fireEvent.change(input, { target: { value: "80" } })
+      expect(screen.queryByText(t.attendance.minAttendanceInvalid)).toBeNull()
+      expect(
+        (screen.getByRole("button", { name: t.save }) as HTMLButtonElement)
+          .disabled
+      ).toBe(false)
+    }
+  )
+
+  it("a blank student name never leaves a blank in the sentence", () => {
+    render(
+      <AttendancePolicyForm
+        policy={POLICY}
+        sample={{ ...SAMPLE, studentName: "  " }}
+        t={t}
+        locale="en"
+      />
+    )
+    expect(screen.getByText(/^With these settings, a student's/)).toBeTruthy()
+  })
 })
