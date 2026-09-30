@@ -62,14 +62,18 @@ The first CI run (36711945269) failed `39g` before any assertion: the four fixtu
 
 ## 5. End to end (Playwright)
 
-| Journey                      | 360 × 800 | 1280 × 800 | Notes                                                                    |
-| ---------------------------- | --------- | ---------- | ------------------------------------------------------------------------ |
-| `legal-reacceptance.spec.ts` | pending   | pending    | live-only; the screen's screenshot is attached per viewport              |
-| every other live journey     | pending   | pending    | seeded accounts now hold every published acceptance (`e2e-fixtures.sql`) |
+| Journey                      | 360 × 800    | 1280 × 800   | Notes                                                                                                                     |
+| ---------------------------- | ------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `legal-reacceptance.spec.ts` | PASS (4.2 s) | PASS (5.5 s) | CI `e2e-live` run 36712908566; axe 0 serious/critical; screenshot attached                                                |
+| every other live journey     | PASS         | PASS         | same run, 4 shards: 175 passed, 5 skipped, 0 failed (seeded accounts hold every published acceptance, `e2e-fixtures.sql`) |
 
 ### Screenshots
 
-Not taken locally: this session had no local Supabase stack and no seeded account on a dev database. Each viewport's screenshot of `/account/legal` is attached (`legal-reacceptance`) to the `playwright-report-live-*` artifacts of the CI run.
+Taken by the live journey in CI (run 36712908566), not locally: this session had no local Supabase stack.
+
+| Screen                                         | 360 × 800                                           | 1280 × 800                                            |
+| ---------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------- |
+| `/account/legal` (Terms + Privacy outstanding) | ![](assets/2026-09-30-legal-reacceptance/phone.png) | ![](assets/2026-09-30-legal-reacceptance/desktop.png) |
 
 ## 6. Performance
 
@@ -93,7 +97,6 @@ Not taken locally: this session had no local Supabase stack and no seeded accoun
 | 3   | The (account) layout's Back link goes to `/app`, which returns to the screen until accepted             | low      | yes                                               |
 | 4   | No grace period; the demo school's owner and every pre-D-114 account see the screen on their next visit | low      | yes — intended (D-115 §4)                         |
 | 5   | Texts are still interim; Terms/Privacy/DPA English only                                                 | medium   | yes — OWNER-QUESTIONS (counsel)                   |
-| 6   | No local screenshots (§5)                                                                               | low      | yes                                               |
 
 ## 9. Sign-off
 
