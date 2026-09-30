@@ -4,7 +4,7 @@ The owner's open requests and the build's open work, in priority order. **Read t
 
 Legend: 🔴 blocked · 🟡 in progress · ⚪ not started · 👤 needs the owner.
 
-Last updated: 2026-09-30 ~20:40 Dhaka.
+Last updated: 2026-09-30 ~22:40 Dhaka.
 
 ---
 
@@ -30,7 +30,7 @@ Last updated: 2026-09-30 ~20:40 Dhaka.
 
 **Plan (lead):** campus.acadigma.com front door + auth pages rebuilt in the acadigma.com theme (ink/paper, Inter, grid marks), data-driven by product key; "Get the app" tabs Web/Android/iPhone/Windows/Mac with honest PWA install steps (store apps "coming later"); product row Campus + Parents live, Students + Ledger coming soon → acadigma.com/<product>; one account across the apps (phone sign-in not built — 👤 SMS provider decision, OQ-10). The current front page claims fees/bKash/messaging that are not built — fixed in the same Part. Website: "Sign in" in nav/footer, "Open the app" / "Get the app" on live product pages.
 
-**Running:** campus builder (Opus, feat/design-front-door, port 3114); website builder (Sonnet, acadigma-website feat/app-links). Must not touch the #127 files (Button primitive, loading.tsx, pull-to-refresh).
+**Running:** campus #128 draft (Opus, feat/design-front-door, port 3114). Website #4 (feat/app-links) reviewed MERGE — merge after #128 is live. Must not touch the #127 files (Button primitive, loading.tsx, pull-to-refresh).
 
 ## 2. Design System v2 — ✅ merged #109 (see DONE). Follow-ups (ponytail LATER list) are in the #109 test report.
 
