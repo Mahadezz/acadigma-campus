@@ -284,19 +284,28 @@ grant execute on function public.staff_check_out(uuid) to authenticated;
 --    GENERIC_AUDIT_TABLES in packages/domain/src/audit/catalog.ts lists the
 --    same table).
 -- ---------------------------------------------------------------------
-insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
-values
-  ('staff_attendance.insert', 'info',
-    '{actor} created a staff attendance record',
-    '{actor} একটি স্টাফ উপস্থিতি রেকর্ড তৈরি করেছেন', true),
-  ('staff_attendance.update', 'notable',
-    '{actor} updated a staff attendance record ({fields})',
-    '{actor} একটি স্টাফ উপস্থিতি রেকর্ড হালনাগাদ করেছেন ({fields})', true),
-  ('staff_attendance.delete', 'critical',
-    '{actor} deleted a staff attendance record',
-    '{actor} একটি স্টাফ উপস্থিতি রেকর্ড মুছে ফেলেছেন', true)
-on conflict (action) do update
-  set severity    = excluded.severity,
-      sentence_en = excluded.sentence_en,
-      sentence_bn = excluded.sentence_bn,
-      is_generic  = excluded.is_generic;
+do $$
+declare
+  v_table  text;
+  v_tables text[] := array['staff_attendance'];
+begin
+  foreach v_table in array v_tables loop
+    insert into public.audit_action_catalog (action, severity, sentence_en, sentence_bn, is_generic)
+    values
+      (v_table || '.insert', 'info',
+        '{actor} created a ' || replace(v_table, '_', ' ') || ' record',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড তৈরি করেছেন', true),
+      (v_table || '.update', 'notable',
+        '{actor} updated a ' || replace(v_table, '_', ' ') || ' record ({fields})',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড হালনাগাদ করেছেন ({fields})', true),
+      (v_table || '.delete', 'critical',
+        '{actor} deleted a ' || replace(v_table, '_', ' ') || ' record',
+        '{actor} একটি ' || replace(v_table, '_', ' ') || ' রেকর্ড মুছে ফেলেছেন', true)
+    on conflict (action) do update
+      set severity    = excluded.severity,
+          sentence_en = excluded.sentence_en,
+          sentence_bn = excluded.sentence_bn,
+          is_generic  = excluded.is_generic;
+  end loop;
+end
+$$;

@@ -62,9 +62,13 @@ export function StaffCheckInCard({
   // Rendered after mount only: the server and the browser disagree on "now".
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => {
-    setNow(new Date())
+    // In timer callbacks only (no synchronous setState in the effect body).
+    const first = setTimeout(() => setNow(new Date()), 0)
     const id = setInterval(() => setNow(new Date()), 20_000)
-    return () => clearInterval(id)
+    return () => {
+      clearTimeout(first)
+      clearInterval(id)
+    }
   }, [])
 
   // Western digits in both languages (DESIGN-SYSTEM §1.6).
