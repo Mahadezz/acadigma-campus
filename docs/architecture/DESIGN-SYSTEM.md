@@ -398,6 +398,36 @@ A PR that adds or reshapes a screen names, in its description, which laws
 shaped the layout when the choice was not obvious — the same discipline
 `ux-laws`'s own review format asks for.
 
+### 1.10 The public front door and auth frame (D-410)
+
+Two looks, split at the sign-in boundary. Everything a signed-out visitor
+sees (`/`, `/login`, `/register`, `/forgot`, `/reset`, `/verify`, `/invite`)
+follows **acadigma.com**, read from `acadigma-website` (`globals.css`,
+`hero.tsx`, `site-footer.tsx`, `cell-field.tsx`). The signed-in shells keep
+§1.8 glass. No glass and no mesh on public pages.
+
+- **Tokens:** none new. The website's ink/paper values are already ours
+  (D-57), and a `dark` class on a section flips it to ink exactly as on the
+  website (the footer; the "you are here" product card).
+- **Type:** hero `clamp(2.5rem, 7vw, 5rem)`, semibold, `-0.05em`, leading
+  0.95; section titles `clamp(2rem, 5vw, 3.5rem)`, `-0.045em`. The website's
+  second headline line is `#a3a3a3` (2.3:1); ours is `--muted-foreground`.
+- **Shape:** interactive elements are full pills (`rounded-full`, 52px in the
+  hero, 44px tabs); cards are 24px (`rounded-3xl`), including `AuthCard` from
+  `sm` up; edges are `shadow-flat` rings, except the hero mark tile, which
+  keeps the website's one soft shadow.
+- **Texture:** `(marketing)/front-door/cell-field.tsx`, the website's grid of
+  rounded cells under a radial mask, static (no pointer spotlight).
+- **Motion:** hover and press only. The website's `motion` hero, flip-words
+  and parallax footer are not ported (D-68: no `motion` dependency).
+- **Honesty:** only live features are named as live; unbuilt apps say
+  "Coming soon", native store builds say "coming later", never a date or a
+  store badge.
+- **Reuse:** `FrontDoor` takes a product key; `front-door/products.ts` is the
+  one list of apps. `SiteFooter` is shared by `/` and the `(auth)` layout.
+
+Screenshots: `docs/test-reports/assets/2026-09-30-front-door/`.
+
 ---
 
 ## 2. Tokens

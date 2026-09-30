@@ -3,7 +3,7 @@
 |                  |                                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------------------ |
 | Area             | identity (entry) · design lane                                                                   |
-| Status           | Part 1 in progress (D-410)                                                                       |
+| Status           | Part 1 built (D-410, PR #128)                                                                    |
 | Owner branch     | `feat/design-front-door`                                                                         |
 | Depends on       | F-ID-01 (sign-in, registration — unchanged), D-68 (product marks), D-114 (legal links), D-408    |
 | Offline          | the page is public and static in content; the service worker's existing rules apply, nothing new |
@@ -28,7 +28,7 @@ None. Copy lives in `apps/web/messages/{en,bn}.json` under `frontDoor`. Product 
 1. **Header** — the Acadigma lockup for this product (`Logo`, D-68) links to `https://acadigma.com`; a "Sign in" link on the right.
 2. **Hero** — the product's grid mark on a chalk tile over the website's cell texture (static; no pointer tracking), a two-line headline in the website's type (semibold, tight tracking), one honest value line, **Sign in** (primary ink pill) and **Create account** (secondary).
 3. **Get the app** — real ARIA tabs (`packages/ui` `Tabs`): Web · Android · iPhone · Windows · Mac. The server renders **Web**; after hydration the tab matching the user agent is selected. Each tab gives 2–3 install steps for that device (the app is an installable PWA, `app/manifest.ts`). Where the browser fires `beforeinstallprompt`, an **Install** button calls the real prompt. Native store/desktop builds are labelled **"Coming later"** — no store badges, no store links, no dates.
-4. **Acadigma apps** — Campus (live, "you are here"), Parents (live: guardians the school invited sign in here and see published results and report cards), Students (coming soon), Ledger (coming soon). Each card shows its grid mark and links to `https://acadigma.com/<product>`.
+4. **Acadigma apps** — Campus (live, "you are here"), Parents (coming soon as its own app, matching acadigma.com; the card says that parents a school has invited can already sign in here to see their child's published results and report cards, which is what `/family` shows today), Students (coming soon), Ledger (coming soon). Each card shows its grid mark and links to `https://acadigma.com/<product>`.
 5. **One Acadigma account** — the same email sign-in works across the apps; phone-number sign-in is not available yet (no date).
 6. **Footer** — mirrors the website footer (dark, product list, follow links, company links) plus the legal documents (D-114) and the language switch.
 
@@ -65,4 +65,4 @@ The `(auth)` layout (`/login`, `/register`, `/forgot`, `/reset`, `/verify`, `/in
 
 ## 11. Status
 
-Part 1 — in progress.
+Part 1 — built (D-410, PR #128). Deviations: the website's pointer spotlight, animated hero mark and parallax footer are static here (no `motion` dependency); the second headline line uses muted ink, not the website's #a3a3a3, for contrast. The manifest's dead "Timetable" shortcut and the unbuilt-feature claims in the manifest and root metadata were removed.

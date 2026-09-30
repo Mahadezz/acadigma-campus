@@ -59,7 +59,7 @@ export function FrontDoor({
           <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 pt-6 pb-16 sm:px-8 sm:pt-12 lg:grid-cols-12 lg:gap-8 lg:pt-16 lg:pb-24">
             <div className="lg:col-span-7">
               <GridMark mark={product} className="size-12 lg:hidden" />
-              <h1 className="mt-6 text-[clamp(2.5rem,8vw,6rem)] leading-[0.95] font-semibold tracking-[-0.05em] text-balance lg:mt-0">
+              <h1 className="mt-6 text-[clamp(2.5rem,7vw,5rem)] leading-[0.95] font-semibold tracking-[-0.05em] text-balance lg:mt-0">
                 {hero.titleLine1}
                 <br />
                 {/* The website's second line is #a3a3a3 (2.3:1); muted ink passes AA. */}

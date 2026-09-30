@@ -74,13 +74,13 @@ export function GetTheApp({ t }: { t: Copy }) {
     >
       <TabsList
         aria-label={t.tabsLabel}
-        className="[scrollbar-width:none] h-auto w-full justify-start overflow-x-auto rounded-full bg-foreground/[0.05] p-1 sm:w-fit group-data-[orientation=horizontal]/tabs:h-auto"
+        className="grid h-auto w-full grid-cols-5 rounded-full bg-foreground/[0.05] p-1 group-data-[orientation=horizontal]/tabs:h-auto sm:inline-flex sm:w-fit"
       >
         {DEVICES.map((d) => (
           <TabsTrigger
             key={d}
             value={d}
-            className="min-h-11 flex-none rounded-full px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-flat dark:data-[state=active]:bg-card"
+            className="min-h-11 min-w-0 rounded-full px-1 text-[13px] text-muted-foreground sm:flex-none sm:px-4 sm:text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-flat dark:data-[state=active]:bg-card"
           >
             {t.devices[d]}
           </TabsTrigger>

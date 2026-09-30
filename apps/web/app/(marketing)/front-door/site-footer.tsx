@@ -122,12 +122,12 @@ export function SiteFooter({
         {locale ? <LanguageToggle current={locale} /> : null}
       </div>
 
+      {/* Decoration, not text: drawn by CSS `content` so contrast checks
+          and screen readers never meet a 6%-opacity word. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none h-[18vw] overflow-hidden text-center text-[24vw] leading-[0.8] font-semibold tracking-[-0.07em] text-white/[0.06] select-none"
-      >
-        Acadigma
-      </div>
+        className="pointer-events-none h-[18vw] overflow-hidden text-center text-[24vw] leading-[0.8] font-semibold tracking-[-0.07em] text-white/[0.06] select-none before:content-['Acadigma']"
+      />
     </footer>
   )
 }
