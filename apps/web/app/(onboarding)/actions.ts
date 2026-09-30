@@ -10,7 +10,7 @@ import {
   ok,
   checkEiinAvailabilityInputSchema,
   completeOnboardingInputSchema,
-  createSchoolWorkspaceInputSchema,
+  createSchoolWorkspaceRequestSchema,
   saveOnboardingDraftInputSchema,
   type ApiError,
   type CheckEiinAvailabilityOutput,
@@ -31,6 +31,7 @@ import { validateAcademicYearRange } from "@acadigma/domain/academic"
 import { resolveOnboardingExitRoute } from "@acadigma/domain/onboarding"
 
 import { getMessages } from "@/lib/i18n"
+import { LEGAL_DOCUMENTS } from "@/lib/legal/documents"
 import { createClient } from "@/lib/supabase/server"
 import {
   throttleRecordFailure,
@@ -176,15 +177,17 @@ export async function checkEiinAvailability(
  * academic-year rule → `public.create_school_workspace` (one transaction;
  * it re-checks everything, since a direct RPC call skips this action) →
  * make the new school the active workspace, exactly as `switchWorkspace`
- * does, so `/app` opens on it.
+ * does, so `/app` opens on it. The request must carry the owner's DPA
+ * acceptance; the version recorded is this deploy's (D-114).
  */
 export async function createSchoolWorkspace(
   raw: unknown
 ): Promise<Result<CreateSchoolWorkspaceOutput, ApiError>> {
-  const parsed = createSchoolWorkspaceInputSchema.safeParse(raw)
+  const parsed = createSchoolWorkspaceRequestSchema.safeParse(raw)
   if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+  const { dpa_accepted: _accepted, ...input } = parsed.data
 
-  if (!validateAcademicYearRange(parsed.data.academic_year).ok) {
+  if (!validateAcademicYearRange(input.academic_year).ok) {
     return err(
       apiError("validation_failed", "Check the academic year dates.", {
         fieldErrors: { academic_year: ["INVALID_ACADEMIC_YEAR"] },
@@ -200,7 +203,11 @@ export async function createSchoolWorkspace(
     return err(apiError("unauthenticated", "Please sign in to continue."))
   }
 
-  const created = await createSchoolWorkspaceRow(supabase, parsed.data)
+  const created = await createSchoolWorkspaceRow(
+    supabase,
+    input,
+    LEGAL_DOCUMENTS.dpa.version
+  )
   if (!created.ok) return created
 
   const cookieStore = await cookies()

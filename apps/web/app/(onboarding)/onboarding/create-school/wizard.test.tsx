@@ -196,6 +196,13 @@ describe("step 3 — classes", () => {
 })
 
 describe("step 4 — review and create", () => {
+  /** D-114: the owner ticks the DPA box before the school can be created. */
+  async function acceptDpa() {
+    await act(async () => {
+      screen.getByRole("checkbox").click()
+    })
+  }
+
   it("summarises the draft and states the trial from the catalogue", () => {
     renderWizard(4, COMPLETE_DRAFT)
     expect(screen.getByText("Ideal School & College")).toBeTruthy()
@@ -223,11 +230,15 @@ describe("step 4 — review and create", () => {
     })
     renderWizard(4, COMPLETE_DRAFT)
 
+    await acceptDpa()
     await act(async () => {
       screen.getByRole("button", { name: t.createButton }).click()
     })
 
-    expect(createSchoolWorkspace).toHaveBeenCalledWith(COMPLETE_DRAFT)
+    expect(createSchoolWorkspace).toHaveBeenCalledWith({
+      ...COMPLETE_DRAFT,
+      dpa_accepted: true,
+    })
     expect(assign).toHaveBeenCalledWith("/app")
     vi.unstubAllGlobals()
   })
@@ -243,6 +254,7 @@ describe("step 4 — review and create", () => {
     })
     renderWizard(4, { ...COMPLETE_DRAFT, eiin: "108263" })
 
+    await acceptDpa()
     await act(async () => {
       screen.getByRole("button", { name: t.createButton }).click()
     })
@@ -259,8 +271,21 @@ describe("step 4 — review and create", () => {
     expect(screen.getByRole("heading", { name: t.step1Title })).toBeTruthy()
   })
 
+  it("asks for the DPA and creates nothing until it is accepted", async () => {
+    renderWizard(4, COMPLETE_DRAFT)
+    expect(
+      screen.getByRole("link", { name: t.dpaLink }).getAttribute("href")
+    ).toBe("/legal/dpa")
+    await act(async () => {
+      screen.getByRole("button", { name: t.createButton }).click()
+    })
+    expect(screen.getByRole("alert").textContent).toBe(t.dpaRequired)
+    expect(createSchoolWorkspace).not.toHaveBeenCalled()
+  })
+
   it("refuses an incomplete draft without calling the server", async () => {
     renderWizard(4, { name: "Half done" })
+    await acceptDpa()
     await act(async () => {
       screen.getByRole("button", { name: t.createButton }).click()
     })

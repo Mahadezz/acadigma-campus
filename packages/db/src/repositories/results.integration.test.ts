@@ -76,27 +76,31 @@ describe.skipIf(!RUN)(
         },
       })
 
-      const school = await createSchoolWorkspace(userClient, {
-        name: "D-75 Publish Sheet School",
-        board: "dhaka",
-        medium: "bangla",
-        timezone: "Asia/Dhaka",
-        working_days: [1, 2, 3, 4, 5, 6, 7],
-        academic_year: {
-          name: "2026",
-          starts_on: "2026-01-01",
-          ends_on: "2026-12-31",
-        },
-        grade_levels: [
-          {
-            name: "Class 9",
-            name_bn: "নবম শ্রেণি",
-            level_number: 9,
-            stage: "secondary",
+      const school = await createSchoolWorkspace(
+        userClient,
+        {
+          name: "D-75 Publish Sheet School",
+          board: "dhaka",
+          medium: "bangla",
+          timezone: "Asia/Dhaka",
+          working_days: [1, 2, 3, 4, 5, 6, 7],
+          academic_year: {
+            name: "2026",
+            starts_on: "2026-01-01",
+            ends_on: "2026-12-31",
           },
-        ],
-        idempotency_key: randomUUID(),
-      })
+          grade_levels: [
+            {
+              name: "Class 9",
+              name_bn: "নবম শ্রেণি",
+              level_number: 9,
+              stage: "secondary",
+            },
+          ],
+          idempotency_key: randomUUID(),
+        },
+        "2026-09-30-interim"
+      )
       if (!school.ok) throw new Error(JSON.stringify(school.error))
       const workspaceId = school.data.workspaceId
       ctx = {

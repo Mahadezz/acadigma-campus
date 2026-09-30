@@ -31,6 +31,15 @@ export const guardianInviteTokenSchema = z
 export const guardianInviteTokenInputSchema = z
   .object({ token: guardianInviteTokenSchema })
   .strict()
+/** Accepting needs the parent's consent (D-114): the ticked box under the
+ * consent text, and the language that text was shown in. */
+export const guardianInviteAcceptInputSchema = z
+  .object({
+    token: guardianInviteTokenSchema,
+    consent: z.literal(true),
+    locale: z.enum(["en", "bn"]),
+  })
+  .strict()
 
 export type GuardianInvitationPreview =
   | {

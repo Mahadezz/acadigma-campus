@@ -44,6 +44,12 @@ const ERRORS: Record<string, ApiError> = {
     "Too many invitations in the last hour. Please try again later."
   ),
   LINK_NOT_FOUND: apiError("not_found", "That link was not found."),
+  // D-114: the consent text this page showed is not the published one
+  // (a deploy landed while the page was open).
+  LEGAL_DOCUMENT_UNKNOWN: apiError(
+    "conflict",
+    "This page is out of date. Reload it and try again."
+  ),
   INVITATION_NOT_FOUND: apiError(
     "not_found",
     "This invitation link is not valid."
@@ -174,13 +180,18 @@ export async function previewGuardianInvitation(
   })
 }
 
-/** Accepts once; returns the school the caller is now a parent of. */
+/** Accepts once, recording the parent's consent to the named version of
+ * the consent text in the language they read it (D-114); returns the school
+ * the caller is now a parent of. */
 export async function acceptGuardianInvitation(
   client: AcadigmaSupabaseClient,
-  token: string
+  token: string,
+  consent: { version: string; locale: "en" | "bn" }
 ): Promise<Result<{ workspaceId: string }, ApiError>> {
   const { data, error } = await client.rpc("accept_guardian_invitation", {
     p_token: token,
+    p_consent_version: consent.version,
+    p_locale: consent.locale,
   })
   if (error) return err(mapError(error.message))
   const row = z.object({ workspace_id: z.string() }).safeParse(data)

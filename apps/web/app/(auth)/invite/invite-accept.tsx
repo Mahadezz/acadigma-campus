@@ -4,11 +4,14 @@ import { useEffect, useState, useTransition } from "react"
 
 import type { ApiError, GuardianInvitationPreview } from "@acadigma/contracts"
 import { Button } from "@acadigma/ui/components/button"
+import { Checkbox } from "@acadigma/ui/components/checkbox"
+import { Label } from "@acadigma/ui/components/label"
 import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 
 import { OnlineOnly } from "@/app/(shared)/offline/online-only"
 import { useGuardedSignOut } from "@/app/(shared)/offline/sign-out-guard"
 import type { Messages } from "@/lib/i18n"
+import { GUARDIAN_CONSENT } from "@/lib/legal/guardian-consent"
 import type { Locale } from "@/lib/locale"
 
 import { signOut } from "../actions"
@@ -84,6 +87,10 @@ export function InviteAccept({
   const [state, setState] = useState<State>({ kind: "loading" })
   const [pending, startTransition] = useTransition()
   const [acceptError, setAcceptError] = useState<ApiError | null>(null)
+  // D-114: the parent's consent of record, given by ticking the box under
+  // the consent text (the server refuses an acceptance without it).
+  const [consent, setConsent] = useState(false)
+  const [consentMissing, setConsentMissing] = useState(false)
   // F-ID-11 §4.7 (D-308, D-309): this sign-out ends on /register, not
   // /login, so the guard wipes the outbox and the page cache itself.
   // The server's user (D-310); signed out never shows the button.
@@ -168,11 +175,21 @@ export function InviteAccept({
   const student =
     locale === "bn" && p.studentNameBn ? p.studentNameBn : p.studentName
 
+  const consentParagraphs = GUARDIAN_CONSENT.text[locale]
+    .trim()
+    .replaceAll("{school}", p.schoolName)
+    .replaceAll("{student}", student)
+    .split(/\n{2,}/)
+
   const token = state.token
   function accept() {
     setAcceptError(null)
+    if (!consent) {
+      setConsentMissing(true)
+      return
+    }
     startTransition(async () => {
-      const r = await acceptInvitation({ token })
+      const r = await acceptInvitation({ token, consent: true, locale })
       if (!r.ok) {
         setAcceptError(r.error)
         return
@@ -193,6 +210,45 @@ export function InviteAccept({
       <p className="text-muted-foreground text-sm">
         {t.whatYouSee.replace("{student}", student)}
       </p>
+      <section
+        aria-labelledby="guardian-consent-heading"
+        className="bg-muted/50 space-y-2 rounded-md border p-3 text-sm"
+      >
+        <h2 id="guardian-consent-heading" className="font-medium">
+          {t.consentHeading}
+        </h2>
+        {consentParagraphs.map((paragraph) => (
+          <p key={paragraph}>{paragraph}</p>
+        ))}
+      </section>
+      <div className="space-y-1">
+        <div className="flex min-h-11 items-center gap-3">
+          <Checkbox
+            id="guardian-consent"
+            checked={consent}
+            aria-invalid={consentMissing || undefined}
+            aria-describedby={
+              consentMissing ? "guardian-consent-required" : undefined
+            }
+            onCheckedChange={(checked) => {
+              setConsent(checked === true)
+              setConsentMissing(false)
+            }}
+          />
+          <Label htmlFor="guardian-consent" className="font-normal">
+            {t.consentCheckbox}
+          </Label>
+        </div>
+        {consentMissing ? (
+          <p
+            id="guardian-consent-required"
+            role="alert"
+            className="text-destructive text-sm"
+          >
+            {t.consentRequired}
+          </p>
+        ) : null}
+      </div>
       {acceptError ? errorView(acceptError) : null}
       {/* F-ID-11 §4.9: accepting an invitation needs the server. */}
       <OnlineOnly>
