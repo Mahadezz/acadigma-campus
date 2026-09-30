@@ -19,9 +19,20 @@ function pages(dir: string): string[] {
 // D-409: every data route falls under a loading.tsx (its own or an ancestor's,
 // up to its shell), so a slow navigation never shows a blank screen.
 describe("loading.tsx coverage", () => {
-  // `/app` itself only redirects, so it never renders a screen to skeleton.
+  // Exempt: `/app` only redirects; the exam and marks flows hang a
+  // `router.refresh()` (Lock marks, Compute results) forever in e2e-live when
+  // a loading.tsx wraps them (D-409), so they stay skeleton-less until that is
+  // understood.
+  const EXEMPT = [
+    join("(school)", "app", "page.tsx"),
+    join("(school)", "app", "exams") + sep,
+    join("(school)", "app", "marks") + sep,
+  ]
   const routes = SHELLS.flatMap((s) => pages(join(APP, s))).filter(
-    (p) => !p.endsWith(join("(school)", "app", "page.tsx"))
+    (p) =>
+      !EXEMPT.some(
+        (e) => relative(APP, p).startsWith(e) || relative(APP, p) === e
+      )
   )
 
   it("finds the routes", () => expect(routes.length).toBeGreaterThan(20))

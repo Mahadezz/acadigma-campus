@@ -71,7 +71,7 @@ export function MarksProgress({
       }
       setUnlocking(null)
       setNotice(done)
-      startTransition(() => router.refresh())
+      router.refresh()
     })
   }
 

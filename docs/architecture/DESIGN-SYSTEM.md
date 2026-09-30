@@ -1132,7 +1132,7 @@ promised one, and it stays a follow-up.
 
 **Acceptance criteria**
 
-1. Every `page.tsx` under the five data shells has a `loading.tsx` on its path (own or ancestor), except `/app` (a redirect). Enforced by `apps/web/lib/loading-coverage.test.ts`.
+1. Every `page.tsx` under the five data shells has a `loading.tsx` on its path (own or ancestor), except `/app` (a redirect) and the exams and marks sections (D-409: a boundary there hangs the Lock/Compute refresh). Enforced by `apps/web/lib/loading-coverage.test.ts`.
 2. During a slow navigation the skeleton renders in the page's final geometry and is `aria-busy`; under reduced motion it does not pulse.
 3. A downward drag of >= 128px finger travel (64px damped) from the top of a phone data screen triggers exactly one `router.refresh()`; a shorter drag, a drag while scrolled, on a fine pointer, or with a dialog open triggers none.
 4. The text-size choice shows immediately; a failed save reverts it and raises a toast; a successful save keeps it.

@@ -98,7 +98,7 @@ export function ExamDetailView({
         return
       }
       setReversing(false)
-      startTransition(() => router.refresh())
+      router.refresh()
     })
   }
 
@@ -118,7 +118,7 @@ export function ExamDetailView({
           .replace("{n}", String(result.data.published))
           .replace("{withheld}", String(result.data.withheld))
       )
-      startTransition(() => router.refresh())
+      router.refresh()
     })
   }
 
@@ -138,7 +138,7 @@ export function ExamDetailView({
           .replace("{failed}", String(result.data.failed))
           .replace("{incomplete}", String(result.data.incomplete))
       )
-      startTransition(() => router.refresh())
+      router.refresh()
     })
   }
 
@@ -407,7 +407,7 @@ function PaperRow({
               entryClosesOn: closes || null,
             })
             setNotice(result.ok ? t.saved : result.error.message || t.error)
-            if (result.ok) startTransition(() => router.refresh())
+            if (result.ok) router.refresh()
           })
         }}
       >
