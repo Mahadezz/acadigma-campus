@@ -157,9 +157,21 @@ const overrideRowSchema = z.object({
   reason: z.string(),
 })
 
-function toOverride(row: unknown): WorkingDayOverride {
-  const r = overrideRowSchema.parse(row)
-  return { id: r.id, date: r.date, isWorking: r.is_working, reason: r.reason }
+/** A malformed row is an "unavailable" result, never a throw to the client. */
+function toOverride(row: unknown): WorkingDayOverride | null {
+  const r = overrideRowSchema.safeParse(row)
+  if (!r.success) return null
+  return {
+    id: r.data.id,
+    date: r.data.date,
+    isWorking: r.data.is_working,
+    reason: r.data.reason,
+  }
+}
+
+function toOverrides(rows: unknown[]): WorkingDayOverride[] | null {
+  const out = rows.map(toOverride)
+  return out.every((o) => o !== null) ? out : null
 }
 
 /** Overrides on or after `from`, oldest first. */
@@ -176,7 +188,8 @@ export async function listWorkingDayOverrides(
     .order("date", { ascending: true })
     .limit(LIST_LIMIT)
   if (error) return err(UNAVAILABLE)
-  return ok((data ?? []).map(toOverride))
+  const overrides = toOverrides(data ?? [])
+  return overrides ? ok(overrides) : err(UNAVAILABLE)
 }
 
 /** One row per (workspace, date): a second save for a date updates it. */
@@ -199,7 +212,8 @@ export async function upsertWorkingDayOverride(
     .select(OVERRIDE_COLUMNS)
     .single()
   if (error) return err(mapWriteError(error))
-  return ok(toOverride(data))
+  const override = toOverride(data)
+  return override ? ok(override) : err(UNAVAILABLE)
 }
 
 export async function deleteWorkingDayOverride(

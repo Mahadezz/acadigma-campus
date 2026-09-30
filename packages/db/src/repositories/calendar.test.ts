@@ -238,6 +238,19 @@ describe("working-day overrides", () => {
     expect(!result.ok && result.error.code).toBe("payment_required")
   })
 
+  it("returns dependency_unavailable, not a throw, on a malformed row", async () => {
+    const list = fakeClient({ data: [{ id: 1 }], error: null })
+    const listed = await listWorkingDayOverrides(CTX, list.client, "2026-01-01")
+    expect(!listed.ok && listed.error.code).toBe("dependency_unavailable")
+    const save = fakeClient({ data: { id: 1 }, error: null })
+    const saved = await upsertWorkingDayOverride(CTX, save.client, {
+      date: "2026-11-06",
+      isWorking: true,
+      reason: "x",
+    })
+    expect(!saved.ok && saved.error.code).toBe("dependency_unavailable")
+  })
+
   it("delete reports not_found when no row matched", async () => {
     const { client } = fakeClient({ data: [], error: null })
     const result = await deleteWorkingDayOverride(CTX, client, "2026-11-06")

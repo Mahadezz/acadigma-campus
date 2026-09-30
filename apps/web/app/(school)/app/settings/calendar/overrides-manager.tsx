@@ -95,6 +95,11 @@ export function OverridesManager({
 }) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
+  // Editing an existing override: the date is fixed (to move one, remove and
+  // re-add), so a save can never silently replace another date's row.
+  const [isEdit, setIsEdit] = useState(false)
+  // The list starts at 1 January of the school's year; so does the date input.
+  const minDate = `${today.slice(0, 4)}-01-01`
   const [removing, setRemoving] = useState<WorkingDayOverride | null>(null)
   const [notice, setNotice] = useState<{
     tone: "success" | "error"
@@ -120,8 +125,9 @@ export function OverridesManager({
   const formatDate = (d: string) =>
     dateFormat.format(new Date(`${d}T00:00:00Z`))
 
-  function open(values: FormValues) {
+  function open(values: FormValues, edit: boolean) {
     setNotice(null)
+    setIsEdit(edit)
     form.reset(values)
     setEditing(true)
   }
@@ -132,6 +138,10 @@ export function OverridesManager({
   }
 
   function onSubmit(values: FormValues) {
+    if (values.date && values.date < minDate) {
+      form.setError("date", { message: t.errors.tooEarly })
+      return
+    }
     const local = upsertWorkingDayOverrideInputSchema.safeParse({
       date: values.date,
       isWorking: values.isWorking === "yes",
@@ -193,7 +203,7 @@ export function OverridesManager({
           type="button"
           variant="outline"
           className="min-h-11"
-          onClick={() => open(EMPTY)}
+          onClick={() => open(EMPTY, false)}
         >
           <PlusIcon aria-hidden />
           {t.add}
@@ -230,11 +240,14 @@ export function OverridesManager({
                     variant="ghost"
                     className="min-h-11 shrink-0"
                     onClick={() =>
-                      open({
-                        date: o.date,
-                        isWorking: o.isWorking ? "yes" : "no",
-                        reason: o.reason,
-                      })
+                      open(
+                        {
+                          date: o.date,
+                          isWorking: o.isWorking ? "yes" : "no",
+                          reason: o.reason,
+                        },
+                        true
+                      )
                     }
                     aria-label={`${t.edit}: ${formatDate(o.date)}`}
                   >
@@ -259,7 +272,7 @@ export function OverridesManager({
       <FormSheet
         open={editing}
         onOpenChange={(next) => (next ? setEditing(true) : close())}
-        title={t.addTitle}
+        title={isEdit ? t.editTitle : t.addTitle}
         description={t.addDescription}
         isDirty={form.formState.isDirty}
         footer={
@@ -302,9 +315,17 @@ export function OverridesManager({
                 <FormItem>
                   <FormLabel>{t.fields.date}</FormLabel>
                   <FormControl>
-                    <Input {...field} type="date" className="min-h-11" />
+                    <Input
+                      {...field}
+                      type="date"
+                      min={minDate}
+                      disabled={isEdit}
+                      className="min-h-11"
+                    />
                   </FormControl>
-                  <FormDescription>{t.dateHelp}</FormDescription>
+                  <FormDescription>
+                    {isEdit ? t.dateLocked : t.dateHelp}
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

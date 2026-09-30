@@ -30,7 +30,7 @@ Branch `feat/calendar-overrides`; CI run 36775577013 (ubuntu); local Windows, No
 
 ## 4. Database (pgTAP)
 
-Not re-run for this change: no migration. `db` job skipped by CI (no `supabase/` change). Existing `41_school_calendar.sql` already asserts teacher cannot insert an override, reason required, isolation and precedence.
+Not re-run for this change: no migration. `db` job skipped by CI (no `supabase/` change). `41_school_calendar.sql` gains a staff-role insert refusal and an admin-of-School-A-into-School-B insert refusal (plan 52 to 54); it already asserts teacher cannot insert an override, reason required, isolation and precedence.
 
 ## 5. End to end (Playwright, CI `e2e-live` 4 shards)
 
@@ -43,7 +43,8 @@ Write gate `can("calendar.override.write")` then `requireWritable`, then RLS (ow
 ## 7. Known issues
 
 - CI `lighthouse` failed on `/login` LCP (3661 ms against a 3500 ms ceiling), a public page this PR does not touch; `/app` is not measured. Treated as runner noise; rerun recorded in the PR.
-- Local screenshots at both viewports were not captured in this session.
+- `working_day_overrides.academic_year_id` (spec §3) is not added: deferred since D-202, confirmed by the lead; no schema change in this Part.
+- The `/login` Lighthouse failure comes from the #128 auth-page restyle; the design lane is fixing it. This PR merges `origin/main` afterwards.
 
 ## 8. Sign-off
 

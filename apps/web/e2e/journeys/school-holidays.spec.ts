@@ -88,6 +88,14 @@ test("owner opens a Friday, changes the reason, then removes the override", asyn
 
   // The same date again replaces the row rather than adding a second.
   await row.getByRole("button", { name: /Edit/ }).click()
+  await expect(page.getByLabel("Date")).toBeDisabled()
+  await expect(
+    page.getByRole("heading", { name: "Edit override" })
+  ).toBeVisible()
+  await testInfo.attach("overrides-edit-sheet", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
   await page.getByLabel("On this day").selectOption("no")
   await page.getByRole("button", { name: "Save override" }).click()
   await expect(page.getByText("Override saved.")).toBeVisible()

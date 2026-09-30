@@ -1960,4 +1960,4 @@ Two things were already true and are worth stating plainly rather than re-derivi
 
 **Why:** the smallest change that makes an already-tested backend usable; no second source of truth for who may override.
 
-**Consequences:** server actions `saveWorkingDayOverride` / `deleteWorkingDayOverride` follow parse, context, `can`, `requireWritable`, repository; audit rows come from the existing trigger. The override list shows overrides from 1 January of the school's current year onward (same window as holidays).
+**Consequences:** server actions `saveWorkingDayOverride` / `deleteWorkingDayOverride` follow parse, context, `can`, `requireWritable`, repository; audit rows come from the existing trigger. The override list shows overrides from 1 January of the school's current year onward (same window as holidays), and the date input is bounded to that same window (`min` = 1 January of the school's year; the simplest consistent choice, rather than also listing past years). Editing an override fixes its date; to move one, remove it and add a new one, so a save can never silently replace another date's row (lead security review of #131).
