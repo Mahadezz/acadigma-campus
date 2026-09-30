@@ -4321,7 +4321,11 @@ export type Database = {
       accept_guardian_invitation:
         | { Args: { p_token: string }; Returns: Json }
         | {
-            Args: { p_consent_version: string; p_locale: string; p_token: string }
+            Args: {
+              p_consent_version: string
+              p_locale: string
+              p_token: string
+            }
             Returns: Json
           }
       account_deletion_blockers: {
