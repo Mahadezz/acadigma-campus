@@ -14,12 +14,7 @@ export const metadata: Metadata = { title: "Appearance" }
  * from Settings and from the avatar menu's "Theme & language" link — not
  * from the header or the home screen (see `user-menu.tsx` and
  * `essentials-row.tsx`'s docblocks in this same PR).
- *
- * Not yet listed on `/app/settings`'s own row list: that list is built in
- * `settings/page.tsx`, which open PR #105 (identity-roles-labels) is
- * editing — this Part does not touch it. The lead adds the row once #105
- * merges; until then this screen is reachable by URL and via the avatar
- * menu, same as every other settings sub-page.
+ * Listed on `/app/settings` as "Theme & language".
  */
 export default async function AppearancePage() {
   await requireShell("school")

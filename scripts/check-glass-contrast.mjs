@@ -120,6 +120,34 @@ for (const [theme, block] of Object.entries(THEMES)) {
       `${ok ? "PASS" : "FAIL"}  ${theme.padEnd(5)}  --${ink} on the bare mesh: ${worst.toFixed(2)}:1`
     )
   }
+  // Coloured inks on resting cards: links (--primary-ink), primary text,
+  // status text, and the input placeholder (muted on glass).
+  const panel = parse(decl(block, "glass-bg-panel"))
+  for (const ink of ["primary", "primary-ink", "success-ink", "danger-ink"]) {
+    const fg = parse(decl(block, ink)).c
+    const worst = Math.min(...backdrops.map((b) => ratio(fg, over(panel, b))))
+    const ok = worst >= 4.5
+    if (!ok) failed++
+    console.log(
+      `${ok ? "PASS" : "FAIL"}  ${theme.padEnd(5)}  --${ink} on --glass-bg-panel: ${worst.toFixed(2)}:1`
+    )
+  }
+  // Chrome over the most contrasting solid content that scrolls under it —
+  // the primary button (near-black in light, near-white in dark) — with the
+  // blur treated as no help (a solid block wider than the blur radius).
+  {
+    const chrome = parse(decl(block, "glass-bg"))
+    const under = saturate(parse(decl(block, "primary")).c, sat)
+    const bg = over(chrome, under)
+    for (const ink of ["foreground", "glass-muted-foreground"]) {
+      const r = ratio(parse(decl(block, ink)).c, bg)
+      const ok = r >= 4.5
+      if (!ok) failed++
+      console.log(
+        `${ok ? "PASS" : "FAIL"}  ${theme.padEnd(5)}  --${ink} on --glass-bg over --primary: ${r.toFixed(2)}:1`
+      )
+    }
+  }
   for (const tint of ["glass-bg", "glass-bg-panel", "glass-bg-overlay"]) {
     const t = parse(decl(block, tint))
     for (const ink of ["foreground", "glass-muted-foreground"]) {

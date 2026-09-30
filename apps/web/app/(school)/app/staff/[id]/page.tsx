@@ -1,7 +1,6 @@
-import Link from "next/link"
 import { forbidden, notFound } from "next/navigation"
 
-import { ArrowLeftIcon, PhoneIcon } from "lucide-react"
+import { PhoneIcon } from "lucide-react"
 
 import { uuidSchema } from "@acadigma/contracts"
 import { getStaffDirectoryRow, listSubjects } from "@acadigma/db/repositories"
@@ -67,14 +66,6 @@ export default async function StaffProfilePage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <Link
-        href="/app/staff"
-        className="text-muted-foreground inline-flex min-h-11 items-center gap-1 text-sm underline-offset-4 hover:underline"
-      >
-        <ArrowLeftIcon aria-hidden="true" className="size-4" />
-        {t.staff.profile.backToDirectory}
-      </Link>
-
       <div className="flex items-center gap-3">
         <Avatar className="size-14">
           <AvatarFallback className="text-lg">

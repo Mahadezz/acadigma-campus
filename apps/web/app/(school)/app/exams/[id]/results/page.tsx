@@ -1,7 +1,4 @@
-import Link from "next/link"
 import { forbidden, notFound } from "next/navigation"
-
-import { ChevronLeftIcon } from "lucide-react"
 
 import type { StudentResultRow } from "@acadigma/contracts"
 import { getExam } from "@acadigma/db/repositories/exams"
@@ -77,13 +74,6 @@ export default async function ExamResultsPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <Link
-        href={`/app/exams/${id}`}
-        className="text-muted-foreground inline-flex min-h-11 items-center gap-1 text-sm"
-      >
-        <ChevronLeftIcon className="size-4" aria-hidden /> {r.back}
-      </Link>
-
       <div className="space-y-1">
         <h2 className="text-lg font-semibold tracking-tight">
           {r.title} · {exam.data.name}

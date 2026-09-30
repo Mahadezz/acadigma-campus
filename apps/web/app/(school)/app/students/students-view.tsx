@@ -19,6 +19,7 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@acadigma/ui/components/native-select"
+import { Skeleton } from "@acadigma/ui/components/skeleton"
 import {
   DataList,
   type DataListColumn,
@@ -31,10 +32,23 @@ import type { Locale } from "@/lib/locale"
 
 import { classLabel } from "./format"
 
-// D-408: the admit form loads on first open; /app/students is at the budget.
-const AdmitSheet = dynamic(() =>
-  import("./admit-sheet").then((m) => m.AdmitSheet)
-)
+// D-408: the admit form loads on first open (/app/students is near the
+// budget). The chunk is fetched on pointerdown/focus of the Admit button, and
+// a sheet-shaped placeholder shows if the tap still beats the network.
+const loadAdmitSheet = () => import("./admit-sheet")
+const AdmitSheet = dynamic(() => loadAdmitSheet().then((m) => m.AdmitSheet), {
+  loading: () => (
+    <div aria-hidden="true">
+      <div className="fixed inset-0 z-50 bg-black/50" />
+      <div className="glass-overlay fixed inset-x-0 bottom-0 z-50 space-y-4 rounded-t-[var(--radius-glass)] border-t p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-1/2 sm:rounded-[var(--radius-glass)] sm:border">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-11 w-full" />
+        <Skeleton className="h-11 w-full" />
+        <Skeleton className="h-11 w-full" />
+      </div>
+    </div>
+  ),
+})
 
 type T = Messages["students"]
 
@@ -130,6 +144,8 @@ export function StudentsView({
             <Button
               type="button"
               className="h-11"
+              onPointerDown={() => void loadAdmitSheet()}
+              onFocus={() => void loadAdmitSheet()}
               onClick={() => {
                 setAdmitted(null)
                 setAdmitting(true)

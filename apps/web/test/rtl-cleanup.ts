@@ -9,19 +9,3 @@ import { afterEach } from "vitest"
 afterEach(() => {
   cleanup()
 })
-
-// jsdom has no matchMedia; GSAP's matchMedia (CountUp, D-408) calls it.
-// Same stub as packages/ui/vitest.setup.ts: "no preference" everywhere.
-if (typeof window !== "undefined" && !window.matchMedia) {
-  window.matchMedia = (query: string) =>
-    ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener() {},
-      removeListener() {},
-      addEventListener() {},
-      removeEventListener() {},
-      dispatchEvent: () => false,
-    }) as MediaQueryList
-}

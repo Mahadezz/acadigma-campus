@@ -71,7 +71,7 @@ export default async function SettingsOverviewPage() {
           redirected away from the grouped Settings list above, which is the
           list's only other link to /app/settings/display — without this,
           those roles could never reach the text-size screen at all. Plain
-          `<Link>`, matching `SubPageHeader`'s own back-link styling, not a
+          `<Link>` in the muted inline-link style, not a
           `Button`: this route had no client component before, and this is
           one line for one link, not a reason to pull one in. */}
       <Link

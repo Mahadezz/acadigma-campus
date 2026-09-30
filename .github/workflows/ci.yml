@@ -601,6 +601,10 @@ jobs:
       - name: Audit action catalogue parity (SQL <-> TypeScript)
         run: node scripts/check-audit-catalog-parity.mjs
 
+      # D-408: text on liquid glass stays >= 4.5:1 at the worst spot.
+      - name: Glass contrast
+        run: node scripts/check-glass-contrast.mjs
+
       # D-56 (M0 wrap-up), the other half of `db`'s "RLS coverage" step: every
       # public table with a workspace_id column must be named in at least one
       # supabase/tests/*.sql file (ARCHITECTURE §9). Pure static analysis on

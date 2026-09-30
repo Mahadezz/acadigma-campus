@@ -703,7 +703,7 @@
   --glass-shadow-2: 0 24px 48px -22px rgb(0 0 0 / 0.75);
   --glass-blur: 24px;
   --glass-saturate: 150%;
-  --glass-muted-foreground: #b4b4b4;
+  --glass-muted-foreground: #c4c4c4;
   --ambient-base: #070a0b;
   --ambient-gradient:
     radial-gradient(

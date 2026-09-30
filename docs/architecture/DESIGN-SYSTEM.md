@@ -40,7 +40,7 @@ a blank page or from a component library's defaults. Values live in
 | ----------------------------------------------------------------- | ------------------------------------------ | ----------------------------------- | --------------------------------------------------------------------- |
 | `--ambient-base` + `--ambient-gradient`                           | `#edf1ef` + green/sky/marigold/teal washes | `#070a0b` + the same hues, deepened | The page. Only `AppShell` paints it. Never cream.                     |
 | `--foreground`                                                    | `#0b0b0b`                                  | `#f4f4f2`                           | Primary text, big numbers.                                            |
-| `--glass-muted-foreground` (as `--muted-foreground` in the shell) | `#4a4a4a`                                  | `#b4b4b4`                           | Secondary text on glass or on the mesh.                               |
+| `--glass-muted-foreground` (as `--muted-foreground` in the shell) | `#4a4a4a`                                  | `#c4c4c4`                           | Secondary text on glass or on the mesh.                               |
 | `--muted-foreground` (outside the shell)                          | `#636363`                                  | `#8e8e8e`                           | Secondary text on paper (auth, onboarding, print).                    |
 | `--glass-bg` / `-panel` / `-overlay`                              | white 72 / 42 / 82 %                       | near-black 72 / 62 / 86 %           | Chrome / resting cards / sheets and dialogs.                          |
 | `--primary` / `--primary-foreground`                              | `#0b0b0b` / `#f4f4f2`                      | `#f4f4f2` / `#0b0b0b`               | The one primary action per screen (a solid ink button).               |
@@ -352,7 +352,7 @@ hairline ring stay on every non-glass surface: lists, forms, table rows and
 default `Card`s.
 
 **Vibrancy.** Secondary text on glass or on the mesh uses
-`--glass-muted-foreground` (`#4a4a4a` light / `#b4b4b4` dark). It is one
+`--glass-muted-foreground` (`#4a4a4a` light / `#c4c4c4` dark). It is one
 step stronger than paper's `--muted-foreground`. `ambient-surface` and the
 three glass utilities set it as `--muted-foreground`. The value only ever
 moves toward `--foreground`, so an opaque surface inside the shell only
@@ -363,10 +363,12 @@ parses tokens.css and finds the worst spot. That is every mesh stop at full
 strength over the base, plus the grain's extreme pixel, run through the
 tint's own `saturate()`, with the tint composited in gamma sRGB. It checks
 `--foreground` and the muted ink against that spot, for each of the three
-tints and for the bare mesh, in both themes. All 16 pairs pass ≥ 4.5:1;
-the lowest is dark muted text on the bare mesh at 4.69:1. Run it after
-touching any glass or mesh token. (It is not in CI yet: `ci.yml` belongs
-to open PR #90.)
+tints and for the bare mesh; link, primary, success and danger inks on
+`glass-panel`; and both inks on `glass-chrome` over a solid
+`--primary` block scrolling under it (blur counted as no help), in both
+themes. All 28 pairs pass ≥ 4.5:1; the lowest is light muted text on
+chrome over the black primary button at 4.60:1. CI runs it (`Glass
+contrast` step).
 
 **Fallbacks** (unlayered, section 13 of tokens.css). Where neither
 `backdrop-filter` nor `-webkit-backdrop-filter` is supported (Safari before

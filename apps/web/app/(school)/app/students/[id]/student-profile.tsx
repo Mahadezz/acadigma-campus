@@ -3,9 +3,8 @@
 // A client module only so the shared ui components tree-shake: imported
 // from a server component, their `radix-ui` barrel ships whole (+40 kB).
 import dynamic from "next/dynamic"
-import Link from "next/link"
 
-import { ArrowLeftIcon, LockIcon, PhoneIcon } from "lucide-react"
+import { LockIcon, PhoneIcon } from "lucide-react"
 
 import type {
   GuardianLink,
@@ -65,13 +64,6 @@ export function StudentProfile({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <Button asChild variant="ghost" className="h-11 px-2">
-        <Link href="/app/students">
-          <ArrowLeftIcon aria-hidden="true" />
-          {t.profile.back}
-        </Link>
-      </Button>
-
       <div className="space-y-1">
         <h1 className="text-xl font-bold tracking-tight">{primaryName}</h1>
         {secondaryName ? (
