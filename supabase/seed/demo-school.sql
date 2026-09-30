@@ -96,7 +96,7 @@ begin
         jsonb_build_object('name', 'Class 7',  'name_bn', 'সপ্তম শ্রেণি', 'level_number', 7,  'stage', 'secondary'),
         jsonb_build_object('name', 'Class 8',  'name_bn', 'অষ্টম শ্রেণি', 'level_number', 8,  'stage', 'secondary'),
         jsonb_build_object('name', 'Class 9',  'name_bn', 'নবম শ্রেণি',   'level_number', 9,  'stage', 'secondary'),
-        jsonb_build_object('name', 'Class 10', 'name_bn', 'দশম শ্রেণি',   'level_number', 10, 'stage', 'secondary'))));
+        jsonb_build_object('name', 'Class 10', 'name_bn', 'দশম শ্রেণি',   'level_number', 10, 'stage', 'secondary'))), '2026-09-30-interim');
     if v_res ? 'error' then
       raise exception 'create_school_workspace: %', v_res ->> 'error';
     end if;

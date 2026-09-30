@@ -116,7 +116,6 @@ with allowed as (
     ('public.cancel_account_deletion()'),  -- F-ID-01 Part 7, D-113
     ('public.pre_request()'),  -- D-65: the hook's public wrapper
     ('public.check_eiin_available(text)'),  -- F-ID-05 Part 3, D-66
-    ('public.create_school_workspace(jsonb)'),  -- F-ID-05 Part 4, D-100
     ('public.create_school_workspace(jsonb, text)'),  -- DPA acceptance, D-114
     ('public.seed_bd_grade_scale(uuid)'),  -- F-AC-06 Part 1, D-302
     ('public.save_grade_scale(uuid, uuid, text, jsonb)'),  -- F-AC-06 Part 1, D-302
@@ -137,7 +136,6 @@ with allowed as (
     ('public.set_section_subjects(uuid, uuid, jsonb)'),  -- F-AC-01 Part 5 demo cut, D-107
     ('public.invite_guardian(uuid, uuid)'),  -- F-AC-02 Part 4 demo cut, D-108
     ('public.guardian_invitation_preview(text)'),  -- F-AC-02 Part 4 demo cut, D-108
-    ('public.accept_guardian_invitation(text)'),  -- F-AC-02 Part 4 demo cut, D-108
     ('public.accept_guardian_invitation(text, text, text)'),  -- guardian consent, D-114
     ('public.revoke_guardian_link(uuid, uuid)'),  -- F-AC-02 Part 4 demo cut, D-108
     ('public.attendance_register(uuid, uuid, date)'),  -- F-OP-03 Part 6 review, D-208

@@ -544,6 +544,14 @@ export const AUDIT_ACTION_CATALOG: readonly AuditActionCatalogEntry[] = [
     isGeneric: false,
   },
   {
+    // D-114 contract step — 20260930052627_consent_contract.sql.
+    action: "legal.accepted",
+    severity: "notable",
+    sentenceEn: "{actor} accepted a legal agreement ({name})",
+    sentenceBn: "{actor} একটি আইনি চুক্তি গ্রহণ করেছেন ({name})",
+    isGeneric: false,
+  },
+  {
     action: "retention.audit_events_purged",
     severity: "info",
     sentenceEn: "The system purged {n} audit events past retention",

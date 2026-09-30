@@ -118,7 +118,7 @@ select throws_ok(
       'academic_year', jsonb_build_object('name', '2026', 'starts_on', '2026-01-01', 'ends_on', '2026-12-31'),
       'grade_levels', jsonb_build_array(jsonb_build_object(
         'name', 'Class 6', 'name_bn', 'ষষ্ঠ শ্রেণি', 'level_number', 6, 'stage', 'secondary')),
-      'idempotency_key', '39e00000-0000-4000-c000-000000000001'))$$,
+      'idempotency_key', '39e00000-0000-4000-c000-000000000001'), '2026-09-30-interim')$$,
   '42501', 'ACCOUNT_CLOSED',
   'A5: a leftover token of a purged account cannot create a school');
 select tests.logout();
