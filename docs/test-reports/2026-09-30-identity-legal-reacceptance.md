@@ -90,13 +90,13 @@ Taken by the live journey in CI (run 36712908566), not locally: this session had
 
 ## 8. Known issues
 
-| #   | Issue                                                                                                   | Severity | Ship anyway?                                      |
-| --- | ------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------- |
-| 1   | The gate is a render gate: server actions and route handlers are not gated (D-115 §6)                   | medium   | yes — permissions are unchanged; decided in D-115 |
-| 2   | The DPA branch has no Playwright journey (needs a school without a DPA row); unit + pgTAP only          | low      | yes                                               |
-| 3   | The (account) layout's Back link goes to `/app`, which returns to the screen until accepted             | low      | yes                                               |
-| 4   | No grace period; the demo school's owner and every pre-D-114 account see the screen on their next visit | low      | yes — intended (D-115 §4)                         |
-| 5   | Texts are still interim; Terms/Privacy/DPA English only                                                 | medium   | yes — OWNER-QUESTIONS (counsel)                   |
+| #   | Issue                                                                                                                                                                     | Severity | Ship anyway?                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
+| 1   | Writes before acceptance are not blocked server-side: server actions, `/api/*`, `/onboarding/*`, `/invite` and `/platform` are not gated (D-115 §5-6, a UX/legal control) | medium   | yes — permissions are unchanged; accepted by the security review |
+| 2   | The DPA owner prompt has no Playwright journey (needs a school without a DPA row); unit tests and pgTAP `39g` cover it                                                    | low      | yes — add the journey once OQ-27 lands                           |
+| 3   | Every demo account sees the screen once after a seed (the seed records no acceptances); DEMO-SCRIPT prep step added                                                       | low      | yes — intended; consent is never faked                           |
+| 4   | No grace period; the demo school's owner and every pre-D-114 account see the screen on their next visit                                                                   | low      | yes — intended (D-115 §4)                                        |
+| 5   | Texts are still interim; Terms/Privacy/DPA English only                                                                                                                   | medium   | yes — OWNER-QUESTIONS (counsel)                                  |
 
 ## 9. Sign-off
 

@@ -61,6 +61,8 @@ test("an account without the current Terms accepts them before using the app", a
   await expect(
     page.getByRole("link", { name: "Terms of Use" }).first()
   ).toHaveAttribute("href", "/legal/terms")
+  // No Back link here: /app would only send the person back (D-115).
+  await expect(page.getByRole("link", { name: "Back" })).toHaveCount(0)
   await expectNoA11yViolations(page, testInfo)
   // The screen at this project's viewport, kept in the report (DoD).
   await testInfo.attach("legal-reacceptance", {

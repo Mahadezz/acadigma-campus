@@ -14,7 +14,10 @@ import { AcceptForm } from "./accept-form"
 
 import type { Metadata } from "next"
 
-export const metadata: Metadata = { title: "Updated terms" }
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getMessages()
+  return { title: t.auth.reaccept.metaTitle }
+}
 
 /**
  * D-115: where `requireShell` sends a person who has not accepted the

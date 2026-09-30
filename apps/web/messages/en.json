@@ -191,6 +191,7 @@
       "scheduledNotice": "Your account will be deleted on {date}. Sign in before then if you want to keep it."
     },
     "reaccept": {
+      "metaTitle": "Updated terms",
       "title": "Please accept our updated terms",
       "lead": "Before you continue, read and accept the current version of these documents.",
       "version": "Version {version}",

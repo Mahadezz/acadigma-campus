@@ -72,7 +72,10 @@ export const getOutstandingDocuments = cache(
     )
     if (!rows.ok) {
       const log = await requestLogger({ route: "legal.outstanding" })
-      log.warn({ code: rows.error.code }, "legal acceptance check skipped")
+      log.warn(
+        { event: "legal_gate_read_failed", code: rows.error.code },
+        "legal acceptance check skipped (fail open, D-115)"
+      )
       return []
     }
     return outstandingDocuments(rows.data, { ownedSchoolId })
