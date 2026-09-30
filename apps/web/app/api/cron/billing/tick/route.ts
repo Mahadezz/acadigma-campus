@@ -1,10 +1,9 @@
-import { timingSafeEqual } from "node:crypto"
-
 import { NextResponse } from "next/server"
 
 import { httpStatusForError } from "@acadigma/contracts"
 import { runTrialExpiryJob, withServiceRole } from "@acadigma/db"
 
+import { isCronAuthorized } from "@/lib/cron-auth"
 import { requestLogger } from "@/lib/logger"
 
 /**
@@ -23,21 +22,8 @@ import { requestLogger } from "@/lib/logger"
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
-/** Constant-time: an early-exit `===` leaks the secret's length via timing. */
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false // fail closed: an unset secret authorizes nobody.
-
-  const provided = request.headers.get("authorization") ?? ""
-  const expected = `Bearer ${secret}`
-  const providedBuf = Buffer.from(provided)
-  const expectedBuf = Buffer.from(expected)
-  if (providedBuf.length !== expectedBuf.length) return false
-  return timingSafeEqual(providedBuf, expectedBuf)
-}
-
 export async function GET(request: Request): Promise<Response> {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json(
       { error: "unauthorized" },
       { status: 401, headers: { "cache-control": "no-store" } }

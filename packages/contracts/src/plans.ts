@@ -7,6 +7,7 @@ import {
   uuidSchema,
 } from "./common"
 import { apiError, type ApiError } from "./errors"
+import { ARCHIVED_READ_ONLY_REASON } from "./operations/danger-zone"
 
 /**
  * Zod schemas for F-CM-06 Parts 1-3 (plans, subscriptions, the limits engine).
@@ -241,6 +242,14 @@ export type PlanReadOnlyErrorPayload = z.infer<typeof planReadOnlyErrorSchema>
 export function planReadOnlyApiError(
   payload: PlanReadOnlyErrorPayload
 ): ApiError {
+  // D-211: an archived school is read-only because its owner archived it,
+  // not because of the plan — upgrading would not lift it.
+  if (payload.reason === ARCHIVED_READ_ONLY_REASON) {
+    return apiError(
+      "forbidden",
+      `${ARCHIVED_READ_ONLY_REASON} You can still view and export everything, and nothing has been deleted. The owner can restore it in Settings → Danger zone.`
+    )
+  }
   return apiError(
     "payment_required",
     `${payload.reason ?? "This workspace is read-only."} Upgrade to make changes — you can still view and export everything, and nothing has been deleted.`
