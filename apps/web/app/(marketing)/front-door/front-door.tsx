@@ -58,10 +58,7 @@ export function FrontDoor({
         </a>
         <a
           href="#get-the-app"
-          className={cn(
-            buttonVariants({ variant: "secondary" }),
-            "h-11 rounded-full px-5"
-          )}
+          className={cn(buttonVariants(), "h-11 rounded-full px-5")}
         >
           {t.getApp.title}
         </a>
@@ -80,7 +77,7 @@ export function FrontDoor({
                 </span>
                 {t.eyebrow}
               </p>
-              <h1 className="mt-8 text-[clamp(3rem,8.4vw,7.25rem)] leading-[0.92] font-semibold tracking-[-0.055em] text-balance">
+              <h1 className="mt-8 text-[clamp(2.25rem,8.4vw,7.25rem)] leading-[0.92] font-semibold tracking-[-0.055em] text-balance">
                 {hero.titleLine1}
                 <br />
                 {/* The website's second line is #a3a3a3 (2.3:1); muted ink passes AA. */}

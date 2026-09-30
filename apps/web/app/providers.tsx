@@ -1,11 +1,17 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import {
+  useEffect,
+  useState,
+  type ComponentProps,
+  type ComponentType,
+  type ReactNode,
+} from "react"
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "next-themes"
 
-import { Toaster } from "@acadigma/ui/components/sonner"
+import type { Toaster as ToasterType } from "@acadigma/ui/components/sonner"
 
 import {
   OfflineProvider,
@@ -37,6 +43,26 @@ function makeQueryClient() {
   })
 }
 
+// Loaded after hydration (plain effect, no Suspense boundary): ~10 kB gzip off
+// the first paint of every page, which Lighthouse's simulated LCP counts.
+function LazyToaster() {
+  const [Toaster, setToaster] = useState<ComponentType<
+    ComponentProps<typeof ToasterType>
+  > | null>(null)
+  useEffect(() => {
+    let live = true
+    void import("@acadigma/ui/components/sonner").then((m) => {
+      if (live) setToaster(() => m.Toaster)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+  return Toaster ? (
+    <Toaster position="top-center" richColors closeButton />
+  ) : null
+}
+
 export function Providers({
   children,
   offlineCopy,
@@ -58,7 +84,7 @@ export function Providers({
       >
         <OfflineProvider copy={offlineCopy}>{children}</OfflineProvider>
         {/* aria-live region for toasts, per ARCHITECTURE §6. */}
-        <Toaster position="top-center" richColors closeButton />
+        <LazyToaster />
       </ThemeProvider>
     </QueryClientProvider>
   )
