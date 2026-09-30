@@ -39,7 +39,6 @@ import { checkExamTransition } from "@acadigma/domain/academic"
 import { createClient } from "@/lib/supabase/server"
 import { requireWorkspace } from "@/lib/workspace"
 
-const EXAMS_PATH = "/app/exams"
 
 type Gate = Result<
   { ctx: WorkspaceContext; supabase: Awaited<ReturnType<typeof createClient>> },
