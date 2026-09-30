@@ -62,6 +62,11 @@ test("an account without the current Terms accepts them before using the app", a
     page.getByRole("link", { name: "Terms of Use" }).first()
   ).toHaveAttribute("href", "/legal/terms")
   await expectNoA11yViolations(page, testInfo)
+  // The screen at this project's viewport, kept in the report (DoD).
+  await testInfo.attach("legal-reacceptance", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
 
   // Not ticked: the reason, and nothing sent.
   await page.getByRole("button", { name: "Continue" }).click()
