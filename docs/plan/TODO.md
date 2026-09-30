@@ -109,6 +109,8 @@ All reviews passed (React, lead; Undo fix corrected so a late-joining student ke
 
 ## 13. Owner-only items (record; don't nag)
 
+- 👤 **Vercel deploy limit hit (2026-09-30 ~19:00):** the Hobby plan allows 100 deployments/day per ACCOUNT. Campus already deploys only `main` (apps/web/vercel.json), so the quota is being spent by the other projects on the account (acadigma-website previews, other client sites). Effect: #82 (merged 581c2b2) is not live until the limit resets (~24 h); production keeps serving the last good deploy (#124). Options: upgrade to Vercel Pro (~$20/month, far higher limit) — recommended once schools pilot; or turn off preview deploys on the other projects. Lead redeploys main after the reset.
+
 - 👤 Vercel: set a spend limit (Settings → Billing); Supabase: check the plan's spend cap — from the owner-shared hosting-bill post (invisible meters cause bill shock).
 - 👤 Decide whether to keep the US-region version of acadigma.com (US phone number, placeholder US pricing).
 
