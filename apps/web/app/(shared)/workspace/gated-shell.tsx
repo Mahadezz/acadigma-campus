@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import type { ShellName } from "@acadigma/domain/workspace"
 import { AppShell } from "@acadigma/ui/primitives/app-shell"
 import { TopBar } from "@acadigma/ui/primitives/top-bar"
@@ -5,6 +7,7 @@ import { TopBar } from "@acadigma/ui/primitives/top-bar"
 import { getMessages } from "@/lib/i18n"
 import { requireShell } from "@/lib/workspace"
 
+import { DeletionBanner } from "../account/deletion-banner"
 import { LastUpdated } from "../offline/last-updated"
 
 import { listMyWorkspaces } from "./actions"
@@ -70,7 +73,17 @@ export async function GatedShell({
       {/* F-ID-11 §4.2 (D-308): the render time travels with a cached copy. */}
       {/* eslint-disable-next-line react-hooks/purity -- the render time is the value */}
       <LastUpdated renderedAt={Date.now()} locale={locale} />
+      {/* F-ID-01 §4.9 (D-113): a pending account deletion. */}
+      <DeletionBanner userId={ctx.userId} />
       {children}
+      {/* The account page (password, delete account) has no other entry in
+          these shells until the user menu gains one (after PR #109). */}
+      <Link
+        href="/account/security"
+        className="text-muted-foreground hover:text-foreground mt-8 inline-flex min-h-11 items-center rounded-md px-2 text-sm underline-offset-4 hover:underline"
+      >
+        {t.settings.rows.account.title}
+      </Link>
     </AppShell>
   )
 }

@@ -142,30 +142,31 @@ erDiagram
 
 Not tenant-scoped: a person exists independently of any workspace.
 
-| Column                      | Type                                   | Null | Default |
-| --------------------------- | -------------------------------------- | ---- | ------- |
-| `id`                        | uuid **PK** → `auth.users(id)` cascade | no   | —       |
-| `full_name`                 | text                                   | no   | `''`    |
-| `display_name`              | text                                   | yes  | —       |
-| `email`                     | text, `check email = lower(email)`     | yes  | —       |
-| `phone`                     | text                                   | yes  | —       |
-| `avatar_url`                | text                                   | yes  | —       |
-| `bio`                       | text                                   | yes  | —       |
-| `locale`                    | text, `in ('en','bn')`                 | no   | `'en'`  |
-| `is_platform_admin`         | boolean                                | no   | `false` |
-| `last_active_workspace_id`  | uuid → `workspaces` set null           | yes  | —       |
-| `onboarding_completed_at`   | timestamptz                            | yes  | —       |
-| `suspended_at`              | timestamptz                            | yes  | —       |
-| `last_seen_at`              | timestamptz                            | yes  | —       |
-| `created_at` / `updated_at` | timestamptz                            | no   | `now()` |
+| Column                      | Type                                               | Null | Default |
+| --------------------------- | -------------------------------------------------- | ---- | ------- |
+| `id`                        | uuid **PK** (= `auth.users.id`; no FK since D-113) | no   | —       |
+| `full_name`                 | text                                               | no   | `''`    |
+| `display_name`              | text                                               | yes  | —       |
+| `email`                     | text, `check email = lower(email)`                 | yes  | —       |
+| `phone`                     | text                                               | yes  | —       |
+| `avatar_url`                | text                                               | yes  | —       |
+| `bio`                       | text                                               | yes  | —       |
+| `locale`                    | text, `in ('en','bn')`                             | no   | `'en'`  |
+| `is_platform_admin`         | boolean                                            | no   | `false` |
+| `last_active_workspace_id`  | uuid → `workspaces` set null                       | yes  | —       |
+| `onboarding_completed_at`   | timestamptz                                        | yes  | —       |
+| `suspended_at`              | timestamptz                                        | yes  | —       |
+| `last_seen_at`              | timestamptz                                        | yes  | —       |
+| `deleted_at`                | timestamptz (D-113: set only by the account purge) | yes  | —       |
+| `created_at` / `updated_at` | timestamptz                                        | no   | `now()` |
 
 **Tenant key** — none (user-scoped).
 **Indexes** — `unique (email) where email is not null`: invitations and "invite an existing teacher" resolve a person by address, and this guarantees one profile per address. `(id) where is_platform_admin`: `app.is_platform_admin()` runs in nearly every platform policy; a partial index over a handful of rows keeps it index-only.
 **RLS** — SELECT: self, **or** platform staff, **or** `app.shares_active_workspace(id)` — which requires the _viewer_ to be `{owner,admin,teacher,staff}` in a shared workspace, so a parent can never enumerate a school's staff. INSERT: `id = (select auth.uid())`. UPDATE: self, plus a separate platform-staff policy. No DELETE policy — profiles die with their `auth.users` row.
 **Triggers** — `app.tg_set_updated_at`; `app.tg_profiles_guard` (SECURITY INVOKER) refuses any self-change of `is_platform_admin` or `suspended_at`, and (D-75, `20260926182848_security_audit_p1.sql`) of `email` or `phone`: both are copied from `auth.users` at sign-up and trusted by `app.current_email()` (the invitee branch of `workspace_invitations_select`) and `app.accept_invitation`'s binding, so only a privileged (server) context or platform staff may change them; audit with `phone`/`email` redacted.
-**Soft delete** — no.
+**Soft delete** — no. **Account deletion (F-ID-01 Part 7, D-113, `20260930034627_account_deletion.sql`)**: the row is never deleted; deleting the `auth.users` row — by the purge or any other path — fires `app.tg_auth_user_deleted`, which turns it into a tombstone (`full_name = 'Deleted user'`, every contact/identity column null, `deleted_at` set); a tombstone accepts no client update. Its audit trigger treats `full_name`, `display_name`, `bio`, `date_of_birth`, `avatar_url` as free-text (value nulled, name kept; `20260930034628_account_deletion_hardening.sql`). The FK to `auth.users` was dropped so the tombstone outlives it and no school FK (44 `SET NULL`, 3 `RESTRICT`, `workspace_members` `CASCADE`) fires. `tg_profiles_guard` refuses a self-change of `deleted_at`. A dashboard delete tombstones the profile but leaves memberships and the personal workspace: delete accounts through the purge.
 
-> `last_active_workspace_id` is a UX hint and **never** an authorization input. Writing a workspace id into the user's own record was the Base44 root cause; here the server re-derives context in `app.set_workspace_context()`.
+> `last_active_workspace_id` is a UX hint) and **never** an authorization input. Writing a workspace id into the user's own record was the Base44 root cause; here the server re-derives context in `app.set_workspace_context()`.
 
 ### 1.2 `workspaces` — the tenant
 
@@ -335,6 +336,21 @@ No `app.attach_audit()` trigger: the generic trigger's `row_id` is read off an `
 **Tenant key** — none (pre-membership; F-ID-01 §3). **Indexes** — `(blocked_until) where blocked_until is not null`: the pg_cron sweep. **RLS** — class **S1**: RLS enabled, zero policies, no grants to `anon`/`authenticated` at all — reachable only through `public.throttle_status`, `public.throttle_record_failure` and `public.throttle_reset` (SECURITY DEFINER, migration `20260917020000_identity_auth.sql`). **Soft delete** — no; `throttle_reset` deletes the row outright on a successful attempt. **Per-user keys (D-101, `20260925300303_throttle_per_user_keys.sql`):** a key starting `user:` is rewritten inside all three functions to `user:<bucket>:<auth.uid()>` (`app.throttle_key`), and the per-user buckets (`changePassword`, `eiinCheck`, `createSchool`) ignore the caller's key entirely — so a caller only ever reads, bumps or clears their own row, and anon cannot use the namespace. Client-keyed buckets still take the app's salted key.
 
 These three functions live in `public`, not `app`, unlike the rest of this feature's helpers: `supabase/config.toml` exposes only `public` (and `graphql_public`) through PostgREST, so an `app.*` function is unreachable from `supabase-js`. `public.log_auth_event` (same migration) is the same shape — a narrow, action-allowlisted wrapper around `app.log_audit_event` (§7.1) for the seven account-level events this feature writes (`account.registered`, `account.email_verified`, `account.login`, `account.logout`, `account.password_reset`, `account.password_changed`, `session.revoked_all`).
+
+### 1.8b `account_deletion_requests` _(F-ID-01 Part 7, D-113, `20260930034627_account_deletion.sql`)_
+
+| Column                                | Type                                                             | Null   | Default             |
+| ------------------------------------- | ---------------------------------------------------------------- | ------ | ------------------- |
+| `id`                                  | uuid **PK**                                                      | no     | `gen_random_uuid()` |
+| `user_id`                             | uuid → `profiles` restrict                                       | no     | —                   |
+| `status`                              | `account_deletion_status` (`pending`,`cancelled`,`completed`)    | no     | `'pending'`         |
+| `requested_at` / `scheduled_purge_at` | timestamptz; `CHECK (scheduled_purge_at >= requested_at + 30 d)` | no     | `now()` / —         |
+| `cancelled_at`                        | timestamptz                                                      | yes    | —                   |
+| `completed_at`                        | timestamptz                                                      | yes    | —                   |
+| `attempts` / `last_error`             | integer / text — purge failures, `SOLE_OWNER_BLOCKED`            | no/yes | `0` / —             |
+
+**Tenant key** — none (user-scoped). **Indexes** — `unique (user_id) where status='pending'` (one live request); `(scheduled_purge_at) where status='pending'` (the nightly scan); `(user_id, requested_at desc)` (FK + the 3-a-day limit).
+**RLS** — SELECT own row, or platform staff. **No INSERT/UPDATE/DELETE grant**: writes are `public.request_account_deletion()` / `public.cancel_account_deletion()` (SECURITY DEFINER, act on `auth.uid()` only; request requires a `password` entry in the JWT `amr` from the last 5 minutes (`REAUTH_REQUIRED`), is idempotent, raises `SOLE_OWNER_BLOCKED` while the caller is the only active owner of any school — `public.account_deletion_blockers()` lists them — and `RATE_LIMITED` after 3 requests in 24 h) and the purge. **Purge** — pg_cron `account-purge` (20:30 UTC) → `app.run_account_purges()` → `app.purge_account(id)` per due row, each in its own subtransaction; both granted to nobody. Removes the personal workspace, `user_preferences`, `onboarding_progress`, `device_registrations`, `notifications`, `guardian_users`, `email_log` rows to the address and `auth.users`; revokes pending `workspace_invitations` to the address; anonymises `profiles` (§1.1, via the `auth.users` delete trigger) and sets school memberships `removed` with `phone` null; never touches school records or `audit_events`. Before its sole-owner check it locks every active owner row of the person's schools (`FOR UPDATE`). `app.tg_refuse_closing_account` (`20260930034629_account_deletion_guards.sql`) refuses `ACCOUNT_CLOSED` on a new workspace owner, a new or re-activated membership and a new or re-activated guardian link for a closing account (profile `deleted_at` set, or a pending request past its date) — an access token outlives sign-out by up to an hour. Refuses `FILES_PRESENT` if the personal workspace holds files; cancels with `SOLE_OWNER_BLOCKED` if the person became a sole owner during the grace. Audit: `account.deletion_requested`, `.deletion_cancelled`, `.deletion_purged` via `app.log_audit_event` (`subject_user_id` set, `workspace_id` null).
 
 ### 1.9 `seller_profiles` _(commerce migration)_
 
@@ -1365,6 +1381,6 @@ create policy <TABLE>_select_parent on public.<TABLE>
 | 2   | `pgsodium` / Supabase Vault wiring for `seller_payout_methods.details_encrypted` | Lands with the commerce migration; the column and the access pattern are fixed here                                                                                        |
 | 3   | `analytics_*` views (PRODUCT-DECISIONS 3.9)                                      | One `security_invoker` view per dashboard, defined with its module. No dashboard ships with a mock array                                                                   |
 | 4   | Retention jobs for `email_log` and `file_access_log` (1 year)                    | pg_cron, with the academics migration                                                                                                                                      |
-| 5   | Account deletion flow                                                            | `workspaces.owner_id` is `ON DELETE RESTRICT`; deleting an account requires ownership transfer or archive first                                                            |
+| 5   | Account deletion flow                                                            | Done (F-ID-01 Part 7, D-113): the profile becomes a tombstone, so `owner_id` RESTRICT never fires; a sole owner must transfer or delete the school first                   |
 | 6   | Pricing shape: band ladder vs. base + per-student overage                        | Schema supports both (`plan_prices.overage_per_student_paisa`); the debate round changes seed rows only                                                                    |
 | 7   | SMS provider                                                                     | `plans.included_sms_per_month` + `usage_counters.sms_sent` + `platform_settings.sms_unit_price_paisa` are in place; the provider itself is deferred (PRODUCT-DECISIONS §7) |
