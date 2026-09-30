@@ -28,7 +28,7 @@ Screenshots (light and dark, phone and desktop): `docs/test-reports/assets/2026-
 ## 3. Known issues
 
 - **Direct navigation to a role-refused page returns HTTP 200 with the forbidden page** (loading.tsx streams before `forbidden()`); five journeys changed from asserting 403 to asserting the page. Owner decision needed (D-409 consequences).
-- **Unexplained hang:** with `loading.tsx` on `exams/[id]`, a `router.refresh()` after Lock marks never finished on desktop in e2e-live (3 journeys); removing it fixed publish-results. Class hub, results and marks-entry loading files were removed for the same suspected reason (title race on the class hub). Cause not found.
+- **Unexplained hang:** a `loading.tsx` that wraps the exam or marks routes (own, section or app level) left `router.refresh()` after Lock marks pending in e2e-live. The exams and marks sections therefore have no skeleton (exempt in `loading-coverage.test.ts`). Cause not found; needs a real-browser repro.
 - Skeleton is shown immediately; the 150 ms delay in DESIGN-SYSTEM §3.7 is not implemented (D-409).
 - Desktop has no visible refresh control beside "Updated ..."; only the focus-only button.
 - Only one action (text size) is optimistic; the rest are listed as Never or as follow-ups in §3.11.
@@ -37,4 +37,4 @@ Screenshots (light and dark, phone and desktop): `docs/test-reports/assets/2026-
 
 ## 4. CI
 
-Filled from the PR's run after it finishes.
+CI run 36743271714 on the head commit: lint, typecheck, unit, contracts, build, security, e2e, lighthouse, docs-sync, changeset, e2e-live 1-4 all success (e2e-live 3 needed one re-run after a `next/font` fetch failure in its build step, unrelated to this change). Earlier runs with an app-level or exam-route `loading.tsx` failed e2e-live (run 36726630869: 15 journeys; run 36740836606: enter-marks and guardian-invite on exam Lock/Compute); run 36735340637, with no school-shell loading.tsx, was fully green.
