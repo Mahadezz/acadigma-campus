@@ -31,12 +31,14 @@ export function AuthCard({
     <div
       data-slot="auth-card"
       className={cn(
-        "w-full space-y-6 sm:rounded-lg sm:bg-card sm:p-8 sm:shadow-flat",
+        "w-full space-y-6 sm:rounded-3xl sm:bg-card sm:p-8 sm:shadow-flat",
         className
       )}
     >
       <div className="space-y-1.5">
-        <h1 className="text-2xl font-medium tracking-tight">{title}</h1>
+        <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.035em]">
+          {title}
+        </h1>
         {subtitle ? (
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         ) : null}

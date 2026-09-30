@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s · Acadigma Campus",
   },
   description:
-    "School operations for Bangladesh: attendance, timetables, marks, billing and messaging, built for the phone in a teacher's hand.",
+    "School operations for Bangladesh: attendance that works offline, exams, marks, results and report cards, built for the phone in a teacher's hand.",
   applicationName: "Acadigma Campus",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
