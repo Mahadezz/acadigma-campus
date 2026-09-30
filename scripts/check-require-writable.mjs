@@ -31,6 +31,8 @@ export const EXEMPT = {
     "removing access is always allowed, even read-only (D-300, D-112)",
   "apps/web/app/(school)/app/settings/membership/actions.ts#leaveWorkspace":
     "ending your own access is always allowed, even read-only (D-300, D-112)",
+  "apps/web/app/(account)/account/legal/actions.ts#acceptLegalDocuments":
+    "D-115: legal_acceptances is exempt from require_writable (D-300); a read-only or archived school's owner must still be able to accept",
   "apps/web/app/(school)/app/settings/danger/actions.ts#archiveSchool": D211,
   "apps/web/app/(school)/app/settings/danger/actions.ts#unarchiveSchool": D211,
   "apps/web/app/(school)/app/settings/danger/actions.ts#scheduleSchoolDeletion":

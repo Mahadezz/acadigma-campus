@@ -190,6 +190,21 @@
       "keepingButton": "Keeping…",
       "scheduledNotice": "Your account will be deleted on {date}. Sign in before then if you want to keep it."
     },
+    "reaccept": {
+      "title": "Please accept our updated terms",
+      "lead": "Before you continue, read and accept the current version of these documents.",
+      "version": "Version {version}",
+      "dpaNote": "As the owner of this school, you accept the Data Processing Agreement on the school's behalf.",
+      "termsRequired": "Accept the Terms of Use and the Privacy Notice to continue.",
+      "dpaRequired": "Accept the agreement to continue.",
+      "continueButton": "Continue",
+      "savingButton": "Saving…",
+      "exitsTitle": "Don't agree?",
+      "exitsBody": "You can stop using Acadigma Campus. Your account and data stay yours.",
+      "deleteAccountLink": "Delete my account",
+      "exportLink": "Download this school's data",
+      "error": "Could not save your acceptance. Please try again."
+    },
     "passwordStrength": {
       "0": "Too weak",
       "1": "Weak",
