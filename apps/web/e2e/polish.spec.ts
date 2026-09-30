@@ -76,7 +76,8 @@ test.describe("app polish (D-409)", () => {
       for (let y = 300; y <= to; y += 20) await touch("touchMove", y)
       await touch("touchEnd", to)
     }
-    const rsc = (r: { url(): string }) => r.url().includes("_rsc=")
+    const rsc = (r: { url(): string; headers(): Record<string, string> }) =>
+      r.url().includes("_rsc=") && !r.headers()["next-router-prefetch"]
 
     // Too short: nothing.
     let seen = 0

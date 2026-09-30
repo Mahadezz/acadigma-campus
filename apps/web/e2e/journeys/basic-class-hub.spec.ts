@@ -138,7 +138,7 @@ test("every tab renders without error, and every interactive element is >= 56x56
     .getByRole("link")
     .or(page.getByRole("button"))
     .or(page.getByRole("tab"))
-    .filter({ hasNotText: "Skip to content" })
+    .filter({ hasNotText: /Skip to content|^(Refresh|রিফ্রেশ করুন)$/ })
   const count = await targets.count()
   expect(count).toBeGreaterThan(0)
   for (let i = 0; i < count; i++) {

@@ -96,6 +96,8 @@ test("a teacher lands on the read-only overview and cannot open the profile form
   await expect(page.getByText("Pass mark")).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 
-  const response = await page.goto("/app/settings/school")
-  expect(response?.status()).toBe(403)
+  // D-409: a loading.tsx above the page streams a 200 before forbidden() runs, so
+  // the contract is the 403 *page* (no data), not the status line.
+  await page.goto("/app/settings/school")
+  await expect(page.getByText("You do not have access")).toBeVisible()
 })

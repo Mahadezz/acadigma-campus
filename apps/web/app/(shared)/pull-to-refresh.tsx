@@ -112,7 +112,7 @@ export function PullToRefresh({
         type="button"
         onClick={refresh}
         disabled={pending}
-        className="bg-card text-foreground sr-only rounded-md border px-4 focus:not-sr-only focus:fixed focus:top-2 focus:left-1/2 focus:z-50 focus:-translate-x-1/2 focus:h-11"
+        className="bg-card text-foreground sr-only rounded-md border focus:not-sr-only focus:px-4 focus:fixed focus:top-2 focus:left-1/2 focus:z-50 focus:-translate-x-1/2 focus:h-11"
       >
         {pending ? refreshingLabel : label}
       </button>
