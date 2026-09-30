@@ -6,6 +6,11 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 ## 2026-09-30
 
+- **#124 merged** (b362638, D-114 contract): signed-in users can no longer call the 1-arg create_school_workspace / accept_guardian_invitation (a direct API call skipped recording consent); audit row on every legal acceptance. Security (Opus) + DB reviews MERGE; migration 20260930052627 live, DB smoke + Vercel ok. **Blocker for real schools cleared.**
+- **#82 merged** (581c2b2): class hub (basic mode) for older teachers. Live-e2e failures were test leakage (a journey left the shared teacher in basic mode), fixed with cleanup in finally — 173 passed / 0 failed; e2e-runner review MERGE. **Not live yet:** the Vercel account hit its 100 deploys/day limit — redeploy main after the reset.
+- **acadigma-website #3 merged** (5c03a6e): design-audit fixes + honest copy (no unbuilt features in present tense, sample figures labelled, no student role, no "2027" date, no language marketing), 360px overflow fixes. React review FIX FIRST → re-verify MERGE.
+- Recovery after the owner's PC lost power (~17:15): nothing lost; #109's 5 uncommitted files backed up (F:\tmp\recovery-0930) and committed by its designer; main guard false-red (commit→PR link race) re-run green.
+
 - **#121 merged** (0ce4be9, D-114): interim Terms / Privacy / DPA pages at /legal/* (marked "not yet reviewed by a lawyer"); sign-up records Terms+Privacy acceptance (+ 18 or older); school creation requires and records DPA acceptance; parent-link screen shows consent text and records consent. Closes legal-audit HIGH items 4–6. Builder's 4 reviews + lead Opus security MERGE; migrations live, production deployed.
 - #120 release merged.
 

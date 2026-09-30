@@ -4,7 +4,7 @@ The owner's open requests and the build's open work, in priority order. **Read t
 
 Legend: 🔴 blocked · 🟡 in progress · ⚪ not started · 👤 needs the owner.
 
-Last updated: 2026-09-29 ~23:10 Dhaka.
+Last updated: 2026-09-30 ~18:40 Dhaka.
 
 ---
 
@@ -60,13 +60,15 @@ Owner-only; type the school name to confirm; 30-day cancellable grace with daily
 
 Runs every logged-in Playwright journey in CI against a seeded database, so "green" means the UI really works. Shards 1 & 3 green; 2 & 4 were failing — fresh Opus builder fixing root causes. **Unblocks #82 and the live security round.**
 
-## 8. Class hub (basic mode) — PR #82 · 🟡 unblocked: fresh builder merging main + running its live journey in CI → merge
+## 8. Class hub (basic mode) — ✅ merged #82 (see DONE). Not live until the Vercel deploy limit resets → lead redeploys main.
 
 All reviews passed (React, lead; Undo fix corrected so a late-joining student keeps their mark). Held so its browser journey runs for real in CI once #90 lands; then merge.
 
 ## 9. Lane Parts in progress
 
-- **identity: consent contract follow-up** (fix/identity-consent-contract) — MUST merge before any real school: revoke the old 1-arg create_school_workspace / accept_guardian_invitation from signed-in callers (today a direct API call skips recording consent); audit trigger on legal_acceptances; pgTAP no direct writes. Then: re-acceptance screen for pre-existing accounts; 👤 4 owner/lawyer questions in OWNER-QUESTIONS (first: accept the DPA before a lawyer reviews it?).
+- **identity: consent contract** ✅ merged #124. Next in lane: **#125 re-acceptance** (D-115) — existing users re-accept current Terms/Privacy, owners the DPA; security + DB MERGE, React FIX FIRST (Back link loops) → builder fixing → re-verify → merge + verify migration 20260930113432 live. ⚠ After it merges every demo account sees the accept screen once: accept once per demo login before an investor demo (DEMO-SCRIPT prep).
+- **ops: #122 attendance policy** — last fix: journey marks one absence via the real roll-call UI and asserts the effect line (isolation-safe) → React re-verify → merge.
+- **design: #109 Design System v2** — screenshots approved by lead; React FIX FIRST + ponytail batch (journey for theme + back button, admit-sheet preload, contrast script, drop count-up, drop duplicate in-page Back links, bottom padding, no strikethrough) → re-verify → merge.
 
 - identity: fresh Opus builder — next queue Part OR the legal-audit consent/ToS/DPA fixes (builder decides + logs).
 - ops: fresh Sonnet builder — next F-OP-07 Part (3 attendance policy / 4 grade scale / 5 calendar / 6 remainder), chosen for pilot + demo value.
