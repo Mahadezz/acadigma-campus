@@ -31,7 +31,7 @@ async function turnOnBasicMode(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/app\/home$/)
 }
 
-test.afterEach(async ({ page }) => {
+async function turnOffBasicMode(page: Page): Promise<void> {
   if (!/\/app/.test(page.url())) return
   await page.goto("/app/settings/display")
   const basicSwitch = page.getByRole("switch", { name: "Basic mode" })
@@ -39,6 +39,12 @@ test.afterEach(async ({ page }) => {
     await basicSwitch.click()
     await page.waitForURL(/\/app\/dashboard$/)
   }
+}
+
+test.afterEach(async ({ page }, testInfo) => {
+  // Own reset budget, as in basic-help-call-office (D-76).
+  testInfo.setTimeout(testInfo.timeout + 30_000)
+  await turnOffBasicMode(page)
 })
 
 async function openFirstClassHub(page: Page): Promise<void> {
@@ -150,32 +156,39 @@ test("a teacher not assigned to a section sees 'This class is not on your list' 
   // teacher does NOT teach — a random/made-up id would 404 through
   // `SECTION_NOT_FOUND` instead of exercising `NOT_ASSIGNED`.
   const ownerPage = await (await browser.newContext()).newPage()
-  await signIn(ownerPage, "owner@acadigma.test")
-  await turnOnBasicMode(ownerPage)
-  await ownerPage.getByRole("link", { name: /All classes/ }).click()
-  const allHrefs = await ownerPage
-    .getByRole("link")
-    .filter({ hasText: "–" })
-    .evaluateAll((els) =>
-      els.map((el) => (el as HTMLAnchorElement).getAttribute("href"))
-    )
-
   const teacherPage = await (await browser.newContext()).newPage()
-  await signIn(teacherPage, "teacher@acadigma.test")
-  await turnOnBasicMode(teacherPage)
-  const myHrefs = await teacherPage
-    .getByRole("link")
-    .filter({ hasText: "–" })
-    .evaluateAll((els) =>
-      els.map((el) => (el as HTMLAnchorElement).getAttribute("href"))
-    )
+  // Both seeded accounts are shared with every later journey in the shard and
+  // `afterEach` only resets the default `page`: put both back in full mode.
+  try {
+    await signIn(ownerPage, "owner@acadigma.test")
+    await turnOnBasicMode(ownerPage)
+    await ownerPage.getByRole("link", { name: /All classes/ }).click()
+    const allHrefs = await ownerPage
+      .getByRole("link")
+      .filter({ hasText: "–" })
+      .evaluateAll((els) =>
+        els.map((el) => (el as HTMLAnchorElement).getAttribute("href"))
+      )
 
-  const notMine = allHrefs.find((href) => href && !myHrefs.includes(href))
-  test.skip(!notMine, "seed data: this teacher teaches every section")
-  if (!notMine) return
+    await signIn(teacherPage, "teacher@acadigma.test")
+    await turnOnBasicMode(teacherPage)
+    const myHrefs = await teacherPage
+      .getByRole("link")
+      .filter({ hasText: "–" })
+      .evaluateAll((els) =>
+        els.map((el) => (el as HTMLAnchorElement).getAttribute("href"))
+      )
 
-  await teacherPage.goto(notMine)
-  await expect(
-    teacherPage.getByText("This class is not on your list.")
-  ).toBeVisible()
+    const notMine = allHrefs.find((href) => href && !myHrefs.includes(href))
+    test.skip(!notMine, "seed data: this teacher teaches every section")
+    if (!notMine) return
+
+    await teacherPage.goto(notMine)
+    await expect(
+      teacherPage.getByText("This class is not on your list.")
+    ).toBeVisible()
+  } finally {
+    await turnOffBasicMode(ownerPage)
+    await turnOffBasicMode(teacherPage)
+  }
 })
