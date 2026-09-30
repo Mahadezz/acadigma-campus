@@ -46,11 +46,11 @@ Last updated: 2026-09-29 ~23:10 Dhaka.
 
 ## 4. (moved to DONE — #115 merged 2026-09-29)
 
-## 5. Account deletion — F-ID-01 Part 7 · ⚪ (identity lane, next after #112)
+## 5. Account deletion — F-ID-01 Part 7 · 🟡 PR #119 (security MERGE; builder merging main + LOW fixes: two-owner race at purge, deleted users refused by create-school/accept-invite, demo-seed ordering)
 
 **Owner:** "dont forget to add the account and workspace deletation". Spec: 30-day grace with banner + cancel; blocked while sole owner of a school (points to ownership transfer); nightly purge job anonymises, keeps audit rows. Was scheduled for M4 (~Apr 2027) — pulled forward; log the pull-forward as a decision in the PR.
 
-## 6. Workspace (school) deletion — F-OP-07 Part 6 "danger zone" · 🟡 PR #117 ready (D-211) — lead's independent Opus security + DB reviews running
+## 6. Workspace (school) deletion — ✅ merged #117 (see DONE). Follow-up BEFORE any real school uses deletion: the purge has no statement_timeout, so one very large school that always exceeds 60 s would fail first every night and block the queue — add an attempts counter / move it to the back, and measure a 2,000-student multi-year fixture. 👤 7-year audit retention → lawyer.
 
 Built: owner-only export (CSV zip, 3/day, downloads directly — deviation from the spec's emailed 7-day link; files not included), archive/restore (read-only, restorable 12 months), delete with 30-day grace + banner + cancel, daily service-role purge; blocks on subscription/unpaid balance; purge refuses a school with files (FILES_PRESENT). Deferred: module visibility + ID patterns (next ops Part), stop billing at period end. 👤 Decision: a deleted school's audit trail is kept 7 years — confirm with a PDPA lawyer (added to the lawyer questions).
 
