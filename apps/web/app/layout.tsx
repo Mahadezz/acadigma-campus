@@ -69,6 +69,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="antialiased">
+        <script dangerouslySetInnerHTML={{ __html: "(function(){var of=window.fetch;window.fetch=function(i,o){var u=typeof i===\"string\"?i:i.url;var t=performance.now();var h=(o&&o.headers)||{};var isA=u.indexOf(\"_rsc\")>-1||h[\"Next-Action\"];var p=of.apply(this,arguments);if(isA){console.log(\"[fx] start \"+u.slice(-34)+(h[\"Next-Action\"]?\" ACTION\":\"\"));p.then(function(r){console.log(\"[fx] headers \"+u.slice(-34)+\" \"+Math.round(performance.now()-t));r.clone().arrayBuffer().then(function(b){console.log(\"[fx] body done \"+u.slice(-34)+\" \"+b.byteLength+\" \"+Math.round(performance.now()-t))},function(e){console.log(\"[fx] body err \"+String(e))})},function(e){console.log(\"[fx] err \"+String(e))})}return p}})()" }} />
         <SkipToContent />
         <Providers offlineCopy={t.offline}>{children}</Providers>
       </body>
