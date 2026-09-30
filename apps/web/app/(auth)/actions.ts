@@ -26,6 +26,7 @@ import {
   type ChangePasswordInput,
   type ChangePasswordOutput,
 } from "@acadigma/contracts"
+import { noteSignIn } from "@acadigma/db/repositories/sessions"
 import { fetchUiPreferences } from "@acadigma/db/repositories/ui-preferences"
 import { safeReturnTo, checkPassword } from "@acadigma/domain/auth"
 
@@ -406,6 +407,14 @@ export async function signInWithPassword(
     rowId: data.user.id,
     context: ctx,
   })
+
+  // F-ID-01 Part 6 (D-116): "New sign-in to your account" when another
+  // session is live. A failure never fails the sign-in.
+  const noted = await noteSignIn(supabase)
+  if (!noted.ok) {
+    const log = await requestLogger({ route: "auth.login" })
+    log.warn({ code: noted.error.code }, "new-device check failed")
+  }
 
   // Read alongside suspended_at above, not a second `profiles` select —
   // resolveLandingRoute's forced-onboarding check needs it too (F-ID-05 §8

@@ -4458,6 +4458,17 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: undefined
       }
+      my_sessions: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          is_current: boolean
+          last_active_at: string
+          user_agent: string
+        }[]
+      }
+      note_sign_in: { Args: never; Returns: boolean }
       pre_request: { Args: never; Returns: undefined }
       publish_results: {
         Args: { p_exam_id: string; p_withhold?: Json; p_workspace_id: string }
@@ -4468,6 +4479,7 @@ export type Database = {
         Returns: undefined
       }
       request_account_deletion: { Args: never; Returns: string }
+      revoke_my_session: { Args: { p_session_id: string }; Returns: boolean }
       revoke_guardian_link: {
         Args: { p_link_id: string; p_workspace_id: string }
         Returns: undefined

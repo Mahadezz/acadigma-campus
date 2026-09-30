@@ -46,9 +46,14 @@ export function createBrowserClient(): AcadigmaSupabaseClient {
  * Server client bound to the request's cookies. Still runs as the signed-in user, so
  * RLS applies to everything it touches. This is the client almost all server code
  * should use.
+ *
+ * `userAgent` is the browser's, forwarded so the sessions Supabase Auth creates
+ * and refreshes from the server record the person's device rather than the Next
+ * server (F-ID-01 Part 6, D-116). It is never logged.
  */
 export function createServerClient(
-  cookies: CookieStore
+  cookies: CookieStore,
+  userAgent?: string | null
 ): AcadigmaSupabaseClient {
   const { url, publishableKey } = publicSupabaseConfig()
   return createSsrServerClient<Database>(url, publishableKey, {
@@ -56,6 +61,7 @@ export function createServerClient(
       getAll: () => cookies.getAll(),
       setAll: (cookiesToSet) => cookies.setAll(cookiesToSet),
     },
+    ...(userAgent ? { global: { headers: { "User-Agent": userAgent } } } : {}),
   })
 }
 

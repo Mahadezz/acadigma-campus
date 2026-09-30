@@ -1,6 +1,6 @@
 import "server-only"
 
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 
 import { createServerClient, type AcadigmaSupabaseClient } from "@acadigma/db"
 
@@ -16,18 +16,22 @@ import { createServerClient, type AcadigmaSupabaseClient } from "@acadigma/db"
  */
 export async function createClient(): Promise<AcadigmaSupabaseClient> {
   const cookieStore = await cookies()
+  const userAgent = (await headers()).get("user-agent")
 
-  return createServerClient({
-    getAll: () => cookieStore.getAll(),
-    setAll: (cookiesToSet) => {
-      try {
-        for (const { name, value, options } of cookiesToSet) {
-          cookieStore.set(name, value, options)
+  return createServerClient(
+    {
+      getAll: () => cookieStore.getAll(),
+      setAll: (cookiesToSet) => {
+        try {
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set(name, value, options)
+          }
+        } catch {
+          // Server Components cannot set cookies. That is fine: middleware.ts
+          // refreshes the session on every request, so the write here is redundant.
         }
-      } catch {
-        // Server Components cannot set cookies. That is fine: middleware.ts
-        // refreshes the session on every request, so the write here is redundant.
-      }
+      },
     },
-  })
+    userAgent
+  )
 }

@@ -190,6 +190,21 @@
       "keepingButton": "Keeping…",
       "scheduledNotice": "Your account will be deleted on {date}. Sign in before then if you want to keep it."
     },
+    "devices": {
+      "title": "Signed-in devices",
+      "description": "Where your account is signed in now. Sign out any device you do not recognise, then change your password.",
+      "thisDevice": "This device",
+      "signedIn": "Signed in {date}",
+      "lastActive": "Last active {date}",
+      "signOutButton": "Sign out",
+      "signingOut": "Signing out…",
+      "signOutLabel": "Sign out {device}",
+      "revoked": "That device is signed out.",
+      "everywhereButton": "Sign out everywhere",
+      "everywhereHint": "Signs out every device, including this one.",
+      "everywhereWorking": "Signing out…",
+      "error": "Could not reach the server. Try again."
+    },
     "reaccept": {
       "metaTitle": "Updated terms",
       "title": "Please accept our updated terms",
