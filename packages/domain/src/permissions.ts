@@ -108,6 +108,8 @@ export const ACTIONS = [
   "workspace.branding.write",
   // F-AC-11 §2: declare/remove a holiday — owner/admin only.
   "calendar.holiday.write",
+  // F-AC-11 §4.3: force a date open or shut — owner/admin only.
+  "calendar.override.write",
   "members.contact.read",
   "members.invite",
   "members.approve",
@@ -207,6 +209,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "workspace.settings.write",
     "workspace.branding.write",
     "calendar.holiday.write",
+    "calendar.override.write",
     "members.contact.read",
     "members.invite",
     "members.approve",
@@ -273,6 +276,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "workspace.settings.write",
     "workspace.branding.write",
     "calendar.holiday.write",
+    "calendar.override.write",
     "members.contact.read",
     "members.invite",
     "members.approve",

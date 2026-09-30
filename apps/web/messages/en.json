@@ -964,6 +964,46 @@
         "notFound": "That holiday no longer exists."
       },
       "endsOnHelp": "Same as the first day for a one-day holiday.",
+      "overrides": {
+        "title": "Make-up days and closures",
+        "description": "Open a day that would normally be closed, or close a normal school day. This beats the weekly pattern and any holiday.",
+        "add": "Override a day",
+        "addTitle": "Override a day",
+        "addDescription": "Attendance and reports will count this date the way you choose. Attendance already taken is kept.",
+        "empty": "No overrides. Add one for a make-up Friday or a local closure.",
+        "save": "Save override",
+        "saving": "Saving…",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "delete": "Remove",
+        "deleting": "Removing…",
+        "deleteTitle": "Remove this override?",
+        "deleteDescription": "{date} goes back to following the weekly pattern and holidays.",
+        "confirmDelete": "Remove override",
+        "saved": "Override saved.",
+        "removed": "Override removed.",
+        "error": "Could not save. Try again.",
+        "working": "School open",
+        "closed": "School closed",
+        "kindWorking": "School open (make-up day)",
+        "kindClosed": "School closed",
+        "dateHelp": "Saving a date that already has an override replaces it.",
+        "fields": {
+          "date": "Date",
+          "kind": "On this day",
+          "reason": "Reason"
+        },
+        "errors": {
+          "reasonRequired": "Enter a reason.",
+          "invalidDate": "Choose a date.",
+          "forbidden": "Only an owner or admin can change the calendar.",
+          "readOnly": "This workspace is read-only. Upgrade to make changes; nothing has been deleted.",
+          "notFound": "That override no longer exists.",
+          "tooEarly": "Choose a date from 1 January of this year."
+        },
+        "editTitle": "Edit override",
+        "dateLocked": "To move an override to another date, remove it and add a new one."
+      },
       "kinds": {
         "public": "Public",
         "religious": "Religious",

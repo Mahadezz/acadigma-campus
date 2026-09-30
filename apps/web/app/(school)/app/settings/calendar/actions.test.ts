@@ -27,13 +27,22 @@ vi.mock("@/lib/workspace", () => ({
 const mockRequireWritable = vi.fn()
 const mockCreate = vi.fn()
 const mockDelete = vi.fn()
+const mockUpsertOverride = vi.fn()
+const mockDeleteOverride = vi.fn()
 vi.mock("@acadigma/db", () => ({
   requireWritable: (...args: unknown[]) => mockRequireWritable(...args),
   createHoliday: (...args: unknown[]) => mockCreate(...args),
   deleteHoliday: (...args: unknown[]) => mockDelete(...args),
+  upsertWorkingDayOverride: (...args: unknown[]) => mockUpsertOverride(...args),
+  deleteWorkingDayOverride: (...args: unknown[]) => mockDeleteOverride(...args),
 }))
 
-const { createHoliday, deleteHoliday } = await import("./actions")
+const {
+  createHoliday,
+  deleteHoliday,
+  saveWorkingDayOverride,
+  deleteWorkingDayOverride,
+} = await import("./actions")
 
 const VALID = {
   name: "Victory Day",
@@ -48,6 +57,8 @@ beforeEach(() => {
   mockRequireWritable.mockResolvedValue({ ok: true, data: undefined })
   mockCreate.mockResolvedValue({ ok: true, data: { id: "h" } })
   mockDelete.mockResolvedValue({ ok: true, data: { deleted: true } })
+  mockUpsertOverride.mockResolvedValue({ ok: true, data: { id: "o" } })
+  mockDeleteOverride.mockResolvedValue({ ok: true, data: { deleted: true } })
 })
 
 describe("createHoliday", () => {
@@ -103,5 +114,43 @@ describe("deleteHoliday", () => {
       holidayId: "11111111-1111-4111-8111-111111111111",
     })
     expect(result.ok).toBe(true)
+  })
+})
+
+describe("working-day overrides", () => {
+  const OVERRIDE = { date: "2026-11-06", isWorking: true, reason: "Make-up" }
+
+  it("refuses a teacher before any database call", async () => {
+    ctx.role = "teacher"
+    const saved = await saveWorkingDayOverride(OVERRIDE)
+    const removed = await deleteWorkingDayOverride({ date: "2026-11-06" })
+    expect(!saved.ok && saved.error.code).toBe("forbidden")
+    expect(!removed.ok && removed.error.code).toBe("forbidden")
+    expect(mockUpsertOverride).not.toHaveBeenCalled()
+    expect(mockDeleteOverride).not.toHaveBeenCalled()
+  })
+
+  it("rejects a missing reason before resolving the workspace", async () => {
+    mockRequireWorkspace.mockClear()
+    const result = await saveWorkingDayOverride({ ...OVERRIDE, reason: " " })
+    expect(!result.ok && result.error.fieldErrors?.["reason"]).toBeTruthy()
+    expect(mockRequireWorkspace).not.toHaveBeenCalled()
+  })
+
+  it("refuses a read-only workspace", async () => {
+    mockRequireWritable.mockResolvedValue({
+      ok: false,
+      error: { code: "PLAN_READ_ONLY", reason: null },
+    })
+    const result = await saveWorkingDayOverride(OVERRIDE)
+    expect(!result.ok && result.error.code).toBe("payment_required")
+    expect(mockUpsertOverride).not.toHaveBeenCalled()
+  })
+
+  it("saves and deletes for an admin", async () => {
+    expect((await saveWorkingDayOverride(OVERRIDE)).ok).toBe(true)
+    expect((await deleteWorkingDayOverride({ date: "2026-11-06" })).ok).toBe(
+      true
+    )
   })
 })

@@ -13,7 +13,7 @@
 -- With the Sat-Thu default week, April has 30 - 4 = 26 school days.
 -- =====================================================================
 begin;
-select plan(52);
+select plan(54);
 
 create schema if not exists tests;
 
@@ -74,6 +74,7 @@ select tests.mkuser('41000000-0000-4000-a000-000000000001', 'owner.a@cal.test', 
 select tests.mkuser('41000000-0000-4000-a000-000000000002', 'admin.a@cal.test',   'Admin A');
 select tests.mkuser('41000000-0000-4000-a000-000000000003', 'teacher.a@cal.test', 'Teacher A');
 select tests.mkuser('41000000-0000-4000-a000-000000000004', 'parent.a@cal.test',  'Parent A');
+select tests.mkuser('41000000-0000-4000-a000-000000000005', 'staff.a@cal.test',   'Staff A');
 select tests.mkuser('41000000-0000-4000-a000-000000000009', 'owner.b@cal.test',   'Owner B');
 
 insert into public.workspaces (id, type, name, slug, owner_id, created_by)
@@ -85,7 +86,8 @@ values ('41000000-0000-4000-b000-00000000000a', 'school', 'Calendar School A', '
 insert into public.workspace_members (workspace_id, user_id, role, status, joined_at)
 values ('41000000-0000-4000-b000-00000000000a', '41000000-0000-4000-a000-000000000002', 'admin',   'active', now()),
        ('41000000-0000-4000-b000-00000000000a', '41000000-0000-4000-a000-000000000003', 'teacher', 'active', now()),
-       ('41000000-0000-4000-b000-00000000000a', '41000000-0000-4000-a000-000000000004', 'parent',  'active', now());
+       ('41000000-0000-4000-b000-00000000000a', '41000000-0000-4000-a000-000000000004', 'parent',  'active', now()),
+       ('41000000-0000-4000-b000-00000000000a', '41000000-0000-4000-a000-000000000005', 'staff',   'active', now());
 
 -- =====================================================================
 -- 1. The weekly pattern alone (no holidays, no overrides yet).
@@ -122,6 +124,13 @@ select throws_ok(
   '42501', 'new row violates row-level security policy for table "working_day_overrides"',
   'a teacher cannot create a working-day override');
 
+select tests.login('41000000-0000-4000-a000-000000000005');
+select throws_ok(
+  $$insert into public.working_day_overrides (workspace_id, date, is_working, reason)
+    values ('41000000-0000-4000-b000-00000000000a', '2026-04-10', true, 'make-up')$$,
+  '42501', 'new row violates row-level security policy for table "working_day_overrides"',
+  'a staff member cannot create a working-day override');
+
 select tests.login('41000000-0000-4000-a000-000000000002');
 select lives_ok(
   $$insert into public.holidays (id, workspace_id, name, kind, starts_on, ends_on)
@@ -138,6 +147,11 @@ select throws_ok(
     values ('41000000-0000-4000-b000-00000000000a', '2026-04-10', true, '   ')$$,
   '23514', 'new row for relation "working_day_overrides" violates check constraint "working_day_overrides_reason_check"',
   'an override without a reason is refused (AC13)');
+select throws_ok(
+  $$insert into public.working_day_overrides (workspace_id, date, is_working, reason)
+    values ('41000000-0000-4000-b000-00000000000b', '2026-04-10', true, 'cross-school')$$,
+  '42501', 'new row violates row-level security policy for table "working_day_overrides"',
+  'an admin of School A cannot create an override in School B');
 select throws_ok(
   $$update public.holidays set workspace_id = '41000000-0000-4000-b000-00000000000b'
      where id = '41000000-0000-4000-c000-000000000001'$$,

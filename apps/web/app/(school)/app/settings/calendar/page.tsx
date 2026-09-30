@@ -1,4 +1,4 @@
-import { listHolidays } from "@acadigma/db"
+import { listHolidays, listWorkingDayOverrides } from "@acadigma/db"
 import { getSchoolSettings } from "@acadigma/db/repositories/settings"
 import { can } from "@acadigma/domain"
 import { todayIn } from "@acadigma/domain/time"
@@ -11,6 +11,7 @@ import { requireShell } from "@/lib/workspace"
 import { SubPageHeader } from "../sub-page-header"
 
 import { HolidaysManager } from "./holidays-manager"
+import { OverridesManager } from "./overrides-manager"
 
 import type { Metadata } from "next"
 
@@ -31,7 +32,10 @@ export default async function HolidaysPage() {
   const settings = await getSchoolSettings(client, ctx)
   const today = todayIn(settings.ok ? settings.data.timezone : undefined)
   const from = `${today.slice(0, 4)}-01-01`
-  const holidays = await listHolidays(ctx, client, from)
+  const [holidays, overrides] = await Promise.all([
+    listHolidays(ctx, client, from),
+    listWorkingDayOverrides(ctx, client, from),
+  ])
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -46,6 +50,17 @@ export default async function HolidaysPage() {
         />
       ) : (
         <InlineAlert tone="error">{holidays.error.message}</InlineAlert>
+      )}
+      {overrides.ok ? (
+        <OverridesManager
+          overrides={overrides.data}
+          canWrite={can(ctx.role, "calendar.override.write")}
+          today={today}
+          locale={locale}
+          t={s.overrides}
+        />
+      ) : (
+        <InlineAlert tone="error">{overrides.error.message}</InlineAlert>
       )}
     </div>
   )

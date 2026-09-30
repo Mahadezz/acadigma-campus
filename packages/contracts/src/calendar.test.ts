@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest"
 
-import { createHolidayInputSchema } from "./calendar"
+import {
+  createHolidayInputSchema,
+  upsertWorkingDayOverrideInputSchema,
+} from "./calendar"
 
 const valid = {
   name: "Eid-ul-Fitr",
@@ -53,5 +56,33 @@ describe("createHolidayInputSchema", () => {
     ]) {
       expect(createHolidayInputSchema.safeParse(input).success).toBe(false)
     }
+  })
+})
+
+describe("working-day override schemas", () => {
+  it("requires a reason (AC13) and a real date", () => {
+    const ok = { date: "2026-11-06", isWorking: true, reason: "Make-up" }
+    expect(upsertWorkingDayOverrideInputSchema.safeParse(ok).success).toBe(true)
+    expect(
+      upsertWorkingDayOverrideInputSchema.safeParse({ ...ok, reason: "  " })
+        .success
+    ).toBe(false)
+    expect(
+      upsertWorkingDayOverrideInputSchema.safeParse({
+        ...ok,
+        date: "2026-02-31",
+      }).success
+    ).toBe(false)
+  })
+
+  it("rejects unknown keys (no client-supplied workspace)", () => {
+    expect(
+      upsertWorkingDayOverrideInputSchema.safeParse({
+        date: "2026-11-06",
+        isWorking: false,
+        reason: "x",
+        workspaceId: "w",
+      }).success
+    ).toBe(false)
   })
 })
