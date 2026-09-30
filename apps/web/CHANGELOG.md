@@ -1,5 +1,27 @@
 # @acadigma/web
 
+## 0.16.0
+
+### Minor Changes
+
+- 9927a0f: Account deletion with a 30-day grace (F-ID-01 Part 7, D-113): delete your account from Account → Security (password + typing DELETE); a banner with "Keep my account" on every screen until the date; blocked while you are the only owner of a school; a nightly job then removes the account and your personal workspace, anonymises your name everywhere, and keeps every school record you created.
+
+### Patch Changes
+
+- 7709a58: Three bugs the first full live-Supabase e2e runs found (D-76): the sign-in throttle now refuses the sixth attempt after five wrong passwords, with no credential check (F-ID-01 AC6; it used to allow a sixth guess); registering an email that already has an account shows the "already has an account" message instead of a generic failure; and on a 360 px phone the top bar no longer overflows when the offline chip appears beside a long school name (the switcher's name truncates), which had left the page scrolled sideways and the queue sheet's buttons untappable. Switching language (and any other in-app refresh) no longer sometimes stalls until the next page load: the offline service worker stopped relaying RSC fetches, whose relayed stream could hang.
+- 43ddf15: F-OP-07 Part 6, danger zone (D-211): Settings → Danger zone (owner only) — download a zip of every school record as CSV (3 a day, audited), archive and restore a school (archived = read-only for everyone, owner can restore within 12 months), and schedule a school's deletion 30 days out with a banner on every screen and a cancel button; a daily cron (`/api/cron/workspaces/purge`) deletes schools whose grace has ended. All rules are enforced in the database (`archive_workspace`, `schedule_workspace_deletion`, `purge_due_workspace` & co., pgTAP `48_danger_zone.sql`). `requireWritable` now also refuses writes in an archived school. New: `getDangerZoneState`/`archiveWorkspace`/`unarchiveWorkspace`/`scheduleWorkspaceDeletion`/`cancelWorkspaceDeletion`/`exportWorkspaceData`/`purgeDueWorkspaces` (`@acadigma/db`), `confirmNameInputSchema`/`DANGER_ERROR`/`dangerZoneStateSchema` (`@acadigma/contracts`).
+- 7709a58: Security review follow-up on the sign-in throttle fix above: `email_not_confirmed` and `user_banned` now count against the brute-force throttle the same as a genuine wrong password (a caller could otherwise probe account state — confirmed vs. unconfirmed, banned vs. active — for free by watching which errors do and don't cost throttle budget), `over_request_rate_limit` weighs only the IP bucket (it is GoTrue's own volumetric signal, not tied to one email), and every rejection branch now returns the same byte-identical generic message. No more "could not sign you in, try again shortly" for an infra hiccup — anti-enumeration means the caller cannot tell a 5xx apart from a wrong password either.
+- 7709a58: Sign-in no longer spends the wrong-password throttle budget (`loginByEmail`/`loginByIp`) on a transient Supabase Auth error — only GoTrue's own `invalid_credentials` code counts as a guessed password. Any other error (timeout, 5xx, unreachable) returns the existing "could not sign you in, try again shortly" shape instead. Found via the e2e-live CI job (D-76): under real resource pressure a handful of transient errors on an otherwise-correct sign-in tripped the shared seeded account's real 5-attempts/900s bucket and locked out every later journey for the rest of the run.
+- 7709a58: The offline attendance queue's "Compare and choose" button no longer disables itself while the phone reads as offline. It only opens a local comparison view — `ConflictSheet` already shows a friendly error if it cannot reach the server, and its Save/Keep/Use-mine actions do not render until the comparison data has loaded, so the guard bought no safety. (The taps that missed this button on a phone were caused by the top bar overflowing at 360 px, fixed separately — see the e2e-live app-fixes changeset, D-76.)
+- Updated dependencies [7709a58]
+- Updated dependencies [9927a0f]
+- Updated dependencies [43ddf15]
+  - @acadigma/ui@0.5.8
+  - @acadigma/contracts@0.15.0
+  - @acadigma/db@0.15.0
+  - @acadigma/domain@0.11.0
+  - @acadigma/pdf@0.5.7
+
 ## 0.15.0
 
 ### Minor Changes
