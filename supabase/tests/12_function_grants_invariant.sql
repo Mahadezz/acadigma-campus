@@ -145,6 +145,10 @@ with allowed as (
     ('public.set_current_academic_year(uuid, uuid)'),  -- F-OP-07 Part 2, D-210
     ('public.update_member_staff_fields(uuid, uuid, text, text, text)'),  -- F-ID-03 Part 6, D-111
     ('public.transfer_ownership(uuid, uuid, boolean)'),  -- F-ID-03 Part 7, D-112
+    ('public.my_sessions()'),  -- F-ID-01 Part 6, D-116
+    ('public.revoke_my_session(uuid)'),  -- F-ID-01 Part 6, D-116
+    ('public.note_sign_in()'),  -- F-ID-01 Part 6, D-116
+    ('public.revoke_all_my_sessions()'),  -- F-ID-01 Part 6, D-116
     ('public.archive_workspace(uuid, text)'),  -- F-OP-07 Part 6, D-211
     ('public.unarchive_workspace(uuid, text)'),  -- F-OP-07 Part 6, D-211
     ('public.schedule_workspace_deletion(uuid, text)'),  -- F-OP-07 Part 6, D-211

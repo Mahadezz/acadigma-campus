@@ -73,8 +73,10 @@ allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
 enabled = true
 site_url = "env(APP_URL)"
 additional_redirect_urls = ["env(APP_URL)"]
-# One hour of access token, so a revoked membership stops mattering quickly.
-jwt_expiry = 3600
+# Ten minutes of access token: a revoked session or membership stops
+# mattering quickly (D-116). Production needs the same value set in the
+# Supabase dashboard (Auth > Sessions / JWT expiry), an owner action.
+jwt_expiry = 600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 # Invitations are how members join a workspace; open sign-up is allowed because the

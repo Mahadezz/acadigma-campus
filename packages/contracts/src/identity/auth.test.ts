@@ -7,6 +7,7 @@ import {
   passwordResetRequestInputSchema,
   registerWithPasswordInputSchema,
   resendVerificationInputSchema,
+  revokeSessionInputSchema,
   signInWithPasswordInputSchema,
 } from "./auth"
 
@@ -159,6 +160,18 @@ describe("authCallbackQuerySchema", () => {
     expect(
       authCallbackQuerySchema.safeParse({ tokenHash: "abc", type: "magiclink" })
         .success
+    ).toBe(false)
+  })
+})
+
+describe("revokeSessionInputSchema", () => {
+  it("takes one session id and nothing that names a user", () => {
+    const id = "0b6f2c1e-3d4a-4b5c-8d9e-0f1a2b3c4d5e"
+    expect(revokeSessionInputSchema.parse({ sessionId: id })).toEqual({
+      sessionId: id,
+    })
+    expect(
+      revokeSessionInputSchema.safeParse({ sessionId: "all" }).success
     ).toBe(false)
   })
 })

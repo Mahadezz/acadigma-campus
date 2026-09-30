@@ -100,6 +100,16 @@ vi.mock("@acadigma/db/repositories/ui-preferences", () => ({
   fetchUiPreferences: mockFetchUiPreferences,
 }))
 
+/** F-ID-01 Part 6 (D-116): the new-device check after a sign-in. */
+const mockNoteSignIn = vi.fn(async () => ({
+  ok: true,
+  data: { notified: false },
+}))
+
+vi.mock("@acadigma/db/repositories/sessions", () => ({
+  noteSignIn: mockNoteSignIn,
+}))
+
 const mockThrottleStatus = vi.fn()
 const mockThrottleRecordFailure = vi.fn()
 const mockThrottleReset = vi.fn()
@@ -294,6 +304,24 @@ describe("signInWithPassword (F-ID-03 review: stale workspace cookie on a shared
       mockCallOrder.indexOf("cookieDelete:acadigma_workspace")
     ).toBeLessThan(mockCallOrder.indexOf("resolveLandingRoute"))
     expect(mockResolveLandingRoute).toHaveBeenCalledTimes(1)
+  })
+
+  it("runs the new-device check once after a successful sign-in (D-116), and a failure of it still signs in", async () => {
+    mockNoteSignIn.mockImplementationOnce(
+      async () =>
+        ({
+          ok: false,
+          error: { code: "dependency_unavailable", message: "down" },
+        }) as never
+    )
+    await expect(
+      signInWithPassword({
+        email: "person@test.local",
+        password: "whatever-they-typed",
+        remember: true,
+      })
+    ).rejects.toThrow("NEXT_REDIRECT")
+    expect(mockNoteSignIn).toHaveBeenCalledTimes(1)
   })
 
   it("does not clear the cookie when the credentials are rejected", async () => {

@@ -189,6 +189,26 @@ export type AccountDeletionBlocker = z.infer<
 >
 
 // ---------------------------------------------------------------------------
+// Part 6 — sessions and devices (F-ID-01 §4.8, D-116)
+// ---------------------------------------------------------------------------
+
+/** One signed-in device: a live Supabase session. Never carries the IP. */
+export const sessionSummarySchema = z.object({
+  id: z.string().uuid(),
+  /** e.g. "Chrome on Android" — derived from the user agent at render. */
+  label: z.string(),
+  createdAt: z.string().min(1),
+  lastActiveAt: z.string().min(1),
+  isCurrent: z.boolean(),
+})
+export type SessionSummary = z.infer<typeof sessionSummarySchema>
+
+export const revokeSessionInputSchema = z.object({
+  sessionId: z.string().uuid(),
+})
+export type RevokeSessionInput = z.infer<typeof revokeSessionInputSchema>
+
+// ---------------------------------------------------------------------------
 // Re-acceptance of the current legal documents (D-115)
 // ---------------------------------------------------------------------------
 
