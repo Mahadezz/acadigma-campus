@@ -355,7 +355,7 @@ Built on `feat/identity-account-deletion`. Where this differs from §3, §4.9 an
 
 ### Part 6 — sessions and devices (D-116, 2026-10-01)
 
-Built on `feat/identity-sessions-devices`. Where this differs from §3, §4.8 and §7 above, this section wins:
+Built on `feat/identity-sessions-devices` (PR #132; test report `docs/test-reports/2026-10-01-F-ID-01-p6.md`). Where this differs from §3, §4.8 and §7 above, this section wins:
 
 - **Where:** `/account/security` → **Signed-in devices**, between Change password and Delete account. One card per device (phone and desktop): the label ("Chrome on Android"), **This device** on the current one, "Signed in {date}" and "Last active {date}". Other devices have a **Sign out** button (44 px, never swipe-only); the current device has none. Below the list, **Sign out everywhere**. No location column (no geo-IP lookup).
 - **A device is a live Supabase session** (`auth.sessions`), read by `public.my_sessions()`; `device_registrations` stays the push-token table. The label comes from the user agent at render (`deviceLabel.ts`); the server client forwards the browser's `User-Agent` so Supabase records it. The IP is never read.

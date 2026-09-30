@@ -114,7 +114,7 @@ export function SignedInDevices({
               />
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 font-medium">
-                  <span className="truncate">{d.label}</span>
+                  <span className="break-words">{d.label}</span>
                   {d.isCurrent ? (
                     <Badge variant="secondary">{t.thisDevice}</Badge>
                   ) : null}
