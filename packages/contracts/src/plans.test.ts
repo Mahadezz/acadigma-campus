@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { ARCHIVED_READ_ONLY_REASON } from "./operations/danger-zone"
 import {
   accessModeSchema,
   getUsageOutput,
@@ -147,6 +148,16 @@ describe("planReadOnlyApiError", () => {
     })
     expect(error.code).toBe("payment_required")
     expect(error.message).toMatch(/^Your Pro trial has ended\. Upgrade/)
+  })
+
+  it("tells an archived school how to restore it, not to upgrade (D-211)", () => {
+    const error = planReadOnlyApiError({
+      code: "PLAN_READ_ONLY",
+      reason: ARCHIVED_READ_ONLY_REASON,
+    })
+    expect(error.code).toBe("forbidden")
+    expect(error.message).toMatch(/^This school is archived\./)
+    expect(error.message).not.toMatch(/Upgrade/)
   })
 
   it("falls back to a generic sentence when there is no reason", () => {

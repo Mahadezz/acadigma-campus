@@ -109,7 +109,9 @@ ensure_user() {
         end if;
         delete from public.workspaces w where w.type = 'personal' and w.owner_id = v;
         delete from auth.users u where u.id = v;
-        -- D-113: profiles no longer cascades from auth.users.
+        -- D-113: profiles no longer cascades from auth.users, and its
+        -- deletion requests (user_id ON DELETE RESTRICT) must go first.
+        delete from public.account_deletion_requests r where r.user_id = v;
         delete from public.profiles p where p.id = v;
       end \$\$" >/dev/null || { echo "::error::replacing $email failed" >&2; exit 1; }
   admin POST /admin/users "$body" >/dev/null || { echo "::error::recreating $email failed" >&2; exit 1; }

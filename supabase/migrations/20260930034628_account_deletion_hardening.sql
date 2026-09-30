@@ -1,5 +1,5 @@
 -- =====================================================================
--- F-ID-01 Part 7 (D-113) · review fixes on 20260929181340_account_deletion
+-- F-ID-01 Part 7 (D-113) · review fixes on 20260930034627_account_deletion
 -- (a new file: that one was already pushed).
 --
 --  1. Re-authentication at the security boundary: request_account_deletion
@@ -48,7 +48,7 @@ create trigger on_auth_user_deleted
   after delete on auth.users
   for each row execute function app.tg_auth_user_deleted();
 
--- Body identical to 20260929181340 plus the tombstone freeze.
+-- Body identical to 20260930034627 plus the tombstone freeze.
 create or replace function app.tg_profiles_guard()
 returns trigger
 language plpgsql

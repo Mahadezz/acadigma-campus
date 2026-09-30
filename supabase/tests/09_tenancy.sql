@@ -298,10 +298,12 @@ update public.workspaces set status = 'archived'
 
 select tests.login('99990001-0000-0000-0000-000000000001');
 
-select throws_ok(
+-- D-211 (F-OP-07 Part 6) adds exactly one allowlist entry: the OWNER of an
+-- archived school may still switch into it, to export, restore or delete it.
+-- Every other member is still refused (48_danger_zone.sql, teacher case).
+select lives_ok(
   $$select * from public.switch_workspace('99993333-3333-3333-3333-333333333333')$$,
-  '42501', 'WORKSPACE_UNAVAILABLE',
-  'switch_workspace: an ARCHIVED workspace is refused even for its own owner (allowlist, not denylist)');
+  'switch_workspace: an ARCHIVED workspace is reachable by its own owner only (D-211)');
 
 select tests.logout();
 

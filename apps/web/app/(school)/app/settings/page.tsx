@@ -1,4 +1,7 @@
+import Link from "next/link"
 import { redirect } from "next/navigation"
+
+import { ChevronRightIcon } from "lucide-react"
 
 import { getSchoolProfile } from "@acadigma/db/repositories/settings"
 import { can } from "@acadigma/domain"
@@ -94,6 +97,26 @@ export default async function SettingsPage() {
           searchEmpty: s.searchEmpty,
         }}
       />
+      {/* F-OP-07 W8 (D-211): owner only, set apart at the bottom. */}
+      {can(ctx.role, "settings.manage") ? (
+        <Link
+          href="/app/settings/danger"
+          className="border-destructive/40 hover:bg-muted/50 flex min-h-14 items-center gap-3 rounded-lg border px-4 py-3"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="text-destructive block font-medium">
+              {t.dangerZone.rowTitle}
+            </span>
+            <span className="text-muted-foreground block truncate text-sm">
+              {t.dangerZone.rowDescription}
+            </span>
+          </span>
+          <ChevronRightIcon
+            className="text-muted-foreground size-4 shrink-0"
+            aria-hidden
+          />
+        </Link>
+      ) : null}
     </div>
   )
 }

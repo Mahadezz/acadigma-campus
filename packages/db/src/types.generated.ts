@@ -66,50 +66,6 @@ export type Database = {
           },
         ]
       }
-      account_deletion_requests: {
-        Row: {
-          attempts: number
-          cancelled_at: string | null
-          completed_at: string | null
-          id: string
-          last_error: string | null
-          requested_at: string
-          scheduled_purge_at: string
-          status: Database["public"]["Enums"]["account_deletion_status"]
-          user_id: string
-        }
-        Insert: {
-          attempts?: number
-          cancelled_at?: string | null
-          completed_at?: string | null
-          id?: string
-          last_error?: string | null
-          requested_at?: string
-          scheduled_purge_at: string
-          status?: Database["public"]["Enums"]["account_deletion_status"]
-          user_id: string
-        }
-        Update: {
-          attempts?: number
-          cancelled_at?: string | null
-          completed_at?: string | null
-          id?: string
-          last_error?: string | null
-          requested_at?: string
-          scheduled_purge_at?: string
-          status?: Database["public"]["Enums"]["account_deletion_status"]
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "account_deletion_requests_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       attendance_records: {
         Row: {
           created_at: string
@@ -2186,7 +2142,6 @@ export type Database = {
           bio: string | null
           created_at: string
           date_of_birth: string | null
-          deleted_at: string | null
           display_name: string | null
           email: string | null
           full_name: string
@@ -2205,7 +2160,6 @@ export type Database = {
           bio?: string | null
           created_at?: string
           date_of_birth?: string | null
-          deleted_at?: string | null
           display_name?: string | null
           email?: string | null
           full_name?: string
@@ -2224,7 +2178,6 @@ export type Database = {
           bio?: string | null
           created_at?: string
           date_of_birth?: string | null
-          deleted_at?: string | null
           display_name?: string | null
           email?: string | null
           full_name?: string
@@ -4104,8 +4057,10 @@ export type Database = {
           access_mode: Database["public"]["Enums"]["access_mode"]
           access_mode_reason: string | null
           access_mode_set_at: string | null
+          archived_at: string | null
           created_at: string
           created_by: string | null
+          deletion_scheduled_at: string | null
           hidden_modules: string[]
           id: string
           invite_code: string | null
@@ -4125,8 +4080,10 @@ export type Database = {
           access_mode?: Database["public"]["Enums"]["access_mode"]
           access_mode_reason?: string | null
           access_mode_set_at?: string | null
+          archived_at?: string | null
           created_at?: string
           created_by?: string | null
+          deletion_scheduled_at?: string | null
           hidden_modules?: string[]
           id?: string
           invite_code?: string | null
@@ -4146,8 +4103,10 @@ export type Database = {
           access_mode?: Database["public"]["Enums"]["access_mode"]
           access_mode_reason?: string | null
           access_mode_set_at?: string | null
+          archived_at?: string | null
           created_at?: string
           created_by?: string | null
+          deletion_scheduled_at?: string | null
           hidden_modules?: string[]
           id?: string
           invite_code?: string | null
@@ -4313,16 +4272,13 @@ export type Database = {
     }
     Functions: {
       accept_guardian_invitation: { Args: { p_token: string }; Returns: Json }
-      account_deletion_blockers: {
-        Args: never
-        Returns: {
-          name: string
-          workspace_id: string
-        }[]
-      }
       admit_student: {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
+      }
+      archive_workspace: {
+        Args: { p_confirm_name: string; p_workspace_id: string }
+        Returns: string
       }
       attendance_day: {
         Args: { p_date?: string; p_workspace_id: string }
@@ -4336,7 +4292,10 @@ export type Database = {
         Args: { p_section_id: string; p_workspace_id: string }
         Returns: boolean
       }
-      cancel_account_deletion: { Args: never; Returns: boolean }
+      cancel_workspace_deletion: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
       check_eiin_available: { Args: { eiin: string }; Returns: boolean }
       compute_results: {
         Args: { p_exam_id: string; p_workspace_id: string }
@@ -4349,6 +4308,10 @@ export type Database = {
         Returns: Json
       }
       expire_pro_trials: { Args: never; Returns: number }
+      export_workspace_table: {
+        Args: { p_table: string; p_workspace_id: string }
+        Returns: Json
+      }
       family_results: {
         Args: { p_workspace_id: string }
         Returns: {
@@ -4421,12 +4384,19 @@ export type Database = {
         Args: { p_attempted_workspace_id: string }
         Returns: undefined
       }
+      log_workspace_export: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
       pre_request: { Args: never; Returns: undefined }
       publish_results: {
         Args: { p_exam_id: string; p_withhold?: Json; p_workspace_id: string }
         Returns: Json
       }
-      request_account_deletion: { Args: never; Returns: string }
+      purge_due_workspace: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
       revoke_guardian_link: {
         Args: { p_link_id: string; p_workspace_id: string }
         Returns: undefined
@@ -4447,6 +4417,10 @@ export type Database = {
       save_marks: {
         Args: { p_input: Json; p_workspace_id: string }
         Returns: Json
+      }
+      schedule_workspace_deletion: {
+        Args: { p_confirm_name: string; p_workspace_id: string }
+        Returns: string
       }
       seed_bd_grade_scale: { Args: { p_workspace_id: string }; Returns: string }
       set_current_academic_year: {
@@ -4500,6 +4474,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      unarchive_workspace: {
+        Args: { p_confirm_name: string; p_workspace_id: string }
+        Returns: undefined
+      }
       unlock_exam_subject: {
         Args: {
           p_exam_subject_id: string
@@ -4523,10 +4501,10 @@ export type Database = {
           phone: string
         }[]
       }
+      workspace_export_tables: { Args: never; Returns: string[] }
     }
     Enums: {
       access_mode: "normal" | "read_only"
-      account_deletion_status: "pending" | "cancelled" | "completed"
       ai_billing_model: "shared_pool" | "individual_allocation"
       attendance_session_status: "draft" | "submitted" | "locked"
       attendance_status: "present" | "absent" | "late" | "excused" | "half_day"
@@ -4774,7 +4752,6 @@ export const Constants = {
   public: {
     Enums: {
       access_mode: ["normal", "read_only"],
-      account_deletion_status: ["pending", "cancelled", "completed"],
       ai_billing_model: ["shared_pool", "individual_allocation"],
       attendance_session_status: ["draft", "submitted", "locked"],
       attendance_status: ["present", "absent", "late", "excused", "half_day"],

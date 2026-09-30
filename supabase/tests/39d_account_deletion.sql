@@ -1,6 +1,6 @@
 -- =====================================================================
 -- pgTAP · F-ID-01 Part 7 — account deletion with a 30-day grace
---   (20260929181340_account_deletion.sql, D-113)
+--   (20260930034627_account_deletion.sql, D-113)
 --
 --   A. Sole-owner guard: the only active owner of a school is blocked and
 --      told which school; a co-owner is not.
