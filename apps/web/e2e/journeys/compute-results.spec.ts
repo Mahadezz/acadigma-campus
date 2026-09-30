@@ -60,10 +60,10 @@ test("owner locks marks, computes results and reads the ranked class", async ({
   // Same race publish-results.spec.ts hit (D-76): wait for the marks page
   // before counting and typing into its boxes.
   await expect(page).toHaveURL(/\/app\/marks\/[0-9a-f-]{36}$/)
-  // "load", not "networkidle": the latter never came on the e2e-live
-  // runner and ran out the test timeout (D-76).
-  await page.waitForLoadState("load")
+  // Wait on the marks boxes themselves, not a load event ("networkidle"
+  // never came on the e2e-live runner, D-76).
   const inputs = page.getByRole("textbox")
+  await expect(inputs.first()).toBeEditable()
   const count = await inputs.count()
   expect(count).toBeGreaterThan(1)
   await inputs.first().focus()

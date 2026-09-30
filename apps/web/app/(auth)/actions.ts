@@ -3,6 +3,8 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
+import { isAuthRetryableFetchError } from "@supabase/supabase-js"
+
 import {
   apiError,
   err,
@@ -307,17 +309,22 @@ export async function signInWithPassword(
     // unconfirmed/banned/rate-limited account apart from a wrong password,
     // that would be a new account-enumeration oracle this function exists
     // to prevent (§4.2).
-    if (
-      error.code === "invalid_credentials" ||
-      error.code === "email_not_confirmed" ||
-      error.code === "user_banned"
-    ) {
+    //
+    // Deny-list, not allow-list (#90 security review): every rejection counts
+    // unless it is provably an infrastructure failure, so a GoTrue version
+    // that answers a wrong password with no code, or a new one, can never
+    // silently switch the brute-force protection off.
+    const infraFailure =
+      isAuthRetryableFetchError(error) ||
+      error.status === 0 ||
+      (error.status ?? 0) >= 500
+    if (error.code === "over_request_rate_limit") {
+      await throttleRecordFailure(supabase, "loginByIp", ipKey)
+    } else if (!infraFailure) {
       await Promise.all([
         throttleRecordFailure(supabase, "loginByEmail", emailKey),
         throttleRecordFailure(supabase, "loginByIp", ipKey),
       ])
-    } else if (error.code === "over_request_rate_limit") {
-      await throttleRecordFailure(supabase, "loginByIp", ipKey)
     }
 
     // One generic message regardless of which half was wrong, or whether

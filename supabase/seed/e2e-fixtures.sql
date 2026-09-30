@@ -22,6 +22,18 @@ begin
     raise exception 'refusing to seed: this database already has % schools',
       (select count(*) from public.workspaces where type = 'school');
   end if;
+  -- #90 security review: a school count alone lets a young production
+  -- database through. This file creates known-password test accounts, so
+  -- it runs only where every account is a seeded one: the throwaway local
+  -- stack (`supabase start` / `db reset`) that seed.sql has just filled.
+  -- One account from anywhere else (a real sign-up, the D-80 demo school's
+  -- accounts) means this is not that database.
+  if exists (
+    select 1 from auth.users
+     where email is null or email not like '%@acadigma.test'
+  ) then
+    raise exception 'refusing to seed E2E accounts: this database has accounts that seed.sql did not create';
+  end if;
 end
 $$;
 
@@ -287,7 +299,7 @@ update public.sections s
 -- 6. Widen the two IP-keyed throttle buckets for this database only
 --    (D-76). `register`/`loginByIp` in the real
 --    `public.throttle_record_failure` (latest definition:
---    supabase/migrations/20260930034612_throttle_block_at_limit.sql) are
+--    supabase/migrations/20260930041459_throttle_block_at_limit.sql) are
 --    tuned for one real person at one IP -- `loginByIp` alone is 30
 --    attempts per 15 minutes before a full HOUR block. Every Playwright
 --    worker in this suite signs in from the exact same IP (the runner's
@@ -393,7 +405,7 @@ begin
         end
   returning * into v_row;
 
-  if v_row.attempts >= v_max_attempts then  -- block AT the limit (20260930034612, AC6)
+  if v_row.attempts >= v_max_attempts then  -- block AT the limit (20260930041459, AC6)
     update public.auth_throttle
        set blocked_until = greatest(
              coalesce(blocked_until, now()),

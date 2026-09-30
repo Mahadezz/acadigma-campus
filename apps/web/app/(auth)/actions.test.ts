@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { AuthRetryableFetchError } from "@supabase/supabase-js"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as AcadigmaDomainAuth from "@acadigma/domain/auth"
@@ -363,6 +364,59 @@ describe("signInWithPassword (F-ID-03 review: stale workspace cookie on a shared
       expect.anything()
     )
   })
+
+  it.each([
+    ["no code at all", { status: 400 }],
+    ["a code this app has never seen", { status: 400, code: "brand_new_code" }],
+    ["a 422 without a code", { status: 422 }],
+  ])(
+    "spends the brute-force throttle for a rejection with %s (deny-list, #90 review)",
+    async (_label, error) => {
+      mockSignInWithPassword.mockResolvedValue({ data: { user: null }, error })
+
+      const result = await signInWithPassword({
+        email: "person@test.local",
+        password: "whatever-they-typed",
+        remember: true,
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.message).toBe("Email or password is incorrect.")
+      }
+      expect(mockThrottleRecordFailure).toHaveBeenCalledWith(
+        expect.anything(),
+        "loginByEmail",
+        expect.anything()
+      )
+    }
+  )
+
+  it.each([
+    ["a network failure (status 0)", { status: 0 }],
+    ["a 502", { status: 502, code: "unexpected_failure" }],
+    [
+      "an AuthRetryableFetchError",
+      new AuthRetryableFetchError("fetch failed", 0),
+    ],
+  ])(
+    "does not spend the throttle on %s, and answers identically",
+    async (_label, error) => {
+      mockSignInWithPassword.mockResolvedValue({ data: { user: null }, error })
+
+      const result = await signInWithPassword({
+        email: "person@test.local",
+        password: "whatever-they-typed",
+        remember: true,
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.message).toBe("Email or password is incorrect.")
+      }
+      expect(mockThrottleRecordFailure).not.toHaveBeenCalled()
+    }
+  )
 
   it("still clears the cookie even when the account turns out to be suspended", async () => {
     mockMaybeSingleProfile.mockImplementation(async () => {

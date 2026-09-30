@@ -61,10 +61,10 @@ test("owner publishes results withholding one student, then unpublishes", async 
   // before the navigation landed, the digits went into the paper's date
   // fields and saved an entry window in year 1 (e2e-live, D-76).
   await expect(page).toHaveURL(/\/app\/marks\/[0-9a-f-]{36}$/)
-  // "load", not "networkidle": the latter never came on the e2e-live
-  // runner and ran out the test timeout (D-76).
-  await page.waitForLoadState("load")
+  // Wait on the marks boxes themselves, not a load event ("networkidle"
+  // never came on the e2e-live runner, D-76).
   const inputs = page.getByRole("textbox")
+  await expect(inputs.first()).toBeEditable()
   const count = await inputs.count()
   await inputs.first().focus()
   for (let i = 0; i < count; i += 1) {
