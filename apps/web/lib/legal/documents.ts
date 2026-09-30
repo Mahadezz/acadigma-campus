@@ -1,10 +1,4 @@
-import {
-  DPA_2026_09_30,
-  GUARDIAN_CONSENT_BN_2026_09_30,
-  GUARDIAN_CONSENT_EN_2026_09_30,
-  PRIVACY_2026_09_30,
-  TERMS_2026_09_30,
-} from "./texts"
+import { DPA_2026_09_30, PRIVACY_2026_09_30, TERMS_2026_09_30 } from "./texts"
 
 /**
  * The current version of each document a person accepts (D-114). The version
@@ -24,9 +18,4 @@ export function isLegalDocumentKey(key: string): key is LegalDocumentKey {
   return Object.hasOwn(LEGAL_DOCUMENTS, key)
 }
 
-/** The parent-link consent (purpose `guardian.portal_access`), in both
- * languages: the parent agrees to the words on their screen. */
-export const GUARDIAN_CONSENT = {
-  version: "2026-09-30",
-  text: { en: GUARDIAN_CONSENT_EN_2026_09_30, bn: GUARDIAN_CONSENT_BN_2026_09_30 },
-} as const
+export { GUARDIAN_CONSENT } from "./guardian-consent"

@@ -85,6 +85,25 @@ export default function HomePage() {
           </Card>
         ))}
       </section>
+
+      {/* D-114: the documents people agree to, one tap from the front door. */}
+      <nav
+        aria-label="Legal"
+        className="text-muted-foreground mt-16 flex flex-wrap justify-center gap-x-6 text-sm"
+      >
+        <Link href="/legal/terms" className="inline-flex min-h-11 items-center">
+          Terms of Use
+        </Link>
+        <Link
+          href="/legal/privacy"
+          className="inline-flex min-h-11 items-center"
+        >
+          Privacy Notice
+        </Link>
+        <Link href="/legal/dpa" className="inline-flex min-h-11 items-center">
+          Data Processing Agreement
+        </Link>
+      </nav>
     </main>
   )
 }

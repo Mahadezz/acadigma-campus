@@ -30,6 +30,7 @@ import { safeReturnTo, checkPassword } from "@acadigma/domain/auth"
 import { logAuthEvent } from "@/lib/audit"
 import { logAuthEmail } from "@/lib/email-log"
 import { getMessages } from "@/lib/i18n"
+import { LEGAL_DOCUMENTS } from "@/lib/legal/documents"
 import { requestLogger } from "@/lib/logger"
 import { getRequestContext, throttleKey } from "@/lib/request-context"
 import { resolveLandingRoute } from "@/lib/resolve-landing-route"
@@ -82,14 +83,10 @@ export async function registerWithPassword(
       )
     )
   }
-  const {
-    fullName,
-    email,
-    password,
-    termsAccepted,
-    next,
-  }: RegisterWithPasswordInput = parsed.data
-  void termsAccepted // literal(true) already enforced by the schema
+  // termsAccepted is literal(true) in the schema: the acceptance itself is
+  // recorded below, from the server's own versions (D-114).
+  const { fullName, email, password, next }: RegisterWithPasswordInput =
+    parsed.data
 
   const { t, locale } = await getMessages()
   const ctx = await getRequestContext()
@@ -122,7 +119,15 @@ export async function registerWithPassword(
     email,
     password,
     options: {
-      data: { full_name: fullName },
+      // D-114: app.tg_record_signup_legal writes the legal_acceptances rows
+      // for these versions in the transaction that creates the user.
+      data: {
+        full_name: fullName,
+        legal: {
+          terms: LEGAL_DOCUMENTS.terms.version,
+          privacy: LEGAL_DOCUMENTS.privacy.version,
+        },
+      },
       emailRedirectTo: `${origin}/api/auth/callback?type=email&next=${next ?? "/onboarding"}`,
     },
   })

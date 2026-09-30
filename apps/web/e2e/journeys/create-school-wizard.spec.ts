@@ -92,6 +92,10 @@ test("create-school wizard: identity → where and when → classes → review �
   await expect(page.getByText(/day Pro trial starts now/)).toBeVisible()
   await expectNoA11yViolations(page, testInfo)
 
+  // D-114: the owner accepts the DPA on the school's behalf.
+  await page
+    .getByRole("checkbox", { name: /Data Processing Agreement/ })
+    .check()
   await page.getByRole("button", { name: "Create school" }).click()
   await expect(page).toHaveURL(/\/app(\/|$)/, { timeout: 30_000 })
 })

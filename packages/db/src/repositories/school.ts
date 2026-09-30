@@ -80,6 +80,11 @@ const CREATE_SCHOOL_ERRORS: Record<string, ApiError> = {
     "dependency_unavailable",
     "Could not create the school right now. Your details are saved — try again."
   ),
+  // D-114: the DPA version this deploy names was never published.
+  LEGAL_DOCUMENT_UNKNOWN: apiError(
+    "conflict",
+    "This page is out of date. Reload it and try again."
+  ),
   IDEMPOTENCY_KEY_REUSED: apiError(
     "conflict",
     "This request was already used for different details. Reload and try again."
@@ -99,14 +104,18 @@ const createSchoolRpcSchema = z.union([
  * `public.create_school_workspace` (SECURITY DEFINER,
  * `20260925300101_create_school_workspace.sql`), which does every write in
  * one transaction. No `WorkspaceContext` for the same reason as above — the
- * workspace does not exist until this returns.
+ * workspace does not exist until this returns. `dpaVersion` is the Data
+ * Processing Agreement version the owner accepted on the school's behalf,
+ * recorded in the same transaction (D-114).
  */
 export async function createSchoolWorkspace(
   client: AcadigmaSupabaseClient,
-  input: CreateSchoolWorkspaceInput
+  input: CreateSchoolWorkspaceInput,
+  dpaVersion: string
 ): Promise<Result<{ workspaceId: string; replayed: boolean }, ApiError>> {
   const { data, error } = await client.rpc("create_school_workspace", {
     p_input: input,
+    p_dpa_version: dpaVersion,
   })
 
   const row = error ? null : createSchoolRpcSchema.safeParse(data)

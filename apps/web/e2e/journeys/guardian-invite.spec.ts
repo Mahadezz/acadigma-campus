@@ -161,6 +161,7 @@ test("admin invites a guardian, the parent accepts and sees the published result
     parent.getByText(new RegExp(`E2E Demo School|${studentName}`)).first()
   ).toBeVisible()
   await expectNoA11yViolations(parent, testInfo)
+  await parent.getByRole("checkbox", { name: "I agree" }).check() // D-114
   await parent.getByRole("button", { name: "Accept" }).click()
 
   await expect(parent).toHaveURL(/\/family$/)
@@ -255,6 +256,7 @@ test("a new parent signs up from the link and lands back on it", async ({
   expect(new URL(parent.url()).pathname).toBe("/invite")
   await parent.goto(`${new URL(inviteUrl).origin}/invite`)
   await expect(parent.getByText(studentName).first()).toBeVisible()
+  await parent.getByRole("checkbox", { name: "I agree" }).check() // D-114
   await parent.getByRole("button", { name: "Accept" }).click()
   await expect(parent).toHaveURL(/\/family$/)
   await expect(parent.getByText(studentName).first()).toBeVisible()
@@ -308,6 +310,7 @@ test("a teacher who is also a parent sees only their own child and keeps the sch
   await expect(teacher).not.toHaveURL(/\/login/)
   await teacher.goto(inviteUrl)
   await expect(teacher.getByText(studentName).first()).toBeVisible()
+  await teacher.getByRole("checkbox", { name: "I agree" }).check() // D-114
   await teacher.getByRole("button", { name: "Accept" }).click()
 
   await expect(teacher).toHaveURL(/\/family$/)
