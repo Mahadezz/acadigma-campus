@@ -110,6 +110,8 @@ export const ACTIONS = [
   "calendar.holiday.write",
   // F-AC-11 §4.3: force a date open or shut — owner/admin only.
   "calendar.override.write",
+  // F-AC-04 §2 (D-214): check yourself in and out — every staff role, never a parent.
+  "staff_attendance.self",
   "members.contact.read",
   "members.invite",
   "members.approve",
@@ -210,6 +212,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "workspace.branding.write",
     "calendar.holiday.write",
     "calendar.override.write",
+    "staff_attendance.self",
     "members.contact.read",
     "members.invite",
     "members.approve",
@@ -277,6 +280,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
     "workspace.branding.write",
     "calendar.holiday.write",
     "calendar.override.write",
+    "staff_attendance.self",
     "members.contact.read",
     "members.invite",
     "members.approve",
@@ -306,6 +310,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
   teacher: [
     "attendance.read",
     "attendance.write",
+    "staff_attendance.self",
     "students.read",
     "marks.read",
     "marks.write",
@@ -343,6 +348,7 @@ export const PERMISSIONS: Readonly<Record<Role, readonly Action[]>> = {
   // Office staff: sees the school, changes almost nothing.
   staff: [
     "attendance.read",
+    "staff_attendance.self",
     "students.read",
     "marks.read",
     "timetable.read",

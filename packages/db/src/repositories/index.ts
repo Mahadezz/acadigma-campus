@@ -1,5 +1,6 @@
 export * from "./academics"
 export * from "./attendance"
+export * from "./staff-attendance"
 export * from "./audit"
 export * from "./billing-jobs"
 export * from "./calendar"

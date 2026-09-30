@@ -1961,3 +1961,19 @@ Two things were already true and are worth stating plainly rather than re-derivi
 **Why:** the smallest change that makes an already-tested backend usable; no second source of truth for who may override.
 
 **Consequences:** server actions `saveWorkingDayOverride` / `deleteWorkingDayOverride` follow parse, context, `can`, `requireWritable`, repository; audit rows come from the existing trigger. The override list shows overrides from 1 January of the school's current year onward (same window as holidays), and the date input is bounded to that same window (`min` = 1 January of the school's year; the simplest consistent choice, rather than also listing past years). Editing an override fixes its date; to move one, remove it and add a new one, so a save can never silently replace another date's row (lead security review of #131).
+
+## D-214 — F-AC-04 Part 1: staff self check-in — RPC-only writes, present/late only, no non-school-day rows, one shared card, code-default policy · ACCEPTED · 2026-10-01
+
+**Context:** F-AC-04 Part 1 (staff attendance table and self check-in) had five points a builder would have had to guess: where the card lives, weekend/holiday behaviour, the status when a late member leaves early, how a self-write is restricted to "check-in columns", and where the policy defaults come from.
+
+**Decision (lead decision 2026-10-01; the owner may overturn):**
+
+1. One shared `StaffCheckInCard`, rendered on `/app/dashboard` and the basic-mode `/app/home`, inserted without restyling either page.
+2. If `app.is_school_day(workspace, today)` is false the card shows "No school today" with no check-in. Part 1 writes no weekend or holiday rows.
+3. Check-in writes `present` or `late` (`minutes_late` kept) from the on-time time plus grace. Check-out records `check_out_at` only. Self-service never writes `half_day`; no status overwrite on check-out.
+4. Writes are RPC-only: SECURITY DEFINER functions, `search_path = ''`, `auth.uid()` required, caller an active staff member of the workspace, one row per (member, date), server Dhaka time, no table write grants (as `save_attendance`), explicit `grant execute` to `authenticated` only (D-54). RLS: a member reads their own rows; owner/admin read all in their workspace.
+5. Policy is code defaults through the existing settings `resolve()` pattern (on time until 08:00, grace 10 minutes). No policy table or edit UI in Part 1.
+
+**Why:** the database is the boundary for a write on staff data; functions that take no time, date or status from the client cannot be made to backdate or forge a row, and narrowing self-service to presence keeps every judgement about a half day with an admin.
+
+**Consequences:** new `staff_attendance` table and the full spec enum `staff_attendance_status` (only `present`, `late` are written by Part 1; creating every value now avoids `ALTER TYPE` later), with `minutes_late` counted from the on-time time (08:00) and `late` only after the 10-minute grace; the policy defaults live in one SQL function, `app.staff_attendance_policy`, because the status is derived in the database (the client supplies no time), not in TypeScript's `resolve()`, new client-callable functions `staff_check_in`, `staff_check_out`, `staff_attendance_today` (added to `12_function_grants_invariant.sql`). Deferred: policy table and editor, check-in window and geofence, admin grid, leave, missed-punch job, derived weekend/holiday statuses. Spec §5.3's check-out half-day derivation is narrowed accordingly.

@@ -36,6 +36,8 @@ import type { Messages } from "@/lib/i18n"
  */
 export type DashboardViewProps = {
   t: Messages["dashboard"]
+  /** Rendered between the header and the cards (the staff check-in card, D-214). */
+  topSlot?: React.ReactNode
   dateLabel: string
   schoolName: string
   subtitle: string | null
@@ -101,6 +103,8 @@ export function DashboardView(props: DashboardViewProps) {
           <div className="hidden shrink-0 lg:block">{primary}</div>
         ) : null}
       </header>
+
+      {props.topSlot}
 
       <div className="grid gap-4 lg:grid-cols-3 lg:gap-5">
         <div className="space-y-4 lg:col-span-2 lg:space-y-5">

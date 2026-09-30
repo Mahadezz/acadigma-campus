@@ -510,6 +510,22 @@
     },
     "loadError": "The dashboard could not load. Refresh to try again."
   },
+  "staffCheckIn": {
+    "title": "Your attendance",
+    "checkIn": "Check in",
+    "checkOut": "Check out",
+    "saving": "Saving…",
+    "noSchool": "No school today",
+    "presentIn": "Present · in at {time}",
+    "lateIn": "Late · in at {time} ({minutes} min late)",
+    "checkedOut": "Checked out at {time}",
+    "errors": {
+      "generic": "Could not save. Try again.",
+      "forbidden": "Only school staff can check in.",
+      "readOnly": "This workspace is read-only. Upgrade to make changes.",
+      "noSchool": "There is no school today."
+    }
+  },
   "attendance": {
     "title": "Attendance",
     "takeAttendance": "Take attendance",
