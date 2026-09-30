@@ -63,6 +63,7 @@ const recordSchema = z.object({
 
 const todaySchema = z.object({
   today: z.string(),
+  timezone: z.string(),
   is_school_day: z.boolean(),
   record: recordSchema.nullable(),
 })
@@ -91,6 +92,7 @@ export async function getStaffCheckInToday(
   if (!parsed.success) return err(UNAVAILABLE)
   return ok({
     today: parsed.data.today,
+    timezone: parsed.data.timezone,
     isSchoolDay: parsed.data.is_school_day,
     record: parsed.data.record ? toRecord(parsed.data.record) : null,
   })

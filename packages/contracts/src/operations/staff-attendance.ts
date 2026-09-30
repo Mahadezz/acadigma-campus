@@ -31,6 +31,8 @@ export type StaffAttendanceRecord = {
 /** What the check-in card needs: the school's today, whether it is a school day, my row. */
 export type StaffCheckInToday = {
   today: string
+  /** IANA zone the school's clock runs in, for formatting the recorded times. */
+  timezone: string
   isSchoolDay: boolean
   record: StaffAttendanceRecord | null
 }

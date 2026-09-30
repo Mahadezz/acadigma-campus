@@ -178,6 +178,9 @@ begin
    where member_id = v_member and date = v_today;
   return jsonb_build_object(
     'today', v_today,
+    'timezone', coalesce(
+      (select sp.timezone from public.school_profiles sp where sp.workspace_id = p_workspace_id),
+      'Asia/Dhaka'),
     'is_school_day', coalesce(app.is_school_day(p_workspace_id, v_today), false),
     'record', case when v_row.id is null then null else app.staff_row_json(v_row) end
   );

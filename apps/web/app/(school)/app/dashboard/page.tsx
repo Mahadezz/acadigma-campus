@@ -21,6 +21,8 @@ import { IMPLEMENTED_NAV_ROUTES } from "@/lib/implemented-routes"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
+import { StaffCheckInSlot } from "../_staff-check-in/staff-check-in-slot"
+
 import { DashboardView, type DashboardViewProps } from "./dashboard-view"
 
 import type { Metadata } from "next"
@@ -86,6 +88,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardView
+      topSlot={<StaffCheckInSlot ctx={ctx} />}
       t={d}
       dateLabel={dateLabel}
       schoolName={s.headerLine1 ?? s.schoolName}

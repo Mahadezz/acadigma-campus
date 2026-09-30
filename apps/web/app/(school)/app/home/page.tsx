@@ -15,6 +15,8 @@ import { getCachedSchoolProfile } from "@/lib/school-profile"
 import { createClient } from "@/lib/supabase/server"
 import { requireShell } from "@/lib/workspace"
 
+import { StaffCheckInSlot } from "../_staff-check-in/staff-check-in-slot"
+
 import { EssentialsRow } from "./essentials-row"
 import { classBlockTitle, fill, pluralize } from "./format"
 
@@ -112,6 +114,8 @@ export default async function BasicHomePage() {
         allDoneLabel={s.allDone}
         renderLink={renderLink}
       />
+
+      <StaffCheckInSlot ctx={ctx} />
 
       {noClasses ? (
         <EmptyState

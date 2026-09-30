@@ -98,12 +98,18 @@ describe("staffCheckIn / staffCheckOut", () => {
 describe("getStaffCheckInToday", () => {
   it("maps a school day with no record", async () => {
     const { client } = fakeClient({
-      data: { today: "2026-10-01", is_school_day: true, record: null },
+      data: {
+        today: "2026-10-01",
+        timezone: "Asia/Dhaka",
+        is_school_day: true,
+        record: null,
+      },
       error: null,
     })
     const result = await getStaffCheckInToday(CTX, client)
     expect(result.ok && result.data).toEqual({
       today: "2026-10-01",
+      timezone: "Asia/Dhaka",
       isSchoolDay: true,
       record: null,
     })
@@ -111,7 +117,12 @@ describe("getStaffCheckInToday", () => {
 
   it("maps a record", async () => {
     const { client } = fakeClient({
-      data: { today: "2026-10-01", is_school_day: false, record: ROW },
+      data: {
+        today: "2026-10-01",
+        timezone: "Asia/Dhaka",
+        is_school_day: false,
+        record: ROW,
+      },
       error: null,
     })
     const result = await getStaffCheckInToday(CTX, client)
