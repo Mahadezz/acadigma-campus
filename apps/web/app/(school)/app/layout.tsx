@@ -16,6 +16,7 @@ import {
   OutboxChip,
   OutboxStaleBanner,
 } from "@/app/(shared)/offline/outbox-chip"
+import { PullToRefresh } from "@/app/(shared)/pull-to-refresh"
 import { listMyWorkspaces } from "@/app/(shared)/workspace/actions"
 import { UserMenu } from "@/app/(shared)/workspace/user-menu"
 import { WorkspaceSwitcher } from "@/app/(shared)/workspace/workspace-switcher"
@@ -25,7 +26,6 @@ import { resolveEntitledNavModules } from "@/lib/school-nav-entitlements"
 import { getCachedSchoolProfile } from "@/lib/school-profile"
 import { createClient } from "@/lib/supabase/server"
 import { getUiPreferences } from "@/lib/ui-preferences"
-import { PullToRefresh } from "@/app/(shared)/pull-to-refresh"
 import { requireShell } from "@/lib/workspace"
 
 import { BasicShellWrapper } from "./basic-shell-wrapper"

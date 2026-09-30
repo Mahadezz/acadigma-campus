@@ -1,5 +1,5 @@
-import { cn } from "../lib/utils"
 import { Skeleton } from "../components/ui/skeleton"
+import { cn } from "../lib/utils"
 
 /**
  * Shared route-loading layouts (D-409, app-polish #2): one per page type, so a

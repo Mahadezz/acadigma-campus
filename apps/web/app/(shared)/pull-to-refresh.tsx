@@ -2,8 +2,9 @@
 
 import * as React from "react"
 
-import { RefreshCwIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
+
+import { RefreshCwIcon } from "lucide-react"
 
 /** Pull distance that triggers a refresh (DESIGN-SYSTEM §3.6). */
 export const PULL_THRESHOLD = 64
