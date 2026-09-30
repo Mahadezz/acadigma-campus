@@ -6,6 +6,7 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 ## 2026-10-01
 
+- **#133 merged** (ce4f273): pages load faster — Sentry loads only when a DSN exists (~128 kB off every page), toast region after hydration; front-door follow-ups (2-line headline at 360, ink header pill, reserved tab height). Lighthouse best-of-3: / 2900 ms, /login 3039 ms. React MERGE ×2. **Production deploy rate-limited** — timer 2026-10-02 04:37 redeploys.
 - **#131 merged + live** (82a9ffc, D-213, 03:52 Dhaka): school calendar — make-up days and closures (owner/admin add, edit, remove with a reason; teachers read-only); attendance % picks them up via app.is_school_day. Security (Opus) FIX FIRST (edit could change the date and silently overwrite) → MERGE. BUILD-UPDATES line owed.
 - **#128 merged + live** (7644650, D-410): campus.acadigma.com front door and sign-in/register pages in the acadigma.com look — hero at the website's scale with a "Campus is live" mono eyebrow, "Open Campus" action, "Get the app" tabs (Web/Android/iPhone/Windows/Mac, honest browser-install steps, store apps "coming later"), compact app rows (Campus live; Parents/Students/Ledger coming soon), removed false claims (fees/bKash/messaging). Reviews: UI finish-gate FIX FIRST → PASS, React MERGE ×2. Production deployed.
 - **acadigma-website #4 merged** (4c0d715): "Sign in" in nav/footer, "Open the app" / "Get the app" on the Campus page. **Production deploy rate-limited by Vercel** — redeploy after the reset.
