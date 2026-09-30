@@ -1162,6 +1162,87 @@
       }
     }
   },
+  "dangerZone": {
+    "title": "Danger zone",
+    "rowTitle": "Danger zone",
+    "rowDescription": "Export, archive or delete this school",
+    "lead": "Actions that affect the whole school. Only the owner can use them, and each one asks you to type the school's name.",
+    "ownerOnly": "Only the school's owner can export, archive or delete this school.",
+    "transfer": {
+      "title": "Transfer ownership",
+      "body": "Hand the school to an admin or teacher. You stay on as an admin.",
+      "action": "Go to Team & membership"
+    },
+    "export": {
+      "title": "Export all data",
+      "body": "Download every record of this school as spreadsheets (CSV) in one zip file. Free on every plan, up to three times a day. files.csv lists uploaded files; their contents are not in the zip.",
+      "action": "Download export",
+      "working": "Preparing your export…",
+      "done": "Your export has downloaded."
+    },
+    "archive": {
+      "title": "Archive this school",
+      "body": "Everyone keeps read-only access and nothing is deleted. You can restore it for 12 months.",
+      "action": "Archive school…",
+      "confirmTitle": "Archive {school}?",
+      "consequences": [
+        "Nobody can add or change anything — attendance, marks, students, settings.",
+        "Everyone can still sign in, read and export.",
+        "Only you, the owner, can open it from the school switcher.",
+        "You can restore it any time in the next 12 months."
+      ],
+      "confirm": "Archive school",
+      "done": "The school is archived."
+    },
+    "unarchive": {
+      "title": "Restore this school",
+      "body": "Archived on {date}. Restore it to make changes again.",
+      "action": "Restore school…",
+      "confirmTitle": "Restore {school}?",
+      "consequences": ["Everyone can add and change records again."],
+      "confirm": "Restore school",
+      "done": "The school is restored."
+    },
+    "delete": {
+      "title": "Delete this school",
+      "body": "Permanently deletes the school after 30 days. You can cancel until then.",
+      "action": "Delete school…",
+      "confirmTitle": "Delete {school}?",
+      "consequences": [
+        "Every student, guardian, class, mark, attendance record, setting and membership of this school is permanently deleted.",
+        "Nothing is deleted for 30 days; you can cancel any time before then.",
+        "People keep their Acadigma accounts; they only lose this school.",
+        "Download an export first if you want a copy."
+      ],
+      "confirm": "Schedule deletion"
+    },
+    "scheduled": {
+      "title": "Deletion scheduled",
+      "body": "This school will be deleted on {date}.",
+      "banner": "{school} will be deleted on {date}. The owner can cancel this in Settings → Danger zone.",
+      "cancel": "Cancel deletion",
+      "cancelled": "Deletion cancelled. The school stays."
+    },
+    "confirm": {
+      "label": "Type {name} to confirm",
+      "back": "Back",
+      "working": "Working…"
+    },
+    "errors": {
+      "NAME_MISMATCH": "The name does not match. Type it exactly as shown.",
+      "ACTIVE_SUBSCRIPTION": "This school has an active paid subscription. Cancel it first.",
+      "UNPAID_BALANCE": "This school has an unpaid balance. Settle it first.",
+      "ALREADY_ARCHIVED": "This school is already archived.",
+      "NOT_ARCHIVED": "This school is not archived.",
+      "ARCHIVE_EXPIRED": "This school was archived more than 12 months ago. Contact support to restore it.",
+      "ALREADY_SCHEDULED": "This school is already scheduled for deletion.",
+      "NOT_SCHEDULED": "This school is not scheduled for deletion.",
+      "DELETION_DUE": "The deletion date has passed; it can no longer be cancelled.",
+      "RATE_LIMITED": "You can download a full export three times a day. Try again tomorrow.",
+      "forbidden": "Only the school's owner can do this.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
   "reports": {
     "title": "Reports",
     "description": "Rendered PDFs — for now, a test document proving the school's letterhead.",
