@@ -6,7 +6,7 @@
 | Part    | Glass on an ambient mesh, theme control, language to Settings, shell back affordance |
 | Spec    | `docs/architecture/DESIGN-SYSTEM.md` §1.8, §1.9, §3.1; D-408                         |
 | PR      | #109                                                                                 |
-| Status  | **PASS WITH KNOWN ISSUES** (CI run 36713791798 green on `ee9ce92f`, §1a)             |
+| Status  | **PASS WITH KNOWN ISSUES** (CI run 36719923962 green on `d5525310`, §1b)             |
 | Date    | 2026-09-29, third pass 2026-09-30                                                    |
 | Run by  | Claude (design lane, second pass)                                                    |
 
@@ -57,6 +57,8 @@ The lead approved the look. Fixed before merge:
 7. **Done setup steps:** no strikethrough. Muted text plus the green check.
 
 Gate on the final commit: `pnpm format:check` clean · `pnpm typecheck` 6/6 · `pnpm lint --max-warnings=0` clean · `pnpm test` 194 files, **1934 passed**, 36 skipped, 0 failed, 54.3 s. Coverage: statements 85.35 %, branches 75.99 %, functions 86.01 %, lines 88.63 %. Every `scripts/check-*.mjs` exit 0: audit-catalog, contrast-tokens, coverage-test-files, docs-sync, env-parity, glass-contrast, notification-catalog, permission-parity, require-writable (+ its test), migrations append-only/order, changeset. `pnpm build` exit 0; bundle budget exit 0 (max 239 kB). axe on the 16 fixture screens: 0 violations.
+
+**After merging `origin/main` again (#122, #125):** `backLabel` dropped on the new attendance-settings page; `take-attendance.spec.ts` now returns through the shell chevron (roll call's own link is gone). Full gate re-run: 201 files, **1984 passed**, 36 skipped, 0 failed; coverage lines 88.75 %; every check script exit 0; build + budget exit 0. **CI run 36719923962 on `d5525310`: all required checks green, e2e-live 1–4 included.** Shard 3 first failed in `next build` (a `next/font` fetch error, not a test) and passed on rerun. Vercel preview is rate-limited (not required).
 
 **Follow-ups (not in this PR):** ponytail-review #4–9 and #11–15; #10 (simplify the back history) deliberately not now. Also: move the marks-entry back target into the URL or `PARENT_PAGES` so `ShellBack` can replace that link.
 
