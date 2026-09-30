@@ -1,5 +1,20 @@
 # @acadigma/domain
 
+## 0.10.5
+
+### Patch Changes
+
+- a328806: F-ID-03 Part 7 — remove a member, leave a school, transfer ownership. Owners
+  and admins can remove a member from Team & access (access ends on their next
+  request; works even on a read-only plan). Every member can leave a school from
+  "Your membership" (`/app/settings/membership`), except its only owner, who
+  first hands ownership to an admin or teacher: a one-step transfer confirmed
+  with their password and the school's name, optionally staying an owner too.
+- 272a0ec: F-OP-07 Part 2 (D-210): Settings → Academic — academic years (create, set current with a confirmation naming what changes), terms within a year (add/delete, validated against the year's range and other terms), exam weighting (a live sum, blocked unless it adds to 100 or is empty), and the pass-mark/GPA-rule/rank/grade-scale-code form. New `terms` table (`47_terms.sql`, class T2 RLS) and `public.set_current_academic_year` RPC for the atomic `is_current` swap. New: `checkTermRange`/`checkExamWeights` (`@acadigma/domain/academic`), `listAcademicYears`/`createAcademicYear`/`setCurrentAcademicYear`/`listTerms`/`createTerm`/`deleteTerm`/`getExamWeights`/`updateExamWeights` (`@acadigma/db/repositories/academic-years`), their Zod contracts (`@acadigma/contracts`).
+- Updated dependencies [a328806]
+- Updated dependencies [272a0ec]
+  - @acadigma/contracts@0.14.0
+
 ## 0.10.4
 
 ### Patch Changes

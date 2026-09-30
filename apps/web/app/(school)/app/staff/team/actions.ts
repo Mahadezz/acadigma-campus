@@ -31,6 +31,7 @@ import {
   changeMemberRole as changeMemberRoleRow,
   getMemberDetail as getMemberDetailRow,
   rejectMember as rejectMemberRow,
+  removeMember as removeMemberRow,
   requireWritable,
   updateMemberStaffFields as updateMemberStaffFieldsRow,
 } from "@acadigma/db"
@@ -138,6 +139,34 @@ export async function assignMemberLabel(
   if (!writable.ok) return err(planReadOnlyApiError(writable.error))
 
   const result = await assignMemberLabelRow(ctx, supabase, parsed.data)
+  if (result.ok) revalidatePath("/app/staff/team")
+  return result
+}
+
+// ---------------------------------------------------------------------------
+// Part 7 (D-112) — removal
+// ---------------------------------------------------------------------------
+
+/**
+ * End a member's access (§4.5 action 6). Deliberately NOT gated by
+ * `requireWritable` (EXEMPT in scripts/check-require-writable.mjs): removing
+ * access is always allowed, even on a read-only plan (D-300, D-112) — a
+ * school whose trial lapsed must still be able to lock out a dismissed
+ * teacher. The database agrees (app.tg_require_writable passes a removal).
+ */
+export async function removeMember(
+  input: unknown
+): Promise<Result<MemberDecision, ApiError>> {
+  const parsed = memberDecisionInputSchema.safeParse(input)
+  if (!parsed.success) return err(apiErrorFromZod(parsed.error))
+  const ctx = await requireWorkspace()
+  if (!can(ctx.role, "members.remove")) return err(FORBIDDEN)
+
+  const result = await removeMemberRow(
+    ctx,
+    await createClient(),
+    parsed.data.memberId
+  )
   if (result.ok) revalidatePath("/app/staff/team")
   return result
 }

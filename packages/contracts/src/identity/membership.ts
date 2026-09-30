@@ -6,8 +6,8 @@ import { type memberRoleSchema, memberStatusSchema } from "./workspace"
 
 /**
  * F-ID-03 §7, Part 5 (D-110): the Team & Access roster read and the two
- * join-request decisions. Role changes, staff fields, labels and removal are
- * Parts 6-7.
+ * join-request decisions. Role changes, staff fields and labels are Part 6;
+ * removal, leaving and ownership transfer Part 7.
  */
 
 /** `/app/staff/team?tab=&q=&after=` — one server-filtered page. */
@@ -122,6 +122,8 @@ export type MemberDetail = MemberStaffFields & {
   status: z.infer<typeof memberStatusSchema>
   labelId: string | null
   label: MemberLabel | null
+  /** The caller is looking at their own row (Part 7: leave, do not remove). */
+  isSelf: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -177,5 +179,36 @@ export const MEMBER_ERROR = {
   EMPLOYEE_NO_TAKEN: "EMPLOYEE_NO_TAKEN",
   LABEL_NOT_FOUND: "LABEL_NOT_FOUND",
   LABEL_NAME_TAKEN: "LABEL_NAME_TAKEN",
+  TARGET_NOT_ELIGIBLE: "TARGET_NOT_ELIGIBLE",
+  REAUTH_FAILED: "REAUTH_FAILED",
+  CONFIRM_NAME_MISMATCH: "CONFIRM_NAME_MISMATCH",
 } as const
 export type MemberErrorMarker = (typeof MEMBER_ERROR)[keyof typeof MEMBER_ERROR]
+
+// ---------------------------------------------------------------------------
+// Part 7 (D-112) — remove, leave, transfer ownership
+// ---------------------------------------------------------------------------
+
+/**
+ * `transferOwnership` input (§4.7). The current password re-authenticates the
+ * owner and the typed school name confirms intent; both are checked on the
+ * server before the transfer runs. `keepOwner` keeps the caller an owner too.
+ * `removeMember` reuses `memberDecisionInputSchema`; `leaveWorkspace` takes no
+ * input (the member is the caller, the school is the resolved context).
+ */
+export const transferOwnershipInputSchema = z.object({
+  memberId: uuidSchema,
+  keepOwner: z.boolean(),
+  currentPassword: z.string().min(1, "Enter your password.").max(256),
+  confirmName: z.string().trim().min(1).max(200),
+})
+export type TransferOwnershipInput = z.infer<
+  typeof transferOwnershipInputSchema
+>
+
+/** An active admin or teacher an owner may hand the school to (§4.7 step 1). */
+export type OwnershipCandidate = {
+  id: string
+  fullName: string
+  role: "admin" | "teacher"
+}

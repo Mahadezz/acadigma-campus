@@ -51,7 +51,7 @@
 --      built-in default would have made it anon-executable.
 -- =====================================================================
 begin;
-select plan(10);
+select plan(12);
 
 -- ---------------------------------------------------------------------
 -- A1. anon — allowed ONLY for the pre-session throttle/auth surface, plus
@@ -139,7 +139,15 @@ with allowed as (
     ('public.can_read_results(uuid, uuid)'),  -- F-OP-03 Part 6 review, D-208
     ('public.list_workspace_members(uuid, public.member_status, text, uuid, integer)'),  -- F-ID-03 Part 5, D-110
     ('public.set_current_academic_year(uuid, uuid)'),  -- F-OP-07 Part 2, D-210
-    ('public.update_member_staff_fields(uuid, uuid, text, text, text)')  -- F-ID-03 Part 6, D-111
+    ('public.update_member_staff_fields(uuid, uuid, text, text, text)'),  -- F-ID-03 Part 6, D-111
+    ('public.transfer_ownership(uuid, uuid, boolean)'),  -- F-ID-03 Part 7, D-112
+    ('public.archive_workspace(uuid, text)'),  -- F-OP-07 Part 6, D-211
+    ('public.unarchive_workspace(uuid, text)'),  -- F-OP-07 Part 6, D-211
+    ('public.schedule_workspace_deletion(uuid, text)'),  -- F-OP-07 Part 6, D-211
+    ('public.cancel_workspace_deletion(uuid)'),  -- F-OP-07 Part 6, D-211
+    ('public.log_workspace_export(uuid)'),  -- F-OP-07 Part 6, D-211
+    ('public.workspace_export_tables()'),  -- F-OP-07 Part 6, D-211
+    ('public.export_workspace_table(uuid, text)')  -- F-OP-07 Part 6, D-211
   ) as a(sig)
   union all
   select p.oid
@@ -180,6 +188,15 @@ select ok(
   not has_function_privilege('authenticated',
     'public.log_auth_event_service(text, uuid, jsonb, inet, text)', 'execute'),
   'authenticated may not execute log_auth_event_service');
+
+-- D-211: the school purge is the daily cron's alone.
+select ok(
+  has_function_privilege('service_role', 'public.purge_due_workspace(uuid)', 'execute'),
+  'service_role may execute purge_due_workspace');
+select ok(
+  not has_function_privilege('anon', 'public.purge_due_workspace(uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.purge_due_workspace(uuid)', 'execute'),
+  'neither anon nor authenticated may execute purge_due_workspace');
 
 -- ---------------------------------------------------------------------
 -- C. The default itself, for functions created after this migration:

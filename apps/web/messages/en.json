@@ -1121,6 +1121,126 @@
         "termNameTaken": "This year already has a term with that name.",
         "weightsNot100": "The weights must add up to 100, or be left empty."
       }
+    },
+    "membership": {
+      "title": "Your membership",
+      "link": "Your membership: leave or hand over this school",
+      "description": "Leave this school, or hand its ownership to someone else.",
+      "yourRole": "You are {role} at {school}.",
+      "leave": {
+        "title": "Leave this school",
+        "lead": "You will lose access to {school} straight away. Your name stays on the records you made.",
+        "start": "Leave {school}…",
+        "confirm": "Yes, leave {school}",
+        "cancel": "Stay"
+      },
+      "transfer": {
+        "title": "Transfer ownership",
+        "lead": "An owner can hand over the school, manage billing and change anything in it. Any owner can transfer it back.",
+        "noCandidates": "There is no active admin or teacher to hand the school to yet. Add one from Team & access first.",
+        "to": "New owner",
+        "choose": "Choose a person",
+        "keepOwner": "Keep me as an owner too",
+        "targetOwner": "{name} will become an owner.",
+        "becomeAdmin": "You will become an admin.",
+        "stayOwner": "You will stay an owner.",
+        "lose": "You will no longer be able to:",
+        "password": "Your password",
+        "passwordHelp": "We ask again because only an owner can undo this.",
+        "confirmName": "Type the school's name to confirm: {school}",
+        "submit": "Transfer ownership",
+        "done": "{name} is now an owner of {school}."
+      },
+      "errors": {
+        "generic": "Something went wrong. Please try again.",
+        "forbidden": "You cannot do this in this school.",
+        "lastOwner": "A school must always have an owner. Hand ownership to an admin or teacher first.",
+        "notEligible": "That person can no longer receive ownership. Choose someone else.",
+        "password": "That password is not correct.",
+        "name": "The name you typed does not match the school's name.",
+        "readOnly": "This school is read-only. Upgrade the plan to transfer ownership."
+      }
+    }
+  },
+  "dangerZone": {
+    "title": "Danger zone",
+    "rowTitle": "Danger zone",
+    "rowDescription": "Export, archive or delete this school",
+    "lead": "Actions that affect the whole school. Only the owner can use them, and each one asks you to type the school's name.",
+    "ownerOnly": "Only the school's owner can export, archive or delete this school.",
+    "transfer": {
+      "title": "Transfer ownership",
+      "body": "Hand the school to an admin or teacher. You stay on as an admin.",
+      "action": "Go to Team & membership"
+    },
+    "export": {
+      "title": "Export all data",
+      "body": "Download every record of this school as spreadsheets (CSV) in one zip file. Free on every plan, up to three times a day. files.csv lists uploaded files; their contents are not in the zip.",
+      "action": "Download export",
+      "working": "Preparing your export…",
+      "done": "Your export has downloaded."
+    },
+    "archive": {
+      "title": "Archive this school",
+      "body": "Everyone keeps read-only access and nothing is deleted. You can restore it for 12 months.",
+      "action": "Archive school…",
+      "confirmTitle": "Archive {school}?",
+      "consequences": [
+        "Nobody can add or change anything — attendance, marks, students, settings.",
+        "Everyone can still sign in, read and export.",
+        "Only you, the owner, can open it from the school switcher.",
+        "You can restore it any time in the next 12 months."
+      ],
+      "confirm": "Archive school",
+      "done": "The school is archived."
+    },
+    "unarchive": {
+      "title": "Restore this school",
+      "body": "Archived on {date}. Restore it to make changes again.",
+      "action": "Restore school…",
+      "confirmTitle": "Restore {school}?",
+      "consequences": ["Everyone can add and change records again."],
+      "confirm": "Restore school",
+      "done": "The school is restored."
+    },
+    "delete": {
+      "title": "Delete this school",
+      "body": "Permanently deletes the school after 30 days. You can cancel until then.",
+      "action": "Delete school…",
+      "confirmTitle": "Delete {school}?",
+      "consequences": [
+        "Every student, guardian, class, mark, attendance record, setting and membership of this school is permanently deleted.",
+        "Nothing is deleted for 30 days; you can cancel any time before then.",
+        "People keep their Acadigma accounts; they only lose this school.",
+        "Download an export first if you want a copy."
+      ],
+      "confirm": "Schedule deletion"
+    },
+    "scheduled": {
+      "title": "Deletion scheduled",
+      "body": "This school will be deleted on {date}.",
+      "banner": "{school} will be deleted on {date}. The owner can cancel this in Settings → Danger zone.",
+      "cancel": "Cancel deletion",
+      "cancelled": "Deletion cancelled. The school stays."
+    },
+    "confirm": {
+      "label": "Type {name} to confirm",
+      "back": "Back",
+      "working": "Working…"
+    },
+    "errors": {
+      "NAME_MISMATCH": "The name does not match. Type it exactly as shown.",
+      "ACTIVE_SUBSCRIPTION": "This school has an active paid subscription. Cancel it first.",
+      "UNPAID_BALANCE": "This school has an unpaid balance. Settle it first.",
+      "ALREADY_ARCHIVED": "This school is already archived.",
+      "NOT_ARCHIVED": "This school is not archived.",
+      "ARCHIVE_EXPIRED": "This school was archived more than 12 months ago. Contact support to restore it.",
+      "ALREADY_SCHEDULED": "This school is already scheduled for deletion.",
+      "NOT_SCHEDULED": "This school is not scheduled for deletion.",
+      "DELETION_DUE": "The deletion date has passed; it can no longer be cancelled.",
+      "RATE_LIMITED": "You can download a full export three times a day. Try again tomorrow.",
+      "forbidden": "Only the school's owner can do this.",
+      "generic": "Something went wrong. Please try again."
     }
   },
   "reports": {
@@ -1909,7 +2029,7 @@
       "workPhone": "Work phone",
       "saveStaff": "Save staff details",
       "staffSaved": "Staff details saved.",
-      "ownerNote": "This member is an owner. Ownership changes happen in Settings, under Ownership.",
+      "ownerNote": "This member is an owner. Ownership changes happen under Your membership.",
       "capabilities": {
         "manageTeam": "Manage the team and roles",
         "manageBilling": "See and manage billing",
@@ -1923,7 +2043,18 @@
         "ownerTarget": "Only an owner can change another owner.",
         "selfEdit": "You cannot change your own role.",
         "codeTaken": "Another member already has that employee code."
-      }
+      },
+      "ownershipLink": "Open Your membership",
+      "removeTitle": "Remove from the school",
+      "removeStart": "Remove {name}…",
+      "removeLead": "{name} will lose access straight away.",
+      "removeConsequences": [
+        "Their next tap in this school fails — they cannot open any class, student or record.",
+        "Their name stays on the attendance, marks and other records they made."
+      ],
+      "removeConfirm": "Yes, remove {name}",
+      "removeCancel": "Keep {name}",
+      "removed": "{name} was removed from the school."
     }
   },
   "labels": {
