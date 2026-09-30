@@ -4,6 +4,10 @@ Everything finished, newest first, with the proof. Pair with `TODO.md`. When an 
 
 ---
 
+## 2026-10-01
+
+- **#127 merged** (1eea748, D-409): polish — shared PageSkeleton + loading.tsx on every data section except exams/marks (refresh hang, follow-up), pull-to-refresh on phone shells, optimistic text size with rollback, button press state. Security (Opus) MERGE ×2 (streamed 200-before-forbidden accepted; negative assertions made non-vacuous), React FIX FIRST → MERGE. Production deployed.
+
 ## 2026-09-30
 
 - **#109 merged** (e860b50, D-408): Design System v2 — liquid glass on an ambient backdrop, Light/Dark/System in Settings → Appearance, language picker moved into Settings, shell back button on every sub-page (history, else logical parent), glass blur fixed on Chrome/Android (minifier kept only the -webkit- line), toasts meet contrast, admit sheet lazy-loaded (students page 206 kB). Lead screenshot check + React (FIX FIRST → MERGE) + ponytail batch; new design-system-v2 journey at 360/1280 with axe.

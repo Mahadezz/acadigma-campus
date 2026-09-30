@@ -44,7 +44,7 @@ Last updated: 2026-09-30 ~22:40 Dhaka.
 - CI green (build currently red), react-reviewer + ponytail-review, lead checks screenshots, merge.
 - Follow-ups noted by the builder: add Appearance to the Settings list; move new copy into messages json; replace the ad-hoc back links on exams/marks/roll call/settings pages after #82 merges.
 
-## 3. Polish Part — skeletons, instant taps, pull-to-refresh · 🟡 PR #127 ready → reviews → merge
+## 3. Polish Part — ✅ merged #127 (see DONE). Follow-up: exams/marks loading.tsx (router.refresh after an action does not land with a loading boundary — leads: marks-entry.tsx:138 seeds state from props via useState; marks actions revalidate /app/exams only). 👤 owner: try pull-to-refresh on a real phone.
 
 **Owner:** the "5 tells of a vibe-coded app" video + "what about the phone's pull refresh?". Standing skill: `~/.claude/skills/app-polish/SKILL.md`.
 
