@@ -241,7 +241,7 @@ Three tiers. **Page** means it wakes someone; everything else waits. Keep the pa
 
 ### Notify (S3 — channel, working hours)
 
-Job queue depth > 100 or oldest pending > 10 minutes · job dead-lettering · AI credit reservation failures > 10/hour · rate limit hits > 100/hour on one route · new Sentry issue type · regression of a resolved issue · p95 server action latency > 1 s for 15 minutes · storage or email provider errors · new Supabase **security** advisory · Lighthouse budget breach on production.
+Job queue depth > 100 or oldest pending > 10 minutes · job dead-lettering · AI credit reservation failures > 10/hour · rate limit hits > 100/hour on one route · new Sentry issue type · regression of a resolved issue · p95 server action latency > 1 s for 15 minutes · storage or email provider errors · new Supabase **security** advisory · Lighthouse budget breach on production · `event: "legal_gate_read_failed"` > 10/hour (D-115: the legal re-acceptance gate is failing open, so people use the app without the check).
 
 ### Digest (weekly)
 

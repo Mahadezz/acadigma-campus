@@ -48,7 +48,30 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({})),
 }))
 
+// D-115: by default the caller has accepted every current document.
+const mockListLegal = vi.fn()
+vi.mock("@acadigma/db/repositories/legal", () => ({
+  listLegalAcceptances: mockListLegal,
+}))
+
+const { LEGAL_DOCUMENTS } = await import("./legal/documents")
 const { requireShell } = await import("./workspace")
+
+function accepted(workspaceId: string | null = "ws-1") {
+  return ok([
+    {
+      document: "terms",
+      version: LEGAL_DOCUMENTS.terms.version,
+      workspaceId: null,
+    },
+    {
+      document: "privacy",
+      version: LEGAL_DOCUMENTS.privacy.version,
+      workspaceId: null,
+    },
+    { document: "dpa", version: LEGAL_DOCUMENTS.dpa.version, workspaceId },
+  ])
+}
 
 function context(over: Partial<WorkspaceContext>): WorkspaceContext {
   return {
@@ -63,6 +86,7 @@ function context(over: Partial<WorkspaceContext>): WorkspaceContext {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockListLegal.mockResolvedValue(accepted())
 })
 
 describe("requireShell", () => {
@@ -147,5 +171,46 @@ describe("requireShell", () => {
     })
 
     await expect(requireShell("school")).rejects.toThrow("FORBIDDEN")
+  })
+})
+
+describe("requireShell legal gate (D-115)", () => {
+  it("sends a person without the current Terms/Privacy to /account/legal", async () => {
+    mockResolveWorkspaceContext.mockResolvedValue(
+      ok(context({ workspaceType: "school", role: "teacher", userId: "u-2" }))
+    )
+    mockListLegal.mockResolvedValue(ok([]))
+    await expect(requireShell("school")).rejects.toThrow(
+      "REDIRECT:/account/legal"
+    )
+    expect(mockListLegal).toHaveBeenCalledWith(expect.anything(), "u-2", null)
+  })
+
+  it("asks a school's owner for the school's DPA", async () => {
+    mockResolveWorkspaceContext.mockResolvedValue(
+      ok(context({ workspaceId: "ws-9", role: "owner", userId: "u-3" }))
+    )
+    mockListLegal.mockResolvedValue(accepted("other-school"))
+    await expect(requireShell("school")).rejects.toThrow(
+      "REDIRECT:/account/legal"
+    )
+    expect(mockListLegal).toHaveBeenCalledWith(expect.anything(), "u-3", "ws-9")
+  })
+
+  it("does not ask an admin for the DPA", async () => {
+    const ctx = context({ workspaceId: "ws-8", role: "admin", userId: "u-4" })
+    mockResolveWorkspaceContext.mockResolvedValue(ok(ctx))
+    mockListLegal.mockResolvedValue(accepted(null))
+    await expect(requireShell("school")).resolves.toEqual(ctx)
+  })
+
+  it("fails open when the read fails", async () => {
+    const ctx = context({ userId: "u-5", workspaceId: "ws-7" })
+    mockResolveWorkspaceContext.mockResolvedValue(ok(ctx))
+    mockListLegal.mockResolvedValue({
+      ok: false,
+      error: { code: "dependency_unavailable", message: "down" },
+    })
+    await expect(requireShell("school")).resolves.toEqual(ctx)
   })
 })

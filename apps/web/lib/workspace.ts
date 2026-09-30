@@ -11,6 +11,7 @@ import {
 import { hasGuardianLink } from "@acadigma/db/repositories/results"
 import { resolveShellGate, type ShellName } from "@acadigma/domain/workspace"
 
+import { getOutstandingDocuments, legalScopeFor } from "@/lib/legal/outstanding"
 import { requestLogger } from "@/lib/logger"
 import { createClient } from "@/lib/supabase/server"
 
@@ -72,11 +73,21 @@ export async function requireShell(
     // not the role, is what lets them in.
     if (shell === "family" && ctx.workspaceType === "school") {
       const linked = await hasGuardianLink(ctx, await createClient())
-      if (linked.ok && linked.data) return ctx
+      if (!(linked.ok && linked.data)) redirect(gate.to)
+    } else {
+      redirect(gate.to)
     }
-    redirect(gate.to)
   }
   if (gate.kind === "forbidden") forbidden()
+
+  // D-115: nobody uses a shell before accepting the current Terms and
+  // Privacy (and, for a school's owner, its DPA). Only the shells are gated:
+  // /account/* (account deletion) and the school export stay reachable.
+  const outstanding = await getOutstandingDocuments(
+    ctx.userId,
+    legalScopeFor(ctx).ownedSchoolId
+  )
+  if (outstanding.length > 0) redirect("/account/legal")
 
   return ctx
 }

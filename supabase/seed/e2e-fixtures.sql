@@ -422,3 +422,26 @@ begin
     );
 end;
 $$;
+
+-- ---------------------------------------------------------------------
+-- D-115: every seeded account has accepted the Terms and Privacy, and
+-- every seeded school's owner its DPA — every published version, so the
+-- journeys keep working whichever version is current. Without this every
+-- shell page would send them to /account/legal first. A journey that needs
+-- the prompt (legal-reacceptance.spec.ts) creates its own fresh account.
+-- ---------------------------------------------------------------------
+insert into public.legal_acceptances
+  (workspace_id, user_id, document, version, text_sha256, locale)
+select null, u.id, d.document, d.version, d.text_sha256, d.locale
+  from auth.users u
+  cross join app.legal_documents d
+ where d.document in ('terms', 'privacy') and d.locale = 'en'
+on conflict do nothing;
+
+insert into public.legal_acceptances
+  (workspace_id, user_id, document, version, text_sha256, locale)
+select w.id, w.owner_id, d.document, d.version, d.text_sha256, d.locale
+  from public.workspaces w
+  cross join app.legal_documents d
+ where w.type = 'school' and d.document = 'dpa' and d.locale = 'en'
+on conflict do nothing;
