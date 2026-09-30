@@ -1,7 +1,8 @@
 "use client"
 
+import { useState, useTransition, type ReactNode } from "react"
+
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
 
 import { Loader2Icon } from "lucide-react"
 
@@ -13,8 +14,6 @@ import { InlineAlert } from "@acadigma/ui/primitives/inline-alert"
 import { fillNodes, LegalLink } from "@/lib/legal/legal-text"
 
 import { acceptLegalDocuments } from "./actions"
-
-import type { ReactNode } from "react"
 
 type Copy = {
   termsLabel: string
