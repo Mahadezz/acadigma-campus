@@ -126,11 +126,11 @@ export function FrontDoor({
                   <span className="relative grid size-9 place-items-center overflow-hidden rounded-full bg-primary-foreground text-primary">
                     <ArrowRightIcon
                       aria-hidden="true"
-                      className="size-4 transition-transform duration-500 ease-out-expo group-hover:translate-x-5 motion-reduce:transition-none"
+                      className="size-4 transition-transform duration-500 ease-out-expo group-hover:translate-x-9 motion-reduce:transition-none"
                     />
                     <ArrowRightIcon
                       aria-hidden="true"
-                      className="absolute size-4 -translate-x-5 transition-transform duration-500 ease-out-expo group-hover:translate-x-0 motion-reduce:transition-none"
+                      className="absolute size-4 -translate-x-9 transition-transform duration-500 ease-out-expo group-hover:translate-x-0 motion-reduce:transition-none"
                     />
                   </span>
                 </Link>

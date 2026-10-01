@@ -70,9 +70,13 @@ export function GetTheApp({ t }: { t: Copy }) {
         <TabsContent
           key={d}
           value={d}
-          // Only a tab the person picks animates; the first panel replaces
+          // Only the panel of a tab the person picks animates, and only while
+          // active (radix keeps an animating panel mounted). The first panel replaces
           // the server-rendered steps in place.
-          className={cn("space-y-5", chosen && "motion-panel-in")}
+          className={cn(
+            "space-y-5",
+            chosen && d === device && "motion-panel-in"
+          )}
         >
           <InstallSteps steps={t.steps[d]} />
           {d !== "web" ? (
