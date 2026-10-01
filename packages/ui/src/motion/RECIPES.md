@@ -167,3 +167,9 @@ Two ideas from the article did survive, and both are recorded in
    things we ship (`--motion-shimmer-period`, `--motion-spin-period`), both of
    which are single-keyframe loops and so satisfy it trivially. Worth knowing
    before anyone adds a multi-step loop.
+
+---
+
+## §10 Public front door (D-411)
+
+`.motion-hero-rise`, `.motion-hero-settle`, `.motion-word-in`, `.motion-panel-in`, `.motion-card-settle`, `.motion-lift`, `.motion-reveal` and `.motion-header-float`/`.motion-header-pill` are for the signed-out pages only (`/` and the `(auth)` frame): acadigma.com's entrance, reveal, floating header and hover lift. Rule 5 (no entrance animation on page content) still applies to every signed-in screen. `.motion-reveal` needs `RevealOnScroll` (`apps/web/app/(marketing)/front-door/`) on the page; without it the element is simply visible. DESIGN-SYSTEM §1.10 has the full list.

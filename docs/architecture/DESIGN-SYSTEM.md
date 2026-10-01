@@ -409,7 +409,7 @@ follows **acadigma.com**, read from `acadigma-website` (`globals.css`,
 - **Tokens:** none new. The website's ink/paper values are already ours
   (D-57), and a `dark` class on a section flips it to ink exactly as on the
   website (the footer; the "you are here" product card).
-- **Type:** hero `clamp(3rem, 8.4vw, 7.25rem)`, semibold, `-0.055em`,
+- **Type:** hero `clamp(2.25rem, 8.4vw, 7.25rem)`, from `lg` `clamp(2.25rem, 7.6vw, 6rem)` (D-411: at 7.25rem "from your phone." wrapped only once Inter loaded, a layout shift at 1280), semibold, `-0.055em`,
   leading 0.92 (the website's `hero.tsx`); section titles
   `clamp(2.25rem, 5vw, 4.5rem)`, `-0.045em`, leading 0.98 (`suite.tsx`);
   sections `py-24 sm:py-32`. The hero eyebrow is the website's pill with a pulsing dot (hidden under
@@ -422,11 +422,26 @@ follows **acadigma.com**, read from `acadigma-website` (`globals.css`,
   `sm` up; edges are `shadow-flat` rings, except the hero mark tile, which
   keeps the website's one soft shadow.
 - **Texture:** `app/(shared)/brand/cell-field.tsx`, the website's grid of
-  rounded cells under a radial mask plus its darker spotlight field, held at the
-  website's resting spot (no pointer tracking). Inline SVG patterns, not
-  `data:` images.
-- **Motion:** hover and press only. The website's `motion` hero, flip-words
-  and parallax footer are not ported (D-68: no `motion` dependency).
+  rounded cells under a radial mask plus its darker spotlight field. The
+  spotlight trails a mouse pointer as on the website (D-411); on touch,
+  under reduced motion and before hydration it rests at 50% 30%. Inline SVG
+  patterns, not `data:` images.
+- **Motion (D-411):** acadigma.com's vocabulary, in CSS: `recipes.css` §10
+  plus about 1 kB of our own script; no `motion`, no GSAP. Hero: eyebrow,
+  lead, buttons and mark tile rise in (900 ms, `--ease-out-expo`, staggered
+  0/150/250 ms); the headline is never hidden (it is the LCP element) and
+  only settles by transform. The headline's last word rotates through
+  true words only ("phone / laptop / tablet", `RotatingWord`: stacked in
+  one grid cell, so no shift; one stable sentence for screen readers).
+  Sections and app cards below the fold rise in once when scrolled to
+  (`.motion-reveal` + `RevealOnScroll`; nothing on screen is ever hidden).
+  The header is sticky and grows a floating pill over the first 96 px of
+  scroll (CSS scroll-driven; static where unsupported). Cards lift 4 px on
+  hover (`translate`), the primary pill's arrow swaps, the device tabs'
+  pill slides and the new panel fades up. Auth pages: the card settles
+  once (transform only). Not ported: `hover-border-gradient`, `3d-card`,
+  the website's split-word headline and the footer parallax. **Reduced
+  motion: nothing moves and everything is visible.**
 - **Honesty:** only live features are named as live; unbuilt apps say
   "Coming soon", native store builds say "coming later", never a date or a
   store badge.
