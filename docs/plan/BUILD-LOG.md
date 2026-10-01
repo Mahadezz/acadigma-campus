@@ -32,7 +32,7 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
   - Lighthouse best-of-3: `/` 2900 ms, `/login` 3039 ms (test report `docs/test-reports/2026-10-01-front-door-followups.md`).
 - **Decisions:** none new (follows D-410).
 - **Migrations:** none.
-- **Review/incidents:** React MERGE twice. The `/login` and `/` LCP was failing other PRs at about 3.65 s. The Vercel production deploy was rate-limited at merge; a redeploy was timed for 2026-10-02 04:37.
+- **Review/incidents:** React MERGE twice. The `/login` and `/` LCP was failing other PRs at about 3.65 s. The Vercel production deploy was rate-limited at merge; it went live with #132's deploy (e494ea2).
 
 ## 2026-10-01 — PR #131 — feat(calendar): F-AC-11 working-day overrides screen (make-up days and closures)
 
