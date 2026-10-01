@@ -12,6 +12,7 @@ import type { Locale, Messages } from "@/lib/i18n"
 
 import { GetTheAppLazy } from "./get-the-app-lazy"
 import { PRODUCTS, productUrl } from "./products"
+import { RotatingWord } from "./rotating-word"
 import { SiteFooter } from "./site-footer"
 
 type Copy = Messages["frontDoor"]
@@ -43,12 +44,21 @@ export function FrontDoor({
   const name = `Acadigma ${PRODUCT_NAMES[product]}`
 
   return (
-    <div className="relative isolate flex min-h-dvh flex-col overflow-hidden bg-background">
+    // overflow-x-clip, not overflow-hidden: a hidden box is a scroll
+    // container, which would stop the sticky header and the scroll-driven
+    // reveals (D-411) from seeing the page scroll.
+    <div className="relative isolate flex min-h-dvh flex-col overflow-x-clip bg-background">
       {/* The texture runs behind the header and the hero, as on acadigma.com. */}
       <div className="absolute inset-x-0 top-0 -z-10 h-[56rem]">
         <CellField />
       </div>
-      <header className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+      {/* D-411: sticky, and the website's floating pill fades in behind it as
+          the page scrolls (recipes.css §10). Static where unsupported. */}
+      <header className="motion-header-float relative mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+        <span
+          aria-hidden="true"
+          className="motion-header-pill absolute inset-x-2 inset-y-1 -z-10 rounded-full bg-card/85 shadow-[0_0_0_1px_rgb(11_11_11/0.06),0_1px_2px_rgb(11_11_11/0.05),0_12px_40px_-12px_rgb(11_11_11/0.18)] backdrop-blur-lg sm:inset-x-4"
+        />
         <a
           href={WEBSITE_URL}
           aria-label={t.homeLabel.replace("{name}", name)}
@@ -70,35 +80,53 @@ export function FrontDoor({
               {/* acadigma.com's hero eyebrow, with an honest line. Inter, not the
                   website's mono: the mono webfont was the one extra request in
                   front of first paint and pushed Lighthouse LCP past 3.5 s. */}
-              <p className="inline-flex items-center gap-2.5 rounded-full bg-card/70 py-1.5 pr-4 pl-2 text-xs font-medium tracking-[0.14em] uppercase text-muted-foreground shadow-flat backdrop-blur">
+              <p className="motion-hero-rise inline-flex items-center gap-2.5 rounded-full bg-card/70 py-1.5 pr-4 pl-2 text-xs font-medium tracking-[0.14em] uppercase text-muted-foreground shadow-flat backdrop-blur">
                 <span aria-hidden="true" className="relative flex size-2">
                   <span className="absolute inset-0 animate-ping rounded-full bg-foreground/40 motion-reduce:hidden" />
                   <span className="relative size-2 rounded-full bg-foreground" />
                 </span>
                 {t.eyebrow}
               </p>
-              <h1 className="mt-8 text-[clamp(2.25rem,8.4vw,7.25rem)] leading-[0.92] font-semibold tracking-[-0.055em] text-balance">
+              {/* Painted at full opacity on the first frame (LCP); it only
+                  settles upward (D-411). */}
+              <h1 className="motion-hero-settle mt-8 text-[clamp(2.25rem,8.4vw,7.25rem)] leading-[0.92] font-semibold tracking-[-0.055em] text-balance">
                 {hero.titleLine1}
                 <br />
                 {/* The website's second line is #a3a3a3 (2.3:1); muted ink passes AA. */}
-                <span className="text-muted-foreground">{hero.titleLine2}</span>
+                <span className="text-muted-foreground">
+                  <RotatingWord
+                    template={hero.titleLine2}
+                    words={hero.devices}
+                  />
+                </span>
               </h1>
-              <p className="mt-8 max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground sm:text-xl">
+              <p
+                className="motion-hero-rise mt-8 max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground sm:text-xl"
+                style={{ "--motion-delay": "150ms" } as React.CSSProperties}
+              >
                 {hero.lead}
               </p>
-              <div className="mt-10 flex flex-wrap items-center gap-3">
+              <div
+                className="motion-hero-rise mt-10 flex flex-wrap items-center gap-3"
+                style={{ "--motion-delay": "250ms" } as React.CSSProperties}
+              >
                 <Link
                   href="/login"
                   className={cn(
                     buttonVariants({ size: "lg" }),
-                    "group h-13 gap-3 rounded-full py-2 pr-2 pl-6 text-[15px]"
+                    "group h-13 gap-3 rounded-full py-2 pr-2 pl-6 text-[15px] transition-[box-shadow,transform,opacity] duration-500 hover:shadow-[0_18px_40px_-16px_rgb(11_11_11/0.7)]"
                   )}
                 >
                   {t.signIn}
-                  <span className="grid size-9 place-items-center rounded-full bg-primary-foreground text-primary">
+                  {/* acadigma.com's arrow: one slides out, the next slides in. */}
+                  <span className="relative grid size-9 place-items-center overflow-hidden rounded-full bg-primary-foreground text-primary">
                     <ArrowRightIcon
                       aria-hidden="true"
-                      className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                      className="size-4 transition-transform duration-500 ease-out-expo group-hover:translate-x-5 motion-reduce:transition-none"
+                    />
+                    <ArrowRightIcon
+                      aria-hidden="true"
+                      className="absolute size-4 -translate-x-5 transition-transform duration-500 ease-out-expo group-hover:translate-x-0 motion-reduce:transition-none"
                     />
                   </span>
                 </Link>
@@ -106,7 +134,7 @@ export function FrontDoor({
                   href="/register"
                   className={cn(
                     buttonVariants({ variant: "ghost", size: "lg" }),
-                    "h-13 rounded-full px-6 text-[15px] ring-1 ring-foreground/15 ring-inset hover:bg-foreground/[0.05]"
+                    "h-13 rounded-full px-6 text-[15px] ring-1 ring-foreground/15 ring-inset transition-[background-color,box-shadow] duration-500 hover:bg-foreground/[0.05] hover:ring-foreground/40"
                   )}
                 >
                   {t.createAccount}
@@ -115,7 +143,7 @@ export function FrontDoor({
             </div>
 
             <div className="hidden lg:col-span-4 lg:block">
-              <div className="relative mx-auto aspect-square w-full max-w-md">
+              <div className="motion-hero-rise relative mx-auto aspect-square w-full max-w-md">
                 <div className="absolute inset-[6%] rounded-[2.5rem] bg-card shadow-[0_0_0_1px_rgb(11_11_11/0.05),0_40px_80px_-40px_rgb(11_11_11/0.35)]" />
                 <div className="absolute inset-[24%]">
                   <GridMark mark={product} title={name} className="size-full" />
@@ -128,15 +156,18 @@ export function FrontDoor({
         <section
           id="get-the-app"
           aria-labelledby="get-the-app-title"
-          className={cn(SECTION, "scroll-mt-4")}
+          className={cn(SECTION, "scroll-mt-16")}
         >
-          <h2 id="get-the-app-title" className={SECTION_TITLE}>
+          <h2
+            id="get-the-app-title"
+            className={cn(SECTION_TITLE, "motion-reveal")}
+          >
             {t.getApp.title}
           </h2>
-          <p className="mt-6 max-w-xl text-lg text-muted-foreground">
+          <p className="motion-reveal mt-6 max-w-xl text-lg text-muted-foreground">
             {t.getApp.lead}
           </p>
-          <div className="mt-10">
+          <div className="motion-reveal mt-10">
             <GetTheAppLazy t={t.getApp} />
           </div>
         </section>
@@ -145,10 +176,10 @@ export function FrontDoor({
           aria-labelledby="apps-title"
           className={cn(SECTION, "pt-0 sm:pt-0")}
         >
-          <h2 id="apps-title" className={SECTION_TITLE}>
+          <h2 id="apps-title" className={cn(SECTION_TITLE, "motion-reveal")}>
             {t.apps.title}
           </h2>
-          <p className="mt-6 max-w-xl text-lg text-muted-foreground">
+          <p className="motion-reveal mt-6 max-w-xl text-lg text-muted-foreground">
             {t.apps.lead}
           </p>
           <ul className="mt-10 grid gap-3 lg:grid-cols-4">
@@ -163,7 +194,7 @@ export function FrontDoor({
                 return (
                   <li
                     key={p.key}
-                    className="dark flex flex-col rounded-3xl bg-background p-6 text-foreground shadow-flat"
+                    className="dark motion-reveal motion-lift flex flex-col rounded-3xl bg-background p-6 text-foreground shadow-flat"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <GridMark mark={p.key} className="size-10" />
@@ -195,7 +226,7 @@ export function FrontDoor({
               return (
                 <li
                   key={p.key}
-                  className="flex items-center gap-4 rounded-2xl bg-card p-4 shadow-flat lg:flex-col lg:items-stretch lg:rounded-3xl lg:p-6"
+                  className="motion-reveal motion-lift flex items-center gap-4 rounded-2xl bg-card p-4 shadow-flat lg:flex-col lg:items-stretch lg:rounded-3xl lg:p-6"
                 >
                   <GridMark mark={p.key} className="size-8 lg:size-10" />
                   <div className="min-w-0 flex-1">
@@ -214,7 +245,7 @@ export function FrontDoor({
                   <a
                     href={productUrl(p.key)}
                     aria-label={about}
-                    className="grid size-11 shrink-0 place-items-center rounded-full ring-1 ring-foreground/15 ring-inset hover:bg-foreground/[0.05] lg:mt-auto"
+                    className="grid size-11 shrink-0 place-items-center rounded-full ring-1 ring-foreground/15 ring-inset transition-[background-color,scale] hover:bg-foreground/[0.05] motion-safe:active:scale-[0.94] lg:mt-auto"
                   >
                     <ArrowUpRightIcon aria-hidden="true" className="size-4" />
                   </a>
@@ -225,7 +256,7 @@ export function FrontDoor({
         </section>
 
         <section aria-labelledby="account-title" className="border-t">
-          <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-16 sm:flex-row sm:items-start sm:gap-10 sm:px-8 sm:py-20">
+          <div className="motion-reveal mx-auto flex max-w-7xl flex-col gap-6 px-5 py-16 sm:flex-row sm:items-start sm:gap-10 sm:px-8 sm:py-20">
             <GridMark className="size-10 shrink-0" />
             <div className="max-w-2xl">
               <h2

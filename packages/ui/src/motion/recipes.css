@@ -463,8 +463,7 @@
 
     /* The headline: transform only, so its first paint (LCP) is not delayed. */
     .motion-hero-settle {
-      animation: motion-hero-settle var(--motion-hero) var(--ease-out-expo)
-        both;
+      animation: motion-hero-settle var(--motion-hero) var(--ease-out-expo) both;
     }
 
     /* A word swapped into the headline (the rotating device word). */
@@ -479,20 +478,21 @@
 
     /* The auth card: transform only (its title can be /login's LCP). */
     .motion-card-settle {
-      animation: motion-card-settle var(--motion-hero) var(--ease-out-expo)
-        both;
+      animation: motion-card-settle var(--motion-hero) var(--ease-out-expo) both;
     }
 
-    /* Cards that lift under a mouse, as acadigma.com's bento tiles do. */
+    /* Cards that lift under a mouse, as acadigma.com's bento tiles do.
+       `translate`, not `transform`, so it composes with .motion-reveal's
+       filled animation, which owns `transform`. */
     @media (hover: hover) {
       .motion-lift {
         transition:
-          transform var(--motion-word) var(--ease-out-expo),
+          translate var(--motion-word) var(--ease-out-expo),
           box-shadow var(--motion-word) var(--ease-out-expo);
       }
 
       .motion-lift:hover {
-        transform: translateY(-4px);
+        translate: 0 -4px;
         box-shadow:
           var(--shadow-flat),
           0 40px 80px -40px rgb(11 11 11 / 0.35);
