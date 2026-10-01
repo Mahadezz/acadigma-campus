@@ -98,3 +98,12 @@ One-time command for #134 (owner types it with `!` in a session started in the r
 3. Save sweep; recreate timers; check `gh pr list` (#135, #148, #134, BUILD-LOG PR, #123).
 4. Fresh builders for #135 and #148 (read the PR descriptions' notes); unblock #134 when the owner has acted.
 5. Keep BUILD-UPDATES.md and the Brain vault current; Brain regen: `py -3 "F:\Acadigma Suite\_lead-tools\brain-src\build_brain.py"`.
+
+## 9. Final hour (07:30 → ~08:00) and pause
+
+- **#150 merged** (3fcacbd): BUILD-LOG entries for #89–#139 (43 entries, spot-checked). **Brain vault regenerated** from main 3fcacbd (123 PRs, 132 decisions, 539 notes, 0 unresolved links).
+- **#135 diagnosis at stop** (head 1b07145+): root cause NOT found. Server and RSC stream are fine; the client router/React stalls after data arrives, only under loading.tsx. Ruled out: router.refresh in an async transition, revalidatePath form, removing either revalidatePath or refresh; lab repro 0/200 failures. Exp PRs #143–#146 closed; **#147 (service workers blocked) and #149 (template.tsx pass-through) still open — read their CI results, then close.** Notes: docs/test-reports/2026-10-01-exams-skeleton-investigation.md on the #135 branch + PR body. Scratch lab files backed up to F:\tmp\recovery-1001.
+- **#148 front-door motion at stop:** D-411 (no motion library; CSS + ~1 kB own JS). Done: CSS recipes, cell-field spotlight, then front-door/tabs/AuthCard work in progress. Remaining when stopped: changeset, DESIGN-SYSTEM doc, recipes doc, D-411 update, videos, reviews. Notes in the PR description (may predate the last commits — diff the branch).
+- **#134 staff check-in:** unchanged — blocked on the owner's types-file permission (§3).
+- **Owner paused at 96% weekly Claude usage — resume Monday.** All agents stopped (work pushed) and all timers cancelled, including the weekly report due 10-02 (give it on Monday).
+- **Builder transcripts** (full JSONL of every agent in this session) copied to F:\tmp\session-46449934-agents\ for reference; the lead session transcript is in C:\Users\Mahadi Sir\.claude\projects\F--Acadigma-Suite-acadigma-campus\46449934-9acb-4050-ad33-e10af6756304.jsonl.
