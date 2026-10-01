@@ -50,6 +50,9 @@
   --motion-shimmer-period: calc(1400ms * var(--motion));
   /* One full rotation of the pull-to-refresh ring (§3.6). */
   --motion-spin-period: calc(900ms * var(--motion));
+  /* §10, public pages only (D-411): acadigma.com's entrance and word swap. */
+  --motion-hero: calc(900ms * var(--motion));
+  --motion-word: calc(500ms * var(--motion));
 }
 
 @layer components {
@@ -428,6 +431,170 @@
     to {
       opacity: 0;
       clip-path: inset(0 0 100% 0);
+    }
+  }
+
+  /* =========================================================================
+     10. Public front door — `.motion-hero-*`, `.motion-word-in`,
+         `.motion-reveal` (+ `RevealOnScroll`), `.motion-header-*`, `.motion-lift`,
+         `.motion-panel-in`, `.motion-card-settle`
+
+     D-411. Signed-out pages only (`/` and the `(auth)` frame): acadigma.com's
+     motion vocabulary, so the front door feels like the same living site.
+     Rule 5 above (no entrance animation on page content) still holds for
+     every signed-in screen; a marketing page is the one place an orchestrated
+     page-load moment earns its 900 ms, because nobody is waiting to work.
+
+     The website's easing (`--ease-out-expo`) and its 0.8–1 s durations. Only
+     transform and opacity. LCP rule: the element Lighthouse may pick as LCP
+     (the hero headline, the auth card's title) is never hidden; it paints at
+     full opacity on the first frame and only settles by transform.
+
+     Static fallback = D-410's still page: everything visible, in place.
+     ========================================================================= */
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Hero entrance: eyebrow, lead, buttons, mark tile. Stagger with
+       `style="--motion-delay: 150ms"`. */
+    .motion-hero-rise {
+      animation: motion-hero-rise var(--motion-hero) var(--ease-out-expo)
+        var(--motion-delay, 0ms) both;
+    }
+
+    /* The headline: transform only, so its first paint (LCP) is not delayed. */
+    .motion-hero-settle {
+      animation: motion-hero-settle var(--motion-hero) var(--ease-out-expo) both;
+    }
+
+    /* A word swapped into the headline (the rotating device word). */
+    .motion-word-in {
+      animation: motion-word-in var(--motion-word) var(--ease-out-expo) both;
+    }
+
+    /* A device-tab panel replacing the previous one. */
+    .motion-panel-in {
+      animation: motion-word-in var(--duration-page) var(--ease-out-expo) both;
+    }
+
+    /* The auth card: transform only (its title can be /login's LCP). */
+    .motion-card-settle {
+      animation: motion-card-settle var(--motion-hero) var(--ease-out-expo) both;
+    }
+
+    /* Cards that lift under a mouse, as acadigma.com's bento tiles do.
+       `translate`, not `transform`, so it composes with .motion-reveal's
+       filled animation, which owns `transform`. */
+    @media (hover: hover) {
+      .motion-lift {
+        transition:
+          translate var(--motion-word) var(--ease-out-expo),
+          box-shadow var(--motion-word) var(--ease-out-expo);
+      }
+
+      .motion-lift:hover {
+        translate: 0 -4px;
+        box-shadow:
+          var(--shadow-flat),
+          0 40px 80px -40px rgb(11 11 11 / 0.35);
+      }
+    }
+
+    /* Reveal on scroll, once (the website's `Reveal`). `RevealOnScroll`
+       marks only elements still below the fold after hydration as pending,
+       so nothing on screen is ever hidden, and without script nothing is.
+       Time-based, not scroll-linked: a scroll-driven reveal leaves text at
+       the viewport edge part-transparent for as long as it sits there,
+       which fails contrast (axe, Lighthouse). */
+    .motion-reveal[data-reveal="pending"] {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+
+    .motion-reveal[data-reveal="shown"] {
+      animation: motion-reveal var(--motion-hero) var(--ease-out-expo)
+        var(--motion-delay, 0ms) both;
+    }
+
+    /* Header: sticky, and a floating pill fades in behind it over the first
+       96px of scroll (the website's resizable navbar). Only where the
+       scroll timeline exists, so the bar never sits transparent over text. */
+    @supports (animation-timeline: scroll()) {
+      .motion-header-float {
+        position: sticky;
+        top: 0;
+        z-index: var(--z-topbar);
+        animation: motion-header-drop linear both;
+        animation-timeline: scroll();
+        animation-range: 0 96px;
+      }
+
+      .motion-header-pill {
+        animation: motion-fade-in linear both;
+        animation-timeline: scroll();
+        animation-range: 0 96px;
+      }
+    }
+  }
+
+  /* The pill is invisible unless the scroll animation above runs. */
+  .motion-header-pill {
+    opacity: 0;
+  }
+
+  @keyframes motion-hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes motion-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes motion-hero-settle {
+    from {
+      transform: translateY(0.12em);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes motion-card-settle {
+    from {
+      transform: translateY(12px);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes motion-word-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.25em);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes motion-header-drop {
+    to {
+      transform: translateY(8px);
     }
   }
 }

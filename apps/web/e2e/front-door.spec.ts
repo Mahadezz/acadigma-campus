@@ -88,3 +88,43 @@ test.describe("front door", () => {
     await expectNoA11yViolations(page, testInfo)
   })
 })
+
+/** D-411: the website's motion, never at the cost of content or LCP. */
+test.describe("front door motion", () => {
+  test("headline paints at once, reveals run once on scroll, header floats", async ({
+    page,
+  }) => {
+    await page.goto("/")
+    const h1 = page.getByRole("heading", { level: 1 })
+    // The LCP element is never hidden, not even for a frame of its entrance.
+    await expect(h1).toHaveCSS("opacity", "1")
+    await expect(h1).toHaveAccessibleName("Run your school from your phone.")
+
+    // Cards below the fold wait off screen, then show once scrolled to.
+    const card = page.locator("li.motion-reveal").last()
+    await expect(card).toHaveAttribute("data-reveal", "pending")
+    await card.scrollIntoViewIfNeeded()
+    await expect(card).toHaveAttribute("data-reveal", "shown")
+    await expect(card).toHaveCSS("opacity", "1")
+
+    const header = page.locator("header").first()
+    await expect(header).toHaveCSS("position", "sticky")
+    await expect(header.locator(".motion-header-pill")).toHaveCSS(
+      "opacity",
+      "1"
+    )
+  })
+
+  test("reduced motion: everything visible and still", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.goto("/")
+    await expect(page.locator("[data-reveal]")).toHaveCount(0)
+    await expect(page.locator("header").first()).toHaveCSS("position", "static")
+    for (const el of await page.locator(".motion-hero-rise").all()) {
+      await expect(el).toHaveCSS("opacity", "1")
+    }
+    // The device word does not rotate.
+    await page.waitForTimeout(3000)
+    await expect(page.locator("h1 .inline-grid > span").first()).toBeVisible()
+  })
+})

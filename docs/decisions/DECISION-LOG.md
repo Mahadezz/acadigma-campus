@@ -1940,7 +1940,7 @@ Two things were already true and are worth stating plainly rather than re-derivi
 **Decision:**
 
 1. **Two looks, split at the sign-in boundary.** Public pages (`/`, the `(auth)` layout) follow acadigma.com, read from `acadigma-website` `origin/main` (`globals.css`, `hero.tsx`, `site-footer.tsx`, `cell-field.tsx`, `lib/site.ts`); the signed-in shells keep D-408. No new tokens were needed: Campus's ink/paper tokens (D-57) and the `.dark` class variant already match the website's, so the website's dark-section trick (`className="dark"` on the footer) works as-is.
-2. **Port the pattern, not the dependency.** The website's `motion`-driven hero, pointer spotlight and scroll-parallax footer are not ported (no `motion` in Campus, D-68). The cell texture is a static CSS background; the footer wordmark is static.
+2. **Port the pattern, not the dependency.** The website's `motion`-driven hero, pointer spotlight and scroll-parallax footer are not ported (no `motion` in Campus, D-68). The cell texture is a static CSS background; the footer wordmark is static. _(EXTENDED by D-411: the hero entrance, the pointer spotlight, a sticky header, reveals and a rotating word are back, in CSS; still no `motion`. The footer stays static.)_
 3. **"Get the app" is honest about what installs today.** Campus is a PWA: each device tab gives install steps, and a real Install button appears only where the browser fires `beforeinstallprompt`. Native store and desktop builds are "Coming later", with no badges, links or dates. The server renders the Web tab; the user agent picks the tab after hydration (progressive enhancement: no user-agent sniffing on the server).
 4. **Only Campus is live; Parents is "coming soon" as its own app, as on acadigma.com.** The Parents row adds what is true today: "Invited parents can already see results in Campus." (`/family`, D-306: published results and report cards). It does not claim attendance alerts; the family view has none yet. Students and Ledger are "coming soon".
 5. **One config object per product** (`front-door/products.ts`) drives the apps row and the page; a Parents/Students/Ledger front door later is config plus a route, not new code. No host routing is built now (YAGNI).
@@ -1951,6 +1951,40 @@ Two things were already true and are worth stating plainly rather than re-derivi
 **Why:** the owner asked for the website's look, and the website's own tokens already live in Campus, so the job was layout and type, not a new theme. Splitting at the sign-in boundary keeps the marketing surface and the calm working screens each consistent with their own references.
 
 **Consequences:** `F-ID-12` is the spec. The auth forms, actions and validation are unchanged; the `(auth)` layout frame changed, and `AuthCard` (only used by the auth pages) moves to the website's 24px card radius and semibold title. When native wrappers ship (D-13: Capacitor/Tauri), each device tab gets a real store link and loses "Coming later".
+
+## D-411 — The front door gets the website's motion back, as CSS (scroll-driven reveals, keyframes) plus about 1 kB of our own script; neither `motion` nor GSAP ships to public pages · ACCEPTED · 2026-10-01
+
+**Context:** the owner, on the public pages after #128/#133: _"the campus web app website is not reactive like the main website, it's just very static, not reactive at all"_. D-410 §2 had copied acadigma.com's look but deliberately left out its motion (the `motion`-driven hero, the pointer spotlight on the cell field, the shrinking nav, flip words, reveal-on-scroll) to protect Lighthouse LCP, which was already close to the 3.5 s error bound on `/login` (CI best-of-3 3174 ms, #133). The brief offered two tools: reuse GSAP (already in `packages/ui`, D-408) or add `motion` to `apps/web` so the website's components port nearly verbatim.
+
+**Measured cost** (esbuild 0.25 `--minify`, then `gzip -9`; React external; the imports the website's hero, `motion.tsx` and resizable navbar use):
+
+| Option                                                                                                             | gzip       |
+| ------------------------------------------------------------------------------------------------------------------ | ---------- |
+| `motion` 13.4.6 (`motion`, `AnimatePresence`, `useInView`, `useReducedMotion`, `useScroll`, `useMotionValueEvent`) | 49.6 kB    |
+| `motion` 13.4.6 with `LazyMotion` + `domAnimation` + `m`                                                           | 32.6 kB    |
+| GSAP 3.15 core                                                                                                     | 28.4 kB    |
+| GSAP 3.15 core + ScrollTrigger                                                                                     | 46.3 kB    |
+| CSS (keyframes + `animation-timeline`) + this entry's own client code                                              | about 1 kB |
+
+Measured in this PR's production build (`next build`, First Load JS): `/` 122 kB → 123 kB (route chunk 4.43 → 5.56 kB), `/login` 159 kB → 159 kB.
+
+**Decision:**
+
+1. **No animation library on public pages.** Everything is CSS in `packages/ui/src/motion/recipes.css` §10 (tokens, `prefers-reduced-motion: no-preference` only), plus three tiny client pieces: the cell field's pointer spotlight, the hero's rotating device word and `RevealOnScroll`. Neither `motion` nor GSAP is added to `/` or `/login`. #133 showed every script requested before first paint is counted by Lighthouse's simulated LCP; 28 to 50 kB in front of a page sitting at 3.2 s is the regression D-410 avoided.
+2. **What was ported, and how:**
+   - **Cell field:** the website's spotlight that trails a mouse pointer (`requestAnimationFrame`, 0.12 easing, same as `cell-field.tsx`), via CSS variables on the existing inline-SVG masks. Mouse only, no listener under reduced motion; on touch it stays at the website's resting spot.
+   - **Hero entrance:** eyebrow, lead and buttons fade and rise in sequence (the website's `easeOutExpo`, 900 ms, staggered 0 / 150 / 250 ms). **The headline is never hidden:** it paints at full opacity on the first frame and only settles 0.12em upward (transform only), so it is not delayed as the LCP element. The website's `SplitWords` (words clipped out of view until animated) is not ported for that reason.
+   - **Rotating word:** "from your phone. / laptop. / tablet." (বাংলা: "হাতের ফোন / ল্যাপটপ / ট্যাবলেট থেকেই।"), all true: Campus is a web app that installs on all three. The server renders the first word; the words share one grid cell, so the line never changes width (no layout shift); screen readers read one stable sentence. No cycling under reduced motion.
+   - **Reveal on scroll, once:** "Get the app", the app cards (staggered 80 ms) and the account strip fade and rise 28 px when scrolled to. `RevealOnScroll` (an IntersectionObserver) marks only elements still entirely below the fold after hydration as pending, so nothing on screen is ever hidden and without script nothing is. A CSS scroll-driven reveal (`animation-timeline: view()`) was built first and dropped: it leaves text at the bottom edge of the first screen part-transparent for as long as it sits there, which fails colour contrast (axe in e2e, and Lighthouse's accessibility score).
+   - **Header:** sticky; as the page scrolls (`animation-timeline: scroll()`, first 96 px) a floating paper pill with a blur and the website's floating shadow fades in behind it and it drops 8 px, transform and opacity only. Without scroll-timeline support or with reduced motion it stays where it was in D-410 (not sticky), so it can never sit transparent over text.
+   - **Hover and press:** cards lift 4 px with the website's soft shadow (`bento-grid.jsx`); the primary pill's arrow slides out and a second slides in (`hero.tsx`); every pill and card has `.motion-press`. `hover-border-gradient` and `3d-card` are not ported: a border that circles forever and a card that tilts under the pointer are the gimmicks this brief rules out.
+   - **Device chooser:** the active-tab pill slides between tabs (the triggers are equal width, so it is `translateX(index × 100%)`), and the new panel fades and rises 4 px.
+   - **Auth pages:** the card rises into place once (transform only, so the title is not delayed as `/login`'s LCP). The signed-in app is unchanged (§2.7 rule 5 still bans entrance animation on working screens).
+3. **Reduced motion = no movement.** Every recipe is inside `prefers-reduced-motion: no-preference`; the default is the D-410 still page with all content visible.
+
+**Why:** the website's motion vocabulary is fades, lifts, a trailing light and a sticky bar, all of which CSS now does natively, at the website's own easing. A library would have bought spring physics for two effects and cost Lighthouse headroom on the two pages that are closest to the bound.
+
+**Consequences:** D-410 §2 ("not ported … the cell texture is a static CSS background") is **extended by this entry** for the hero, texture, header and reveals; the footer wordmark stays static. Firefox (no scroll-driven animations yet) gets the non-sticky header; everything else works there. At `lg` the hero headline caps at 6rem (`clamp(2.25rem, 7.6vw, 6rem)`): at 7.25rem "from your phone." was 801 px in Inter against an 800 px column, so it wrapped to a third line only once the webfont arrived (CLS 0.04 at 1280 on main; 0.0006 now). The e2e axe helper now waits only for time-based animations, since a scroll-driven one finishes only when the page scrolls. If a future public page needs gesture physics (drag, flick), that is the time to measure `motion` again, lazily loaded below the fold.
 
 ## D-116 — Sessions and devices: the list is Supabase's own `auth.sessions`, signing out is deleting its rows in a database function that audits in the same transaction · ACCEPTED · 2026-10-01
 

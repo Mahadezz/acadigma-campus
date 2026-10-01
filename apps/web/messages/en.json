@@ -2289,7 +2289,8 @@
     "hero": {
       "campus": {
         "titleLine1": "Run your school",
-        "titleLine2": "from your phone.",
+        "titleLine2": "from your {device}.",
+        "devices": ["phone", "laptop", "tablet"],
         "lead": "Attendance that works offline, classes and exams, marks that become results, and report cards ready to print."
       }
     },

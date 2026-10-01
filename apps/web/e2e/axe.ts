@@ -23,12 +23,18 @@ export async function expectNoA11yViolations(
 ): Promise<void> {
   // Scan the settled screen, not a frame mid fade-in: axe measured a badge
   // and a button part-way through their enter transitions as 1.57:1 and
-  // 2.74:1 (e2e-live, D-76). Finite animations only — a spinner never ends.
+  // 2.74:1 (e2e-live, D-76). Finite animations only — a spinner never ends —
+  // and time-based only: a scroll-driven one (the front door's header, D-411)
+  // finishes only when the page is scrolled.
   await page.evaluate(() =>
     Promise.all(
       document
         .getAnimations()
-        .filter((a) => a.effect?.getComputedTiming().endTime !== Infinity)
+        .filter(
+          (a) =>
+            a.timeline === document.timeline &&
+            a.effect?.getComputedTiming().endTime !== Infinity
+        )
         .map((a) => a.finished.catch(() => undefined))
     )
   )

@@ -1,9 +1,13 @@
+"use client"
+
+import { useEffect, useRef } from "react"
+
 /**
  * The brand's texture from acadigma.com (`acadigma-website/src/components/site/cell-field.tsx`):
  * a field of rounded grid cells under a radial fade, with a darker field in a
- * soft spotlight. The website moves the spotlight with the pointer; here it
- * stays at the website's resting spot (50% 30%), so this is static and
- * server-rendered (D-410). Drawn as inline SVG patterns, not `data:` images,
+ * soft spotlight that trails a mouse pointer, as on the website (D-411). On
+ * touch, under reduced motion and before hydration it rests at the website's
+ * spot (50% 30%); the SVG itself is server-rendered. Drawn as inline SVG patterns, not `data:` images,
  * so it adds no request in front of the first paint. Same geometry as the
  * website at its default 44px cell. One per page (the pattern ids are fixed).
  */
@@ -22,13 +26,52 @@ const LAYERS = [
   {
     id: "acadigma-cells-lit",
     colour: "text-[#dcdcd7] dark:text-[#232323]",
-    mask: "radial-gradient(circle 260px at 50% 30%, black 0%, transparent 100%)",
+    mask: "radial-gradient(circle 260px at var(--mx, 50%) var(--my, 30%), black 0%, transparent 100%)",
   },
 ] as const
 
 export function CellField() {
+  const ref = useRef<HTMLDivElement>(null)
+
+  // The website's pointer spotlight (acadigma-website cell-field.tsx): the lit
+  // field eases 12% of the way to the pointer each frame, then stops.
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    let raf = 0
+    let tx = 50,
+      ty = 30,
+      x = 50,
+      y = 30
+    const tick = () => {
+      x += (tx - x) * 0.12
+      y += (ty - y) * 0.12
+      el.style.setProperty("--mx", `${x}%`)
+      el.style.setProperty("--my", `${y}%`)
+      raf =
+        Math.abs(tx - x) + Math.abs(ty - y) > 0.05
+          ? requestAnimationFrame(tick)
+          : 0
+    }
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return
+      const r = el.getBoundingClientRect()
+      tx = ((e.clientX - r.left) / r.width) * 100
+      ty = ((e.clientY - r.top) / r.height) * 100
+      if (!raf) raf = requestAnimationFrame(tick)
+    }
+    // On window: the field sits behind the content, which takes the events.
+    window.addEventListener("pointermove", onMove, { passive: true })
+    return () => {
+      window.removeEventListener("pointermove", onMove)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
+
   return (
     <div
+      ref={ref}
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 -z-10"
     >
