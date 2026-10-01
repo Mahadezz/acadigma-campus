@@ -1,5 +1,66 @@
 # @acadigma/ui
 
+## 0.6.0
+
+### Minor Changes
+
+- 581c2b2: F-ID-10 Part 3 (D-406): the class hub. `/app/classes/[sectionId]` — a big
+  header, four tabs (Attendance, Marks, Students, Print), all scoped to the
+  one section through existing repositories/RLS. Attendance reuses the
+  existing roll call at basic sizes with a `ConfirmSheet` naming the counts
+  before every save ("Save attendance for 6-ক? 38 present, 2 absent") and a
+  30s post-save Undo that re-saves the previous values as one ordinary,
+  audited edit. Marks lists this section's papers the caller teaches with
+  n/N entered and a status chip, then taps through to the existing marks
+  entry screen — the first time marks are reachable in basic mode. Students
+  is this section's roster (roll, name, Bangla names via `BnEnText`). Print
+  shows the report cards of the latest published or computed exam plus bulk
+  print, reusing F-OP-03's existing single/bulk actions and permissions
+  unchanged. A caller not assigned to a section (and not owner/admin) sees
+  "This class is not on your list" — no student data is sent. Home's class
+  blocks and the "All classes" list now open the hub instead of the roll
+  call directly. New: `ConfirmSheet` (`packages/ui`), `AttendanceToggle`'s
+  `size="basic"` variant, `CLASS_HUB_TABS` (`packages/domain`).
+
+  No migration — every read goes through `listMySections`, `attendance_day`,
+  `listRoster`, `exam_subjects` and the exam/report-card repositories, all
+  already RLS-protected.
+
+- 1eea748: App polish (D-409): a shared `PageSkeleton` (list, detail, form) behind a
+  `loading.tsx` on every data route; phone pull-to-refresh (`PullToRefresh`,
+  coarse pointer only, keyboard-reachable refresh button); the Settings > Display
+  text size is optimistic with rollback and a toast; `Button` and tappable list
+  rows get a real press state (scale + opacity, reduced-motion safe). No
+  migration.
+- e860b50: Design System v2 (D-408). The signed-in app now sits on an ambient mesh with liquid-glass chrome in both light and dark: a glass header, a floating glass tab bar, a glass sidebar, glass dashboard cards, sheets, dialogs and toasts. Contrast is checked by `scripts/check-glass-contrast.mjs` (16/16 pairs ≥ 4.5:1). The dashboard has one big number per card, tinted icon chips and one primary action ("Open attendance"), which sits in the phone thumb zone. A Light/Dark/System control with previews and the language switch now live at `/app/settings/appearance`. Every page that is not a top-level destination gets a back control at the top-left of the header: a chevron on phone and tablet, and the chevron plus the parent's name on desktop. It steps back through in-app history, or goes to the logical parent after a deep link. Reduced transparency and missing `backdrop-filter` fall back to opaque surfaces.
+- e494ea2: F-ID-01 Part 6 (D-116): signed-in devices. `/account/security` lists every
+  live session of the caller ("Chrome on Android", This device, signed in /
+  last active), signs out any other device with one tap (the card hides at
+  once and comes back if the server refuses), and signs out everywhere,
+  including this device. A password sign-in while another session is live
+  raises the `auth.new_device_signin` in-app notification once. The list is
+  Supabase's `auth.sessions`, read and revoked by `public.my_sessions()`,
+  `public.revoke_my_session()` and `public.note_sign_in()` (own sessions only,
+  `session.revoked` audited in the same transaction); the server client now
+  forwards the browser's `User-Agent` so sessions record the device. No IP is
+  read and no location is shown.
+
+  Sign out everywhere now asks first (new `AlertDialog` in `packages/ui`,
+  copied from the shadcn registry on the D-408 glass surface) and is one
+  database transaction (`public.revoke_all_my_sessions()`) that audits only
+  what it revoked. The new-device notification is once per session by a unique
+  index. Local/CI `jwt_expiry` is 600 s.
+
+### Patch Changes
+
+- 7644650: The front door at campus.acadigma.com now matches acadigma.com, names only what is live, and has a "Get the app" chooser for Web, Android, iPhone, Windows and Mac with install steps and a real Install button where the browser supports it. Sign-in and registration pages share the same look.
+- Updated dependencies [82a9ffc]
+- Updated dependencies [581c2b2]
+- Updated dependencies [b362638]
+- Updated dependencies [e494ea2]
+- Updated dependencies [56a702b]
+  - @acadigma/domain@0.12.0
+
 ## 0.5.8
 
 ### Patch Changes
