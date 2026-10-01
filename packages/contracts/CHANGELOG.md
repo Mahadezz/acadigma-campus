@@ -1,5 +1,58 @@
 # @acadigma/contracts
 
+## 0.16.0
+
+### Minor Changes
+
+- 82a9ffc: F-AC-11 §4.3 (D-213): working-day overrides. `/app/settings/calendar` gains
+  a "Make-up days and closures" list under the holidays. An owner or admin
+  opens a normally closed day (a make-up Friday) or closes a normal school day,
+  with a required reason; saving a date that already has an override replaces
+  it. Every staff role can read the list. `app.is_school_day` already honoured
+  overrides; this is the screen for the table. New permission
+  `calendar.override.write` (owner, admin). No migration.
+- 581c2b2: F-ID-10 Part 3 (D-406): the class hub. `/app/classes/[sectionId]` — a big
+  header, four tabs (Attendance, Marks, Students, Print), all scoped to the
+  one section through existing repositories/RLS. Attendance reuses the
+  existing roll call at basic sizes with a `ConfirmSheet` naming the counts
+  before every save ("Save attendance for 6-ক? 38 present, 2 absent") and a
+  30s post-save Undo that re-saves the previous values as one ordinary,
+  audited edit. Marks lists this section's papers the caller teaches with
+  n/N entered and a status chip, then taps through to the existing marks
+  entry screen — the first time marks are reachable in basic mode. Students
+  is this section's roster (roll, name, Bangla names via `BnEnText`). Print
+  shows the report cards of the latest published or computed exam plus bulk
+  print, reusing F-OP-03's existing single/bulk actions and permissions
+  unchanged. A caller not assigned to a section (and not owner/admin) sees
+  "This class is not on your list" — no student data is sent. Home's class
+  blocks and the "All classes" list now open the hub instead of the roll
+  call directly. New: `ConfirmSheet` (`packages/ui`), `AttendanceToggle`'s
+  `size="basic"` variant, `CLASS_HUB_TABS` (`packages/domain`).
+
+  No migration — every read goes through `listMySections`, `attendance_day`,
+  `listRoster`, `exam_subjects` and the exam/report-card repositories, all
+  already RLS-protected.
+
+- 0ce4be9: Legal acceptance and parent consent are recorded where they are given (D-114): interim Terms of Use, Privacy Notice and Data Processing Agreement at `/legal/*`; signing up records the Terms and Privacy versions agreed to (and now confirms the person is 18 or older); creating a school requires accepting the DPA on its behalf; accepting a parent link shows the consent text with the school and child named and records the parent's consent in the language shown. `@acadigma/contracts` is marked side-effect free so unused schemas no longer reach page bundles.
+- 0ab12c2: People are asked to accept the current Terms of Use and Privacy Notice before using the app, and a school's owner the current Data Processing Agreement, when they have not accepted that version yet — accounts and schools created before acceptance was recorded, and everyone after a new version is published (D-115). Deleting your account and downloading your school's data stay available without accepting.
+- e494ea2: F-ID-01 Part 6 (D-116): signed-in devices. `/account/security` lists every
+  live session of the caller ("Chrome on Android", This device, signed in /
+  last active), signs out any other device with one tap (the card hides at
+  once and comes back if the server refuses), and signs out everywhere,
+  including this device. A password sign-in while another session is live
+  raises the `auth.new_device_signin` in-app notification once. The list is
+  Supabase's `auth.sessions`, read and revoked by `public.my_sessions()`,
+  `public.revoke_my_session()` and `public.note_sign_in()` (own sessions only,
+  `session.revoked` audited in the same transaction); the server client now
+  forwards the browser's `User-Agent` so sessions record the device. No IP is
+  read and no location is shown.
+
+  Sign out everywhere now asks first (new `AlertDialog` in `packages/ui`,
+  copied from the shadcn registry on the D-408 glass surface) and is one
+  database transaction (`public.revoke_all_my_sessions()`) that audits only
+  what it revoked. The new-device notification is once per session by a unique
+  index. Local/CI `jwt_expiry` is 600 s.
+
 ## 0.15.0
 
 ### Minor Changes
