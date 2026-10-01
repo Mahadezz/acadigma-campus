@@ -34,6 +34,7 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",
+    serviceWorkers: "block",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
