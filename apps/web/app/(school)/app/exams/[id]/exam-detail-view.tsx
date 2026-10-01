@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 
 import type {
   ExamDetail,
@@ -41,6 +40,7 @@ import { dateRange, examDateFormatter } from "../format"
 import { MarksProgress } from "./marks-progress"
 import { PublishSheet } from "./publish-sheet"
 import { ReasonSheet } from "./reason-sheet"
+import { useRefreshingAction } from "./use-refreshing-action"
 
 type T = Messages["exams"]
 
@@ -74,8 +74,7 @@ export function ExamDetailView({
   /** The school's calendar day (ISO), for the progress rows' Closed badge. */
   today: string
 }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
+  const { pending, run } = useRefreshingAction()
   const [error, setError] = useState<string | null>(null)
   const [reversing, setReversing] = useState(false)
   const [publishing, setPublishing] = useState(false)
@@ -87,7 +86,7 @@ export function ExamDetailView({
 
   function move(status: string, reason?: string) {
     setError(null)
-    startTransition(async () => {
+    void run(async () => {
       const result = await setExamStatus({ examId: exam.id, status, reason })
       if (!result.ok) {
         setError(
@@ -95,22 +94,22 @@ export function ExamDetailView({
             ? t.publishBlocked
             : result.error.message || t.error
         )
-        return
+        return false
       }
       setReversing(false)
-      router.refresh()
+      return true
     })
   }
 
   function publish(withhold: { studentId: string; reason: string }[]) {
     setError(null)
     setNotice(null)
-    startTransition(async () => {
+    void run(async () => {
       const result = await publishResults({ examId: exam.id, withhold })
       if (!result.ok) {
         setPublishing(false)
         setError(result.error.message || t.error)
-        return
+        return false
       }
       setPublishing(false)
       setNotice(
@@ -118,18 +117,18 @@ export function ExamDetailView({
           .replace("{n}", String(result.data.published))
           .replace("{withheld}", String(result.data.withheld))
       )
-      router.refresh()
+      return true
     })
   }
 
   function compute() {
     setError(null)
     setNotice(null)
-    startTransition(async () => {
+    void run(async () => {
       const result = await computeResults({ examId: exam.id })
       if (!result.ok) {
         setError(result.error.message || t.error)
-        return
+        return false
       }
       setNotice(
         t.computed
@@ -138,7 +137,7 @@ export function ExamDetailView({
           .replace("{failed}", String(result.data.failed))
           .replace("{incomplete}", String(result.data.incomplete))
       )
-      router.refresh()
+      return true
     })
   }
 
@@ -334,8 +333,7 @@ function PaperRow({
   subjectName: string
   fmt: (iso: string) => string
 }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
+  const { pending, run } = useRefreshingAction()
   const [date, setDate] = useState(paper.examDate ?? "")
   const [full, setFull] = useState(String(paper.fullMarks))
   const [pass, setPass] = useState(String(paper.passMarks))
@@ -396,7 +394,7 @@ function PaperRow({
         onSubmit={(event) => {
           event.preventDefault()
           setNotice(null)
-          startTransition(async () => {
+          void run(async () => {
             const result = await updateExamSubject({
               id: paper.id,
               examDate: date || null,
@@ -407,7 +405,7 @@ function PaperRow({
               entryClosesOn: closes || null,
             })
             setNotice(result.ok ? t.saved : result.error.message || t.error)
-            if (result.ok) router.refresh()
+            return result.ok
           })
         }}
       >
