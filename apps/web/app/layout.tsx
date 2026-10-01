@@ -69,6 +69,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="antialiased">
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{new PerformanceObserver(function(l){l.getEntries().forEach(function(e){if(e.name.indexOf(\"_rsc\")>-1||e.initiatorType===\"fetch\"){console.log(\"[res] \"+e.name.replace(location.origin,\"\").slice(-46)+\" start=\"+Math.round(e.startTime)+\" hdr=\"+Math.round(e.responseStart)+\" end=\"+Math.round(e.responseEnd)+\" size=\"+e.transferSize)}})}).observe({type:\"resource\",buffered:true})}catch(e){}})()" }} />
         <SkipToContent />
         <Providers offlineCopy={t.offline}>{children}</Providers>
       </body>

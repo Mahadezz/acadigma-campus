@@ -80,6 +80,7 @@ export function ExamDetailView({
   const [reversing, setReversing] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  console.log(`[ui] render status=${exam.status} pending=${pending} t=${Math.round(performance.now())}`)
   const next = nextExamStatus(exam.status)
   const back = reversalFrom(exam.status)
   const fmt = examDateFormatter(locale)
