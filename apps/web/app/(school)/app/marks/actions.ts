@@ -7,7 +7,6 @@
  * class list and every value; invalid rows come back in `rejected`.
  */
 
-import { revalidatePath } from "next/cache"
 
 import {
   apiError,
@@ -58,7 +57,6 @@ export async function saveMarks(
   if (!writable.ok) return err(planReadOnlyApiError(writable.error))
 
   const result = await saveMarksRepo(ctx, supabase, parsed.data)
-  if (result.ok) revalidatePath("/app/exams", "layout")
   return result
 }
 
@@ -92,10 +90,6 @@ export async function submitExamSubject(
     parsed.data.examSubjectId,
     parsed.data.confirmIncomplete
   )
-  if (result.ok && result.data.submitted) {
-    revalidatePath("/app/exams", "layout")
-    revalidatePath(`/app/marks/${parsed.data.examSubjectId}`)
-  }
   return result
 }
 
@@ -134,7 +128,6 @@ export async function lockExamSubject(
     gate.data.supabase,
     parsed.data.examSubjectId
   )
-  if (result.ok) revalidatePath("/app/exams", "layout")
   return result
 }
 
@@ -157,7 +150,6 @@ export async function unlockExamSubject(
     parsed.data.examSubjectId,
     parsed.data.reason
   )
-  if (result.ok) revalidatePath("/app/exams", "layout")
   return result
 }
 
@@ -180,6 +172,5 @@ export async function reopenMarksEntry(
     parsed.data.examSubjectId,
     addDays(schoolToday(), 7)
   )
-  if (result.ok) revalidatePath("/app/exams", "layout")
   return result
 }
