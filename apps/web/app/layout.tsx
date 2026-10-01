@@ -69,7 +69,8 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="antialiased">
-        <script dangerouslySetInnerHTML={{ __html: "(function(){try{new PerformanceObserver(function(l){l.getEntries().forEach(function(e){if(e.name.indexOf(\"_rsc\")>-1||e.initiatorType===\"fetch\"){console.log(\"[res] \"+e.name.replace(location.origin,\"\").slice(-46)+\" start=\"+Math.round(e.startTime)+\" hdr=\"+Math.round(e.responseStart)+\" end=\"+Math.round(e.responseEnd)+\" size=\"+e.transferSize)}})}).observe({type:\"resource\",buffered:true})}catch(e){}})()" }} />
+        <script dangerouslySetInnerHTML={{ __html: "(function(){var of=window.fetch;window.fetch=function(i,o){var u=String(i&&i.url?i.url:i);var h=(o&&o.headers)||{};var act=!!(h[\"Next-Action\"]||h[\"next-action\"]);var rsc=u.indexOf(\"_rsc\")>-1;var p=of.apply(window,arguments);if((act||rsc)&&u.indexOf(\"/app/\")>-1){var t=performance.now();var tag=(act?\"POST \":\"GET \")+u.replace(location.origin,\"\").slice(-28);p.then(function(r){var c=r.clone();var rd=c.body.getReader();var parts=[];var dec=new TextDecoder();var sizes=[];function pump(){return rd.read().then(function(x){if(x.done){console.log(\"[fx] END \"+tag+\" chunks=\"+sizes.join(\",\")+\" t=\"+Math.round(performance.now()-t));if(u.indexOf(\"_rsc\")>-1||act){console.log(\"[fxbody] \"+tag+\" \"+JSON.stringify(sizes)+\" \"+btoa(String.fromCharCode.apply(null,[].concat.apply([],parts.map(function(a){return Array.prototype.slice.call(a)}))).slice(0,200000)))}return}sizes.push(x.value.length);parts.push(x.value);return pump()})}pump().catch(function(e){console.log(\"[fx] ERR \"+tag+\" \"+e)})},function(){});}return p}})()" }} />
+        
         <SkipToContent />
         <Providers offlineCopy={t.offline}>{children}</Providers>
       </body>
