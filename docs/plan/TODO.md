@@ -8,6 +8,86 @@ Last updated: 2026-10-01 ~07:30 Dhaka (end of session "Acadigma Latest" — read
 
 ---
 
+## 0. 👤 Owner's 3-day checklist (written 2026-10-01, do before Monday)
+
+Everything only the owner can do, most important first, with exact steps. Tick each box when done. Screen labels in Vercel, Supabase and Google change sometimes; if a label is slightly different, look for the closest match. **Never paste a password, key or token into the Claude chat** — put it only where each step says.
+
+### Day 1 — unblock the build (≈ 30 minutes)
+
+- [ ] **1. Vercel Pro** (stops the daily deploy limit that blocked 4 releases)
+  1. Go to vercel.com and sign in.
+  2. Top-left, pick the team **mahadezzs-projects**.
+  3. **Settings → Billing** → **Upgrade to Pro** (about $20 per member per month). Pay with your card.
+  4. Still in Billing, open **Spend Management** and set a monthly limit you're comfortable with (for example $50), with an email alert.
+  5. Done — nothing to tell Claude; deploys will simply stop failing.
+
+- [ ] **2. Unblock staff check-in (#134)** — a permission rule stops Claude replacing one auto-generated file.
+  - **Easiest:** on Monday, start Claude in `F:\Acadigma Suite\acadigma-campus` and, before saying "continue", paste this line (it starts with `!`, which runs it as you):
+    `! cd "/f/Acadigma Suite/acadigma-campus/.worktrees/ops-staff-checkin" && gh run download 36784518287 -n types-generated -D /f/tmp/types-134 && cp /f/tmp/types-134/types.generated.ts packages/db/src/types.generated.ts && git add packages/db/src/types.generated.ts && git commit -m "chore(db): regenerate types from CI (D-55)" && git push`
+  - If it says the artifact is missing or expired, just tell Claude "re-run #134's CI and give me the new command".
+  - **Permanent fix (recommended, so it never blocks again):** in Claude type `/permissions` → **Allow** → add `Bash(rm packages/db/src/types.generated.ts)` → save.
+
+- [ ] **3. Supabase security settings** (Campus project — the one Claude calls `kekfmibwjejdhxjkmezo`)
+  1. Go to supabase.com/dashboard and open the **Campus** project.
+  2. **Access-token lifetime → 600 seconds:** **Project Settings → JWT Keys** (or **Authentication → Sessions** on some versions) → find **Access token expiry / JWT expiry** → change **3600** to **600** → Save. (Why: a signed-out lost phone loses access after 10 minutes, not 1 hour.)
+  3. **Confirm email ON:** **Authentication → Sign In / Providers → Email** → turn **Confirm email** on → Save.
+  4. **Max rows 1000:** **Project Settings → Data API** → **Max rows** → **1000** → Save.
+  5. **Spend cap:** **Organization → Billing** → if you're on a paid plan, make sure **Spend cap** is ON.
+
+- [ ] **4. Try "sign out a device" once** (proves #132 works in production)
+  1. On your phone, sign in at **campus.acadigma.com**.
+  2. On your laptop, sign in too.
+  3. On the laptop: **Account → Security → Signed-in devices** → next to your phone, press **Sign out**.
+  4. Refresh the phone — it should go to the sign-in page.
+  5. Tell Claude on Monday: "sign-out worked" or the exact message you saw (e.g. "Could not sign out").
+
+### Day 2 — the investor demo and email (≈ 1 hour)
+
+- [ ] **5. Demo password secret** (the only thing blocking the investor demo)
+  1. Make up a strong password (12+ characters) and save it in your password manager.
+  2. Go to github.com/Mahadezz/acadigma-campus → **Settings** → **Environments** → **production** (create it if missing).
+  3. **Environment secrets → Add environment secret** → Name: `DEMO_ACCOUNT_PASSWORD` → Value: your password → **Add secret**.
+  4. Tell Claude on Monday: "demo secret added". Claude then runs the demo seed, tests it, and gives you the logins. Before showing investors, sign in once to each demo account (teacher, owner, parent) and accept the Terms screen.
+
+- [ ] **6. Company email (Google Workspace, about $7–8/month)**
+  1. Go to workspace.google.com → **Get started** → plan **Business Starter** → choose **"I have a domain"** → enter `acadigma.com`.
+  2. Create your user (e.g. `mahadi@acadigma.com`) and pay.
+  3. Google asks you to **verify the domain**: it shows a **TXT record**. In another tab: namecheap.com → **Domain List** → **acadigma.com → Manage** → **Advanced DNS** → **Add new record** → type **TXT**, Host `@`, Value = the text Google gave → save. Back in Google, press **Verify** (can take up to an hour).
+  4. **Mail records:** in Namecheap **Advanced DNS**, under **Mail Settings** choose **Custom MX** → add **MX**, Host `@`, Value `smtp.google.com`, Priority `1` (use exactly what Google's setup screen shows). Don't touch the existing A/CNAME records — those keep the website online.
+  5. **SPF:** add **TXT**, Host `@`, Value `v=spf1 include:_spf.google.com ~all` (if a TXT starting `v=spf1` already exists, edit it instead of adding a second).
+  6. **DKIM:** in admin.google.com → **Apps → Google Workspace → Gmail → Authenticate email** → **Generate new record** → copy the TXT host + value into Namecheap → back in Google press **Start authentication**.
+  7. **DMARC:** add **TXT**, Host `_dmarc`, Value `v=DMARC1; p=none; rua=mailto:mahadi@acadigma.com`.
+  8. **Aliases (free):** admin.google.com → **Directory → Users** → your user → **Add alternate emails** → add `info`, `support`, `privacy`, `security`, `billing`, `legal`.
+  9. Tell Claude on Monday which addresses exist — Claude puts them into the Privacy Notice, Terms, app Help and the website.
+
+- [ ] **7. Fonts** (stops the random build failures)
+  1. Go to fonts.google.com and download these families (**Get font → Download all**): **Inter**, **Hind Siliguri**, **JetBrains Mono**.
+  2. Unzip all three into a new folder `F:\tmp\fonts`.
+  3. Tell Claude on Monday: "fonts are in F:\tmp\fonts".
+
+### Day 3 — security clean-up and decisions (≈ 30 minutes)
+
+- [ ] **8. Revoke the keys that were pasted in chat earlier**
+  1. **21st.dev:** sign in at 21st.dev → account/API keys → **revoke** the old key. If you still want the 21st.dev design tool, create a new key and add it yourself in the Claude MCP settings (never paste it in chat).
+  2. **Sentry:** sentry.io → **Settings → Auth Tokens** → **revoke** the token you pasted before. Then **Projects → (your project) → Settings → Client Keys (DSN)** → copy the **DSN** — that one is safe to send to Claude; it switches on error reports.
+
+- [ ] **9. Decide: a test database** (today, local testing hits the real production database)
+  - **Option A (recommended): a second free Supabase project** called `acadigma-campus-dev` in region **Mumbai (ap-south-1)** — free, separate, safe. Create it at supabase.com → **New project** and tell Claude its name. (Free plans allow 2 active projects per organization; pause an unused one if needed.)
+  - **Option B: Supabase Branching** — needs the Pro plan (about $25/month + small branch costs).
+  - Tell Claude "A" or "B".
+
+- [ ] **10. Quick answers** (reply in one message on Monday)
+  - Website Parents page: OK to say *"Parents app coming soon; parents invited by their school can already see results in Campus"*? (yes/no)
+  - Keep the US-region version of acadigma.com (US phone number, placeholder prices)? (keep/remove)
+  - Keep the Campus code repo **public** on GitHub? (public/private)
+  - Old Docker disk copy on C: (11.6 GB, `C:\Users\Mahadi Sir\AppData\Local\Docker\wsl\disk\docker_data.vhdx`) — "delete it"? (yes/no)
+  - Staff check-in decisions in §1c (card on both homes, no check-in on holidays, 08:00 + 10-minute grace) — OK? (yes / what to change)
+
+- [ ] **11. Optional, when you have time**
+  - Pick an SMS provider for phone-number sign-in (Claude can compare Bangladeshi gateways for you on Monday).
+  - Lawyer questions: `docs/product/legal/LEGAL-AUDIT-2026-09-29.md` (12 questions) and `docs/product/OWNER-QUESTIONS.md`.
+
+
 ## 1. Investor demo — "an older teacher's morning" on a live link · 🔴👤
 
 **Goal (owner):** investors are waiting; a clickable demo on the live app, phone-first. Owner chose (no preference → lead decided): one clearly named fictional demo school on production.
