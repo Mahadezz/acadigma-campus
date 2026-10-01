@@ -4,6 +4,376 @@ A dated, newest-first record of what merged to `main`, what it shipped, which de
 
 ---
 
+## 2026-10-01 — PR #139 — docs(product): build updates — calendar overrides, faster pages, signed-in devices
+
+- **Lane:** lead
+- **Shipped:** Adds `docs/product/BUILD-UPDATES.md` lines for #131, #133 and #132. Documentation only.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-10-01 — PR #132 — feat(identity): see and sign out your signed-in devices (F-ID-01 Part 6, D-116)
+
+- **Lane:** identity
+- **Shipped:**
+  - Account → Security → Signed-in devices: every live session ("Chrome on Android", "This device", signed in and last active), Sign out on any other device, and Sign out everywhere (this device too).
+  - A password sign-in while another session is live raises an `auth.new_device_signin` in-app row once. There is no screen for it yet (F-ID-07).
+  - A device is a live Supabase `auth.sessions` row; no new table. Revoke deletes the row, and the other browser's next request goes to `/login`. `session.revoked` is audited in the same transaction. The IP is never read.
+- **Decisions:** D-116.
+- **Migrations:** `20260930204524_sessions_and_devices.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Security (Opus) MERGE twice; DB and React FIX FIRST, then MERGE. Hosted `DELETE` on `auth.sessions` is unproven because there is no dev branch; it fails safe with an error if it is missing. Vercel deployed e494ea2, so #133 went live with it.
+
+## 2026-10-01 — PR #133 — fix(design): front door follow-ups and /login + / Lighthouse LCP (Sentry and toasts load after first paint)
+
+- **Lane:** design
+- **Shipped:**
+  - #128 review follow-ups: headline is 2 lines at 360 (was 4), the phone header pill is ink, and the install steps reserve the tab-row height (0 px shift).
+  - Sentry's browser SDK (about 128 kB gzip) loads only when a DSN exists, as a dynamic import. The toast region loads after hydration.
+  - Lighthouse best-of-3: `/` 2900 ms, `/login` 3039 ms (test report `docs/test-reports/2026-10-01-front-door-followups.md`).
+- **Decisions:** none new (follows D-410).
+- **Migrations:** none.
+- **Review/incidents:** React MERGE twice. The `/login` and `/` LCP was failing other PRs at about 3.65 s. The Vercel production deploy was rate-limited at merge; it went live with #132's deploy (e494ea2).
+
+## 2026-10-01 — PR #131 — feat(calendar): F-AC-11 working-day overrides screen (make-up days and closures)
+
+- **Lane:** ops
+- **Shipped:** Owners and admins can force a date open or shut with a required reason: add, edit and remove make-up days and closures. Teachers read it only. Attendance % picks them up through `app.is_school_day`. The backend came from #43.
+- **Decisions:** D-213.
+- **Migrations:** none.
+- **Review/incidents:** Security (Opus) FIX FIRST (an edit could change the date and silently overwrite another row), then MERGE. Live at 82a9ffc (DONE.md).
+
+## 2026-10-01 — PR #130 — docs(product): build updates — new front page (#128)
+
+- **Lane:** lead
+- **Shipped:** Adds the #128 line to `docs/product/BUILD-UPDATES.md`. Documentation only.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-10-01 — PR #128 — feat(design): public front door in the acadigma.com look, with a Get the app device chooser (D-410)
+
+- **Lane:** design
+- **Shipped:**
+  - F-ID-12 Part 1. `/` and the sign-in and register pages rebuilt in the acadigma.com look, naming only live features. It removes the false claims about fees, bKash, timetables and messaging (legal audit #7).
+  - "Get the app" tabs (Web, Android, iPhone, Windows, Mac) with browser-install steps. A real Install button shows only when `beforeinstallprompt` fires. Store apps are labelled "coming later", with no badges or links.
+  - An "Acadigma apps" row from one config: Campus live; Parents, Students and Ledger coming soon.
+- **Decisions:** D-410.
+- **Migrations:** none.
+- **Review/incidents:** UI finish-gate FIX FIRST then PASS; React MERGE twice. Production deployed at 7644650 (DONE.md).
+
+## 2026-10-01 — PR #129 — docs(product): plain-English build updates for investors
+
+- **Lane:** lead
+- **Shipped:** Adds `docs/product/BUILD-UPDATES.md`, a plain-English, newest-first record of what was built with Dhaka times and links, plus a `docs/README.md` row. Owner request. Documentation only.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** Fact-checked against every PR; 28 overstatements were corrected (DONE.md).
+
+## 2026-10-01 — PR #127 — feat(design): app polish — shared skeletons, pull-to-refresh, optimistic text size, press state (D-409)
+
+- **Lane:** design
+- **Shipped:** A shared `PageSkeleton` and `loading.tsx` on every data section except exams and marks (a refresh hang, left as a follow-up). Pull-to-refresh on the phone shells. An optimistic text-size setting with rollback. A press state on buttons and tappable rows.
+- **Decisions:** D-409.
+- **Migrations:** none.
+- **Review/incidents:** Security (Opus) MERGE twice; a streamed 200-before-forbidden response was accepted, and negative assertions were made non-vacuous. React FIX FIRST then MERGE. Production deployed (DONE.md).
+
+## 2026-09-30 — PR #109 — feat(design): Design System v2 — liquid glass, theme control, language to Settings (D-408)
+
+- **Lane:** design
+- **Shipped:**
+  - Glass materials (`--glass-*` tokens) on the top bar, bottom nav, sheets, dialogs, toasts and the dashboard's "Today" cards, never on scrolling lists.
+  - Light, Dark or System in Settings → Appearance (`/app/settings/appearance`). The language picker moved there, with no copy marketing bilingual support.
+  - A shell back button on every sub-page, tap feedback on toggles, tabs, choice cards and nav items, and an admit sheet loaded lazily (students page 206 kB).
+  - `DESIGN-SYSTEM.md` v2 (§1.8 liquid glass, §1.9 UX-laws checklist). A new design-system-v2 journey runs at 360 and 1280 with axe.
+- **Decisions:** D-408 (owner changed direction mid-Part, 2026-09-29).
+- **Migrations:** none.
+- **Review/incidents:** Lead screenshot check; React FIX FIRST then MERGE; ponytail batch. Glass blur was fixed on Chrome and Android, where the minifier had kept only the `-webkit-` line. Five uncommitted files survived the 2026-09-30 power loss through a backup. Live at e860b50 (DONE.md).
+
+## 2026-09-30 — PR #126 — chore(ci): pnpm verify + test:contracts scripts; Friday-safe attendance journeys
+
+- **Lane:** testing
+- **Shipped:** Root `test:contracts` and `verify` scripts (format:check, typecheck, lint, test, test:contracts, env and contrast checks; git/build-dependent checks stay CI-only). `isSchoolOffToday()` skips take-attendance and the basic class-hub roll test on Fridays in Asia/Dhaka.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** No changeset needed.
+
+## 2026-09-30 — PR #122 — feat(operations): F-OP-07 Part 3 — attendance policy settings + live effect preview
+
+- **Lane:** ops
+- **Shipped:** Settings → Attendance (`/app/settings/attendance`, owner and admin): every `attendance_policy` field with a live plain-English effect line, computed from one real student's recorded statuses with the shared `attendancePercentage()`. No stored attendance row is touched. Saving reuses the existing `updateSchoolSettings` action: no new write path, migration or permission key.
+- **Decisions:** D-212.
+- **Migrations:** none.
+- **Review/incidents:** React FIX FIRST twice, then MERGE. The journey marks a real register.
+
+## 2026-09-30 — PR #125 — feat(identity): re-accept the current Terms, Privacy and DPA before using the app (D-115)
+
+- **Lane:** identity
+- **Shipped:** `requireShell` sends a signed-in person who has not accepted the current Terms and Privacy, or a school owner who has not accepted the current DPA, to `/account/legal`. This covers accounts created before #121 and anyone after a new version. Delete account and the owner's export stay reachable. New `public.accept_legal_document(document, version, workspace_id)`, SECURITY DEFINER, `authenticated` only; the database decides the hash.
+- **Decisions:** D-115 (follows D-114).
+- **Migrations:** `20260930113432_legal_reacceptance.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Security and DB MERGE; React FIX FIRST then MERGE. Demo accounts see the screen once after each seed.
+
+## 2026-09-30 — PR #124 — fix(identity): consent contract step — revoke the one-argument school/guardian RPCs, audit legal acceptances (D-114)
+
+- **Lane:** identity
+- **Shipped:** The D-114 contract step, closing the MEDIUM finding from the #121 security review. `execute` is revoked from `authenticated` on `create_school_workspace(jsonb)` and `accept_guardian_invitation(text)`, so a direct API call can no longer skip recording consent. Every `legal_acceptances` insert writes a `legal.accepted` audit event. Callers moved to the recording overloads (16 pgTAP files, the grants invariant, two demo seeds, one journey). pgTAP `39f` E1-E5.
+- **Decisions:** D-114.
+- **Migrations:** `20260930052627_consent_contract.sql`. Applied to production; DB smoke and Vercel passed (DONE.md).
+- **Review/incidents:** Security (Opus) and DB reviews MERGE. It went in after #121 was live at 0ce4be9. DONE.md: this cleared the blocker for real schools.
+
+## 2026-09-30 — PR #121 — feat(identity): record Terms/Privacy, DPA and guardian consent where they are given (D-114)
+
+- **Lane:** identity
+- **Shipped:**
+  - Interim, public Terms, Privacy and DPA pages at `/legal/*`, each marked as not reviewed by a lawyer.
+  - Sign-up records Terms and Privacy acceptance and "18 or older" through a trigger on `auth.users`. School creation requires and records the DPA in the same transaction. The parent-link screen shows the consent text and records consent.
+  - Closes legal-audit HIGH items 4 to 6.
+- **Decisions:** D-114.
+- **Migrations:** `20260930041659_legal_acceptance_and_consent.sql`, `20260930044136_legal_acceptance_review.sql`. Applied to production (DONE.md).
+- **Review/incidents:** The builder's 4 reviews plus the lead's Opus security review, MERGE. The one-argument RPCs stayed callable until #124. Production deployed.
+
+## 2026-09-30 — PR #120 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR. It versions the packages changed by #119 and #90.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-30 — PR #90 — ci(e2e): run every live-Supabase Playwright journey (D-76, OQ-27)
+
+- **Lane:** testing
+- **Shipped:**
+  - A new `e2e-live` CI job starts a local Supabase stack and runs the full Playwright suite (phone and desktop, axe included) in 4 shards with no retries. About 106 of 126 tests had been skipped behind `E2E_LIVE_SUPABASE`.
+  - `supabase/seed/e2e-fixtures.sql` adds the academic year, Class 6, subjects, the grade scale and 40 students, plus three more seeded accounts. The test seed refuses to run where real accounts exist.
+  - Real bugs it found and fixed: the sign-in throttle allowed a sixth guess and now counts every non-infrastructure failure; the register-existing-email message; a 360 px top-bar overflow with the offline chip; the service worker no longer relays RSC requests.
+- **Decisions:** D-76.
+- **Migrations:** `20260930041459_throttle_block_at_limit.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Two Opus security rounds and a React review. Live-e2e failures on #82 were test leakage, fixed by cleanup in `finally` (173 passed, 0 failed).
+
+## 2026-09-30 — PR #119 — feat(identity): F-ID-01 Part 7 — account deletion with a 30-day grace (D-113)
+
+- **Lane:** identity
+- **Shipped:** Delete your own account from Account → Security (type `DELETE` plus password; a password sign-in within 5 minutes is enforced in the database). All sessions end, and a "Keep my account" banner shows for 30 days. It is blocked while you are the sole owner of a school, with a link to transfer ownership. A nightly purge anonymises the user to "Deleted user" and keeps school records. Owner request 2026-09-29 (with #117).
+- **Decisions:** D-113.
+- **Migrations:** `20260930034627_account_deletion.sql`, `20260930034628_account_deletion_hardening.sql`, `20260930034629_account_deletion_guards.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Two Opus security rounds.
+
+## 2026-09-30 — PR #117 — feat(operations): F-OP-07 Part 6 — danger zone: archive, 30-day deletion, export (D-211)
+
+- **Lane:** ops
+- **Shipped:** Settings → Danger zone (`/app/settings/danger`, owner only). Export all data as a CSV zip (3 a day, audited). Archive and restore (read-only for everyone while archived, restorable for 12 months). Delete after 30 days, with a banner and a cancel button; it is refused while a subscription is active or has an unpaid balance. A daily purge cron (service role only) deletes up to 5 schools per run, oldest first, and refuses suspended schools, unpaid balances and files. Owner request 2026-09-29.
+- **Decisions:** D-211.
+- **Migrations:** `20260929213326_danger_zone.sql`, `20260929213327_danger_zone_guard_message.sql`, `20260929213328_danger_zone_review.sql`, `20260929220146_danger_zone_purge_suspended.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Two Opus security reviews plus a DB review.
+
+## 2026-09-30 — PR #116 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR. It versions the packages changed by #112 and #115.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-30 — PR #112 — feat(identity): F-ID-03 Part 7 — remove a member, leave a school, transfer ownership (D-112)
+
+- **Lane:** identity
+- **Shipped:** Owners and admins can remove a member, with a consequences confirmation; it works on a read-only plan. A new Your membership page (`/app/settings/membership`) lets any member leave, except the sole owner. Owners can transfer ownership to an active admin or teacher with password and typed school name. `public.transfer_ownership` is the only way to become owner. A removed owner comes back only as admin.
+- **Decisions:** D-112.
+- **Migrations:** `20260929172553_member_leave_transfer.sql`, `20260929172554_member_transfer_hardening.sql`, `20260929180854_member_owner_reactivation.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Two Opus security reviews.
+
+## 2026-09-30 — PR #118 — docs(legal): read-only legal and compliance audit (2026-09-29)
+
+- **Lane:** lead
+- **Shipped:** `docs/product/legal/LEGAL-AUDIT-2026-09-29.md`, a read-only audit of Campus and the website against the owner's App Legal Checklist adapted for Bangladesh: data map, findings with file:line evidence, 24 prioritised issues and 12 lawyer questions. It is a starting point, not legal advice. Documentation only.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** Top findings: the website claimed biometrics, unbuilt AI features and FERPA, and its prices contradicted D-78; sign-up required a ToS and Privacy Policy that did not exist; guardian linking recorded no consent; no deletion or export. These drove #112, #117, #119, #121 and the website fixes.
+
+## 2026-09-29 — PR #115 — fix(identity): reach Create a school / Join with a code from inside the app
+
+- **Lane:** identity
+- **Shipped:** Owner report: personal accounts could not create a school. The RPC already worked, but no in-app link reached it. The workspace switcher chip stays tappable for a lone personal workspace. The pinned action is now two links, Create a school and Join a school with a code, and the personal home gets the same pair.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** TypeScript, React and ponytail reviews (44 px fix); new pgTAP. Server caps (3 a day, 20 memberships) were already enforced. The lead fixed docs and a merge conflict.
+
+## 2026-09-29 — PR #113 — ci(docs-sync): exempt the version-only changesets release PR
+
+- **Lane:** testing
+- **Shipped:** `changeset-release/*` branches skip docs-sync only when every changed file is a `CHANGELOG.md`, a `package.json` or under `.changeset/`. The bot rewrites the PR description, so the `docs: none` opt-out never survived (#97, #98, #103, #108). `CI.md` §2.11 updated.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-29 — PR #110 — feat(operations): F-OP-07 Part 2 — academic years, terms, exam weighting, rules (D-210)
+
+- **Lane:** ops
+- **Shipped:** Settings → Academic: school years (create, set current with confirmation), terms (gap and overlap checks), exam weighting (live sum, 100% rule), and the pass mark, GPA, rank and grade-scale-code rules. New `terms` table with pgTAP isolation and escalation, and an atomic `set_current_academic_year` RPC. Years and terms are add and remove only.
+- **Decisions:** D-210.
+- **Migrations:** `20260929160707_academic_terms.sql`. Applied to production (DONE.md).
+- **Review/incidents:** The builder's review set plus the lead's independent Opus security review, MERGE.
+
+## 2026-09-29 — PR #108 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR. It versions the packages changed by #111, #107, #105 and #101.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-29 — PR #114 — chore(claude): owner allows routine git/gh/pnpm commands without prompts
+
+- **Lane:** lead
+- **Shipped:** Owner (2026-09-29): "I give you all permissions do it yourself no need my approval". The former `ask` list in `.claude/settings.json` moves to `allow`; every `deny` rule is unchanged (force-push, reset --hard, rm -rf, supabase db push, secret reads). Agent tool configuration only.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** The lead validated the JSON and the deny list.
+
+## 2026-09-29 — PR #111 — fix(demo): replace a pre-registered demo account instead of resetting it (D-80)
+
+- **Lane:** lead
+- **Shipped:** Follow-up to #107's three LOWs. A demo email someone else registered is deleted in one transaction and recreated through the Auth admin API with the seed marker. It is refused if the account belongs to any workspace but its own personal one. Old tokens are void, and JSON reaches curl on stdin.
+- **Decisions:** D-80.
+- **Migrations:** none.
+- **Review/incidents:** Security re-review MERGE. It closes the demo-account takeover found in review.
+
+## 2026-09-29 — PR #105 — feat(identity): F-ID-03 Part 6 — role changes, staff fields, custom labels (D-111)
+
+- **Lane:** identity
+- **Shipped:** On the Team & Access roster, owners and admins can change a member's role, with a plain-language preview of what they gain or lose. They can edit staff details (employee code, generated when blank; department; work phone), manage custom labels at `/app/settings/labels` and assign one. A label changes the title shown, never permissions.
+- **Decisions:** D-111.
+- **Migrations:** `20260929065654_member_staff_fields.sql`, `20260929121412_label_same_workspace_fk.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Three security reviews. A cross-school label gap was closed with composite FKs and a cleanup before the constraint turned on.
+
+## 2026-09-29 — PR #107 — feat(demo): one fictional demo school on production, seeded by a manual workflow (D-80)
+
+- **Lane:** lead
+- **Shipped:** A manual-only `demo-seed.yml` workflow (main only, `production` environment, no inputs) and `scripts/demo-seed.sh`. They build one fictional school (40 students, attendance, an exam, results, and teacher, owner and parent logins) through the app's own database functions in one transaction. A 5-minute investor script came with it.
+- **Decisions:** D-80.
+- **Migrations:** none.
+- **Review/incidents:** Two security reviews; a demo-account takeover was closed (see #111).
+
+## 2026-09-29 — PR #101 — feat(messaging): F-OP-05 Part 1 — channels, messages, RLS by derived membership (D-311)
+
+- **Lane:** ops
+- **Shipped:** Database only; no screen or action yet (Part 2). `channels`, `channel_members` and `messages`, with composite workspace FKs and `require_writable`. Membership is derived (general, staff and per-class channels from roles and class teaching).
+- **Decisions:** D-311.
+- **Migrations:** `20260929041934_messaging_schema.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Independent Opus security review found no cross-school or cross-role leak.
+
+## 2026-09-29 — PR #103 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR. It versions the packages changed by #99 and #100.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-29 — PR #100 — feat(operations): F-OP-06 Part 2 — staff directory + person sheet
+
+- **Lane:** ops
+- **Shipped:** `/app/staff` (search, filter chips, cursor pagination, own-record badge) and a read-only person sheet at `/app/staff/[id]`. `staff_directory` now lists every active non-parent member of a school, so a new school's owner appears before any staff record. Invite, Message and View timetable actions are deferred.
+- **Decisions:** D-209.
+- **Migrations:** `20260929020309_staff_directory_every_member.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Security and DB reviews. CI's pgTAP caught a first-draft bug that leaked each person's own personal workspace into their directory; fixed. A bundle-budget regression on the person page was also fixed.
+
+## 2026-09-29 — PR #102 — feat(design): dashboard design pass — bilingual errors, eyebrow ceiling (D-407)
+
+- **Lane:** design
+- **Shipped:** The dashboard error screen now follows the user's language; it had hardcoded English. The dashboard's five eyebrows are cut to one, per `DESIGN-SYSTEM.md` §8.1.
+- **Decisions:** D-407.
+- **Migrations:** none.
+- **Review/incidents:** TypeScript, React and ponytail reviews.
+
+## 2026-09-29 — PR #99 — feat(identity): F-ID-03 Part 5 — Team & Access roster, approve/reject (D-110)
+
+- **Lane:** identity
+- **Shipped:** `/app/staff/team` for owners and admins: Active, Waiting and Removed tabs, server-side search and keyset paging. Approve and Turn down on waiting requests. New `public.list_workspace_members`, a SECURITY DEFINER function limited to owners and admins; it returns explicit columns because `profiles` RLS hid pending joiners' names. No table change.
+- **Decisions:** D-110.
+- **Migrations:** `20260929015813_team_roster.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Security and DB reviews. pgTAP `39a_` has 30 assertions.
+
+## 2026-09-29 — PR #98 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR. It versions the web package for #93.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-29 — PR #96 — docs(product): price list (onboarding ৳15,000, D-78) + LOI template
+
+- **Lane:** lead
+- **Shipped:** `docs/product/PRICE-PROPOSAL.md` (the BDT plan grid from `research/MARKET-STRATEGY.md` §c, what is live and what is coming, the founding-school offer) and `docs/product/LOI-TEMPLATE.md` (one-page non-binding Letter of Intent, English with a Bengali version). Both are marked DRAFT. DONE.md: onboarding fee ৳15,000 is the owner's; the rest is provisional.
+- **Decisions:** D-78.
+- **Migrations:** none.
+- **Review/incidents:** Owner to confirm the refundable LOI deposit (recommended ৳5,000) and any founding-school perk beyond the 24-month price lock.
+
+## 2026-09-29 — PR #93 — feat(platform): F-ID-11 Part 2b — conflict sheet, late sync, session expiry
+
+- **Lane:** billing
+- **Shipped:**
+  - "Compare and choose" shows who saved when and only the students that differ; Keep theirs, Use mine or Save my choices. Nothing is overwritten until chosen; the audit keeps both.
+  - A roll call taken offline and sent up to 7 days later is saved and marked "Sent late from offline", only when no register exists for that day.
+  - An expired session pauses the waiting list instead of retrying, and the sign-in screen counts what waits on the phone.
+- **Decisions:** D-310.
+- **Migrations:** `20260928165204_attendance_late_sync.sql`. Applied to production (DONE.md).
+- **Review/incidents:** Security and DB reviews. Merged by the owner.
+
+## 2026-09-28 — PR #97 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR. It versions the packages changed by #94.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-28 — PR #94 — test(security): audit Part 2 — files, report_runs, members, data_requests, capabilities, definer sweep (D-77)
+
+- **Lane:** testing
+- **Shipped:** Part 2 of the security audit: the items #87 handed on plus a sweep of `app` SECURITY DEFINER functions. Fixed in one migration of policies, grants and one trigger function:
+  - L5 `files`: a client row must sit under `<workspace_id>/<own uid>/`; only an owner or admin can make a file public; `anon` can no longer read file metadata; clients cannot write server-owned columns.
+  - L1 `report_runs`: a column-level insert grant, so a run can no longer be created `ready` or with a `file_id`. Proven through real PostgREST.
+  - L2 `workspace_members`: a direct client write can no longer change provenance columns.
+  - `supabase/tests/25_security_audit_p2.sql` had 22 of 33 assertions red on `main` before the fixes.
+- **Decisions:** D-77.
+- **Migrations:** `20260926215147_security_audit_p2.sql`. Applied by CI on merge.
+- **Review/incidents:** none noted beyond the above.
+
+## 2026-09-28 — PR #95 — ci(deps)(deps): bump github/codeql-action/upload-sarif from 4.38.0 to 4.38.1 in the actions group
+
+- **Lane:** lead
+- **Shipped:** Dependabot bump of `github/codeql-action/upload-sarif` from 4.38.0 to 4.38.1.
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-27 — PR #92 — chore(release): version packages
+
+- **Lane:** lead
+- **Shipped:** Changesets release PR. It versions the web package for #89 (0.11.0).
+- **Decisions:** none.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
+## 2026-09-27 — PR #89 — feat(platform): F-ID-11 Part 2a — offline outbox with attendance, outbox purge
+
+- **Lane:** billing
+- **Shipped:** A per-user IndexedDB outbox. A roll call taken with no signal is saved on the phone ("Saved on this phone, waiting to send") and sends once when back online, never as another account or into another school. A correction before sending replaces it; a colleague's newer save comes back as a conflict. A "1 waiting" top-bar chip opens the list (Waiting, Needs your choice, Needs attention). Sign-out with waiting changes asks first. Changes for a removed school, and another person's unsent changes on a shared phone, are deleted. No migration; `save_attendance` unchanged.
+- **Decisions:** D-309.
+- **Migrations:** none.
+- **Review/incidents:** none noted. Conflict and late-sync handling came in Part 2b (#93).
+
+## 2026-09-27 — PR #91 — docs(plan): BUILD-LOG for #76-#88, playbook testing-first rule
+
+- **Lane:** lead
+- **Shipped:** BUILD-LOG entries for #84, #78, #80, #76, #86, #85, #83, #87 and #88, including the security findings fixed before each merge. `docs/plan/LEAD-PLAYBOOK.md` synced with the lead-playbook skill: the owner's 2026-09-27 rule to put testing and security first (a standing security and testing lane).
+- **Decisions:** D-75.
+- **Migrations:** none.
+- **Review/incidents:** none noted.
+
 ## 2026-09-27 — PR #88 — chore(release): version packages
 
 - **Lane:** lead
