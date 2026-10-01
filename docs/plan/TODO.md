@@ -27,7 +27,6 @@ Last updated: 2026-10-01 ~06:40 Dhaka.
 ## 1b. One front door for the Acadigma apps — ✅ campus #128 live; website #4 merged, deploy waiting on the Vercel limit
 
 **Left:**
-- Redeploy acadigma.com after the Vercel limit resets (merge 4c0d715 was rate-limited; Vercel does not retry by itself).
 - Follow-ups from the reviews (fresh design builder): headline wraps to 4 lines at 360 (lower the clamp minimum); 360 header "Get the app" pill → ink; reserve the tab-row height so the lazy tabs don't jump; Lighthouse LCP on / sits at ~3.5 s — take the median of several runs in CI rather than one; self-host fonts (👤 permission) removes the build flake that hit 4 builds on 2026-09-30/10-01.
 - Website copy (owner not yet answered): Parents page "not available yet" → "Parents app coming soon; invited parents can already see results in Campus".
 - Later: parents./students./ledger. front doors are config (PRODUCTS) once those domains exist.
