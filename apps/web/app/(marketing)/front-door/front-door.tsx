@@ -12,6 +12,7 @@ import type { Locale, Messages } from "@/lib/i18n"
 
 import { GetTheAppLazy } from "./get-the-app-lazy"
 import { PRODUCTS, productUrl } from "./products"
+import { RevealOnScroll } from "./reveal-on-scroll"
 import { RotatingWord } from "./rotating-word"
 import { SiteFooter } from "./site-footer"
 
@@ -54,7 +55,7 @@ export function FrontDoor({
       </div>
       {/* D-411: sticky, and the website's floating pill fades in behind it as
           the page scrolls (recipes.css §10). Static where unsupported. */}
-      <header className="motion-header-float relative mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+      <header className="motion-header-float mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
         <span
           aria-hidden="true"
           className="motion-header-pill absolute inset-x-2 inset-y-1 -z-10 rounded-full bg-card/85 shadow-[0_0_0_1px_rgb(11_11_11/0.06),0_1px_2px_rgb(11_11_11/0.05),0_12px_40px_-12px_rgb(11_11_11/0.18)] backdrop-blur-lg sm:inset-x-4"
@@ -88,8 +89,11 @@ export function FrontDoor({
                 {t.eyebrow}
               </p>
               {/* Painted at full opacity on the first frame (LCP); it only
-                  settles upward (D-411). */}
-              <h1 className="motion-hero-settle mt-8 text-[clamp(2.25rem,8.4vw,7.25rem)] leading-[0.92] font-semibold tracking-[-0.055em] text-balance">
+                  settles upward (D-411). From lg the size caps at 6rem so the
+                  longest line ("from your phone.") fits the column in Inter
+                  and in its fallback alike: at 7.25rem it wrapped only once
+                  Inter arrived, a 0.04 layout shift at 1280. */}
+              <h1 className="motion-hero-settle mt-8 text-[clamp(2.25rem,8.4vw,7.25rem)] leading-[0.92] lg:text-[clamp(2.25rem,7.6vw,6rem)] font-semibold tracking-[-0.055em] text-balance">
                 {hero.titleLine1}
                 <br />
                 {/* The website's second line is #a3a3a3 (2.3:1); muted ink passes AA. */}
@@ -183,7 +187,11 @@ export function FrontDoor({
             {t.apps.lead}
           </p>
           <ul className="mt-10 grid gap-3 lg:grid-cols-4">
-            {PRODUCTS.map((p) => {
+            {PRODUCTS.map((p, i) => {
+              // The website's stagger: each card 80 ms after the last.
+              const delay = {
+                "--motion-delay": `${i * 80}ms`,
+              } as React.CSSProperties
               const copy = t.apps.products[p.key]
               const about = t.apps.learnMore.replace(
                 "{name}",
@@ -194,6 +202,7 @@ export function FrontDoor({
                 return (
                   <li
                     key={p.key}
+                    style={delay}
                     className="dark motion-reveal motion-lift flex flex-col rounded-3xl bg-background p-6 text-foreground shadow-flat"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -226,6 +235,7 @@ export function FrontDoor({
               return (
                 <li
                   key={p.key}
+                  style={delay}
                   className="motion-reveal motion-lift flex items-center gap-4 rounded-2xl bg-card p-4 shadow-flat lg:flex-col lg:items-stretch lg:rounded-3xl lg:p-6"
                 >
                   <GridMark mark={p.key} className="size-8 lg:size-10" />
@@ -283,6 +293,7 @@ export function FrontDoor({
       </main>
 
       <SiteFooter t={t} locale={locale} />
+      <RevealOnScroll />
     </div>
   )
 }

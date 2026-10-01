@@ -436,7 +436,7 @@
 
   /* =========================================================================
      10. Public front door — `.motion-hero-*`, `.motion-word-in`,
-         `.motion-reveal`, `.motion-header-*`, `.motion-lift`,
+         `.motion-reveal` (+ `RevealOnScroll`), `.motion-header-*`, `.motion-lift`,
          `.motion-panel-in`, `.motion-card-settle`
 
      D-411. Signed-out pages only (`/` and the `(auth)` frame): acadigma.com's
@@ -499,14 +499,20 @@
       }
     }
 
-    /* Reveal on scroll: CSS scroll-driven, no script and nothing hidden
-       before hydration. Unsupported browsers (Firefox today) show it still. */
-    @supports (animation-timeline: view()) {
-      .motion-reveal {
-        animation: motion-hero-rise linear both;
-        animation-timeline: view();
-        animation-range: entry 0% entry 220px;
-      }
+    /* Reveal on scroll, once (the website's `Reveal`). `RevealOnScroll`
+       marks only elements still below the fold after hydration as pending,
+       so nothing on screen is ever hidden, and without script nothing is.
+       Time-based, not scroll-linked: a scroll-driven reveal leaves text at
+       the viewport edge part-transparent for as long as it sits there,
+       which fails contrast (axe, Lighthouse). */
+    .motion-reveal[data-reveal="pending"] {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+
+    .motion-reveal[data-reveal="shown"] {
+      animation: motion-reveal var(--motion-hero) var(--ease-out-expo)
+        var(--motion-delay, 0ms) both;
     }
 
     /* Header: sticky, and a floating pill fades in behind it over the first
@@ -539,6 +545,17 @@
     from {
       opacity: 0;
       transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes motion-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(28px);
     }
     to {
       opacity: 1;
